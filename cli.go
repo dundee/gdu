@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path"
 	"github.com/rivo/tview"
 )
 
@@ -9,19 +10,25 @@ type UI struct {
 	app *tview.Application
 	header *tview.TextView
 	dirContent *tview.Table
+	topDir string
+	currentDir string
 }
 
-func CreateUI() *UI {
+func (ui *UI) ItemSelected(row, column int) {
+	selectedDir := ui.dirContent.GetCell(row, column).Text
+	ui.ShowDir(selectedDir)
+} 
+
+func CreateUI(topDir string) *UI {
 	ui := &UI{}
+	ui.topDir = path.Clean(topDir)
 
 	ui.app = tview.NewApplication()
 
 	ui.header = tview.NewTextView()
-	ui.header.SetText("aaa")
 
 	ui.dirContent = tview.NewTable().SetSelectable(true, true)
-	ui.dirContent.SetCell(0, 0, tview.NewTableCell("aa"))
-	ui.dirContent.SetCell(1, 0, tview.NewTableCell("bb"))
+	ui.dirContent.SetSelectedFunc(ui.ItemSelected)
 
 	footer := tview.NewTextView().SetText("footer")
 
@@ -41,18 +48,29 @@ func CreateUI() *UI {
 	return ui
 }
 
-func StartUILoop(ui *UI) {
+func (ui *UI) StartUILoop() {
 	if err := ui.app.Run(); err != nil {
 		panic(err)
 	}
 }
 
-func ShowDir(ui *UI, dir Dir) {
+func (ui *UI) ShowDir(dirPath string) {
+	ui.currentDir = path.Clean(path.Join(ui.currentDir, dirPath))
+
+	dir := processDir(ui.currentDir)
+
 	ui.dirContent.Clear()
 
 	ui.header.SetText(dir.name)
 
-	for i, item := range dir.files {
-		ui.dirContent.SetCell(i, 0, tview.NewTableCell(item.name))
+	rowIndex := 0
+	if ui.currentDir != ui.topDir {
+		ui.dirContent.SetCell(0, 0, tview.NewTableCell(".."))
+		rowIndex += 1
+	}
+
+	for _, item := range dir.files {
+		ui.dirContent.SetCell(rowIndex, 0, tview.NewTableCell(item.name))
+		rowIndex += 1
 	}
 }

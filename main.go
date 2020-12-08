@@ -13,7 +13,7 @@ func main() {
 		topDir = "."
 	}
 
-	ui := CreateUI()
+	ui := CreateUI(topDir)
 
 	// go func() {
 	// 	ui.QueueUpdate(func() {
@@ -21,9 +21,8 @@ func main() {
 	// 	})
 	// }()
 
-	dir := processDir(topDir)
-	ShowDir(ui, dir)
-	StartUILoop(ui)
+	ui.ShowDir(topDir)
+	ui.StartUILoop()
 }
 
 func processDir(path string) Dir {
