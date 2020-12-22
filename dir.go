@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 )
 
 // File struct
@@ -51,6 +52,10 @@ func processDir(path string) *File {
 		dir.itemCount += file.itemCount
 		dir.files[i] = file
 	}
+
+	sort.Slice(dir.files, func(i, j int) bool {
+		return dir.files[i].size > dir.files[j].size
+	})
 
 	return &dir
 }
