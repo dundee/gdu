@@ -13,13 +13,15 @@ type UI struct {
 	header          *tview.TextView
 	currentDirLabel *tview.TextView
 	dirContent      *tview.Table
-	topDir          string
-	currentDir      string
+	currentDir      File
+	topDirPath      string
+	currentDirPath  string
 }
 
 func (ui *UI) ItemSelected(row, column int) {
-	selectedDir := ui.dirContent.GetCell(row, column).Text
-	ui.ShowDir(selectedDir)
+	selectedDir := ui.dirContent.GetCell(row, column).GetReference().(*File)
+	ui.currentDir = *selectedDir
+	ui.ShowDir()
 }
 
 func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
@@ -30,9 +32,9 @@ func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
-func CreateUI(topDir string) *UI {
+func CreateUI(topDirPath string) *UI {
 	ui := &UI{}
-	ui.topDir, _ = filepath.Abs(topDir)
+	ui.topDirPath, _ = filepath.Abs(topDirPath)
 
 	ui.app = tview.NewApplication()
 
@@ -70,22 +72,24 @@ func (ui *UI) StartUILoop() {
 	}
 }
 
-func (ui *UI) ShowDir(dirPath string) {
-	ui.currentDir, _ = filepath.Abs(filepath.Join(ui.currentDir, dirPath))
-	ui.currentDirLabel.SetText("--- " + ui.currentDir + " ---")
-
-	dir := processDir(ui.currentDir)
+func (ui *UI) ShowDir() {
+	ui.currentDirPath = ui.currentDir.path
+	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
 
 	ui.dirContent.Clear()
 
 	rowIndex := 0
-	if ui.currentDir != ui.topDir {
-		ui.dirContent.SetCellSimple(0, 0, "..")
+	if ui.currentDirPath != ui.topDirPath {
+		cell := tview.NewTableCell("           /..")
+		cell.SetReference(ui.currentDir.parent)
+		ui.dirContent.SetCell(0, 0, cell)
 		rowIndex++
 	}
 
-	for _, item := range dir.files {
-		ui.dirContent.SetCellSimple(rowIndex, 0, fmt.Sprintf("%10s", formatSize(item.size))+" "+item.name)
+	for i, item := range ui.currentDir.files {
+		cell := tview.NewTableCell(formatRow(item))
+		cell.SetReference(&ui.currentDir.files[i])
+		ui.dirContent.SetCell(rowIndex, 0, cell)
 		rowIndex++
 	}
 }
@@ -99,4 +103,14 @@ func formatSize(size int64) string {
 		return fmt.Sprintf("%.1f KiB", float64(size)/float64(1e3))
 	}
 	return fmt.Sprintf("%d B", size)
+}
+
+func formatRow(item File) string {
+	row := fmt.Sprintf("%10s", formatSize(item.size))
+	row += " "
+	if item.isDir {
+		row += "/"
+	}
+	row += item.name
+	return row
 }

@@ -13,6 +13,7 @@ func main() {
 	}
 
 	ui := CreateUI(topDir)
+	ui.currentDir = processDir(topDir)
 
 	// go func() {
 	// 	ui.QueueUpdate(func() {
@@ -20,6 +21,6 @@ func main() {
 	// 	})
 	// }()
 
-	ui.ShowDir(topDir)
+	ui.ShowDir()
 	ui.StartUILoop()
 }
