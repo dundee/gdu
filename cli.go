@@ -11,16 +11,21 @@ import (
 type UI struct {
 	app             *tview.Application
 	header          *tview.TextView
+	footer          *tview.TextView
 	currentDirLabel *tview.TextView
 	dirContent      *tview.Table
-	currentDir      File
+	currentDir      *File
 	topDirPath      string
 	currentDirPath  string
 }
 
 func (ui *UI) ItemSelected(row, column int) {
 	selectedDir := ui.dirContent.GetCell(row, column).GetReference().(*File)
-	ui.currentDir = *selectedDir
+	if !selectedDir.isDir {
+		return
+	}
+
+	ui.currentDir = selectedDir
 	ui.ShowDir()
 }
 
@@ -40,6 +45,8 @@ func CreateUI(topDirPath string) *UI {
 
 	ui.header = tview.NewTextView()
 	ui.header.SetText("gdu ~ Use arrow keys to navigate, press ? for help")
+	ui.header.SetTextColor(tcell.ColorBlack)
+	ui.header.SetBackgroundColor(tcell.ColorWhite)
 
 	ui.currentDirLabel = tview.NewTextView()
 
@@ -47,13 +54,15 @@ func CreateUI(topDirPath string) *UI {
 	ui.dirContent.SetSelectedFunc(ui.ItemSelected)
 	ui.dirContent.SetInputCapture(ui.KeyPressed)
 
-	footer := tview.NewTextView().SetText("footer")
+	ui.footer = tview.NewTextView()
+	ui.footer.SetTextColor(tcell.ColorBlack)
+	ui.footer.SetBackgroundColor(tcell.ColorWhite)
 
 	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
 	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
 		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
 		AddItem(ui.dirContent, 2, 0, 1, 1, 0, 0, true).
-		AddItem(footer, 3, 0, 1, 1, 0, 0, false)
+		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
 
 	modal := tview.NewModal().SetText("bbb")
 
@@ -88,10 +97,12 @@ func (ui *UI) ShowDir() {
 
 	for i, item := range ui.currentDir.files {
 		cell := tview.NewTableCell(formatRow(item))
-		cell.SetReference(&ui.currentDir.files[i])
+		cell.SetReference(ui.currentDir.files[i])
 		ui.dirContent.SetCell(rowIndex, 0, cell)
 		rowIndex++
 	}
+
+	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
 }
 
 func formatSize(size int64) string {
@@ -105,7 +116,7 @@ func formatSize(size int64) string {
 	return fmt.Sprintf("%d B", size)
 }
 
-func formatRow(item File) string {
+func formatRow(item *File) string {
 	row := fmt.Sprintf("%10s", formatSize(item.size))
 	row += " "
 	if item.isDir {
