@@ -117,8 +117,18 @@ func formatSize(size int64) string {
 }
 
 func formatRow(item *File) string {
+	part := int(float64(item.size) / float64(item.parent.size) * 10.0)
 	row := fmt.Sprintf("%10s", formatSize(item.size))
-	row += " "
+	row += " ["
+	for i := 0; i < 10; i++ {
+		if part > i {
+			row += "#"
+		} else {
+			row += " "
+		}
+	}
+	row += "] "
+
 	if item.isDir {
 		row += "/"
 	}
