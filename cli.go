@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"time"
 
@@ -126,12 +127,14 @@ func (ui *UI) ShowDir() {
 }
 
 func formatSize(size int64) string {
-	if size > 1e9 {
-		return fmt.Sprintf("%.1f GiB", float64(size)/float64(1e9))
+	if size > 1e12 {
+		return fmt.Sprintf("%.1f TiB", float64(size)/math.Pow(2, 40))
+	} else if size > 1e9 {
+		return fmt.Sprintf("%.1f GiB", float64(size)/math.Pow(2, 30))
 	} else if size > 1e6 {
-		return fmt.Sprintf("%.1f MiB", float64(size)/float64(1e6))
+		return fmt.Sprintf("%.1f MiB", float64(size)/math.Pow(2, 20))
 	} else if size > 1e3 {
-		return fmt.Sprintf("%.1f KiB", float64(size)/float64(1e3))
+		return fmt.Sprintf("%.1f KiB", float64(size)/math.Pow(2, 10))
 	}
 	return fmt.Sprintf("%d B", size)
 }
