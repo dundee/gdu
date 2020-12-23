@@ -13,13 +13,13 @@ func main() {
 	}
 
 	ui := CreateUI(topDir)
-
-	// ui.currentDir = processDir(topDir)
-	// ui.ShowDir()
+	statusChannel := make(chan CurrentProgress)
+	go ui.updateProgress(statusChannel)
 
 	go func() {
+		ui.currentDir = processDir(topDir, statusChannel)
+
 		ui.app.QueueUpdateDraw(func() {
-			ui.currentDir = processDir(topDir)
 			ui.ShowDir()
 			ui.pages.HidePage("modal")
 		})

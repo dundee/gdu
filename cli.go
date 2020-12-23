@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -14,6 +15,7 @@ type UI struct {
 	footer          *tview.TextView
 	currentDirLabel *tview.TextView
 	pages           *tview.Pages
+	modal           *tview.Modal
 	dirContent      *tview.Table
 	currentDir      *File
 	topDirPath      string
@@ -66,11 +68,11 @@ func CreateUI(topDirPath string) *UI {
 		AddItem(ui.dirContent, 2, 0, 1, 1, 0, 0, true).
 		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
 
-	modal := tview.NewModal().SetText("Scanning...")
+	ui.modal = tview.NewModal().SetText("Scanning...")
 
 	ui.pages = tview.NewPages().
 		AddPage("background", grid, true, true).
-		AddPage("modal", modal, true, true)
+		AddPage("modal", ui.modal, true, true)
 
 	ui.app.SetRoot(ui.pages, true)
 
@@ -80,6 +82,22 @@ func CreateUI(topDirPath string) *UI {
 func (ui *UI) StartUILoop() {
 	if err := ui.app.Run(); err != nil {
 		panic(err)
+	}
+}
+
+func (ui *UI) updateProgress(statusChannel chan CurrentProgress) {
+	for {
+		progress := <-statusChannel
+
+		if progress.done {
+			return
+		}
+
+		ui.app.QueueUpdateDraw(func() {
+			ui.modal.SetText("Current item: " + progress.currentItemName)
+		})
+
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 

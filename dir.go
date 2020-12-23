@@ -17,7 +17,15 @@ type File struct {
 	parent    *File
 }
 
-func processDir(path string) *File {
+// CurrentProgress struct
+type CurrentProgress struct {
+	currentItemName string
+	itemCount       int
+	totalSize       int64
+	done            bool
+}
+
+func processDir(path string, statusChannel chan CurrentProgress) *File {
 	var file *File
 	path, _ = filepath.Abs(path)
 
@@ -36,8 +44,17 @@ func processDir(path string) *File {
 
 	for i, f := range files {
 		if f.IsDir() {
-			file = processDir(filepath.Join(path, f.Name()))
+			file = processDir(filepath.Join(path, f.Name()), statusChannel)
 			file.parent = &dir
+
+			select {
+			case statusChannel <- CurrentProgress{
+				currentItemName: file.path,
+				itemCount:       file.itemCount,
+				totalSize:       file.size,
+			}:
+			default:
+			}
 		} else {
 			file = &File{
 				name:      f.Name(),
