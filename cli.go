@@ -13,6 +13,7 @@ type UI struct {
 	header          *tview.TextView
 	footer          *tview.TextView
 	currentDirLabel *tview.TextView
+	pages           *tview.Pages
 	dirContent      *tview.Table
 	currentDir      *File
 	topDirPath      string
@@ -42,6 +43,7 @@ func CreateUI(topDirPath string) *UI {
 	ui.topDirPath, _ = filepath.Abs(topDirPath)
 
 	ui.app = tview.NewApplication()
+	ui.app.SetInputCapture(ui.KeyPressed)
 
 	ui.header = tview.NewTextView()
 	ui.header.SetText("gdu ~ Use arrow keys to navigate, press ? for help")
@@ -52,11 +54,11 @@ func CreateUI(topDirPath string) *UI {
 
 	ui.dirContent = tview.NewTable().SetSelectable(true, true)
 	ui.dirContent.SetSelectedFunc(ui.ItemSelected)
-	ui.dirContent.SetInputCapture(ui.KeyPressed)
 
 	ui.footer = tview.NewTextView()
 	ui.footer.SetTextColor(tcell.ColorBlack)
 	ui.footer.SetBackgroundColor(tcell.ColorWhite)
+	ui.footer.SetText("No items to diplay.")
 
 	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
 	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
@@ -64,13 +66,13 @@ func CreateUI(topDirPath string) *UI {
 		AddItem(ui.dirContent, 2, 0, 1, 1, 0, 0, true).
 		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
 
-	modal := tview.NewModal().SetText("bbb")
+	modal := tview.NewModal().SetText("Scanning...")
 
-	pages := tview.NewPages().
+	ui.pages = tview.NewPages().
 		AddPage("background", grid, true, true).
-		AddPage("modal", modal, true, false)
+		AddPage("modal", modal, true, true)
 
-	ui.app.SetRoot(pages, true)
+	ui.app.SetRoot(ui.pages, true)
 
 	return ui
 }

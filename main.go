@@ -13,14 +13,17 @@ func main() {
 	}
 
 	ui := CreateUI(topDir)
-	ui.currentDir = processDir(topDir)
 
-	// go func() {
-	// 	ui.QueueUpdate(func() {
-	// 		table.SetCell(2, 0, tview.NewTableCell("cc"))
-	// 	})
-	// }()
+	// ui.currentDir = processDir(topDir)
+	// ui.ShowDir()
 
-	ui.ShowDir()
+	go func() {
+		ui.app.QueueUpdateDraw(func() {
+			ui.currentDir = processDir(topDir)
+			ui.ShowDir()
+			ui.pages.HidePage("modal")
+		})
+	}()
+
 	ui.StartUILoop()
 }
