@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(t *testing.T) {
+func TestFooter(t *testing.T) {
 	CreateTestDir()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -17,11 +17,21 @@ func TestMain(t *testing.T) {
 
 	ui := CreateUI(".", simScreen)
 
-	ui.currentDir = &File{
+	dir := File{
 		name:      "xxx",
 		size:      5,
 		itemCount: 2,
 	}
+
+	file := File{
+		name:      "yyy",
+		size:      2,
+		itemCount: 1,
+		parent:    &dir,
+	}
+	dir.files = []*File{&file}
+
+	ui.currentDir = &dir
 	ui.ShowDir()
 	ui.pages.HidePage("modal")
 
@@ -37,4 +47,24 @@ func TestMain(t *testing.T) {
 		}
 		assert.Equal(t, text[i], r.Bytes[0])
 	}
+}
+
+func TestUpdateProgress(t *testing.T) {
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	defer simScreen.Fini()
+	simScreen.Init()
+	simScreen.SetSize(15, 15)
+
+	statusChannel := make(chan CurrentProgress)
+
+	ui := CreateUI(".", simScreen)
+	go func() {
+		ui.updateProgress(statusChannel)
+	}()
+
+	statusChannel <- CurrentProgress{
+		currentItemName: "xxx",
+		done:            true,
+	}
+	assert.True(t, true)
 }
