@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 )
@@ -34,27 +35,26 @@ func processDir(path string, statusChannel chan CurrentProgress) *File {
 		return &File{}
 	}
 
+	subDirsChan := make(chan *File, len(files))
+
 	dir := File{
 		name:      filepath.Base(path),
 		path:      path,
 		isDir:     true,
-		itemCount: 0,
+		itemCount: 1,
 		files:     make([]*File, len(files)),
 	}
+	dirCount := 0
 
-	for i, f := range files {
+	index := 0
+	for _, f := range files {
 		if f.IsDir() {
-			file = processDir(filepath.Join(path, f.Name()), statusChannel)
-			file.parent = &dir
-
-			select {
-			case statusChannel <- CurrentProgress{
-				currentItemName: file.path,
-				itemCount:       file.itemCount,
-				totalSize:       file.size,
-			}:
-			default:
-			}
+			dirCount++
+			go func(subDirsChan chan *File, f os.FileInfo) {
+				file = processDir(filepath.Join(path, f.Name()), statusChannel)
+				file.parent = &dir
+				subDirsChan <- file
+			}(subDirsChan, f)
 		} else {
 			file = &File{
 				name:      f.Name(),
@@ -63,11 +63,29 @@ func processDir(path string, statusChannel chan CurrentProgress) *File {
 				itemCount: 1,
 				parent:    &dir,
 			}
-		}
 
+			dir.size += file.size
+			dir.itemCount += file.itemCount
+			dir.files[index] = file
+			index++
+		}
+	}
+
+	filesCount := len(files) - dirCount
+	for i := 0; i < dirCount; i++ {
+		file = <-subDirsChan
 		dir.size += file.size
 		dir.itemCount += file.itemCount
-		dir.files[i] = file
+		dir.files[filesCount+i] = file
+
+		select {
+		case statusChannel <- CurrentProgress{
+			currentItemName: file.path,
+			itemCount:       file.itemCount,
+			totalSize:       file.size,
+		}:
+		default:
+		}
 	}
 
 	sort.Slice(dir.files, func(i, j int) bool {
