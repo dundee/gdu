@@ -8,10 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProcessDir(t *testing.T) {
+func CreateTestDir() {
 	os.MkdirAll("test_dir/nested/subnested", os.ModePerm)
 	ioutil.WriteFile("test_dir/nested/subnested/file", []byte("hello"), 0644)
 	ioutil.WriteFile("test_dir/nested/file2", []byte("go"), 0644)
+}
+
+func TestProcessDir(t *testing.T) {
+	CreateTestDir()
 
 	statusChannel := make(chan CurrentProgress)
 

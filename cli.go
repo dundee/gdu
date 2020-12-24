@@ -41,11 +41,12 @@ func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
-func CreateUI(topDirPath string) *UI {
+func CreateUI(topDirPath string, screen tcell.Screen) *UI {
 	ui := &UI{}
 	ui.topDirPath, _ = filepath.Abs(topDirPath)
 
 	ui.app = tview.NewApplication()
+	ui.app.SetScreen(screen)
 	ui.app.SetInputCapture(ui.KeyPressed)
 
 	ui.header = tview.NewTextView()

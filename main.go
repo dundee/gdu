@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+
+	"github.com/gdamore/tcell/v2"
 )
 
 func main() {
@@ -12,7 +14,13 @@ func main() {
 		topDir = "."
 	}
 
-	ui := CreateUI(topDir)
+	screen, err := tcell.NewScreen()
+	if err != nil {
+		panic(err)
+	}
+	screen.Init()
+
+	ui := CreateUI(topDir, screen)
 	statusChannel := make(chan CurrentProgress)
 	go ui.updateProgress(statusChannel)
 
