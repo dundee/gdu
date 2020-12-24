@@ -13,3 +13,17 @@ Go:
 
     go get -u github.com/Dundee/gdu
 
+
+Arch Linux:
+
+    yay -S gdu
+
+
+## Usage
+
+    gdu some_dir_to_analyze
+
+
+## Running tests
+
+    make test
