@@ -10,6 +10,7 @@ import (
 	"github.com/rivo/tview"
 )
 
+// UI struct
 type UI struct {
 	app             *tview.Application
 	header          *tview.TextView
@@ -23,6 +24,7 @@ type UI struct {
 	currentDirPath  string
 }
 
+// ItemSelected is called when table row is selected
 func (ui *UI) ItemSelected(row, column int) {
 	selectedDir := ui.dirContent.GetCell(row, column).GetReference().(*File)
 	if !selectedDir.isDir {
@@ -33,6 +35,7 @@ func (ui *UI) ItemSelected(row, column int) {
 	ui.ShowDir()
 }
 
+// KeyPressed is called when user pressed any key
 func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if key.Rune() == 'q' {
 		ui.app.Stop()
@@ -41,6 +44,7 @@ func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
+// CreateUI creates the whole UI app
 func CreateUI(topDirPath string, screen tcell.Screen) *UI {
 	ui := &UI{}
 	ui.topDirPath, _ = filepath.Abs(topDirPath)
@@ -81,6 +85,7 @@ func CreateUI(topDirPath string, screen tcell.Screen) *UI {
 	return ui
 }
 
+// StartUILoop starts tview application
 func (ui *UI) StartUILoop() {
 	if err := ui.app.Run(); err != nil {
 		panic(err)
@@ -103,6 +108,7 @@ func (ui *UI) updateProgress(statusChannel chan CurrentProgress) {
 	}
 }
 
+// ShowDir shows content of the selected dir
 func (ui *UI) ShowDir() {
 	ui.currentDirPath = ui.currentDir.path
 	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
