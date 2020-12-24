@@ -1,2 +1,4 @@
 .vscode
 build
+coverage.txt
+test_dir
