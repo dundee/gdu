@@ -1,6 +1,6 @@
 # gdu
 
-[![Build Status](https://travis-ci.org/Dundee/gdu.svg?branch=master)](https://travis-ci.org/Dundee/gdu)
+[![Build Status](https://travis-ci.com/Dundee/gdu.svg?branch=master)](https://travis-ci.com/Dundee/gdu)
 [![codecov](https://codecov.io/gh/Dundee/gdu/branch/master/graph/badge.svg)](https://codecov.io/gh/Dundee/gdu)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Dundee/gdu)](https://goreportcard.com/report/github.com/Dundee/gdu)
 
