@@ -68,3 +68,24 @@ func TestUpdateProgress(t *testing.T) {
 	}
 	assert.True(t, true)
 }
+
+func TestHelp(t *testing.T) {
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	defer simScreen.Fini()
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(".", simScreen)
+	ui.ShowHelp()
+	ui.help.Draw(simScreen)
+	simScreen.Show()
+
+	b, _, _ := simScreen.GetContents()
+
+	cells := b[252:259]
+
+	text := []byte("selected")
+	for i, r := range cells {
+		assert.Equal(t, text[i], r.Bytes[0])
+	}
+}

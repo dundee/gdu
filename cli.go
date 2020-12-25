@@ -10,6 +10,11 @@ import (
 	"github.com/rivo/tview"
 )
 
+const helpText = `
+[red]up, down [white]Move cursor
+       [red]d [white]Delete selected file or dir
+`
+
 // UI struct
 type UI struct {
 	app             *tview.Application
@@ -18,6 +23,7 @@ type UI struct {
 	currentDirLabel *tview.TextView
 	pages           *tview.Pages
 	modal           *tview.Modal
+	help            *tview.Flex
 	dirContent      *tview.Table
 	currentDir      *File
 	topDirPath      string
@@ -37,9 +43,16 @@ func (ui *UI) ItemSelected(row, column int) {
 
 // KeyPressed is called when user pressed any key
 func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
+	if (key.Key() == tcell.KeyEsc || key.Rune() == 'q') && ui.pages.HasPage("help") {
+		ui.pages.RemovePage("help")
+		return key
+	}
 	if key.Rune() == 'q' {
 		ui.app.Stop()
 		return nil
+	}
+	if key.Rune() == '?' {
+		ui.ShowHelp()
 	}
 	return key
 }
@@ -131,6 +144,24 @@ func (ui *UI) ShowDir() {
 	}
 
 	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
+}
+
+// ShowHelp shows help :)
+func (ui *UI) ShowHelp() {
+	text := tview.NewTextView().SetText(helpText).SetDynamicColors(true)
+	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
+	text.SetTitle("gdu help")
+
+	flex := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(text, 10, 1, false).
+			AddItem(nil, 0, 1, false), 50, 1, false).
+		AddItem(nil, 0, 1, false)
+
+	ui.help = flex
+	ui.pages.AddPage("help", flex, true, true)
 }
 
 func formatSize(size int64) string {
