@@ -22,7 +22,7 @@ type UI struct {
 	footer          *tview.TextView
 	currentDirLabel *tview.TextView
 	pages           *tview.Pages
-	modal           *tview.Modal
+	progress        *tview.Modal
 	help            *tview.Flex
 	dirContent      *tview.Table
 	currentDir      *File
@@ -31,8 +31,83 @@ type UI struct {
 	askBeforeDelete bool
 }
 
-// ItemSelected is called when table row is selected
-func (ui *UI) ItemSelected(row, column int) {
+// CreateUI creates the whole UI app
+func CreateUI(topDirPath string, screen tcell.Screen) *UI {
+	ui := &UI{
+		askBeforeDelete: true,
+	}
+	ui.topDirPath, _ = filepath.Abs(topDirPath)
+
+	ui.app = tview.NewApplication()
+	ui.app.SetScreen(screen)
+	ui.app.SetInputCapture(ui.keyPressed)
+
+	ui.header = tview.NewTextView()
+	ui.header.SetText("gdu ~ Use arrow keys to navigate, press ? for help")
+	ui.header.SetTextColor(tcell.ColorBlack)
+	ui.header.SetBackgroundColor(tcell.ColorWhite)
+
+	ui.currentDirLabel = tview.NewTextView()
+
+	ui.dirContent = tview.NewTable().SetSelectable(true, false)
+	ui.dirContent.SetSelectedFunc(ui.itemSelected)
+
+	ui.footer = tview.NewTextView()
+	ui.footer.SetTextColor(tcell.ColorBlack)
+	ui.footer.SetBackgroundColor(tcell.ColorWhite)
+	ui.footer.SetText("No items to diplay.")
+
+	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
+	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
+		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
+		AddItem(ui.dirContent, 2, 0, 1, 1, 0, 0, true).
+		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+
+	ui.progress = tview.NewModal().SetText("Scanning...")
+
+	ui.pages = tview.NewPages().
+		AddPage("background", grid, true, true).
+		AddPage("progress", ui.progress, true, true)
+
+	ui.app.SetRoot(ui.pages, true)
+
+	return ui
+}
+
+// ShowDir shows content of the selected dir
+func (ui *UI) ShowDir() {
+	ui.currentDirPath = ui.currentDir.path
+	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
+
+	ui.dirContent.Clear()
+
+	rowIndex := 0
+	if ui.currentDirPath != ui.topDirPath {
+		cell := tview.NewTableCell("           /..")
+		cell.SetReference(ui.currentDir.parent)
+		ui.dirContent.SetCell(0, 0, cell)
+		rowIndex++
+	}
+
+	for i, item := range ui.currentDir.files {
+		cell := tview.NewTableCell(formatRow(item))
+		cell.SetReference(ui.currentDir.files[i])
+		ui.dirContent.SetCell(rowIndex, 0, cell)
+		rowIndex++
+	}
+
+	ui.dirContent.Select(0, 0)
+	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
+}
+
+// StartUILoop starts tview application
+func (ui *UI) StartUILoop() {
+	if err := ui.app.Run(); err != nil {
+		panic(err)
+	}
+}
+
+func (ui *UI) itemSelected(row, column int) {
 	selectedDir := ui.dirContent.GetCell(row, column).GetReference().(*File)
 	if !selectedDir.isDir {
 		return
@@ -69,8 +144,7 @@ func (ui *UI) deleteSelected() {
 	ui.ShowDir()
 }
 
-// KeyPressed is called when user pressed any key
-func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
+func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if (key.Key() == tcell.KeyEsc || key.Rune() == 'q') && ui.pages.HasPage("help") {
 		ui.pages.RemovePage("help")
 		return key
@@ -80,7 +154,7 @@ func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 	if key.Rune() == '?' {
-		ui.ShowHelp()
+		ui.showHelp()
 	}
 	if key.Rune() == 'd' {
 		if ui.askBeforeDelete {
@@ -92,56 +166,6 @@ func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
-// CreateUI creates the whole UI app
-func CreateUI(topDirPath string, screen tcell.Screen) *UI {
-	ui := &UI{
-		askBeforeDelete: true,
-	}
-	ui.topDirPath, _ = filepath.Abs(topDirPath)
-
-	ui.app = tview.NewApplication()
-	ui.app.SetScreen(screen)
-	ui.app.SetInputCapture(ui.KeyPressed)
-
-	ui.header = tview.NewTextView()
-	ui.header.SetText("gdu ~ Use arrow keys to navigate, press ? for help")
-	ui.header.SetTextColor(tcell.ColorBlack)
-	ui.header.SetBackgroundColor(tcell.ColorWhite)
-
-	ui.currentDirLabel = tview.NewTextView()
-
-	ui.dirContent = tview.NewTable().SetSelectable(true, false)
-	ui.dirContent.SetSelectedFunc(ui.ItemSelected)
-
-	ui.footer = tview.NewTextView()
-	ui.footer.SetTextColor(tcell.ColorBlack)
-	ui.footer.SetBackgroundColor(tcell.ColorWhite)
-	ui.footer.SetText("No items to diplay.")
-
-	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
-	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
-		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
-		AddItem(ui.dirContent, 2, 0, 1, 1, 0, 0, true).
-		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
-
-	ui.modal = tview.NewModal().SetText("Scanning...")
-
-	ui.pages = tview.NewPages().
-		AddPage("background", grid, true, true).
-		AddPage("modal", ui.modal, true, true)
-
-	ui.app.SetRoot(ui.pages, true)
-
-	return ui
-}
-
-// StartUILoop starts tview application
-func (ui *UI) StartUILoop() {
-	if err := ui.app.Run(); err != nil {
-		panic(err)
-	}
-}
-
 func (ui *UI) updateProgress(statusChannel chan CurrentProgress) {
 	for {
 		progress := <-statusChannel
@@ -151,41 +175,14 @@ func (ui *UI) updateProgress(statusChannel chan CurrentProgress) {
 		}
 
 		ui.app.QueueUpdateDraw(func() {
-			ui.modal.SetText("Current item: " + progress.currentItemName)
+			ui.progress.SetText("Current item: " + progress.currentItemName)
 		})
 
 		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-// ShowDir shows content of the selected dir
-func (ui *UI) ShowDir() {
-	ui.currentDirPath = ui.currentDir.path
-	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
-
-	ui.dirContent.Clear()
-
-	rowIndex := 0
-	if ui.currentDirPath != ui.topDirPath {
-		cell := tview.NewTableCell("           /..")
-		cell.SetReference(ui.currentDir.parent)
-		ui.dirContent.SetCell(0, 0, cell)
-		rowIndex++
-	}
-
-	for i, item := range ui.currentDir.files {
-		cell := tview.NewTableCell(formatRow(item))
-		cell.SetReference(ui.currentDir.files[i])
-		ui.dirContent.SetCell(rowIndex, 0, cell)
-		rowIndex++
-	}
-
-	ui.dirContent.Select(0, 0)
-	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
-}
-
-// ShowHelp shows help :)
-func (ui *UI) ShowHelp() {
+func (ui *UI) showHelp() {
 	text := tview.NewTextView().SetText(helpText).SetDynamicColors(true)
 	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	text.SetTitle("gdu help")

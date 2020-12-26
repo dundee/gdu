@@ -23,7 +23,7 @@ func TestProcessDir(t *testing.T) {
 
 	statusChannel := make(chan CurrentProgress)
 
-	dir := processDir("test_dir", statusChannel)
+	dir := ProcessDir("test_dir", statusChannel)
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.name)

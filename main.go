@@ -25,11 +25,11 @@ func main() {
 	go ui.updateProgress(statusChannel)
 
 	go func() {
-		ui.currentDir = processDir(topDir, statusChannel)
+		ui.currentDir = ProcessDir(topDir, statusChannel)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.ShowDir()
-			ui.pages.HidePage("modal")
+			ui.pages.HidePage("progress")
 		})
 	}()
 

@@ -32,7 +32,7 @@ func TestFooter(t *testing.T) {
 
 	ui.currentDir = &dir
 	ui.ShowDir()
-	ui.pages.HidePage("modal")
+	ui.pages.HidePage("progress")
 
 	ui.footer.Draw(simScreen)
 	simScreen.Show()
@@ -75,7 +75,7 @@ func TestHelp(t *testing.T) {
 	simScreen.SetSize(50, 50)
 
 	ui := CreateUI(".", simScreen)
-	ui.ShowHelp()
+	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
 
@@ -102,10 +102,10 @@ func TestDeleteDir(t *testing.T) {
 
 	statusChannel := make(chan CurrentProgress)
 	go ui.updateProgress(statusChannel)
-	ui.currentDir = processDir("test_dir", statusChannel)
+	ui.currentDir = ProcessDir("test_dir", statusChannel)
 
 	ui.ShowDir()
-	ui.pages.HidePage("modal")
+	ui.pages.HidePage("progress")
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -137,10 +137,10 @@ func TestShowConfirm(t *testing.T) {
 
 	statusChannel := make(chan CurrentProgress)
 	go ui.updateProgress(statusChannel)
-	ui.currentDir = processDir("test_dir", statusChannel)
+	ui.currentDir = ProcessDir("test_dir", statusChannel)
 
 	ui.ShowDir()
-	ui.pages.HidePage("modal")
+	ui.pages.HidePage("progress")
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)

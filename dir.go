@@ -15,7 +15,8 @@ type CurrentProgress struct {
 	done            bool
 }
 
-func processDir(path string, statusChannel chan CurrentProgress) *File {
+// ProcessDir analyzes given path
+func ProcessDir(path string, statusChannel chan CurrentProgress) *File {
 	var file *File
 	path, _ = filepath.Abs(path)
 
@@ -40,7 +41,7 @@ func processDir(path string, statusChannel chan CurrentProgress) *File {
 		if f.IsDir() {
 			dirCount++
 			go func(subDirsChan chan *File, f os.FileInfo) {
-				file = processDir(filepath.Join(path, f.Name()), statusChannel)
+				file = ProcessDir(filepath.Join(path, f.Name()), statusChannel)
 				file.parent = &dir
 				subDirsChan <- file
 			}(subDirsChan, f)
