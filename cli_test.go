@@ -2,15 +2,13 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFooter(t *testing.T) {
-	fin := CreateTestDir()
-	defer fin()
-
 	simScreen := tcell.NewSimulationScreen("UTF-8")
 	defer simScreen.Fini()
 	simScreen.Init()
@@ -88,5 +86,84 @@ func TestHelp(t *testing.T) {
 	text := []byte("selected")
 	for i, r := range cells {
 		assert.Equal(t, text[i], r.Bytes[0])
+	}
+}
+
+func TestDeleteDir(t *testing.T) {
+	fin := CreateTestDir()
+	defer fin()
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI("test_dir", simScreen)
+	ui.askBeforeDelete = false
+
+	statusChannel := make(chan CurrentProgress)
+	go ui.updateProgress(statusChannel)
+	ui.currentDir = processDir("test_dir", statusChannel)
+
+	ui.ShowDir()
+	ui.pages.HidePage("modal")
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, '?', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	assert.NoFileExists(t, "test_dir/nested/file2")
+}
+
+func TestShowConfirm(t *testing.T) {
+	fin := CreateTestDir()
+	defer fin()
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI("test_dir", simScreen)
+
+	statusChannel := make(chan CurrentProgress)
+	go ui.updateProgress(statusChannel)
+	ui.currentDir = processDir("test_dir", statusChannel)
+
+	ui.ShowDir()
+	ui.pages.HidePage("modal")
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, '?', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	assert.FileExists(t, "test_dir/nested/file2")
+}
+
+func printScreen(simScreen tcell.SimulationScreen) {
+	b, _, _ := simScreen.GetContents()
+
+	for i, r := range b {
+		println(i, string(r.Bytes))
 	}
 }
