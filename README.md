@@ -1,8 +1,8 @@
 # gdu
 
-[![Build Status](https://travis-ci.com/Dundee/gdu.svg?branch=master)](https://travis-ci.com/Dundee/gdu)
-[![codecov](https://codecov.io/gh/Dundee/gdu/branch/master/graph/badge.svg)](https://codecov.io/gh/Dundee/gdu)
-[![Go Report Card](https://goreportcard.com/badge/github.com/Dundee/gdu)](https://goreportcard.com/report/github.com/Dundee/gdu)
+[![Build Status](https://travis-ci.com/dundee/gdu.svg?branch=master)](https://travis-ci.com/dundee/gdu)
+[![codecov](https://codecov.io/gh/dundee/gdu/branch/master/graph/badge.svg)](https://codecov.io/gh/dundee/gdu)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dundee/gdu)](https://goreportcard.com/report/github.com/dundee/gdu)
 
 Extremely fast disk usage analyzer.
 Port of [ncdu](https://dev.yorhel.nl/ncdu) written in Go.
@@ -11,7 +11,7 @@ Port of [ncdu](https://dev.yorhel.nl/ncdu) written in Go.
 
 Go:
 
-    go get -u github.com/Dundee/gdu
+    go get -u github.com/dundee/gdu
 
 
 Arch Linux:
