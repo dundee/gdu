@@ -7,17 +7,6 @@ import (
 	"sort"
 )
 
-// File struct
-type File struct {
-	name      string
-	path      string
-	size      int64
-	itemCount int
-	isDir     bool
-	files     []*File
-	parent    *File
-}
-
 // CurrentProgress struct
 type CurrentProgress struct {
 	currentItemName string

@@ -28,6 +28,7 @@ type UI struct {
 	currentDir      *File
 	topDirPath      string
 	currentDirPath  string
+	askBeforeDelete bool
 }
 
 // ItemSelected is called when table row is selected
@@ -38,6 +39,33 @@ func (ui *UI) ItemSelected(row, column int) {
 	}
 
 	ui.currentDir = selectedDir
+	ui.ShowDir()
+}
+
+func (ui *UI) confirmDeletion() {
+	row, column := ui.dirContent.GetSelection()
+	selectedFile := ui.dirContent.GetCell(row, column).GetReference().(*File)
+	modal := tview.NewModal().
+		SetText("Are you sure you want to \"" + selectedFile.name + "\"").
+		AddButtons([]string{"yes", "no", "don't ask me again"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonIndex == 1 {
+				ui.pages.HidePage("confirm")
+				return
+			} else if buttonIndex == 2 {
+				ui.askBeforeDelete = false
+			}
+			ui.pages.HidePage("confirm")
+			ui.deleteSelected()
+		})
+	ui.pages.AddPage("confirm", modal, true, true)
+	ui.pages.ShowPage("confirm")
+}
+
+func (ui *UI) deleteSelected() {
+	row, column := ui.dirContent.GetSelection()
+	selectedFile := ui.dirContent.GetCell(row, column).GetReference().(*File)
+	ui.currentDir.RemoveFile(selectedFile)
 	ui.ShowDir()
 }
 
@@ -54,12 +82,21 @@ func (ui *UI) KeyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if key.Rune() == '?' {
 		ui.ShowHelp()
 	}
+	if key.Rune() == 'd' {
+		if ui.askBeforeDelete {
+			ui.confirmDeletion()
+		} else {
+			ui.deleteSelected()
+		}
+	}
 	return key
 }
 
 // CreateUI creates the whole UI app
 func CreateUI(topDirPath string, screen tcell.Screen) *UI {
-	ui := &UI{}
+	ui := &UI{
+		askBeforeDelete: true,
+	}
 	ui.topDirPath, _ = filepath.Abs(topDirPath)
 
 	ui.app = tview.NewApplication()
@@ -73,7 +110,7 @@ func CreateUI(topDirPath string, screen tcell.Screen) *UI {
 
 	ui.currentDirLabel = tview.NewTextView()
 
-	ui.dirContent = tview.NewTable().SetSelectable(true, true)
+	ui.dirContent = tview.NewTable().SetSelectable(true, false)
 	ui.dirContent.SetSelectedFunc(ui.ItemSelected)
 
 	ui.footer = tview.NewTextView()
@@ -143,6 +180,7 @@ func (ui *UI) ShowDir() {
 		rowIndex++
 	}
 
+	ui.dirContent.Select(0, 0)
 	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
 }
 

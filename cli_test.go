@@ -8,7 +8,8 @@ import (
 )
 
 func TestFooter(t *testing.T) {
-	CreateTestDir()
+	fin := CreateTestDir()
+	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
 	defer simScreen.Fini()
