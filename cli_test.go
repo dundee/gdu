@@ -1,6 +1,7 @@
 package main
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ func TestFooter(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(15, 15)
 
-	ui := CreateUI(".", simScreen)
+	ui := CreateUI(simScreen)
 
 	dir := File{
 		name:      "xxx",
@@ -31,7 +32,7 @@ func TestFooter(t *testing.T) {
 	dir.files = []*File{&file}
 
 	ui.currentDir = &dir
-	ui.ShowDir()
+	ui.showDir()
 	ui.pages.HidePage("progress")
 
 	ui.footer.Draw(simScreen)
@@ -56,7 +57,7 @@ func TestUpdateProgress(t *testing.T) {
 
 	statusChannel := make(chan CurrentProgress)
 
-	ui := CreateUI(".", simScreen)
+	ui := CreateUI(simScreen)
 	go func() {
 		ui.updateProgress(statusChannel)
 	}()
@@ -74,7 +75,7 @@ func TestHelp(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(".", simScreen)
+	ui := CreateUI(simScreen)
 	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
@@ -97,15 +98,10 @@ func TestDeleteDir(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI("test_dir", simScreen)
+	ui := CreateUI(simScreen)
 	ui.askBeforeDelete = false
 
-	statusChannel := make(chan CurrentProgress)
-	go ui.updateProgress(statusChannel)
-	ui.currentDir = ProcessDir("test_dir", statusChannel)
-
-	ui.ShowDir()
-	ui.pages.HidePage("progress")
+	ui.AnalyzePath("test_dir")
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -133,14 +129,9 @@ func TestShowConfirm(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI("test_dir", simScreen)
+	ui := CreateUI(simScreen)
 
-	statusChannel := make(chan CurrentProgress)
-	go ui.updateProgress(statusChannel)
-	ui.currentDir = ProcessDir("test_dir", statusChannel)
-
-	ui.ShowDir()
-	ui.pages.HidePage("progress")
+	ui.AnalyzePath("test_dir")
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -158,6 +149,29 @@ func TestShowConfirm(t *testing.T) {
 	ui.StartUILoop()
 
 	assert.FileExists(t, "test_dir/nested/file2")
+}
+
+func TestShowDevices(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		return
+	}
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	defer simScreen.Fini()
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(simScreen)
+	ui.ListDevices()
+	ui.table.Draw(simScreen)
+	simScreen.Show()
+
+	b, _, _ := simScreen.GetContents()
+
+	text := []byte("Device name")
+	for i, r := range b[0:11] {
+		assert.Equal(t, text[i], r.Bytes[0])
+	}
 }
 
 func printScreen(simScreen tcell.SimulationScreen) {

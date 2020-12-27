@@ -24,7 +24,7 @@ type UI struct {
 	pages           *tview.Pages
 	progress        *tview.Modal
 	help            *tview.Flex
-	dirContent      *tview.Table
+	table           *tview.Table
 	currentDir      *File
 	topDirPath      string
 	currentDirPath  string
@@ -32,11 +32,10 @@ type UI struct {
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(topDirPath string, screen tcell.Screen) *UI {
+func CreateUI(screen tcell.Screen) *UI {
 	ui := &UI{
 		askBeforeDelete: true,
 	}
-	ui.topDirPath, _ = filepath.Abs(topDirPath)
 
 	ui.app = tview.NewApplication()
 	ui.app.SetScreen(screen)
@@ -49,8 +48,7 @@ func CreateUI(topDirPath string, screen tcell.Screen) *UI {
 
 	ui.currentDirLabel = tview.NewTextView()
 
-	ui.dirContent = tview.NewTable().SetSelectable(true, false)
-	ui.dirContent.SetSelectedFunc(ui.itemSelected)
+	ui.table = tview.NewTable().SetSelectable(true, false)
 
 	ui.footer = tview.NewTextView()
 	ui.footer.SetTextColor(tcell.ColorBlack)
@@ -60,43 +58,86 @@ func CreateUI(topDirPath string, screen tcell.Screen) *UI {
 	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
 	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
 		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
-		AddItem(ui.dirContent, 2, 0, 1, 1, 0, 0, true).
+		AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
 		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
 
-	ui.progress = tview.NewModal().SetText("Scanning...")
-
 	ui.pages = tview.NewPages().
-		AddPage("background", grid, true, true).
-		AddPage("progress", ui.progress, true, true)
+		AddPage("background", grid, true, true)
 
 	ui.app.SetRoot(ui.pages, true)
 
 	return ui
 }
 
-// ShowDir shows content of the selected dir
-func (ui *UI) ShowDir() {
+// ListDevices lists mounted devices and shows their disk usage
+func (ui *UI) ListDevices() {
+	devices := GetDevicesInfo()
+
+	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
+	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
+	ui.table.SetCell(0, 2, tview.NewTableCell("Used").SetSelectable(false))
+	ui.table.SetCell(0, 3, tview.NewTableCell("Used part").SetSelectable(false))
+	ui.table.SetCell(0, 4, tview.NewTableCell("Free").SetSelectable(false))
+	ui.table.SetCell(0, 5, tview.NewTableCell("Mount point").SetSelectable(false))
+
+	for i, device := range devices {
+		ui.table.SetCell(i+1, 0, tview.NewTableCell(device.name).SetReference(devices[i]))
+		ui.table.SetCell(i+1, 1, tview.NewTableCell(formatSize(device.size)))
+		ui.table.SetCell(i+1, 2, tview.NewTableCell(formatSize(device.size-device.free)))
+		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device)))
+		ui.table.SetCell(i+1, 4, tview.NewTableCell(formatSize(device.free)))
+		ui.table.SetCell(i+1, 5, tview.NewTableCell(device.mountPoint))
+	}
+
+	ui.table.Select(1, 0)
+	ui.footer.SetText("")
+	ui.table.SetSelectedFunc(ui.deviceItemSelected)
+}
+
+// AnalyzePath analyzes recursively disk usage in given path
+func (ui *UI) AnalyzePath(path string) {
+	ui.topDirPath, _ = filepath.Abs(path)
+
+	ui.progress = tview.NewModal().SetText("Scanning...")
+	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.table.SetSelectedFunc(ui.fileItemSelected)
+
+	statusChannel := make(chan CurrentProgress)
+	go ui.updateProgress(statusChannel)
+
+	go func() {
+		ui.currentDir = ProcessDir(ui.topDirPath, statusChannel)
+
+		ui.app.QueueUpdateDraw(func() {
+			ui.showDir()
+			ui.pages.HidePage("progress")
+		})
+	}()
+}
+
+// showDir shows content of the selected dir
+func (ui *UI) showDir() {
 	ui.currentDirPath = ui.currentDir.path
 	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
 
-	ui.dirContent.Clear()
+	ui.table.Clear()
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
 		cell := tview.NewTableCell("           /..")
 		cell.SetReference(ui.currentDir.parent)
-		ui.dirContent.SetCell(0, 0, cell)
+		ui.table.SetCell(0, 0, cell)
 		rowIndex++
 	}
 
 	for i, item := range ui.currentDir.files {
-		cell := tview.NewTableCell(formatRow(item))
+		cell := tview.NewTableCell(formatFileRow(item))
 		cell.SetReference(ui.currentDir.files[i])
-		ui.dirContent.SetCell(rowIndex, 0, cell)
+		ui.table.SetCell(rowIndex, 0, cell)
 		rowIndex++
 	}
 
-	ui.dirContent.Select(0, 0)
+	ui.table.Select(0, 0)
 	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
 }
 
@@ -107,19 +148,24 @@ func (ui *UI) StartUILoop() {
 	}
 }
 
-func (ui *UI) itemSelected(row, column int) {
-	selectedDir := ui.dirContent.GetCell(row, column).GetReference().(*File)
+func (ui *UI) fileItemSelected(row, column int) {
+	selectedDir := ui.table.GetCell(row, column).GetReference().(*File)
 	if !selectedDir.isDir {
 		return
 	}
 
 	ui.currentDir = selectedDir
-	ui.ShowDir()
+	ui.showDir()
+}
+
+func (ui *UI) deviceItemSelected(row, column int) {
+	selectedDevice := ui.table.GetCell(row, column).GetReference().(*Device)
+	ui.AnalyzePath(selectedDevice.mountPoint)
 }
 
 func (ui *UI) confirmDeletion() {
-	row, column := ui.dirContent.GetSelection()
-	selectedFile := ui.dirContent.GetCell(row, column).GetReference().(*File)
+	row, column := ui.table.GetSelection()
+	selectedFile := ui.table.GetCell(row, column).GetReference().(*File)
 	modal := tview.NewModal().
 		SetText("Are you sure you want to \"" + selectedFile.name + "\"").
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
@@ -138,10 +184,10 @@ func (ui *UI) confirmDeletion() {
 }
 
 func (ui *UI) deleteSelected() {
-	row, column := ui.dirContent.GetSelection()
-	selectedFile := ui.dirContent.GetCell(row, column).GetReference().(*File)
+	row, column := ui.table.GetSelection()
+	selectedFile := ui.table.GetCell(row, column).GetReference().(*File)
 	ui.currentDir.RemoveFile(selectedFile)
-	ui.ShowDir()
+	ui.showDir()
 }
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
@@ -212,7 +258,7 @@ func formatSize(size int64) string {
 	return fmt.Sprintf("%d B", size)
 }
 
-func formatRow(item *File) string {
+func formatFileRow(item *File) string {
 	part := int(float64(item.size) / float64(item.parent.size) * 10.0)
 	row := fmt.Sprintf("%10s", formatSize(item.size))
 	row += " ["
@@ -229,5 +275,19 @@ func formatRow(item *File) string {
 		row += "/"
 	}
 	row += item.name
+	return row
+}
+
+func getDeviceUsagePart(item *Device) string {
+	part := int(float64(item.size-item.free) / float64(item.size) * 10.0)
+	row := "["
+	for i := 0; i < 10; i++ {
+		if part > i {
+			row += "#"
+		} else {
+			row += " "
+		}
+	}
+	row += "]"
 	return row
 }

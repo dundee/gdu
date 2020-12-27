@@ -5,7 +5,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/dundee/gdu)](https://goreportcard.com/report/github.com/dundee/gdu)
 
 Extremely fast disk usage analyzer.
-Port of [ncdu](https://dev.yorhel.nl/ncdu) written in Go.
+Port of [ncdu](https://dev.yorhel.nl/ncdu) written in Go with additional abilities of `df`.
+
+<img src="/assets/demo.gif" width="100%" />
 
 ## Installation
 
@@ -21,7 +23,8 @@ Arch Linux:
 
 ## Usage
 
-    gdu some_dir_to_analyze
+    gdu                      # Show all mounted disks
+    gdu some_dir_to_analyze  # analyze given dir
 
 
 ## Running tests

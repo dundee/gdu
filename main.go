@@ -2,36 +2,29 @@ package main
 
 import (
 	"os"
+	"runtime"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 func main() {
-	var topDir string
-	if len(os.Args) > 1 {
-		topDir = os.Args[1]
-	} else {
-		topDir = "."
-	}
-
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		panic(err)
 	}
 	screen.Init()
 
-	ui := CreateUI(topDir, screen)
-	statusChannel := make(chan CurrentProgress)
-	go ui.updateProgress(statusChannel)
+	ui := CreateUI(screen)
 
-	go func() {
-		ui.currentDir = ProcessDir(topDir, statusChannel)
-
-		ui.app.QueueUpdateDraw(func() {
-			ui.ShowDir()
-			ui.pages.HidePage("progress")
-		})
-	}()
+	if len(os.Args) > 1 {
+		ui.AnalyzePath(os.Args[1])
+	} else {
+		if runtime.GOOS == "linux" {
+			ui.ListDevices()
+		} else {
+			ui.AnalyzePath(".")
+		}
+	}
 
 	ui.StartUILoop()
 }
