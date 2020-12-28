@@ -180,7 +180,6 @@ func (ui *UI) confirmDeletion() {
 			ui.deleteSelected()
 		})
 	ui.pages.AddPage("confirm", modal, true, true)
-	ui.pages.ShowPage("confirm")
 }
 
 func (ui *UI) deleteSelected() {
@@ -193,6 +192,7 @@ func (ui *UI) deleteSelected() {
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if (key.Key() == tcell.KeyEsc || key.Rune() == 'q') && ui.pages.HasPage("help") {
 		ui.pages.RemovePage("help")
+		ui.app.SetFocus(ui.table)
 		return key
 	}
 	if key.Rune() == 'q' {
