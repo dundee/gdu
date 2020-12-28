@@ -22,10 +22,11 @@ type UI struct {
 	footer          *tview.TextView
 	currentDirLabel *tview.TextView
 	pages           *tview.Pages
-	progress        *tview.Modal
+	progress        *tview.TextView
 	help            *tview.Flex
 	table           *tview.Table
 	currentDir      *File
+	currentProgress *CurrentProgress
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
@@ -98,8 +99,19 @@ func (ui *UI) ListDevices() {
 func (ui *UI) AnalyzePath(path string) {
 	ui.topDirPath, _ = filepath.Abs(path)
 
-	ui.progress = tview.NewModal().SetText("Scanning...")
-	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.progress = tview.NewTextView().SetText("Scanning...")
+	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
+	ui.progress.SetTitle("Scanning...")
+
+	flex := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 10, 1, false).
+			AddItem(ui.progress, 8, 1, false).
+			AddItem(nil, 10, 1, false), 0, 50, false).
+		AddItem(nil, 0, 1, false)
+
+	ui.pages.AddPage("progress", flex, true, true)
 	ui.table.SetSelectedFunc(ui.fileItemSelected)
 
 	statusChannel := make(chan CurrentProgress)
@@ -213,6 +225,11 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) updateProgress(statusChannel chan CurrentProgress) {
+	ui.currentProgress = &CurrentProgress{
+		itemCount: 0,
+		totalSize: int64(0),
+	}
+
 	for {
 		progress := <-statusChannel
 
@@ -220,8 +237,21 @@ func (ui *UI) updateProgress(statusChannel chan CurrentProgress) {
 			return
 		}
 
+		if progress.itemCount > ui.currentProgress.itemCount {
+			ui.currentProgress.itemCount = progress.itemCount
+		}
+		if progress.totalSize > ui.currentProgress.totalSize {
+			ui.currentProgress.totalSize = progress.totalSize
+		}
+
 		ui.app.QueueUpdateDraw(func() {
-			ui.progress.SetText("Current item: " + progress.currentItemName)
+			ui.progress.SetText("Total items: " +
+				fmt.Sprint(ui.currentProgress.itemCount) +
+				" size: " +
+				"size: " +
+				formatSize(ui.currentProgress.totalSize) +
+				"\nCurrent item: " +
+				progress.currentItemName)
 		})
 
 		time.Sleep(100 * time.Millisecond)
