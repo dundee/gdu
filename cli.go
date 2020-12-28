@@ -150,6 +150,7 @@ func (ui *UI) showDir() {
 	}
 
 	ui.table.Select(0, 0)
+	ui.table.ScrollToBeginning()
 	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
 }
 
