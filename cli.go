@@ -167,7 +167,7 @@ func (ui *UI) confirmDeletion() {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(*File)
 	modal := tview.NewModal().
-		SetText("Are you sure you want to \"" + selectedFile.name + "\"").
+		SetText("Are you sure you want to delete \"" + selectedFile.name + "\"").
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonIndex == 1 {
