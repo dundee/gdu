@@ -6,7 +6,7 @@
 
 **Warning: development of gdu is still in alpha stage.**
 
-Disk usage analyzer written in Go.
+Pretty fast disk usage analyzer written in Go.
 Inspired by [ncdu](https://dev.yorhel.nl/ncdu), [godu](https://github.com/viktomas/godu) and [df](https://www.gnu.org/software/coreutils/manual/html_node/df-invocation.html).
 
 <img src="/assets/demo.gif" width="100%" />
@@ -25,8 +25,9 @@ Arch Linux:
 
 ## Usage
 
-    gdu                      # Show all mounted disks
-    gdu some_dir_to_analyze  # analyze given dir
+    gdu                                 # show all mounted disks
+    gdu some_dir_to_analyze             # analyze given dir
+    gdu -log-file=./gdu.log some_dir    # write errors to log file
 
 
 ## Running tests
