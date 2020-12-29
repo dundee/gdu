@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -31,12 +32,12 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 	var err error
 	path, err = filepath.Abs(path)
 	if err != nil {
-		panic(err)
+		log.Print(err.Error())
 	}
 
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		panic(err)
+		log.Print(err.Error())
 	}
 
 	dir := File{
