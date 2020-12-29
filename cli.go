@@ -5,6 +5,7 @@ import (
 	"math"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -124,7 +125,7 @@ func (ui *UI) AnalyzePath(path string) {
 	go ui.updateProgress(progress)
 
 	go func() {
-		ui.currentDir = ProcessDir(ui.topDirPath, progress)
+		ui.currentDir = ProcessDir(ui.topDirPath, progress, ui.ShouldBeIgnored)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()
@@ -170,6 +171,14 @@ func (ui *UI) StartUILoop() {
 	if err := ui.app.Run(); err != nil {
 		panic(err)
 	}
+}
+
+// ShouldBeIgnored returns true if given path should be ignored
+func (ui *UI) ShouldBeIgnored(path string) bool {
+	if strings.HasPrefix(path, "/proc") || strings.HasPrefix(path, "/dev") || strings.HasPrefix(path, "/sys") || strings.HasPrefix(path, "/run") {
+		return true
+	}
+	return false
 }
 
 func (ui *UI) fileItemSelected(row, column int) {

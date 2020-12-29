@@ -22,7 +22,7 @@ func TestProcessDir(t *testing.T) {
 	fin := CreateTestDir()
 	defer fin()
 
-	dir := ProcessDir("test_dir", &CurrentProgress{mutex: &sync.Mutex{}})
+	dir := ProcessDir("test_dir", &CurrentProgress{mutex: &sync.Mutex{}}, func(_ string) bool { return false })
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.name)

@@ -17,17 +17,20 @@ type CurrentProgress struct {
 	done            bool
 }
 
+// ShouldBeIgnored whether path should be ignored
+type ShouldBeIgnored func(path string) bool
+
 // ProcessDir analyzes given path
-func ProcessDir(path string, progress *CurrentProgress) *File {
+func ProcessDir(path string, progress *CurrentProgress, ignore ShouldBeIgnored) *File {
 	concurrencyLimitChannel := make(chan bool, 2*runtime.NumCPU())
 	var wait sync.WaitGroup
-	dir := processDir(path, progress, concurrencyLimitChannel, &wait)
+	dir := processDir(path, progress, concurrencyLimitChannel, &wait, ignore)
 	wait.Wait()
 	dir.UpdateStats()
 	return dir
 }
 
-func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel chan bool, wait *sync.WaitGroup) *File {
+func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel chan bool, wait *sync.WaitGroup, ignore ShouldBeIgnored) *File {
 	var file *File
 	var err error
 	path, err = filepath.Abs(path)
@@ -54,11 +57,15 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 	for _, f := range files {
 		entryPath := filepath.Join(path, f.Name())
 
+		if ignore(entryPath) {
+			continue
+		}
+
 		if f.IsDir() {
 			wait.Add(1)
 			go func() {
 				concurrencyLimitChannel <- true
-				file = processDir(entryPath, progress, concurrencyLimitChannel, wait)
+				file = processDir(entryPath, progress, concurrencyLimitChannel, wait, ignore)
 				file.parent = &dir
 				mutex.Lock()
 				dir.files = append(dir.files, file)
