@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"sort"
+	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -26,7 +28,6 @@ type UI struct {
 	help            *tview.Flex
 	table           *tview.Table
 	currentDir      *File
-	currentProgress *CurrentProgress
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
@@ -114,11 +115,16 @@ func (ui *UI) AnalyzePath(path string) {
 	ui.pages.AddPage("progress", flex, true, true)
 	ui.table.SetSelectedFunc(ui.fileItemSelected)
 
-	statusChannel := make(chan CurrentProgress)
-	go ui.updateProgress(statusChannel)
+	progress := &CurrentProgress{
+		mutex:     &sync.Mutex{},
+		done:      false,
+		itemCount: 0,
+		totalSize: int64(0),
+	}
+	go ui.updateProgress(progress)
 
 	go func() {
-		ui.currentDir = ProcessDir(ui.topDirPath, statusChannel)
+		ui.currentDir = ProcessDir(ui.topDirPath, progress)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()
@@ -142,6 +148,10 @@ func (ui *UI) showDir() {
 		rowIndex++
 	}
 
+	sort.Slice(ui.currentDir.files, func(i, j int) bool {
+		return ui.currentDir.files[i].size > ui.currentDir.files[j].size
+	})
+
 	for i, item := range ui.currentDir.files {
 		cell := tview.NewTableCell(formatFileRow(item))
 		cell.SetReference(ui.currentDir.files[i])
@@ -149,9 +159,10 @@ func (ui *UI) showDir() {
 		rowIndex++
 	}
 
+	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
-	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
+	ui.app.SetFocus(ui.table)
 }
 
 // StartUILoop starts tview application
@@ -225,35 +236,24 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
-func (ui *UI) updateProgress(statusChannel chan CurrentProgress) {
-	ui.currentProgress = &CurrentProgress{
-		itemCount: 0,
-		totalSize: int64(0),
-	}
-
+func (ui *UI) updateProgress(progress *CurrentProgress) {
 	for {
-		progress := <-statusChannel
+		progress.mutex.Lock()
 
 		if progress.done {
 			return
 		}
 
-		if progress.itemCount > ui.currentProgress.itemCount {
-			ui.currentProgress.itemCount = progress.itemCount
-		}
-		if progress.totalSize > ui.currentProgress.totalSize {
-			ui.currentProgress.totalSize = progress.totalSize
-		}
-
 		ui.app.QueueUpdateDraw(func() {
 			ui.progress.SetText("Total items: " +
-				fmt.Sprint(ui.currentProgress.itemCount) +
+				fmt.Sprint(progress.itemCount) +
 				" size: " +
 				"size: " +
-				formatSize(ui.currentProgress.totalSize) +
+				formatSize(progress.totalSize) +
 				"\nCurrent item: " +
 				progress.currentItemName)
 		})
+		progress.mutex.Unlock()
 
 		time.Sleep(100 * time.Millisecond)
 	}

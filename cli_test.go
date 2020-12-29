@@ -2,6 +2,7 @@ package main
 
 import (
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -55,17 +56,11 @@ func TestUpdateProgress(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(15, 15)
 
-	statusChannel := make(chan CurrentProgress)
+	progress := &CurrentProgress{mutex: &sync.Mutex{}, done: true}
 
 	ui := CreateUI(simScreen)
-	go func() {
-		ui.updateProgress(statusChannel)
-	}()
-
-	statusChannel <- CurrentProgress{
-		currentItemName: "xxx",
-		done:            true,
-	}
+	progress.currentItemName = "xxx"
+	ui.updateProgress(progress)
 	assert.True(t, true)
 }
 

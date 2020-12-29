@@ -2,13 +2,14 @@ package main
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
-	"sort"
+	"runtime"
+	"sync"
 )
 
 // CurrentProgress struct
 type CurrentProgress struct {
+	mutex           *sync.Mutex
 	currentItemName string
 	itemCount       int
 	totalSize       int64
@@ -16,71 +17,75 @@ type CurrentProgress struct {
 }
 
 // ProcessDir analyzes given path
-func ProcessDir(path string, statusChannel chan CurrentProgress) *File {
+func ProcessDir(path string, progress *CurrentProgress) *File {
+	concurrencyLimitChannel := make(chan bool, 2*runtime.NumCPU())
+	var wait sync.WaitGroup
+	dir := processDir(path, progress, concurrencyLimitChannel, &wait)
+	wait.Wait()
+	dir.UpdateStats()
+	return dir
+}
+
+func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel chan bool, wait *sync.WaitGroup) *File {
 	var file *File
-	path, _ = filepath.Abs(path)
+	var err error
+	path, err = filepath.Abs(path)
+	if err != nil {
+		panic(err)
+	}
 
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		return &File{}
+		panic(err)
 	}
-
-	subDirsChan := make(chan *File, len(files))
 
 	dir := File{
 		name:      filepath.Base(path),
 		path:      path,
 		isDir:     true,
 		itemCount: 1,
-		files:     make([]*File, len(files)),
+		files:     make([]*File, 0, len(files)),
 	}
-	dirCount := 0
 
-	index := 0
+	var mutex sync.Mutex
+	var totalSize int64
+
 	for _, f := range files {
+		entryPath := filepath.Join(path, f.Name())
+
 		if f.IsDir() {
-			dirCount++
-			go func(subDirsChan chan *File, f os.FileInfo) {
-				file = ProcessDir(filepath.Join(path, f.Name()), statusChannel)
+			wait.Add(1)
+			go func() {
+				concurrencyLimitChannel <- true
+				file = processDir(entryPath, progress, concurrencyLimitChannel, wait)
 				file.parent = &dir
-				subDirsChan <- file
-			}(subDirsChan, f)
+				mutex.Lock()
+				dir.files = append(dir.files, file)
+				mutex.Unlock()
+				<-concurrencyLimitChannel
+				wait.Done()
+			}()
 		} else {
 			file = &File{
 				name:      f.Name(),
-				path:      filepath.Join(path, f.Name()),
+				path:      entryPath,
 				size:      f.Size(),
 				itemCount: 1,
 				parent:    &dir,
 			}
+			totalSize += f.Size()
 
-			dir.size += file.size
-			dir.itemCount += file.itemCount
-			dir.files[index] = file
-			index++
+			mutex.Lock()
+			dir.files = append(dir.files, file)
+			mutex.Unlock()
 		}
 	}
 
-	filesCount := len(files) - dirCount
-	for i := 0; i < dirCount; i++ {
-		file = <-subDirsChan
-		dir.size += file.size
-		dir.itemCount += file.itemCount
-		dir.files[filesCount+i] = file
-
-		select {
-		case statusChannel <- CurrentProgress{
-			currentItemName: file.path,
-			itemCount:       file.itemCount,
-			totalSize:       file.size,
-		}:
-		default:
-		}
-	}
-
-	sort.Slice(dir.files, func(i, j int) bool {
-		return dir.files[i].size > dir.files[j].size
-	})
+	progress.mutex.Lock()
+	progress.currentItemName = path
+	progress.itemCount += len(files)
+	progress.totalSize += totalSize
+	progress.mutex.Unlock()
 
 	return &dir
 }

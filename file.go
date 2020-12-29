@@ -1,6 +1,8 @@
 package main
 
-import "os"
+import (
+	"os"
+)
 
 // File struct
 type File struct {
@@ -54,4 +56,20 @@ func (f *File) RemoveFile(file *File) {
 		}
 		cur = cur.parent
 	}
+}
+
+// UpdateStats recursively updates size and item count
+func (f *File) UpdateStats() {
+	if !f.isDir {
+		return
+	}
+	var totalSize int64
+	var itemCount int
+	for _, entry := range f.files {
+		entry.UpdateStats()
+		totalSize += entry.size
+		itemCount += entry.itemCount
+	}
+	f.itemCount = itemCount + 1
+	f.size = totalSize
 }
