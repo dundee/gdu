@@ -6,8 +6,8 @@
 
 **Warning: development of gdu is still in alpha stage.**
 
-Extremely fast disk usage analyzer written in Go.
-Inspired by [ncdu](https://dev.yorhel.nl/ncdu) with additional abilities of `df`.
+Disk usage analyzer written in Go.
+Inspired by [ncdu](https://dev.yorhel.nl/ncdu), [godu](https://github.com/viktomas/godu) and [df](https://www.gnu.org/software/coreutils/manual/html_node/df-invocation.html).
 
 <img src="/assets/demo.gif" width="100%" />
 
