@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -15,6 +16,7 @@ var AppVersion = "development"
 
 func main() {
 	logFile := flag.String("log-file", "/dev/null", "Path to a logfile")
+	ignorePath := flag.String("ignore", "/proc,/dev,/sys,/run", "Absolute paths to ignore (separated by comma)")
 	showVersion := flag.Bool("v", false, "Prints version")
 	flag.Parse()
 
@@ -38,6 +40,7 @@ func main() {
 	screen.Init()
 
 	ui := CreateUI(screen)
+	ui.SetIgnorePaths(strings.Split(*ignorePath, ","))
 
 	args := flag.Args()
 

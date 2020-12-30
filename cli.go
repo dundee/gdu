@@ -34,6 +34,7 @@ type UI struct {
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
+	ignorePaths     []string
 }
 
 // CreateUI creates the whole UI app
@@ -136,7 +137,28 @@ func (ui *UI) AnalyzePath(path string) {
 	}()
 }
 
-// showDir shows content of the selected dir
+// StartUILoop starts tview application
+func (ui *UI) StartUILoop() {
+	if err := ui.app.Run(); err != nil {
+		panic(err)
+	}
+}
+
+// SetIgnorePaths sets paths to ignore
+func (ui *UI) SetIgnorePaths(paths []string) {
+	ui.ignorePaths = paths
+}
+
+// ShouldBeIgnored returns true if given path should be ignored
+func (ui *UI) ShouldBeIgnored(path string) bool {
+	for _, ignorePath := range ui.ignorePaths {
+		if strings.HasPrefix(path, ignorePath) {
+			return true
+		}
+	}
+	return false
+}
+
 func (ui *UI) showDir() {
 	ui.currentDirPath = ui.currentDir.path
 	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
@@ -166,21 +188,6 @@ func (ui *UI) showDir() {
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
 	ui.app.SetFocus(ui.table)
-}
-
-// StartUILoop starts tview application
-func (ui *UI) StartUILoop() {
-	if err := ui.app.Run(); err != nil {
-		panic(err)
-	}
-}
-
-// ShouldBeIgnored returns true if given path should be ignored
-func (ui *UI) ShouldBeIgnored(path string) bool {
-	if strings.HasPrefix(path, "/proc") || strings.HasPrefix(path, "/dev") || strings.HasPrefix(path, "/sys") || strings.HasPrefix(path, "/run") {
-		return true
-	}
-	return false
 }
 
 func (ui *UI) fileItemSelected(row, column int) {

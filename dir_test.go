@@ -44,3 +44,10 @@ func TestProcessDir(t *testing.T) {
 	// test parent link
 	assert.Equal(t, "test_dir", dir.files[0].files[1].files[0].parent.parent.parent.name)
 }
+
+func TestIgnoreDir(t *testing.T) {
+	dir := ProcessDir("/proc", &CurrentProgress{mutex: &sync.Mutex{}}, func(_ string) bool { return true })
+
+	assert.Equal(t, "proc", dir.name)
+	assert.Equal(t, 1, dir.itemCount)
+}

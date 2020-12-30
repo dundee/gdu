@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"runtime"
 	"sync"
 	"testing"
@@ -215,4 +216,33 @@ func TestKeys(t *testing.T) {
 	ui.StartUILoop()
 
 	assert.NoFileExists(t, "test_dir/nested/subnested/file")
+}
+
+func TestSetIgnorePaths(t *testing.T) {
+	fin := CreateTestDir()
+	defer fin()
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(simScreen)
+
+	path, _ := filepath.Abs("test_dir/nested/subnested")
+	ui.SetIgnorePaths([]string{path})
+
+	ui.AnalyzePath("test_dir")
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	dir := ui.currentDir
+
+	assert.Equal(t, 3, dir.itemCount)
+
 }

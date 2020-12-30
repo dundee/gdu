@@ -26,6 +26,7 @@ Arch Linux:
     gdu                                 # show all mounted disks
     gdu some_dir_to_analyze             # analyze given dir
     gdu -log-file=./gdu.log some_dir    # write errors to log file
+    gdu -ignore=/sys,/proc /            # ignore some paths
 
 
 ## Running tests
