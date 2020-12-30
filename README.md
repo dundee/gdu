@@ -31,3 +31,15 @@ Arch Linux:
 ## Running tests
 
     make test
+
+
+## Benchmark
+
+Scanning 80G of data on 500 GB SSD.
+
+Tool       | Without cache | With cache
+ ---       | ---           | --- 
+gdu /      | 6.5s          | 2.5s
+godu /     | 8.5s          | 3s
+du -hs /   | 44s           | 4.5s
+ncdu /     | 54s           | 12s
