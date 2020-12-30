@@ -1,6 +1,6 @@
 // +build linux,amd64
 
-package main
+package analyze
 
 import (
 	"bufio"
@@ -34,10 +34,10 @@ func GetDevicesInfo() []*Device {
 			syscall.Statfs(parts[1], info)
 
 			device := &Device{
-				name:       parts[0],
-				mountPoint: parts[1],
-				size:       info.Bsize * int64(info.Blocks),
-				free:       info.Bsize * int64(info.Bavail),
+				Name:       parts[0],
+				MountPoint: parts[1],
+				Size:       info.Bsize * int64(info.Blocks),
+				Free:       info.Bsize * int64(info.Bavail),
 			}
 			devices = append(devices, device)
 		}

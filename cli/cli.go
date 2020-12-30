@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dundee/gdu/analyze"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -30,7 +31,7 @@ type UI struct {
 	progress        *tview.TextView
 	help            *tview.Flex
 	table           *tview.Table
-	currentDir      *File
+	currentDir      *analyze.File
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
@@ -77,7 +78,7 @@ func CreateUI(screen tcell.Screen) *UI {
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices() {
-	devices := GetDevicesInfo()
+	devices := analyze.GetDevicesInfo()
 
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
 	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
@@ -87,12 +88,12 @@ func (ui *UI) ListDevices() {
 	ui.table.SetCell(0, 5, tview.NewTableCell("Mount point").SetSelectable(false))
 
 	for i, device := range devices {
-		ui.table.SetCell(i+1, 0, tview.NewTableCell(device.name).SetReference(devices[i]))
-		ui.table.SetCell(i+1, 1, tview.NewTableCell(formatSize(device.size)))
-		ui.table.SetCell(i+1, 2, tview.NewTableCell(formatSize(device.size-device.free)))
+		ui.table.SetCell(i+1, 0, tview.NewTableCell(device.Name).SetReference(devices[i]))
+		ui.table.SetCell(i+1, 1, tview.NewTableCell(formatSize(device.Size)))
+		ui.table.SetCell(i+1, 2, tview.NewTableCell(formatSize(device.Size-device.Free)))
 		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device)))
-		ui.table.SetCell(i+1, 4, tview.NewTableCell(formatSize(device.free)))
-		ui.table.SetCell(i+1, 5, tview.NewTableCell(device.mountPoint))
+		ui.table.SetCell(i+1, 4, tview.NewTableCell(formatSize(device.Free)))
+		ui.table.SetCell(i+1, 5, tview.NewTableCell(device.MountPoint))
 	}
 
 	ui.table.Select(1, 0)
@@ -119,16 +120,16 @@ func (ui *UI) AnalyzePath(path string) {
 	ui.pages.AddPage("progress", flex, true, true)
 	ui.table.SetSelectedFunc(ui.fileItemSelected)
 
-	progress := &CurrentProgress{
-		mutex:     &sync.Mutex{},
-		done:      false,
-		itemCount: 0,
-		totalSize: int64(0),
+	progress := &analyze.CurrentProgress{
+		Mutex:     &sync.Mutex{},
+		Done:      false,
+		ItemCount: 0,
+		TotalSize: int64(0),
 	}
 	go ui.updateProgress(progress)
 
 	go func() {
-		ui.currentDir = ProcessDir(ui.topDirPath, progress, ui.ShouldBeIgnored)
+		ui.currentDir = analyze.ProcessDir(ui.topDirPath, progress, ui.ShouldBeIgnored)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()
@@ -160,7 +161,7 @@ func (ui *UI) ShouldBeIgnored(path string) bool {
 }
 
 func (ui *UI) showDir() {
-	ui.currentDirPath = ui.currentDir.path
+	ui.currentDirPath = ui.currentDir.Path
 	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
 
 	ui.table.Clear()
@@ -168,31 +169,31 @@ func (ui *UI) showDir() {
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
 		cell := tview.NewTableCell("           /..")
-		cell.SetReference(ui.currentDir.parent)
+		cell.SetReference(ui.currentDir.Parent)
 		ui.table.SetCell(0, 0, cell)
 		rowIndex++
 	}
 
-	sort.Slice(ui.currentDir.files, func(i, j int) bool {
-		return ui.currentDir.files[i].size > ui.currentDir.files[j].size
+	sort.Slice(ui.currentDir.Files, func(i, j int) bool {
+		return ui.currentDir.Files[i].Size > ui.currentDir.Files[j].Size
 	})
 
-	for i, item := range ui.currentDir.files {
+	for i, item := range ui.currentDir.Files {
 		cell := tview.NewTableCell(formatFileRow(item))
-		cell.SetReference(ui.currentDir.files[i])
+		cell.SetReference(ui.currentDir.Files[i])
 		ui.table.SetCell(rowIndex, 0, cell)
 		rowIndex++
 	}
 
-	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.size) + " Items: " + fmt.Sprint(ui.currentDir.itemCount))
+	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.Size) + " Items: " + fmt.Sprint(ui.currentDir.ItemCount))
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
 	ui.app.SetFocus(ui.table)
 }
 
 func (ui *UI) fileItemSelected(row, column int) {
-	selectedDir := ui.table.GetCell(row, column).GetReference().(*File)
-	if !selectedDir.isDir {
+	selectedDir := ui.table.GetCell(row, column).GetReference().(*analyze.File)
+	if !selectedDir.IsDir {
 		return
 	}
 
@@ -201,15 +202,15 @@ func (ui *UI) fileItemSelected(row, column int) {
 }
 
 func (ui *UI) deviceItemSelected(row, column int) {
-	selectedDevice := ui.table.GetCell(row, column).GetReference().(*Device)
-	ui.AnalyzePath(selectedDevice.mountPoint)
+	selectedDevice := ui.table.GetCell(row, column).GetReference().(*analyze.Device)
+	ui.AnalyzePath(selectedDevice.MountPoint)
 }
 
 func (ui *UI) confirmDeletion() {
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(*File)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
 	modal := tview.NewModal().
-		SetText("Are you sure you want to delete \"" + selectedFile.name + "\"").
+		SetText("Are you sure you want to delete \"" + selectedFile.Name + "\"").
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonIndex == 1 {
@@ -226,7 +227,7 @@ func (ui *UI) confirmDeletion() {
 
 func (ui *UI) deleteSelected() {
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(*File)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
 	ui.currentDir.RemoveFile(selectedFile)
 	ui.showDir()
 }
@@ -273,24 +274,24 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
-func (ui *UI) updateProgress(progress *CurrentProgress) {
+func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 	for {
-		progress.mutex.Lock()
+		progress.Mutex.Lock()
 
-		if progress.done {
+		if progress.Done {
 			return
 		}
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.progress.SetText("Total items: " +
-				fmt.Sprint(progress.itemCount) +
+				fmt.Sprint(progress.ItemCount) +
 				" size: " +
 				"size: " +
-				formatSize(progress.totalSize) +
+				formatSize(progress.TotalSize) +
 				"\nCurrent item: " +
-				progress.currentItemName)
+				progress.CurrentItemName)
 		})
-		progress.mutex.Unlock()
+		progress.Mutex.Unlock()
 
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -326,9 +327,9 @@ func formatSize(size int64) string {
 	return fmt.Sprintf("%d B", size)
 }
 
-func formatFileRow(item *File) string {
-	part := int(float64(item.size) / float64(item.parent.size) * 10.0)
-	row := fmt.Sprintf("%10s", formatSize(item.size))
+func formatFileRow(item *analyze.File) string {
+	part := int(float64(item.Size) / float64(item.Parent.Size) * 10.0)
+	row := fmt.Sprintf("%10s", formatSize(item.Size))
 	row += " ["
 	for i := 0; i < 10; i++ {
 		if part > i {
@@ -339,15 +340,15 @@ func formatFileRow(item *File) string {
 	}
 	row += "] "
 
-	if item.isDir {
+	if item.IsDir {
 		row += "/"
 	}
-	row += item.name
+	row += item.Name
 	return row
 }
 
-func getDeviceUsagePart(item *Device) string {
-	part := int(float64(item.size-item.free) / float64(item.size) * 10.0)
+func getDeviceUsagePart(item *analyze.Device) string {
+	part := int(float64(item.Size-item.Free) / float64(item.Size) * 10.0)
 	row := "["
 	for i := 0; i < 10; i++ {
 		if part > i {

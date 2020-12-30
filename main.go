@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/dundee/gdu/cli"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -39,7 +40,7 @@ func main() {
 	}
 	screen.Init()
 
-	ui := CreateUI(screen)
+	ui := cli.CreateUI(screen)
 	ui.SetIgnorePaths(strings.Split(*ignorePath, ","))
 
 	args := flag.Args()

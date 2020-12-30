@@ -1,4 +1,4 @@
-package main
+package analyze
 
 import (
 	"io/ioutil"
@@ -10,11 +10,11 @@ import (
 
 // CurrentProgress struct
 type CurrentProgress struct {
-	mutex           *sync.Mutex
-	currentItemName string
-	itemCount       int
-	totalSize       int64
-	done            bool
+	Mutex           *sync.Mutex
+	CurrentItemName string
+	ItemCount       int
+	TotalSize       int64
+	Done            bool
 }
 
 // ShouldBeIgnored whether path should be ignored
@@ -44,11 +44,11 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 	}
 
 	dir := File{
-		name:      filepath.Base(path),
-		path:      path,
-		isDir:     true,
-		itemCount: 1,
-		files:     make([]*File, 0, len(files)),
+		Name:      filepath.Base(path),
+		Path:      path,
+		IsDir:     true,
+		ItemCount: 1,
+		Files:     make([]*File, 0, len(files)),
 	}
 
 	var mutex sync.Mutex
@@ -66,34 +66,34 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 			go func() {
 				concurrencyLimitChannel <- true
 				file = processDir(entryPath, progress, concurrencyLimitChannel, wait, ignore)
-				file.parent = &dir
+				file.Parent = &dir
 				mutex.Lock()
-				dir.files = append(dir.files, file)
+				dir.Files = append(dir.Files, file)
 				mutex.Unlock()
 				<-concurrencyLimitChannel
 				wait.Done()
 			}()
 		} else {
 			file = &File{
-				name:      f.Name(),
-				path:      entryPath,
-				size:      f.Size(),
-				itemCount: 1,
-				parent:    &dir,
+				Name:      f.Name(),
+				Path:      entryPath,
+				Size:      f.Size(),
+				ItemCount: 1,
+				Parent:    &dir,
 			}
 			totalSize += f.Size()
 
 			mutex.Lock()
-			dir.files = append(dir.files, file)
+			dir.Files = append(dir.Files, file)
 			mutex.Unlock()
 		}
 	}
 
-	progress.mutex.Lock()
-	progress.currentItemName = path
-	progress.itemCount += len(files)
-	progress.totalSize += totalSize
-	progress.mutex.Unlock()
+	progress.Mutex.Lock()
+	progress.CurrentItemName = path
+	progress.ItemCount += len(files)
+	progress.TotalSize += totalSize
+	progress.Mutex.Unlock()
 
 	return &dir
 }

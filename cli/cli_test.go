@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"path/filepath"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/analyze"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,19 +20,19 @@ func TestFooter(t *testing.T) {
 
 	ui := CreateUI(simScreen)
 
-	dir := File{
-		name:      "xxx",
-		size:      5,
-		itemCount: 2,
+	dir := analyze.File{
+		Name:      "xxx",
+		Size:      5,
+		ItemCount: 2,
 	}
 
-	file := File{
-		name:      "yyy",
-		size:      2,
-		itemCount: 1,
-		parent:    &dir,
+	file := analyze.File{
+		Name:      "yyy",
+		Size:      2,
+		ItemCount: 1,
+		Parent:    &dir,
 	}
-	dir.files = []*File{&file}
+	dir.Files = []*analyze.File{&file}
 
 	ui.currentDir = &dir
 	ui.showDir()
@@ -57,10 +58,10 @@ func TestUpdateProgress(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(15, 15)
 
-	progress := &CurrentProgress{mutex: &sync.Mutex{}, done: true}
+	progress := &analyze.CurrentProgress{Mutex: &sync.Mutex{}, Done: true}
 
 	ui := CreateUI(simScreen)
-	progress.currentItemName = "xxx"
+	progress.CurrentItemName = "xxx"
 	ui.updateProgress(progress)
 	assert.True(t, true)
 }
@@ -87,7 +88,7 @@ func TestHelp(t *testing.T) {
 }
 
 func TestDeleteDir(t *testing.T) {
-	fin := CreateTestDir()
+	fin := analyze.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -118,7 +119,7 @@ func TestDeleteDir(t *testing.T) {
 }
 
 func TestShowConfirm(t *testing.T) {
-	fin := CreateTestDir()
+	fin := analyze.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -179,7 +180,7 @@ func printScreen(simScreen tcell.SimulationScreen) {
 }
 
 func TestKeys(t *testing.T) {
-	fin := CreateTestDir()
+	fin := analyze.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -219,7 +220,7 @@ func TestKeys(t *testing.T) {
 }
 
 func TestSetIgnorePaths(t *testing.T) {
-	fin := CreateTestDir()
+	fin := analyze.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -243,6 +244,6 @@ func TestSetIgnorePaths(t *testing.T) {
 
 	dir := ui.currentDir
 
-	assert.Equal(t, 3, dir.itemCount)
+	assert.Equal(t, 3, dir.ItemCount)
 
 }

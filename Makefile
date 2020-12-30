@@ -1,4 +1,5 @@
 VERSION := $(shell git describe --tags)
+PACKAGES := $(shell go list ./...)
 
 run:
 	go run .
@@ -12,10 +13,10 @@ build:
 	cd build; GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-darwin-amd64 ..; tar czf gdu-darwin-amd64.tgz gdu-darwin-amd64
 
 test:
-	go test -v
+	go test -v $(PACKAGES)
 
 coverage:
-	go test -v -race -coverprofile=coverage.txt -covermode=atomic
+	go test -v -race -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)
 
 clean:
 	-rm coverage.txt

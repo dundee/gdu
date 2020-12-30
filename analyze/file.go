@@ -1,4 +1,4 @@
-package main
+package analyze
 
 import (
 	"os"
@@ -6,13 +6,13 @@ import (
 
 // File struct
 type File struct {
-	name      string
-	path      string
-	size      int64
-	itemCount int
-	isDir     bool
-	files     Files
-	parent    *File
+	Name      string
+	Path      string
+	Size      int64
+	ItemCount int
+	IsDir     bool
+	Files     Files
+	Parent    *File
 }
 
 // Files - slice of pointers to File
@@ -39,37 +39,37 @@ func (s Files) Remove(file *File) Files {
 
 // RemoveFile removes file from dir
 func (f *File) RemoveFile(file *File) {
-	error := os.RemoveAll(file.path)
+	error := os.RemoveAll(file.Path)
 	if error != nil {
 		panic(error)
 	}
 
-	f.files = f.files.Remove(file)
+	f.Files = f.Files.Remove(file)
 
 	cur := f
 	for {
-		cur.itemCount -= file.itemCount
-		cur.size -= file.size
+		cur.ItemCount -= file.ItemCount
+		cur.Size -= file.Size
 
-		if cur.parent == nil {
+		if cur.Parent == nil {
 			break
 		}
-		cur = cur.parent
+		cur = cur.Parent
 	}
 }
 
 // UpdateStats recursively updates size and item count
 func (f *File) UpdateStats() {
-	if !f.isDir {
+	if !f.IsDir {
 		return
 	}
 	var totalSize int64
 	var itemCount int
-	for _, entry := range f.files {
+	for _, entry := range f.Files {
 		entry.UpdateStats()
-		totalSize += entry.size
-		itemCount += entry.itemCount
+		totalSize += entry.Size
+		itemCount += entry.ItemCount
 	}
-	f.itemCount = itemCount + 1
-	f.size = totalSize
+	f.ItemCount = itemCount + 1
+	f.Size = totalSize
 }
