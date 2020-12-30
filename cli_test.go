@@ -77,7 +77,7 @@ func TestHelp(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[252:259]
+	cells := b[308:315]
 
 	text := []byte("selected")
 	for i, r := range cells {
@@ -175,4 +175,44 @@ func printScreen(simScreen tcell.SimulationScreen) {
 	for i, r := range b {
 		println(i, string(r.Bytes))
 	}
+}
+
+func TestKeys(t *testing.T) {
+	fin := CreateTestDir()
+	defer fin()
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(simScreen)
+	ui.askBeforeDelete = false
+
+	ui.AnalyzePath("test_dir")
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, 'l', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	assert.NoFileExists(t, "test_dir/nested/subnested/file")
 }

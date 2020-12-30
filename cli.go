@@ -14,8 +14,10 @@ import (
 )
 
 const helpText = `
-[red]up, down [white]Move cursor
-       [red]d [white]Delete selected file or dir
+[red]up, down, j, k    [white]Move cursor
+      [red]enter, h    [white]Select dir/device
+             [red]l    [white]Go to parent dir
+             [red]d    [white]Delete selected file or dir
 `
 
 // UI struct
@@ -228,19 +230,38 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.app.SetFocus(ui.table)
 		return key
 	}
-	if key.Rune() == 'q' {
+	switch key.Rune() {
+	case 'q':
 		ui.app.Stop()
 		return nil
-	}
-	if key.Rune() == '?' {
+	case '?':
 		ui.showHelp()
-	}
-	if key.Rune() == 'd' {
+		break
+	case 'd':
 		if ui.askBeforeDelete {
 			ui.confirmDeletion()
 		} else {
 			ui.deleteSelected()
 		}
+		break
+	case 'h':
+		row, column := ui.table.GetSelection()
+		if ui.currentDir != nil {
+			ui.fileItemSelected(row, column)
+		} else {
+			ui.deviceItemSelected(row, column)
+		}
+		break
+	case 'l':
+		if ui.currentDirPath == ui.topDirPath {
+			break
+		}
+		if ui.currentDir != nil {
+			ui.fileItemSelected(0, 0)
+		} else {
+			ui.deviceItemSelected(0, 0)
+		}
+		break
 	}
 	return key
 }
@@ -277,8 +298,8 @@ func (ui *UI) showHelp() {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 10, 1, false).
-			AddItem(nil, 0, 1, false), 50, 1, false).
+			AddItem(text, 12, 1, false).
+			AddItem(nil, 0, 1, false), 55, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	ui.help = flex
