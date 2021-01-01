@@ -19,6 +19,9 @@ const helpText = `
 [red]enter, right, l    [white]Select directory/device
         [red]left, h    [white]Go to parent directory
 			  [red]d    [white]Delete selected file or directory
+			  [red]n    [white]Sort by name (asc/desc)
+			  [red]s    [white]Sort by size (asc/desc)
+			  [red]c    [white]Sort by items (asc/desc)
 `
 
 // UI struct
@@ -36,12 +39,16 @@ type UI struct {
 	currentDirPath  string
 	askBeforeDelete bool
 	ignorePaths     []string
+	sortBy          string
+	sortOrder       string
 }
 
 // CreateUI creates the whole UI app
 func CreateUI(screen tcell.Screen) *UI {
 	ui := &UI{
 		askBeforeDelete: true,
+		sortBy:          "size",
+		sortOrder:       "desc",
 	}
 
 	ui.app = tview.NewApplication()
@@ -174,9 +181,7 @@ func (ui *UI) showDir() {
 		rowIndex++
 	}
 
-	sort.Slice(ui.currentDir.Files, func(i, j int) bool {
-		return ui.currentDir.Files[i].Size > ui.currentDir.Files[j].Size
-	})
+	ui.sortItems()
 
 	for i, item := range ui.currentDir.Files {
 		cell := tview.NewTableCell(formatFileRow(item))
@@ -185,10 +190,38 @@ func (ui *UI) showDir() {
 		rowIndex++
 	}
 
-	ui.footer.SetText("Apparent size: " + formatSize(ui.currentDir.Size) + " Items: " + fmt.Sprint(ui.currentDir.ItemCount))
+	ui.footer.SetText(
+		"Apparent size: " +
+			formatSize(ui.currentDir.Size) +
+			" Items: " + fmt.Sprint(ui.currentDir.ItemCount) +
+			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
 	ui.app.SetFocus(ui.table)
+}
+
+func (ui *UI) sortItems() {
+	if ui.sortBy == "size" {
+		if ui.sortOrder == "desc" {
+			sort.Sort(ui.currentDir.Files)
+		} else {
+			sort.Sort(sort.Reverse(ui.currentDir.Files))
+		}
+	}
+	if ui.sortBy == "itemCount" {
+		if ui.sortOrder == "desc" {
+			sort.Sort(analyze.ByItemCount(ui.currentDir.Files))
+		} else {
+			sort.Sort(sort.Reverse(analyze.ByItemCount(ui.currentDir.Files)))
+		}
+	}
+	if ui.sortBy == "name" {
+		if ui.sortOrder == "desc" {
+			sort.Sort(analyze.ByName(ui.currentDir.Files))
+		} else {
+			sort.Sort(sort.Reverse(analyze.ByName(ui.currentDir.Files)))
+		}
+	}
 }
 
 func (ui *UI) fileItemSelected(row, column int) {
@@ -279,8 +312,31 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.deleteSelected()
 		}
 		break
+	case 's':
+		ui.setSorting("size")
+		break
+	case 'c':
+		ui.setSorting("itemCount")
+		break
+	case 'n':
+		ui.setSorting("name")
+		break
 	}
 	return key
+}
+
+func (ui *UI) setSorting(newOrder string) {
+	if newOrder == ui.sortBy {
+		if ui.sortOrder == "asc" {
+			ui.sortOrder = "desc"
+		} else {
+			ui.sortOrder = "asc"
+		}
+	} else {
+		ui.sortBy = newOrder
+		ui.sortOrder = "asc"
+	}
+	ui.showDir()
 }
 
 func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
