@@ -136,9 +136,8 @@ func TestSortByItemCount(t *testing.T) {
 }
 
 func TestSortByItemCountDesc(t *testing.T) {
-	// fin := analyze.CreateTestDir()
-	// defer fin()
-	analyze.CreateTestDir()
+	fin := analyze.CreateTestDir()
+	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
 	simScreen.Init()
