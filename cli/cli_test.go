@@ -79,7 +79,7 @@ func TestHelp(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[308:315]
+	cells := b[257 : 257+7]
 
 	text := []byte("selected")
 	for i, r := range cells {
@@ -171,14 +171,6 @@ func TestShowDevices(t *testing.T) {
 	}
 }
 
-func printScreen(simScreen tcell.SimulationScreen) {
-	b, _, _ := simScreen.GetContents()
-
-	for i, r := range b {
-		println(i, string(r.Bytes))
-	}
-}
-
 func TestKeys(t *testing.T) {
 	fin := analyze.CreateTestDir()
 	defer fin()
@@ -196,19 +188,19 @@ func TestKeys(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
 		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
+		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
 		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
+		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, 'l', 1)
+		simScreen.InjectKey(tcell.KeyEnter, 'h', 1)
 		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
+		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(100 * time.Millisecond)
@@ -246,4 +238,12 @@ func TestSetIgnorePaths(t *testing.T) {
 
 	assert.Equal(t, 3, dir.ItemCount)
 
+}
+
+func printScreen(simScreen tcell.SimulationScreen) {
+	b, _, _ := simScreen.GetContents()
+
+	for i, r := range b {
+		println(i, string(r.Bytes))
+	}
 }

@@ -15,10 +15,10 @@ import (
 )
 
 const helpText = `
-[red]up, down, j, k    [white]Move cursor
-      [red]enter, h    [white]Select dir/device
-             [red]l    [white]Go to parent dir
-             [red]d    [white]Delete selected file or dir
+ [red]up, down, k, j    [white]Move cursor up/down
+[red]enter, right, l    [white]Select directory/device
+        [red]left, h    [white]Go to parent directory
+			  [red]d    [white]Delete selected file or directory
 `
 
 // UI struct
@@ -238,6 +238,33 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.app.SetFocus(ui.table)
 		return key
 	}
+
+	if key.Rune() == 'h' || key.Key() == tcell.KeyLeft {
+		if ui.currentDirPath == ui.topDirPath {
+			return key
+		}
+		if ui.currentDir != nil {
+			ui.fileItemSelected(0, 0)
+		} else {
+			ui.deviceItemSelected(0, 0)
+		}
+		return key
+	}
+
+	if key.Rune() == 'l' || key.Key() == tcell.KeyRight {
+		row, column := ui.table.GetSelection()
+		if ui.currentDirPath != ui.topDirPath && row == 0 { // do not select /..
+			return key
+		}
+
+		if ui.currentDir != nil {
+			ui.fileItemSelected(row, column)
+		} else {
+			ui.deviceItemSelected(row, column)
+		}
+		return key
+	}
+
 	switch key.Rune() {
 	case 'q':
 		ui.app.Stop()
@@ -250,24 +277,6 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.confirmDeletion()
 		} else {
 			ui.deleteSelected()
-		}
-		break
-	case 'h':
-		row, column := ui.table.GetSelection()
-		if ui.currentDir != nil {
-			ui.fileItemSelected(row, column)
-		} else {
-			ui.deviceItemSelected(row, column)
-		}
-		break
-	case 'l':
-		if ui.currentDirPath == ui.topDirPath {
-			break
-		}
-		if ui.currentDir != nil {
-			ui.fileItemSelected(0, 0)
-		} else {
-			ui.deviceItemSelected(0, 0)
 		}
 		break
 	}
@@ -306,8 +315,8 @@ func (ui *UI) showHelp() {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 12, 1, false).
-			AddItem(nil, 0, 1, false), 55, 1, false).
+			AddItem(text, 15, 1, false).
+			AddItem(nil, 0, 1, false), 60, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	ui.help = flex
