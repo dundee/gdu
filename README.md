@@ -17,7 +17,7 @@ Head for the [releases](https://github.com/dundee/gdu/releases) and download bin
 
 Using curl:
 
-    curl -L https://github.com/dundee/gdu/releases/download/v1.6.0/gdu-linux-amd64.tgz | tar xz
+    curl -L https://github.com/dundee/gdu/releases/latest/download/gdu-linux-amd64.tgz | tar xz
     chmod +x gdu-linux-amd64
     mv gdu-linux-amd64 /usr/bin/gdu
 
