@@ -239,7 +239,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	selectedDevice := ui.table.GetCell(row, column).GetReference().(*analyze.Device)
 
 	for _, device := range ui.devices {
-		if device.Name != selectedDevice.Name {
+		if device.Name != selectedDevice.Name && !strings.HasPrefix(selectedDevice.MountPoint, device.MountPoint) {
 			ui.ignorePaths = append(ui.ignorePaths, device.MountPoint)
 		}
 	}
