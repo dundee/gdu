@@ -114,7 +114,7 @@ func (ui *UI) AnalyzePath(path string) {
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
-	ui.progress.SetTitle("Scanning...")
+	ui.progress.SetTitle(" Scanning... ")
 
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
@@ -365,7 +365,7 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 func (ui *UI) showHelp() {
 	text := tview.NewTextView().SetText(helpText).SetDynamicColors(true)
 	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
-	text.SetTitle("gdu help")
+	text.SetTitle(" gdu help ")
 
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
