@@ -13,14 +13,26 @@ However HDDs work as well, but the performance gain is not so huge.
 
 ## Installation
 
-Go:
+Head for the [releases](https://github.com/dundee/gdu/releases) and download binary for your system.
 
-    go get -u github.com/dundee/gdu
+Using curl:
 
+    curl -L https://github.com/dundee/gdu/releases/download/v1.6.0/gdu-linux-amd64.tgz | tar xz
+    chmod +x gdu-linux-amd64
+    mv gdu-linux-amd64 /usr/bin/gdu
 
 Arch Linux:
 
     yay -S gdu
+
+Brew:
+
+    brew tap dundee/taps
+    brew install gdu
+
+Go:
+
+    go get -u github.com/dundee/gdu
 
 
 ## Usage
