@@ -35,6 +35,7 @@ type UI struct {
 	help            *tview.Flex
 	table           *tview.Table
 	currentDir      *analyze.File
+	devices         []*analyze.Device
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
@@ -85,7 +86,7 @@ func CreateUI(screen tcell.Screen) *UI {
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices() {
-	devices := analyze.GetDevicesInfo()
+	ui.devices = analyze.GetDevicesInfo()
 
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
 	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
@@ -94,8 +95,8 @@ func (ui *UI) ListDevices() {
 	ui.table.SetCell(0, 4, tview.NewTableCell("Free").SetSelectable(false))
 	ui.table.SetCell(0, 5, tview.NewTableCell("Mount point").SetSelectable(false))
 
-	for i, device := range devices {
-		ui.table.SetCell(i+1, 0, tview.NewTableCell(device.Name).SetReference(devices[i]))
+	for i, device := range ui.devices {
+		ui.table.SetCell(i+1, 0, tview.NewTableCell(device.Name).SetReference(ui.devices[i]))
 		ui.table.SetCell(i+1, 1, tview.NewTableCell(formatSize(device.Size)))
 		ui.table.SetCell(i+1, 2, tview.NewTableCell(formatSize(device.Size-device.Free)))
 		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device)))
@@ -236,6 +237,13 @@ func (ui *UI) fileItemSelected(row, column int) {
 
 func (ui *UI) deviceItemSelected(row, column int) {
 	selectedDevice := ui.table.GetCell(row, column).GetReference().(*analyze.Device)
+
+	for _, device := range ui.devices {
+		if device.Name != selectedDevice.Name {
+			ui.ignorePaths = append(ui.ignorePaths, device.MountPoint)
+		}
+	}
+
 	ui.AnalyzePath(selectedDevice.MountPoint)
 }
 
