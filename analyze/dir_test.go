@@ -35,8 +35,11 @@ func TestProcessDir(t *testing.T) {
 }
 
 func TestIgnoreDir(t *testing.T) {
-	dir := ProcessDir("/proc", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return true })
+	fin := CreateTestDir()
+	defer fin()
 
-	assert.Equal(t, "proc", dir.Name)
+	dir := ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return true })
+
+	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, 1, dir.ItemCount)
 }

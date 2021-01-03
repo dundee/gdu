@@ -39,7 +39,7 @@ type UI struct {
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
-	ignorePaths     []string
+	ignoreDirPaths  map[string]bool
 	sortBy          string
 	sortOrder       string
 }
@@ -137,7 +137,7 @@ func (ui *UI) AnalyzePath(path string) {
 	go ui.updateProgress(progress)
 
 	go func() {
-		ui.currentDir = analyze.ProcessDir(ui.topDirPath, progress, ui.ShouldBeIgnored)
+		ui.currentDir = analyze.ProcessDir(ui.topDirPath, progress, ui.ShouldDirBeIgnored)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()
@@ -153,19 +153,17 @@ func (ui *UI) StartUILoop() {
 	}
 }
 
-// SetIgnorePaths sets paths to ignore
-func (ui *UI) SetIgnorePaths(paths []string) {
-	ui.ignorePaths = paths
+// SetIgnoreDirPaths sets paths to ignore
+func (ui *UI) SetIgnoreDirPaths(paths []string) {
+	ui.ignoreDirPaths = make(map[string]bool, len(paths))
+	for _, path := range paths {
+		ui.ignoreDirPaths[path] = true
+	}
 }
 
-// ShouldBeIgnored returns true if given path should be ignored
-func (ui *UI) ShouldBeIgnored(path string) bool {
-	for _, ignorePath := range ui.ignorePaths {
-		if strings.HasPrefix(path, ignorePath) {
-			return true
-		}
-	}
-	return false
+// ShouldDirBeIgnored returns true if given path should be ignored
+func (ui *UI) ShouldDirBeIgnored(path string) bool {
+	return ui.ignoreDirPaths[path]
 }
 
 func (ui *UI) showDir() {
@@ -240,7 +238,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 	for _, device := range ui.devices {
 		if device.Name != selectedDevice.Name && !strings.HasPrefix(selectedDevice.MountPoint, device.MountPoint) {
-			ui.ignorePaths = append(ui.ignorePaths, device.MountPoint)
+			ui.ignoreDirPaths[device.MountPoint] = true
 		}
 	}
 

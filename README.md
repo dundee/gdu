@@ -40,7 +40,7 @@ Go:
     gdu                                 # show all mounted disks
     gdu some_dir_to_analyze             # analyze given dir
     gdu -log-file=./gdu.log some_dir    # write errors to log file
-    gdu -ignore=/sys,/proc /            # ignore some paths
+    gdu -ignore-dir=/sys,/proc /        # ignore some paths
 
 
 ## Running tests
@@ -54,7 +54,7 @@ Scanning 80G of data on 500 GB SSD.
 
 Tool        | Without cache | With cache
  ---        | ---           | --- 
-gdu /       | 6.5s          | 2.5s
+gdu /       | 6.5s          | 2s
 dua /       | 8s            | 2s
 godu /      | 8.5s          | 3s
 du -hs /    | 44s           | 4.5s

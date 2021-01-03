@@ -211,7 +211,7 @@ func TestKeys(t *testing.T) {
 	assert.NoFileExists(t, "test_dir/nested/subnested/file")
 }
 
-func TestSetIgnorePaths(t *testing.T) {
+func TestSetIgnoreDirPaths(t *testing.T) {
 	fin := analyze.CreateTestDir()
 	defer fin()
 
@@ -222,7 +222,7 @@ func TestSetIgnorePaths(t *testing.T) {
 	ui := CreateUI(simScreen)
 
 	path, _ := filepath.Abs("test_dir/nested/subnested")
-	ui.SetIgnorePaths([]string{path})
+	ui.SetIgnoreDirPaths([]string{path})
 
 	ui.AnalyzePath("test_dir")
 

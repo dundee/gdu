@@ -17,7 +17,7 @@ var AppVersion = "development"
 
 func main() {
 	logFile := flag.String("log-file", "/dev/null", "Path to a logfile")
-	ignorePath := flag.String("ignore", "/proc,/dev,/sys,/run", "Absolute paths to ignore (separated by comma)")
+	ignoreDirPaths := flag.String("ignore-dir", "/proc,/dev,/sys,/run", "Absolute paths to ignore (separated by comma)")
 	showVersion := flag.Bool("v", false, "Prints version")
 	flag.Parse()
 
@@ -41,7 +41,7 @@ func main() {
 	screen.Init()
 
 	ui := cli.CreateUI(screen)
-	ui.SetIgnorePaths(strings.Split(*ignorePath, ","))
+	ui.SetIgnoreDirPaths(strings.Split(*ignoreDirPaths, ","))
 
 	args := flag.Args()
 
