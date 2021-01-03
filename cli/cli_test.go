@@ -22,6 +22,7 @@ func TestFooter(t *testing.T) {
 
 	dir := analyze.File{
 		Name:      "xxx",
+		BasePath:  ".",
 		Size:      5,
 		ItemCount: 2,
 	}

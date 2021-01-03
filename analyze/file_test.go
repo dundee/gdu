@@ -61,6 +61,7 @@ func TestRemove(t *testing.T) {
 func TestRemoveFile(t *testing.T) {
 	dir := &File{
 		Name:      "xxx",
+		BasePath:  ".",
 		Size:      5,
 		ItemCount: 3,
 	}

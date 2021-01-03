@@ -167,7 +167,7 @@ func (ui *UI) ShouldDirBeIgnored(path string) bool {
 }
 
 func (ui *UI) showDir() {
-	ui.currentDirPath = ui.currentDir.Path
+	ui.currentDirPath = ui.currentDir.Path()
 	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
 
 	ui.table.Clear()

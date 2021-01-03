@@ -25,6 +25,7 @@ func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnore
 	concurrencyLimitChannel := make(chan bool, 2*runtime.NumCPU())
 	var wait sync.WaitGroup
 	dir := processDir(path, progress, concurrencyLimitChannel, &wait, ignore)
+	dir.BasePath = filepath.Dir(path)
 	wait.Wait()
 	dir.UpdateStats()
 	return dir
@@ -33,10 +34,6 @@ func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnore
 func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel chan bool, wait *sync.WaitGroup, ignoreDir ShouldDirBeIgnored) *File {
 	var file *File
 	var err error
-	path, err = filepath.Abs(path)
-	if err != nil {
-		log.Print(err.Error())
-	}
 
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -45,7 +42,6 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 
 	dir := File{
 		Name:      filepath.Base(path),
-		Path:      path,
 		IsDir:     true,
 		ItemCount: 1,
 		Files:     make([]*File, 0, len(files)),
@@ -76,7 +72,6 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 		} else {
 			file = &File{
 				Name:      f.Name(),
-				Path:      entryPath,
 				Size:      f.Size(),
 				ItemCount: 1,
 				Parent:    &dir,
