@@ -252,14 +252,16 @@ func (ui *UI) confirmDeletion() {
 		SetText("Are you sure you want to delete \"" + selectedFile.Name + "\"").
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonIndex == 0 || buttonIndex == 2 {
+				ui.deleteSelected()
+			}
 			if buttonIndex == 1 {
-				ui.pages.HidePage("confirm")
+				ui.pages.RemovePage("confirm")
 				return
 			} else if buttonIndex == 2 {
 				ui.askBeforeDelete = false
 			}
 			ui.pages.HidePage("confirm")
-			ui.deleteSelected()
 		})
 	ui.pages.AddPage("confirm", modal, true, true)
 }
@@ -279,6 +281,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	}
 
 	if key.Rune() == 'h' || key.Key() == tcell.KeyLeft {
+		if ui.pages.HasPage("confirm") {
+			return key
+		}
+
 		if ui.currentDirPath == ui.topDirPath {
 			return key
 		}
@@ -291,6 +297,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	}
 
 	if key.Rune() == 'l' || key.Key() == tcell.KeyRight {
+		if ui.pages.HasPage("confirm") {
+			return key
+		}
+
 		row, column := ui.table.GetSelection()
 		if ui.currentDirPath != ui.topDirPath && row == 0 { // do not select /..
 			return key
