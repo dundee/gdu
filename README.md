@@ -41,6 +41,7 @@ Go:
     gdu some_dir_to_analyze             # analyze given dir
     gdu -log-file=./gdu.log some_dir    # write errors to log file
     gdu -ignore-dir=/sys,/proc /        # ignore some paths
+    gdu -no-color /                     # use only white/gray/black colors
 
 
 ## Running tests

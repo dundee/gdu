@@ -14,7 +14,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-const helpText = `
+const helpTextColorized = `
  [red]up, down, k, j    [white]Move cursor up/down
 [red]enter, right, l    [white]Select directory/device
         [red]left, h    [white]Go to parent directory
@@ -22,6 +22,15 @@ const helpText = `
 			  [red]n    [white]Sort by name (asc/desc)
 			  [red]s    [white]Sort by size (asc/desc)
 			  [red]c    [white]Sort by items (asc/desc)
+`
+const helpText = `
+ [::b]up, down, k, j    [white:black:-]Move cursor up/down
+[::b]enter, right, l    [white:black:-]Select directory/device
+        [::b]left, h    [white:black:-]Go to parent directory
+			  [::b]d    [white:black:-]Delete selected file or directory
+			  [::b]n    [white:black:-]Sort by name (asc/desc)
+			  [::b]s    [white:black:-]Sort by size (asc/desc)
+			  [::b]c    [white:black:-]Sort by items (asc/desc)
 `
 
 // UI struct
@@ -42,14 +51,16 @@ type UI struct {
 	ignoreDirPaths  map[string]bool
 	sortBy          string
 	sortOrder       string
+	useColors       bool
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(screen tcell.Screen) *UI {
+func CreateUI(screen tcell.Screen, useColors bool) *UI {
 	ui := &UI{
 		askBeforeDelete: true,
 		sortBy:          "size",
 		sortOrder:       "desc",
+		useColors:       useColors,
 	}
 
 	ui.app = tview.NewApplication()
@@ -57,18 +68,34 @@ func CreateUI(screen tcell.Screen) *UI {
 	ui.app.SetInputCapture(ui.keyPressed)
 
 	ui.header = tview.NewTextView()
-	ui.header.SetText("gdu ~ Use arrow keys to navigate, press ? for help")
-	ui.header.SetTextColor(tcell.ColorBlack)
-	ui.header.SetBackgroundColor(tcell.ColorWhite)
+	ui.header.SetText(" gdu ~ Use arrow keys to navigate, press ? for help ")
+	if ui.useColors {
+		ui.header.SetTextColor(tcell.ColorWhite)
+		ui.header.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
+	} else {
+		ui.header.SetTextColor(tcell.ColorBlack)
+		ui.header.SetBackgroundColor(tcell.ColorWhite)
+	}
 
 	ui.currentDirLabel = tview.NewTextView()
 
 	ui.table = tview.NewTable().SetSelectable(true, false)
 
-	ui.footer = tview.NewTextView()
-	ui.footer.SetTextColor(tcell.ColorBlack)
-	ui.footer.SetBackgroundColor(tcell.ColorWhite)
-	ui.footer.SetText("No items to diplay.")
+	if ui.useColors {
+		ui.table.SetSelectedStyle(tcell.Style{}.
+			Foreground(tcell.ColorBlack).
+			Background(tcell.NewRGBColor(52, 152, 219)))
+	}
+
+	ui.footer = tview.NewTextView().SetDynamicColors(true)
+	if ui.useColors {
+		ui.footer.SetTextColor(tcell.ColorWhite)
+		ui.footer.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
+	} else {
+		ui.footer.SetTextColor(tcell.ColorBlack)
+		ui.footer.SetBackgroundColor(tcell.ColorWhite)
+	}
+	ui.footer.SetText(" No items to diplay. ")
 
 	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
 	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
@@ -95,13 +122,22 @@ func (ui *UI) ListDevices() {
 	ui.table.SetCell(0, 4, tview.NewTableCell("Free").SetSelectable(false))
 	ui.table.SetCell(0, 5, tview.NewTableCell("Mount point").SetSelectable(false))
 
+	var textColor, sizeColor string
+	if ui.useColors {
+		textColor = "[#3498db:black:b]"
+		sizeColor = "[#edb20a:black:b]"
+	} else {
+		textColor = "[white:black:b]"
+		sizeColor = "[white:black:b]"
+	}
+
 	for i, device := range ui.devices {
-		ui.table.SetCell(i+1, 0, tview.NewTableCell(device.Name).SetReference(ui.devices[i]))
-		ui.table.SetCell(i+1, 1, tview.NewTableCell(formatSize(device.Size)))
-		ui.table.SetCell(i+1, 2, tview.NewTableCell(formatSize(device.Size-device.Free)))
+		ui.table.SetCell(i+1, 0, tview.NewTableCell(textColor+device.Name).SetReference(ui.devices[i]))
+		ui.table.SetCell(i+1, 1, tview.NewTableCell(formatSize(device.Size, false, ui.useColors)))
+		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+formatSize(device.Size-device.Free, false, ui.useColors)))
 		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device)))
-		ui.table.SetCell(i+1, 4, tview.NewTableCell(formatSize(device.Free)))
-		ui.table.SetCell(i+1, 5, tview.NewTableCell(device.MountPoint))
+		ui.table.SetCell(i+1, 4, tview.NewTableCell(formatSize(device.Free, false, ui.useColors)))
+		ui.table.SetCell(i+1, 5, tview.NewTableCell(textColor+device.MountPoint))
 	}
 
 	ui.table.Select(1, 0)
@@ -116,6 +152,7 @@ func (ui *UI) AnalyzePath(path string) {
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	ui.progress.SetTitle(" Scanning... ")
+	ui.progress.SetDynamicColors(true)
 
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
@@ -168,13 +205,13 @@ func (ui *UI) ShouldDirBeIgnored(path string) bool {
 
 func (ui *UI) showDir() {
 	ui.currentDirPath = ui.currentDir.Path()
-	ui.currentDirLabel.SetText("--- " + ui.currentDirPath + " ---")
+	ui.currentDirLabel.SetText("[::b] --- " + ui.currentDirPath + " ---").SetDynamicColors(true)
 
 	ui.table.Clear()
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
-		cell := tview.NewTableCell("           /..")
+		cell := tview.NewTableCell("                        [::b]/..")
 		cell.SetReference(ui.currentDir.Parent)
 		ui.table.SetCell(0, 0, cell)
 		rowIndex++
@@ -183,16 +220,28 @@ func (ui *UI) showDir() {
 	ui.sortItems()
 
 	for i, item := range ui.currentDir.Files {
-		cell := tview.NewTableCell(formatFileRow(item))
+		cell := tview.NewTableCell(formatFileRow(item, ui.useColors))
 		cell.SetReference(ui.currentDir.Files[i])
+
 		ui.table.SetCell(rowIndex, 0, cell)
 		rowIndex++
 	}
 
+	var footerNumberColor, footerTextColor string
+	if ui.useColors {
+		footerNumberColor = "[#e74c3c:#2479d0:b]"
+		footerTextColor = "[white:#2479d0:-]"
+	} else {
+		footerNumberColor = "[black:white:b]"
+		footerTextColor = "[black:white:-]"
+	}
+
 	ui.footer.SetText(
-		"Apparent size: " +
-			formatSize(ui.currentDir.Size) +
-			" Items: " + fmt.Sprint(ui.currentDir.ItemCount) +
+		" Apparent size: " +
+			footerNumberColor +
+			formatSize(ui.currentDir.Size, true, ui.useColors) +
+			" Items: " + footerNumberColor + fmt.Sprint(ui.currentDir.ItemCount) +
+			footerTextColor +
 			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
@@ -263,6 +312,11 @@ func (ui *UI) confirmDeletion() {
 			}
 			ui.pages.HidePage("confirm")
 		})
+
+	if !ui.useColors {
+		modal.SetBackgroundColor(tcell.ColorGray)
+	}
+
 	ui.pages.AddPage("confirm", modal, true, true)
 }
 
@@ -356,6 +410,11 @@ func (ui *UI) setSorting(newOrder string) {
 }
 
 func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
+	color := "[white:black:b]"
+	if ui.useColors {
+		color = "[red:black:b]"
+	}
+
 	for {
 		progress.Mutex.Lock()
 
@@ -365,11 +424,12 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.progress.SetText("Total items: " +
+				color +
 				fmt.Sprint(progress.ItemCount) +
-				" size: " +
-				"size: " +
-				formatSize(progress.TotalSize) +
-				"\nCurrent item: " +
+				"[white:black:-] size: " +
+				color +
+				formatSize(progress.TotalSize, false, ui.useColors) +
+				"[white:black:-]\nCurrent item: [white:black:b]" +
 				progress.CurrentItemName)
 		})
 		progress.Mutex.Unlock()
@@ -379,9 +439,15 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 }
 
 func (ui *UI) showHelp() {
-	text := tview.NewTextView().SetText(helpText).SetDynamicColors(true)
+	text := tview.NewTextView().SetDynamicColors(true)
 	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	text.SetTitle(" gdu help ")
+
+	if ui.useColors {
+		text.SetText(helpTextColorized)
+	} else {
+		text.SetText(helpText)
+	}
 
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
@@ -395,22 +461,41 @@ func (ui *UI) showHelp() {
 	ui.pages.AddPage("help", flex, true, true)
 }
 
-func formatSize(size int64) string {
-	if size > 1e12 {
-		return fmt.Sprintf("%.1f TiB", float64(size)/math.Pow(2, 40))
-	} else if size > 1e9 {
-		return fmt.Sprintf("%.1f GiB", float64(size)/math.Pow(2, 30))
-	} else if size > 1e6 {
-		return fmt.Sprintf("%.1f MiB", float64(size)/math.Pow(2, 20))
-	} else if size > 1e3 {
-		return fmt.Sprintf("%.1f KiB", float64(size)/math.Pow(2, 10))
+func formatSize(size int64, reverseColor bool, useColors bool) string {
+	var color string
+	if reverseColor {
+		if useColors {
+			color = "[white:#2479d0:-]"
+		} else {
+			color = "[black:white:-]"
+		}
+	} else {
+		color = "[white:black:-]"
 	}
-	return fmt.Sprintf("%d B", size)
+
+	if size > 1e12 {
+		return fmt.Sprintf("%.1f%s TiB", float64(size)/math.Pow(2, 40), color)
+	} else if size > 1e9 {
+		return fmt.Sprintf("%.1f%s GiB", float64(size)/math.Pow(2, 30), color)
+	} else if size > 1e6 {
+		return fmt.Sprintf("%.1f%s MiB", float64(size)/math.Pow(2, 20), color)
+	} else if size > 1e3 {
+		return fmt.Sprintf("%.1f%s KiB", float64(size)/math.Pow(2, 10), color)
+	}
+	return fmt.Sprintf("%d%s B", size, color)
 }
 
-func formatFileRow(item *analyze.File) string {
+func formatFileRow(item *analyze.File, useColor bool) string {
 	part := int(float64(item.Size) / float64(item.Parent.Size) * 10.0)
-	row := fmt.Sprintf("%10s", formatSize(item.Size))
+	var row string
+
+	if useColor {
+		row = "[#edb20a:black:b]"
+	} else {
+		row = "[white:black:b]"
+	}
+
+	row += fmt.Sprintf("%25s", formatSize(item.Size, false, useColor))
 	row += " ["
 	for i := 0; i < 10; i++ {
 		if part > i {
@@ -422,7 +507,11 @@ func formatFileRow(item *analyze.File) string {
 	row += "] "
 
 	if item.IsDir {
-		row += "/"
+		if useColor {
+			row += "[#3498db::b]/"
+		} else {
+			row += "[::b]/"
+		}
 	}
 	row += item.Name
 	return row

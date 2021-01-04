@@ -10,6 +10,7 @@ import (
 
 	"github.com/dundee/gdu/cli"
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 // AppVersion stores the current version of the app
@@ -19,6 +20,7 @@ func main() {
 	logFile := flag.String("log-file", "/dev/null", "Path to a logfile")
 	ignoreDirPaths := flag.String("ignore-dir", "/proc,/dev,/sys,/run", "Absolute paths to ignore (separated by comma)")
 	showVersion := flag.Bool("v", false, "Prints version")
+	noColor := flag.Bool("no-color", false, "Do not use colorized output")
 	flag.Parse()
 
 	if *showVersion {
@@ -40,7 +42,11 @@ func main() {
 	}
 	screen.Init()
 
-	ui := cli.CreateUI(screen)
+	if !*noColor {
+		tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
+	}
+
+	ui := cli.CreateUI(screen, !*noColor)
 	ui.SetIgnoreDirPaths(strings.Split(*ignoreDirPaths, ","))
 
 	args := flag.Args()

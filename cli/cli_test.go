@@ -18,7 +18,7 @@ func TestFooter(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(15, 15)
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, false)
 
 	dir := analyze.File{
 		Name:      "xxx",
@@ -44,12 +44,12 @@ func TestFooter(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	text := []byte("Apparent size: 5 B Items: 2")
+	text := []byte(" Apparent size: 5 B Items: 2")
 	for i, r := range b {
 		if i >= len(text) {
 			break
 		}
-		assert.Equal(t, text[i], r.Bytes[0])
+		assert.Equal(t, string(text[i]), string(r.Bytes[0]))
 	}
 }
 
@@ -61,7 +61,7 @@ func TestUpdateProgress(t *testing.T) {
 
 	progress := &analyze.CurrentProgress{Mutex: &sync.Mutex{}, Done: true}
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, false)
 	progress.CurrentItemName = "xxx"
 	ui.updateProgress(progress)
 	assert.True(t, true)
@@ -73,7 +73,7 @@ func TestHelp(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, false)
 	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
@@ -96,7 +96,7 @@ func TestDeleteDir(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, true)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir")
@@ -127,7 +127,7 @@ func TestShowConfirm(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, true)
 
 	ui.AnalyzePath("test_dir")
 
@@ -159,7 +159,7 @@ func TestShowDevices(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, false)
 	ui.ListDevices()
 	ui.table.Draw(simScreen)
 	simScreen.Show()
@@ -180,7 +180,7 @@ func TestKeys(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, false)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir")
@@ -220,7 +220,7 @@ func TestSetIgnoreDirPaths(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen)
+	ui := CreateUI(simScreen, false)
 
 	path, _ := filepath.Abs("test_dir/nested/subnested")
 	ui.SetIgnoreDirPaths([]string{path})
