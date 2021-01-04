@@ -28,6 +28,11 @@ func GetDevicesInfo() []*Device {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		if strings.Contains(line, "/snap/") {
+			continue
+		}
+
 		if line[0:4] == "/dev" {
 			parts := strings.Fields(line)
 			info := &syscall.Statfs_t{}
