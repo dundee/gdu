@@ -376,6 +376,9 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.showHelp()
 		break
 	case 'd':
+		if ui.currentDir == nil {
+			break
+		}
 		if ui.askBeforeDelete {
 			ui.confirmDeletion()
 		} else {
