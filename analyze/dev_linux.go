@@ -44,7 +44,6 @@ func GetDevicesInfo() []*Device {
 				Size:       info.Bsize * int64(info.Blocks),
 				Free:       info.Bsize * int64(info.Bavail),
 			}
-
 			devices = append(devices, device)
 		}
 	}
