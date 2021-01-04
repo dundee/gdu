@@ -39,7 +39,10 @@ func GetDevicesInfo() []*Device {
 				Size:       info.Bsize * int64(info.Blocks),
 				Free:       info.Bsize * int64(info.Bavail),
 			}
-			devices = append(devices, device)
+			
+			if !(strings.Contains(parts[1], "/snap/")){
+				devices = append(devices, device)
+			}
 		}
 	}
 
