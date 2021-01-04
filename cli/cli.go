@@ -310,7 +310,7 @@ func (ui *UI) confirmDeletion() {
 			} else if buttonIndex == 2 {
 				ui.askBeforeDelete = false
 			}
-			ui.pages.HidePage("confirm")
+			ui.pages.RemovePage("confirm")
 		})
 
 	if !ui.useColors {
