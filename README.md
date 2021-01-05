@@ -9,7 +9,7 @@ Pretty fast disk usage analyzer written in Go.
 Gdu is intended primarily for SSD disks where it can fully utilize parallel processing.
 However HDDs work as well, but the performance gain is not so huge.
 
-<img src="/assets/demo.gif" width="100%" />
+[![asciicast](https://asciinema.org/a/382738.svg)](https://asciinema.org/a/382738)
 
 ## Installation
 
