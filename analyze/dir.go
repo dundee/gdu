@@ -20,6 +20,9 @@ type CurrentProgress struct {
 // ShouldDirBeIgnored whether path should be ignored
 type ShouldDirBeIgnored func(path string) bool
 
+// Analyzer is type for dir analyzing funcion
+type Analyzer func(path string, progress *CurrentProgress, ignore ShouldDirBeIgnored) *File
+
 // ProcessDir analyzes given path
 func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnored) *File {
 	concurrencyLimitChannel := make(chan bool, 2*runtime.NumCPU())

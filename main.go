@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/cli"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -52,12 +53,12 @@ func main() {
 	args := flag.Args()
 
 	if len(args) == 1 {
-		ui.AnalyzePath(args[0])
+		ui.AnalyzePath(args[0], analyze.ProcessDir)
 	} else {
 		if runtime.GOOS == "linux" {
 			ui.ListDevices()
 		} else {
-			ui.AnalyzePath(".")
+			ui.AnalyzePath(".", analyze.ProcessDir)
 		}
 	}
 

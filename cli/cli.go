@@ -45,6 +45,7 @@ type UI struct {
 	table           *tview.Table
 	currentDir      *analyze.File
 	devices         []*analyze.Device
+	analyzer        analyze.Analyzer
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
@@ -61,6 +62,7 @@ func CreateUI(screen tcell.Screen, useColors bool) *UI {
 		sortBy:          "size",
 		sortOrder:       "desc",
 		useColors:       useColors,
+		analyzer:        analyze.ProcessDir,
 	}
 
 	ui.app = tview.NewApplication()
@@ -150,7 +152,7 @@ func (ui *UI) ListDevices() {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string) {
+func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer) {
 	ui.topDirPath, _ = filepath.Abs(path)
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
@@ -178,7 +180,7 @@ func (ui *UI) AnalyzePath(path string) {
 	go ui.updateProgress(progress)
 
 	go func() {
-		ui.currentDir = analyze.ProcessDir(ui.topDirPath, progress, ui.ShouldDirBeIgnored)
+		ui.currentDir = analyzer(ui.topDirPath, progress, ui.ShouldDirBeIgnored)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()
@@ -295,7 +297,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 		}
 	}
 
-	ui.AnalyzePath(selectedDevice.MountPoint)
+	ui.AnalyzePath(selectedDevice.MountPoint, ui.analyzer)
 }
 
 func (ui *UI) confirmDeletion() {
