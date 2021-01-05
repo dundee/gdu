@@ -30,6 +30,11 @@ Brew:
     brew tap dundee/taps
     brew install gdu
 
+Snap:
+
+    snap install gdu-disk-usage-analyzer
+    snap alias gdu-disk-usage-analyzer.gdu gdu
+
 Go:
 
     go get -u github.com/dundee/gdu

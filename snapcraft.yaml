@@ -1,4 +1,4 @@
-name: gdu
+name: gdu-disk-usage-analyzer
 version: git
 summary: Disk usage analyzer with console interface written in Go.
 description: |
