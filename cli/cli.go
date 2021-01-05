@@ -329,7 +329,9 @@ func (ui *UI) confirmDeletion() {
 func (ui *UI) deleteSelected() {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
-	ui.currentDir.RemoveFile(selectedFile)
+	if err := ui.currentDir.RemoveFile(selectedFile); err != nil {
+		panic(err)
+	}
 	ui.showDir()
 }
 

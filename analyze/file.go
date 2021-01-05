@@ -25,10 +25,10 @@ func (f *File) Path() string {
 }
 
 // RemoveFile removes file from dir
-func (f *File) RemoveFile(file *File) {
+func (f *File) RemoveFile(file *File) error {
 	error := os.RemoveAll(file.Path())
 	if error != nil {
-		panic(error)
+		return error
 	}
 
 	f.Files = f.Files.Remove(file)
@@ -43,6 +43,7 @@ func (f *File) RemoveFile(file *File) {
 		}
 		cur = cur.Parent
 	}
+	return nil
 }
 
 // UpdateStats recursively updates size and item count
