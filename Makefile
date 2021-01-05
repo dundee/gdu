@@ -18,6 +18,9 @@ test:
 coverage:
 	go test -v -race -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)
 
+benchnmark:
+	go test -bench=. $(PACKAGES)
+
 clean:
 	-rm coverage.txt
 	-rm -r test_dir

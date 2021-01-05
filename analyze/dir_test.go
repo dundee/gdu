@@ -43,3 +43,12 @@ func TestIgnoreDir(t *testing.T) {
 	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, 1, dir.ItemCount)
 }
+
+func BenchmarkProcessDir(b *testing.B) {
+	fin := CreateTestDir()
+	defer fin()
+
+	b.ResetTimer()
+
+	ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return false })
+}
