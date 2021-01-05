@@ -113,7 +113,11 @@ func CreateUI(screen tcell.Screen, useColors bool) *UI {
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices() {
-	ui.devices = analyze.GetDevicesInfo()
+	var err error
+	ui.devices, err = analyze.GetDevicesInfo("/proc/mounts")
+	if err != nil {
+		panic(err)
+	}
 
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
 	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))

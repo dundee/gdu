@@ -4,26 +4,25 @@ package analyze
 
 import (
 	"bufio"
-	"log"
+	"io"
 	"os"
-	"runtime"
 	"strings"
 	"syscall"
 )
 
 // GetDevicesInfo returns usage info about mounted devices (by calling Statfs syscall)
-func GetDevicesInfo() []*Device {
-	if runtime.GOOS != "linux" {
-		panic("Listing devices is not yet supported on " + runtime.GOOS)
-	}
-
-	devices := []*Device{}
-
-	file, err := os.Open("/proc/mounts")
+func GetDevicesInfo(mountsPath string) ([]*Device, error) {
+	file, err := os.Open(mountsPath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer file.Close()
+
+	return processMounts(file)
+}
+
+func processMounts(file io.Reader) ([]*Device, error) {
+	devices := []*Device{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -33,7 +32,7 @@ func GetDevicesInfo() []*Device {
 			continue
 		}
 
-		if line[0:4] == "/dev" {
+		if line[0:4] == "/dev" || strings.Contains(line, " zfs ") {
 			parts := strings.Fields(line)
 			info := &syscall.Statfs_t{}
 			syscall.Statfs(parts[1], info)
@@ -49,8 +48,8 @@ func GetDevicesInfo() []*Device {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return devices
+	return devices, nil
 }
