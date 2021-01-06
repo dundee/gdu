@@ -58,14 +58,15 @@ Go:
 
 Scanning 80G of data on 500 GB SSD.
 
-Tool        | Without cache | With cache
- ---        | ---           | --- 
-gdu /       | 6.5s          | 2s
-dua /       | 8s            | 2s
-godu /      | 8.5s          | 3s
-nnn -T d /  | 31s           | 3s
-du -hs /    | 44s           | 4.5s
-duc index / | 47s           | 5s
-ncdu /      | 54s           | 12s
+Tool        | Real time without cache | Real time with cache | CPU time without cache (user + sys)
+ ---        | ---                     | ---                  | ---               
+gdu /       | 6.5                     | 2                    | 15   (8 + 7)
+dua /       | 7.5                     | 2                    | 17   (4 + 13)
+godu /      | 8                       | 3                    | 23   (11 + 12)
+nnn -T d /  | 31                      | 3                    | 7.2  (0.3 + 6.9)
+du -hs /    | 32                      | 4                    | 8.6  (0.9 + 7.7)
+duc index / | 34                      | 4.5                  | 11.3 (2.5 + 8.8)
+baobab /    | 38                      | 12                   | 25   (16 + 9)
+ncdu /      | 43                      | 13                   | 18.5 (1.5 + 17)
 
 Gdu is inspired by [ncdu](https://dev.yorhel.nl/ncdu), [godu](https://github.com/viktomas/godu), [dua](https://github.com/Byron/dua-cli) and [df](https://www.gnu.org/software/coreutils/manual/html_node/df-invocation.html).
