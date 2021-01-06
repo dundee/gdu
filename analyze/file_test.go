@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -117,31 +116,4 @@ func TestRemoveFile(t *testing.T) {
 	assert.Equal(t, 1, len(dir.Files))
 	assert.Equal(t, 2, dir.ItemCount)
 	assert.Equal(t, int64(2), dir.Size)
-}
-
-func TestRemoveWithError(t *testing.T) {
-	fin := CreateTestDir()
-	defer fin()
-
-	os.Chmod("test_dir/nested", 0)
-	defer os.Chmod("test_dir/nested", 0755)
-
-	dir := &File{
-		Name:      "test_dir",
-		BasePath:  ".",
-		Size:      5,
-		ItemCount: 3,
-	}
-	subdir := &File{
-		Name:      "nested",
-		Size:      4,
-		ItemCount: 2,
-		Parent:    dir,
-	}
-
-	err := dir.RemoveFile(subdir)
-
-	assert.DirExists(t, "test_dir/nested")
-	assert.NotNil(t, err)
-	assert.Equal(t, "openfdat test_dir/nested: permission denied", err.Error())
 }

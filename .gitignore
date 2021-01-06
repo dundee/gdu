@@ -2,3 +2,5 @@
 build
 coverage.txt
 test_dir
+debian/gdu
+*.deb

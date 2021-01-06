@@ -12,6 +12,10 @@ build:
 	cd build; GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-windows-amd64.exe ..; zip gdu-windows-amd64.zip gdu-windows-amd64.exe
 	cd build; GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-darwin-amd64 ..; tar czf gdu-darwin-amd64.tgz gdu-darwin-amd64
 
+build-deb:
+	docker build -t debian_go .
+	docker run -v $(CURDIR):/xxx -w /xxx debian_go bash -c "dpkg-buildpackage; cp ../*.deb ."
+
 test:
 	go test -v $(PACKAGES)
 
@@ -25,5 +29,6 @@ clean:
 	-rm coverage.txt
 	-rm -r test_dir
 	-rm -r build
+	-sudo rm -r obj-x86_64-linux-gnu on
 
 .PHONY: run build test coverage clean

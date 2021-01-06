@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+export DH_GOPKG := github.com/dundee/gdu
+export GO111MODULE := on
+export GOCACHE := on
+
+%:
+	dh $@ --buildsystem=golang --with=golang
+
+
