@@ -3,4 +3,8 @@ build
 coverage.txt
 test_dir
 debian/gdu
+debian/files
+debian/.debhelper
+debian/debhelper-build-stamp
 *.deb
+*.substvars

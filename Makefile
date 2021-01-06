@@ -29,6 +29,6 @@ clean:
 	-rm coverage.txt
 	-rm -r test_dir
 	-rm -r build
-	-sudo rm -r obj-x86_64-linux-gnu on
+	-sudo rm -r obj-x86_64-linux-gnu on *.deb
 
 .PHONY: run build test coverage clean
