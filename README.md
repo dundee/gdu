@@ -25,6 +25,10 @@ Arch Linux:
 
     yay -S gdu
 
+Debian:
+
+    dpkg -i gdu_*_all.deb
+
 Brew:
 
     brew tap dundee/taps
