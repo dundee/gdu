@@ -64,10 +64,10 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 			wait.Add(1)
 			go func() {
 				concurrencyLimitChannel <- true
-				file = processDir(entryPath, progress, concurrencyLimitChannel, wait, ignoreDir)
-				file.Parent = &dir
+				subdir := processDir(entryPath, progress, concurrencyLimitChannel, wait, ignoreDir)
+				subdir.Parent = &dir
 				mutex.Lock()
-				dir.Files = append(dir.Files, file)
+				dir.Files = append(dir.Files, subdir)
 				mutex.Unlock()
 				<-concurrencyLimitChannel
 				wait.Done()

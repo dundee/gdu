@@ -53,12 +53,12 @@ func main() {
 	args := flag.Args()
 
 	if len(args) == 1 {
-		ui.AnalyzePath(args[0], analyze.ProcessDir)
+		ui.AnalyzePath(args[0], analyze.ProcessDir, nil)
 	} else {
 		if runtime.GOOS == "linux" {
 			ui.ListDevices()
 		} else {
-			ui.AnalyzePath(".", analyze.ProcessDir)
+			ui.AnalyzePath(".", analyze.ProcessDir, nil)
 		}
 	}
 

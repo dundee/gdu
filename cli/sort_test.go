@@ -19,7 +19,7 @@ func TestSortBySizeAsc(t *testing.T) {
 
 	ui := CreateUI(simScreen, true)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -50,7 +50,7 @@ func TestSortByName(t *testing.T) {
 
 	ui := CreateUI(simScreen, false)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -81,7 +81,7 @@ func TestSortByNameDesc(t *testing.T) {
 
 	ui := CreateUI(simScreen, false)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -114,7 +114,7 @@ func TestSortByItemCount(t *testing.T) {
 
 	ui := CreateUI(simScreen, true)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -145,7 +145,7 @@ func TestSortByItemCountDesc(t *testing.T) {
 
 	ui := CreateUI(simScreen, false)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)

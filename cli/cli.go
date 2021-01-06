@@ -19,6 +19,7 @@ const helpTextColorized = `
 [red]enter, right, l    [white]Select directory/device
         [red]left, h    [white]Go to parent directory
 			  [red]d    [white]Delete selected file or directory
+			  [red]r    [white]Rescan current directory
 			  [red]n    [white]Sort by name (asc/desc)
 			  [red]s    [white]Sort by size (asc/desc)
 			  [red]c    [white]Sort by items (asc/desc)
@@ -28,6 +29,7 @@ const helpText = `
 [::b]enter, right, l    [white:black:-]Select directory/device
         [::b]left, h    [white:black:-]Go to parent directory
 			  [::b]d    [white:black:-]Delete selected file or directory
+			  [::b]r    [white:black:-]Rescan current directory
 			  [::b]n    [white:black:-]Sort by name (asc/desc)
 			  [::b]s    [white:black:-]Sort by size (asc/desc)
 			  [::b]c    [white:black:-]Sort by items (asc/desc)
@@ -46,6 +48,7 @@ type UI struct {
 	currentDir      *analyze.File
 	devices         []*analyze.Device
 	analyzer        analyze.Analyzer
+	topDir          *analyze.File
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
@@ -152,8 +155,8 @@ func (ui *UI) ListDevices() {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer) {
-	ui.topDirPath, _ = filepath.Abs(path)
+func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *analyze.File) {
+	abspath, _ := filepath.Abs(path)
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
@@ -180,7 +183,17 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer) {
 	go ui.updateProgress(progress)
 
 	go func() {
-		ui.currentDir = analyzer(ui.topDirPath, progress, ui.ShouldDirBeIgnored)
+		ui.currentDir = analyzer(abspath, progress, ui.ShouldDirBeIgnored)
+
+		if parentDir != nil {
+			ui.currentDir.Parent = parentDir
+			parentDir.Files = parentDir.Files.RemoveByName(ui.currentDir.Name)
+			parentDir.Files = append(parentDir.Files, ui.currentDir)
+			ui.topDir.UpdateStats()
+		} else {
+			ui.topDirPath = abspath
+			ui.topDir = ui.currentDir
+		}
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()
@@ -202,6 +215,10 @@ func (ui *UI) SetIgnoreDirPaths(paths []string) {
 	for _, path := range paths {
 		ui.ignoreDirPaths[path] = true
 	}
+}
+
+func (ui *UI) rescanDir() {
+	ui.AnalyzePath(ui.currentDirPath, ui.analyzer, ui.currentDir.Parent)
 }
 
 // ShouldDirBeIgnored returns true if given path should be ignored
@@ -297,7 +314,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 		}
 	}
 
-	ui.AnalyzePath(selectedDevice.MountPoint, ui.analyzer)
+	ui.AnalyzePath(selectedDevice.MountPoint, ui.analyzer, nil)
 }
 
 func (ui *UI) confirmDeletion() {
@@ -392,6 +409,12 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		} else {
 			ui.deleteSelected()
 		}
+		break
+	case 'r':
+		if ui.currentDir == nil {
+			break
+		}
+		ui.rescanDir()
 		break
 	case 's':
 		ui.setSorting("size")

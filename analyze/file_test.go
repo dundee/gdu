@@ -58,6 +58,33 @@ func TestRemove(t *testing.T) {
 	assert.Equal(t, file2, dir.Files[0])
 }
 
+func TestRemoveByName(t *testing.T) {
+	dir := File{
+		Name:      "xxx",
+		Size:      5,
+		ItemCount: 2,
+	}
+
+	file := &File{
+		Name:      "yyy",
+		Size:      2,
+		ItemCount: 1,
+		Parent:    &dir,
+	}
+	file2 := &File{
+		Name:      "zzz",
+		Size:      3,
+		ItemCount: 1,
+		Parent:    &dir,
+	}
+	dir.Files = []*File{file, file2}
+
+	dir.Files = dir.Files.RemoveByName("yyy")
+
+	assert.Equal(t, 1, len(dir.Files))
+	assert.Equal(t, file2, dir.Files[0])
+}
+
 func TestRemoveNotInDir(t *testing.T) {
 	dir := File{
 		Name:      "xxx",
@@ -81,6 +108,33 @@ func TestRemoveNotInDir(t *testing.T) {
 	assert.Equal(t, -1, dir.Files.Find(file2))
 
 	dir.Files = dir.Files.Remove(file2)
+
+	assert.Equal(t, 1, len(dir.Files))
+}
+
+func TestRemoveByNameNotInDir(t *testing.T) {
+	dir := File{
+		Name:      "xxx",
+		Size:      5,
+		ItemCount: 2,
+	}
+
+	file := &File{
+		Name:      "yyy",
+		Size:      2,
+		ItemCount: 1,
+		Parent:    &dir,
+	}
+	file2 := &File{
+		Name:      "zzz",
+		Size:      3,
+		ItemCount: 1,
+	}
+	dir.Files = []*File{file}
+
+	assert.Equal(t, -1, dir.Files.Find(file2))
+
+	dir.Files = dir.Files.RemoveByName("zzz")
 
 	assert.Equal(t, 1, len(dir.Files))
 }

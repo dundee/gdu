@@ -75,9 +75,28 @@ func (s Files) Find(file *File) int {
 	return -1
 }
 
+// FindByName searches name in Files and returns its index, or -1
+func (s Files) FindByName(name string) int {
+	for i, item := range s {
+		if item.Name == name {
+			return i
+		}
+	}
+	return -1
+}
+
 // Remove removes File from Files
 func (s Files) Remove(file *File) Files {
 	index := s.Find(file)
+	if index == -1 {
+		return s
+	}
+	return append(s[:index], s[index+1:]...)
+}
+
+// RemoveByName removes File from Files
+func (s Files) RemoveByName(name string) Files {
+	index := s.FindByName(name)
 	if index == -1 {
 		return s
 	}
