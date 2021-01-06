@@ -63,9 +63,9 @@ Tool        | Without cache | With cache
 gdu /       | 6.5s          | 2s
 dua /       | 8s            | 2s
 godu /      | 8.5s          | 3s
+nnn -T d /  | 31s           | 3s
 du -hs /    | 44s           | 4.5s
 duc index / | 47s           | 5s
-nnn -T d /  | 48s           | 4s
 ncdu /      | 54s           | 12s
 
 Gdu is inspired by [ncdu](https://dev.yorhel.nl/ncdu), [godu](https://github.com/viktomas/godu), [dua](https://github.com/Byron/dua-cli) and [df](https://www.gnu.org/software/coreutils/manual/html_node/df-invocation.html).
