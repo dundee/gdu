@@ -1,3 +1,10 @@
+gdu (2.2.0-0) UNRELEASED; urgency=medium
+
+  * show ZFS devices
+  * rescan current dir
+
+ -- Daniel Milde <daniel@milde.cz>  Wed, 6 Jan 2021 23:45:51 +0200
+
 gdu (2.1.0-0) UNRELEASED; urgency=medium
 
   * Initial
