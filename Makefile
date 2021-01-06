@@ -14,7 +14,7 @@ build:
 
 build-deb:
 	docker build -t debian_go .
-	docker run -v $(CURDIR):/xxx -w /xxx debian_go bash -c "dpkg-buildpackage; cp ../*.deb ."
+	docker run -v $(CURDIR)/..:/xxx -w /xxx/gdu debian_go bash -c "dpkg-buildpackage"
 
 test:
 	go test -v $(PACKAGES)
