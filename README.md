@@ -21,7 +21,7 @@ Using curl:
     chmod +x gdu-linux-amd64
     mv gdu-linux-amd64 /usr/bin/gdu
 
-Arch Linux:
+[Arch Linux](https://aur.archlinux.org/packages/gdu/):
 
     yay -S gdu
 
@@ -29,17 +29,17 @@ Debian:
 
     dpkg -i gdu_*_all.deb
 
-Brew:
+[Brew](https://github.com/dundee/homebrew-taps):
 
     brew tap dundee/taps
     brew install gdu
 
-Snap:
+[Snap](https://snapcraft.io/gdu-disk-usage-analyzer):
 
     snap install gdu-disk-usage-analyzer
     snap alias gdu-disk-usage-analyzer.gdu gdu
 
-Go:
+[Go](https://pkg.go.dev/github.com/dundee/gdu):
 
     go get -u github.com/dundee/gdu
 
