@@ -22,6 +22,12 @@ func main() {
 	ignoreDirPaths := flag.String("ignore-dir", "/proc,/dev,/sys,/run", "Absolute paths to ignore (separated by comma)")
 	showVersion := flag.Bool("v", false, "Prints version")
 	noColor := flag.Bool("no-color", false, "Do not use colorized output")
+
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of gdu: [flags] [directory to scan]\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	if *showVersion {
