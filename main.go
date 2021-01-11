@@ -10,6 +10,7 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/cli"
+	"github.com/dundee/gdu/stdout"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -22,6 +23,7 @@ func main() {
 	ignoreDirPaths := flag.String("ignore-dir", "/proc,/dev,/sys,/run", "Absolute paths to ignore (separated by comma)")
 	showVersion := flag.Bool("v", false, "Prints version")
 	noColor := flag.Bool("no-color", false, "Do not use colorized output")
+	nonInteractive := flag.Bool("noninteractive", false, "Do not run in interactive mode")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of gdu: [flags] [directory to scan]\n")
@@ -29,6 +31,7 @@ func main() {
 	}
 
 	flag.Parse()
+	args := flag.Args()
 
 	if *showVersion {
 		fmt.Println("Version:\t", AppVersion)
@@ -40,8 +43,18 @@ func main() {
 		log.Fatalf("error opening file: %v", err)
 	}
 	defer f.Close()
-
 	log.SetOutput(f)
+
+	if *nonInteractive {
+		if len(args) == 1 {
+			ui := stdout.CreateStdoutUI(!*noColor)
+			ui.SetIgnoreDirPaths(strings.Split(*ignoreDirPaths, ","))
+			ui.AnalyzePath(args[0], analyze.ProcessDir)
+		} else {
+			flag.Usage()
+		}
+		return
+	}
 
 	screen, err := tcell.NewScreen()
 	if err != nil {
@@ -55,8 +68,6 @@ func main() {
 
 	ui := cli.CreateUI(screen, !*noColor)
 	ui.SetIgnoreDirPaths(strings.Split(*ignoreDirPaths, ","))
-
-	args := flag.Args()
 
 	if len(args) == 1 {
 		ui.AnalyzePath(args[0], analyze.ProcessDir, nil)
