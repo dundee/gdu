@@ -29,6 +29,10 @@ Debian:
 
     dpkg -i gdu_*_all.deb
 
+[NixOS](https://search.nixos.org/packages?channel=unstable&show=gdu&query=gdu):
+
+    nix-env -iA nixos.gdu
+
 [Brew](https://github.com/dundee/homebrew-taps):
 
     brew tap dundee/taps
