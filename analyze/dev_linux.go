@@ -40,8 +40,8 @@ func processMounts(file io.Reader) ([]*Device, error) {
 			device := &Device{
 				Name:       parts[0],
 				MountPoint: parts[1],
-				Size:       info.Bsize * int64(info.Blocks),
-				Free:       info.Bsize * int64(info.Bavail),
+				Size:       int64(info.Bsize) * int64(info.Blocks),
+				Free:       int64(info.Bsize) * int64(info.Bavail),
 			}
 			devices = append(devices, device)
 		}

@@ -1,4 +1,4 @@
-// +build windows darwin linux,arm
+// +build windows darwin
 
 package analyze
 
