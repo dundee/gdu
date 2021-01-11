@@ -31,6 +31,11 @@ func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnore
 	dir.BasePath = filepath.Dir(path)
 	wait.Wait()
 	dir.UpdateStats()
+
+	progress.Mutex.Lock()
+	progress.Done = true
+	progress.Mutex.Unlock()
+
 	return dir
 }
 
