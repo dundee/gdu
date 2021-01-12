@@ -1,3 +1,11 @@
+gdu (2.3.0-0) UNRELEASED; urgency=medium
+
+  * added non-interactive mode
+  * usage message improved
+  * fixed finishing progress goroutine
+
+ -- Daniel Milde <daniel@milde.cz>  Tue, 12 Jan 2021 22:51:37 +0200
+
 gdu (2.2.0-0) UNRELEASED; urgency=medium
 
   * show ZFS devices
