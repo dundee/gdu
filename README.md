@@ -33,9 +33,8 @@ Debian:
 
     nix-env -iA nixos.gdu
 
-[Brew](https://github.com/dundee/homebrew-taps):
+[Brew](https://formulae.brew.sh/formula/gdu):
 
-    brew tap dundee/taps
     brew install gdu
 
 [Snap](https://snapcraft.io/gdu-disk-usage-analyzer):
