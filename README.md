@@ -33,7 +33,7 @@ Debian:
 
     nix-env -iA nixos.gdu
 
-[Brew](https://formulae.brew.sh/formula/gdu):
+[Homebrew](https://formulae.brew.sh/formula/gdu):
 
     brew install gdu
 
