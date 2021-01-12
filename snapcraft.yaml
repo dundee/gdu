@@ -4,7 +4,7 @@ summary: Disk usage analyzer with console interface written in Go.
 description: |
   Pretty fast disk usage analyzer written in Go. Inspired by ncdu, godu and df.
 confinement: strict
-base: core18
+base: core20
 parts:
   gdu:
     plugin: go
