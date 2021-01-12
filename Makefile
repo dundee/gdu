@@ -25,6 +25,9 @@ test:
 coverage:
 	go test -v -race -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)
 
+coverage-html: coverage
+	go tool cover -html=coverage.txt
+
 benchnmark:
 	go test -bench=. $(PACKAGES)
 
@@ -34,4 +37,4 @@ clean:
 	-rm -r build
 	-sudo rm -r obj-x86_64-linux-gnu on *.deb
 
-.PHONY: run build test coverage clean
+.PHONY: run build test coverage coverage-html clean

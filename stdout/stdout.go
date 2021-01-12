@@ -2,6 +2,7 @@ package stdout
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"path/filepath"
 	"sort"
@@ -13,14 +14,16 @@ import (
 
 // UI struct
 type UI struct {
+	output         io.Writer
 	ignoreDirPaths map[string]bool
 	useColors      bool
 	showProgress   bool
 }
 
 // CreateStdoutUI creates UI for stdout
-func CreateStdoutUI(useColors bool, showProgress bool) *UI {
+func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool) *UI {
 	ui := &UI{
+		output:       output,
 		useColors:    useColors,
 		showProgress: showProgress,
 	}
@@ -58,13 +61,14 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer) {
 
 	sort.Sort(dir.Files)
 
-	print("\r")
+	fmt.Fprint(ui.output, "\r")
 	prefix := ""
 	for _, file := range dir.Files {
 		if file.IsDir {
 			prefix = "/"
 		}
-		fmt.Printf("%10s %s%s\n",
+		fmt.Fprintf(ui.output,
+			"%10s %s%s\n",
 			formatSize(file.Size),
 			prefix,
 			file.Name)
@@ -94,7 +98,7 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 	for {
 		progress.Mutex.Lock()
 
-		print(emptyRow)
+		fmt.Fprint(ui.output, emptyRow)
 
 		if progress.Done {
 			return
@@ -102,22 +106,22 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 
 		switch i {
 		case 0:
-			print("\r | ")
+			fmt.Fprint(ui.output, "\r | ")
 			break
 		case 1:
-			print("\r / ")
+			fmt.Fprint(ui.output, "\r / ")
 			break
 		case 2:
-			print("\r - ")
+			fmt.Fprint(ui.output, "\r - ")
 			break
 		case 3:
-			print("\r \\ ")
+			fmt.Fprint(ui.output, "\r \\ ")
 			break
 		}
 
-		print("Scanning... Total items: " +
-			fmt.Sprint(progress.ItemCount) +
-			" size: " +
+		fmt.Fprint(ui.output, "Scanning... Total items: "+
+			fmt.Sprint(progress.ItemCount)+
+			" size: "+
 			formatSize(progress.TotalSize))
 		progress.Mutex.Unlock()
 
