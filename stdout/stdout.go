@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	"github.com/gookit/color"
 )
 
 // UI struct
@@ -18,6 +19,9 @@ type UI struct {
 	ignoreDirPaths map[string]bool
 	useColors      bool
 	showProgress   bool
+	red            color.Style
+	orange         color.Style
+	blue           color.Style
 }
 
 // CreateStdoutUI creates UI for stdout
@@ -27,6 +31,15 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool) *UI {
 		useColors:    useColors,
 		showProgress: showProgress,
 	}
+
+	ui.red = color.Style{color.FgRed, color.OpBold}
+	ui.orange = color.Style{color.FgYellow, color.OpBold}
+	ui.blue = color.Style{color.FgBlue, color.OpBold}
+
+	if !useColors {
+		color.Disable()
+	}
+
 	return ui
 }
 
@@ -61,17 +74,25 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer) {
 
 	sort.Sort(dir.Files)
 
-	fmt.Fprint(ui.output, "\r")
-	prefix := ""
+	var lineFormat string
+	if ui.useColors {
+		lineFormat = "%20s %s\n"
+	} else {
+		lineFormat = "%9s %s\n"
+	}
+
 	for _, file := range dir.Files {
 		if file.IsDir {
-			prefix = "/"
+			fmt.Fprintf(ui.output,
+				lineFormat,
+				ui.formatSize(file.Size),
+				ui.blue.Sprintf("/"+file.Name))
+		} else {
+			fmt.Fprintf(ui.output,
+				lineFormat,
+				ui.formatSize(file.Size),
+				file.Name)
 		}
-		fmt.Fprintf(ui.output,
-			"%10s %s%s\n",
-			formatSize(file.Size),
-			prefix,
-			file.Name)
 	}
 }
 
@@ -101,6 +122,7 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 		fmt.Fprint(ui.output, emptyRow)
 
 		if progress.Done {
+			fmt.Fprint(ui.output, "\r")
 			return
 		}
 
@@ -120,9 +142,9 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 		}
 
 		fmt.Fprint(ui.output, "Scanning... Total items: "+
-			fmt.Sprint(progress.ItemCount)+
+			ui.red.Sprint(progress.ItemCount)+
 			" size: "+
-			formatSize(progress.TotalSize))
+			ui.formatSize(progress.TotalSize))
 		progress.Mutex.Unlock()
 
 		time.Sleep(100 * time.Millisecond)
@@ -131,15 +153,15 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 	}
 }
 
-func formatSize(size int64) string {
+func (ui *UI) formatSize(size int64) string {
 	if size > 1e12 {
-		return fmt.Sprintf("%.1f TiB", float64(size)/math.Pow(2, 40))
+		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 40)) + " TiB"
 	} else if size > 1e9 {
-		return fmt.Sprintf("%.1f GiB", float64(size)/math.Pow(2, 30))
+		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 30)) + " GiB"
 	} else if size > 1e6 {
-		return fmt.Sprintf("%.1f MiB", float64(size)/math.Pow(2, 20))
+		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 20)) + " MiB"
 	} else if size > 1e3 {
-		return fmt.Sprintf("%.1f KiB", float64(size)/math.Pow(2, 10))
+		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 10)) + " KiB"
 	}
-	return fmt.Sprintf("%d B", size)
+	return ui.orange.Sprintf("%d", size) + " B"
 }

@@ -51,7 +51,7 @@ func main() {
 
 	if *nonInteractive || !istty {
 		if len(args) == 1 {
-			ui := stdout.CreateStdoutUI(os.Stdout, !*noColor, !*noProgress && istty)
+			ui := stdout.CreateStdoutUI(os.Stdout, !*noColor && istty, !*noProgress && istty)
 			ui.SetIgnoreDirPaths(strings.Split(*ignoreDirPaths, ","))
 			ui.AnalyzePath(args[0], analyze.ProcessDir)
 		} else {
