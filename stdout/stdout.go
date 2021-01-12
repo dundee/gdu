@@ -15,12 +15,14 @@ import (
 type UI struct {
 	ignoreDirPaths map[string]bool
 	useColors      bool
+	showProgress   bool
 }
 
 // CreateStdoutUI creates UI for stdout
-func CreateStdoutUI(useColors bool) *UI {
+func CreateStdoutUI(useColors bool, showProgress bool) *UI {
 	ui := &UI{
-		useColors: useColors,
+		useColors:    useColors,
+		showProgress: showProgress,
 	}
 	return ui
 }
@@ -37,17 +39,21 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer) {
 		TotalSize: int64(0),
 	}
 	var wait sync.WaitGroup
-	wait.Add(2)
 
-	go func() {
-		ui.updateProgress(progress)
-		wait.Done()
-	}()
+	if ui.showProgress {
+		wait.Add(1)
+		go func() {
+			ui.updateProgress(progress)
+			wait.Done()
+		}()
+	}
 
+	wait.Add(1)
 	go func() {
 		dir = analyzer(abspath, progress, ui.ShouldDirBeIgnored)
 		wait.Done()
 	}()
+
 	wait.Wait()
 
 	sort.Sort(dir.Files)
