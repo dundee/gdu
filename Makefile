@@ -7,13 +7,23 @@ run:
 build:
 	@echo "Version: " $(VERSION)
 	-mkdir build
-	cd build; GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-linux-armv5l ..; tar czf gdu-linux-armv5l.tgz gdu-linux-armv5l
-	cd build; GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-linux-armv6l ..; tar czf gdu-linux-armv6l.tgz gdu-linux-armv6l
-	cd build; GOOS=linux GOARM=7 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-linux-armv7l ..; tar czf gdu-linux-armv7l.tgz gdu-linux-armv7l
-	cd build; GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-linux-arm64 ..; tar czf gdu-linux-arm64.tgz gdu-linux-arm64
-	cd build; GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-linux-amd64 ..; tar czf gdu-linux-amd64.tgz gdu-linux-amd64
-	cd build; GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-windows-amd64.exe ..; zip gdu-windows-amd64.zip gdu-windows-amd64.exe
-	cd build; GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu-darwin-amd64 ..; tar czf gdu-darwin-amd64.tgz gdu-darwin-amd64
+	-gox \
+		-os="darwin windows" \
+		-arch="amd64" \
+		-output="build/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-ldflags="-s -w -X 'main.AppVersion=$(VERSION)'"
+	-gox \
+		-os="linux freebsd netbsd openbsd" \
+		-output="build/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-ldflags="-s -w -X 'main.AppVersion=$(VERSION)'"
+
+	cd build; GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_armv5l ..
+	cd build; GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_armv6l ..
+	cd build; GOOS=linux GOARM=7 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_armv7l ..
+	cd build; GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_arm64 ..
+
+	cd build; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_*; do tar czf $$file.tgz $$file; done
+	cd build; for file in gdu_windows_*; do zip $$file.zip $$file; done
 
 build-deb:
 	docker build -t debian_go .
