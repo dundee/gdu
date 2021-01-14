@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/dundee/gdu/analyze"
-	"github.com/dundee/gdu/cli"
 	"github.com/dundee/gdu/stdout"
+	"github.com/dundee/gdu/tui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
 	"github.com/rivo/tview"
@@ -70,7 +70,7 @@ func main() {
 		tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
 	}
 
-	ui := cli.CreateUI(screen, !*noColor)
+	ui := tui.CreateUI(screen, !*noColor)
 	ui.SetIgnoreDirPaths(strings.Split(*ignoreDirPaths, ","))
 
 	if len(args) == 1 {
