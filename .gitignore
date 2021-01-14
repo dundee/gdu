@@ -1,6 +1,6 @@
 .vscode
-build
 coverage.txt
+dist
 test_dir
 debian/gdu
 debian/files

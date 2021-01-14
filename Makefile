@@ -1,29 +1,34 @@
 VERSION := $(shell git describe --tags)
 PACKAGES := $(shell go list ./...)
+LDFLAGS := "-s -w \
+	-X 'github.com/dundee/gdu/build.Version=$(VERSION)' \
+	-X 'github.com/dundee/gdu/build.User=$(shell id -u -n)' \
+	-X 'github.com/dundee/gdu/build.Time=$(shell LC_ALL=en_US.UTF-8 date)'"
 
 run:
 	go run .
 
 build:
 	@echo "Version: " $(VERSION)
-	-mkdir build
+	-mkdir dist
 	-gox \
 		-os="darwin windows" \
 		-arch="amd64" \
-		-output="build/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-ldflags="-s -w -X 'main.AppVersion=$(VERSION)'"
+		-output="dist/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-ldflags=$(LDFLAGS)
+	
 	-gox \
 		-os="linux freebsd netbsd openbsd" \
-		-output="build/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-ldflags="-s -w -X 'main.AppVersion=$(VERSION)'"
+		-output="dist/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-ldflags=$(LDFLAGS)
 
-	cd build; GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_armv5l ..
-	cd build; GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_armv6l ..
-	cd build; GOOS=linux GOARM=7 GOARCH=arm go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_armv7l ..
-	cd build; GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X 'main.AppVersion=$(VERSION)'" -o gdu_linux_arm64 ..
+	cd dist; GOOS=linux GOARM=5 GOARCH=arm go build -ldflags=$(LDFLAGS) -o gdu_linux_armv5l ..
+	cd dist; GOOS=linux GOARM=6 GOARCH=arm go build -ldflags=$(LDFLAGS) -o gdu_linux_armv6l ..
+	cd dist; GOOS=linux GOARM=7 GOARCH=arm go build -ldflags=$(LDFLAGS) -o gdu_linux_armv7l ..
+	cd dist; GOOS=linux GOARCH=arm64 go build -ldflags=$(LDFLAGS) -o gdu_linux_arm64 ..
 
-	cd build; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_*; do tar czf $$file.tgz $$file; done
-	cd build; for file in gdu_windows_*; do zip $$file.zip $$file; done
+	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_*; do tar czf $$file.tgz $$file; done
+	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
 
 build-deb:
 	docker build -t debian_go .
@@ -44,7 +49,7 @@ benchnmark:
 clean:
 	-rm coverage.txt
 	-rm -r test_dir
-	-rm -r build
+	-rm -r dist
 	-sudo rm -r obj-x86_64-linux-gnu on *.deb
 
 .PHONY: run build test coverage coverage-html clean

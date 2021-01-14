@@ -12,7 +12,10 @@ parts:
     override-build: |
           GO111MODULE=on CGO_ENABLED=0 go build \
             -ldflags \
-            "-s -w -X main.AppVersion=$(git describe)" \
+              "-s -w \
+              -X 'github.com/dundee/gdu/build.Version=$(git describe)' \
+              -X 'github.com/dundee/gdu/build.User=$(id -u -n)' \
+              -X 'github.com/dundee/gdu/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
             -o $SNAPCRAFT_PART_INSTALL/gdu
           $SNAPCRAFT_PART_INSTALL/gdu -v
 apps:
