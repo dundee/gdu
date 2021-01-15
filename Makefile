@@ -30,7 +30,7 @@ build:
 	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_*; do tar czf $$file.tgz $$file; done
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
 
-build-deb:
+build-deb: clean
 	docker build -t debian_go .
 	docker run -v $(CURDIR)/..:/xxx -w /xxx/gdu debian_go bash -c "dpkg-buildpackage"
 
