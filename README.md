@@ -49,6 +49,21 @@ Debian:
 
 ## Usage
 
+```
+  gdu [flags] [directory_to_scan]
+
+Flags:
+  -h, --help                  help for gdu
+  -i, --ignore-dirs strings   Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
+  -l, --log-file string       Path to a logfile (default "/dev/null")
+  -c, --no-color              Do not use colorized output
+  -p, --no-progress           Do not show progress
+  -n, --non-interactive       Do not run in interactive mode
+  -v, --version               Print version
+```
+
+## Examples
+
     gdu                                   # show all mounted disks
     gdu <some_dir_to_analyze>             # analyze given dir
     gdu -l ./gdu.log <some_dir>           # write errors to log file
