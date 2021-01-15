@@ -50,13 +50,13 @@ Debian:
 ## Usage
 
     gdu                                   # show all mounted disks
-    gdu some_dir_to_analyze               # analyze given dir
-    gdu -log-file=./gdu.log some_dir      # write errors to log file
-    gdu -ignore-dir=/sys,/proc /          # ignore some paths
-    gdu -no-color /                       # use only white/gray/black colors
+    gdu <some_dir_to_analyze>             # analyze given dir
+    gdu -l ./gdu.log <some_dir>           # write errors to log file
+    gdu -i /sys,/proc /                   # ignore some paths
+    gdu -c /                              # use only white/gray/black colors
 
-    gdu -non-interactive /                # only print stats, do not start interactive mode
-    gdu -non-interactive -no-progress /   # do not show progress either
+    gdu -n /                              # only print stats, do not start interactive mode
+    gdu -np /                             # do not show progress either
     gdu / > file                          # write stats to file, do not start interactive mode
 
 Gdu has two modes: interactive (default) and non-interactive.

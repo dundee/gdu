@@ -1,3 +1,9 @@
+gdu (3.0.0-0) UNRELEASED; urgency=medium
+
+  * POSIX/GNU style flags: --log-file (or just -l) instead of -log-file 
+
+ -- Daniel Milde <daniel@milde.cz>  Fri, 15 Jan 2021 18:23:42 +0200
+
 gdu (2.3.0-0) UNRELEASED; urgency=medium
 
   * added non-interactive mode
