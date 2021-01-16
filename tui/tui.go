@@ -368,9 +368,13 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			return key
 		}
 		if ui.currentDir != nil {
+			subDir := ui.currentDir
 			ui.fileItemSelected(0, 0)
-		} else {
-			ui.deviceItemSelected(0, 0)
+			index := ui.currentDir.Files.Find(subDir)
+			if ui.currentDir != ui.topDir {
+				index++
+			}
+			ui.table.Select(index, 0)
 		}
 		return key
 	}
