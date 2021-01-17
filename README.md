@@ -64,8 +64,9 @@ Flags:
 
 ## Examples
 
-    gdu                                   # show all mounted disks
+    gdu                                   # analyze current dir
     gdu <some_dir_to_analyze>             # analyze given dir
+    gdu -d                                # show all mounted disks
     gdu -l ./gdu.log <some_dir>           # write errors to log file
     gdu -i /sys,/proc /                   # ignore some paths
     gdu -c /                              # use only white/gray/black colors

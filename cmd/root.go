@@ -31,6 +31,7 @@ However HDDs work as well, but the performance gain is not so huge.
 	flags := rootCmd.Flags()
 	flags.StringVarP(&sf.logFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringSliceVarP(&sf.ignoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
+	flags.BoolVarP(&sf.showDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&sf.showVersion, "version", "v", false, "Print version")
 	flags.BoolVarP(&sf.noColor, "no-color", "c", false, "Do not use colorized output")
 	flags.BoolVarP(&sf.nonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")

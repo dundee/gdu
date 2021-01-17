@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -19,6 +18,7 @@ import (
 type scanFlags struct {
 	logFile        string
 	ignoreDirs     []string
+	showDisks      bool
 	showVersion    bool
 	noColor        bool
 	nonInteractive bool
@@ -33,6 +33,8 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 		return
 	}
 
+	var path string
+
 	f, err := os.OpenFile(flags.logFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
@@ -40,14 +42,16 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 	defer f.Close()
 	log.SetOutput(f)
 
+	if len(args) == 1 {
+		path = args[0]
+	} else {
+		path = "."
+	}
+
 	if flags.nonInteractive || !istty {
-		if len(args) == 1 {
-			ui := stdout.CreateStdoutUI(writer, !flags.noColor && istty, !flags.noProgress && istty)
-			ui.SetIgnoreDirPaths(flags.ignoreDirs)
-			ui.AnalyzePath(args[0], analyze.ProcessDir)
-		} else {
-			flag.Usage()
-		}
+		ui := stdout.CreateStdoutUI(writer, !flags.noColor && istty, !flags.noProgress && istty)
+		ui.SetIgnoreDirPaths(flags.ignoreDirs)
+		ui.AnalyzePath(path, analyze.ProcessDir)
 		return
 	}
 
@@ -62,16 +66,17 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 	}
 
 	ui := tui.CreateUI(screen, !flags.noColor)
-	ui.SetIgnoreDirPaths(flags.ignoreDirs)
 
-	if len(args) == 1 {
-		ui.AnalyzePath(args[0], analyze.ProcessDir, nil)
-	} else {
+	if flags.showDisks {
 		if runtime.GOOS == "linux" {
 			ui.ListDevices()
 		} else {
-			ui.AnalyzePath(".", analyze.ProcessDir, nil)
+			fmt.Fprint(writer, "Listing devices is not yet supported for this platform")
+			return
 		}
+	} else {
+		ui.SetIgnoreDirPaths(flags.ignoreDirs)
+		ui.AnalyzePath(path, analyze.ProcessDir, nil)
 	}
 
 	ui.StartUILoop()
