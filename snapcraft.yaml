@@ -1,8 +1,9 @@
 name: gdu-disk-usage-analyzer
 version: git
-summary: Disk usage analyzer with console interface written in Go.
+summary: Pretty fast disk usage analyzer written in Go.
 description: |
-  Pretty fast disk usage analyzer written in Go. Inspired by ncdu, godu and df.
+  Gdu is intended primarily for SSD disks where it can fully utilize parallel processing.
+  However HDDs work as well, but the performance gain is not so huge.
 confinement: strict
 base: core20
 parts:
