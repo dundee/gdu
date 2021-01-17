@@ -9,7 +9,6 @@ Build-Depends: debhelper (>= 9),
                golang-go,
                git
 
-
 Package: gdu
 Architecture: all
 Description: Pretty fast disk usage analyzer written in Go

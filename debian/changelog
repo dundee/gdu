@@ -1,3 +1,9 @@
+gdu (3.0.0-1) UNRELEASED; urgency=medium
+
+  * machine readable copyright
+
+ -- Daniel Milde <daniel@milde.cz>  Sun, 17 Jan 2021 21:32:02 +0200
+
 gdu (3.0.0-0) UNRELEASED; urgency=medium
 
   * POSIX/GNU style flags: --log-file (or just -l) instead of -log-file 
