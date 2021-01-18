@@ -52,4 +52,7 @@ clean:
 	-rm -r dist
 	-sudo rm -r obj-x86_64-linux-gnu on *.deb
 
+clean-uncompressed-dist:
+	find dist -type f -not -name '*.tgz' -not -name '*.zip' -delete
+
 .PHONY: run build test coverage coverage-html clean
