@@ -59,6 +59,7 @@ Flags:
   -c, --no-color              Do not use colorized output
   -p, --no-progress           Do not show progress
   -n, --non-interactive       Do not run in interactive mode
+  -d, --show-disks            Show all mounted disks
   -v, --version               Print version
 ```
 

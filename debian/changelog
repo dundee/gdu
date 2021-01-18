@@ -1,8 +1,10 @@
-gdu (3.0.0-1) UNRELEASED; urgency=medium
+gdu (4.0.0-1) unstable; urgency=medium
 
-  * machine readable copyright
+  * analyze current directory when no argument is passed
+  * added option --show-disks
+  * select previous directory when going up 
 
- -- Daniel Milde <daniel@milde.cz>  Sun, 17 Jan 2021 21:32:02 +0200
+ -- Daniel Milde <daniel@milde.cz>  Mon, 18 Jan 2021 11:46:05 +0000
 
 gdu (3.0.0-0) UNRELEASED; urgency=medium
 
