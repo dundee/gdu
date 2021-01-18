@@ -6,6 +6,16 @@ description: |
   However HDDs work as well, but the performance gain is not so huge.
 confinement: strict
 base: core20
+plugs:
+  read-root:
+    interface: system-files
+    read:
+    - /usr
+    - /var
+    - /home
+    - /opt
+    - /etc
+    - /mnt
 parts:
   gdu:
     plugin: go
@@ -22,3 +32,6 @@ parts:
 apps:
   gdu:
     command: gdu
+    plugs:
+    - mount-observe
+    - read-root
