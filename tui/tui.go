@@ -100,7 +100,7 @@ func CreateUI(screen tcell.Screen, useColors bool) *UI {
 		ui.footer.SetTextColor(tcell.ColorBlack)
 		ui.footer.SetBackgroundColor(tcell.ColorWhite)
 	}
-	ui.footer.SetText(" No items to diplay. ")
+	ui.footer.SetText(" No items to display. ")
 
 	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
 	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).

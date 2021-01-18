@@ -1,8 +1,7 @@
 #!/usr/bin/make -f
 
-export DH_GOPKG := github.com/dundee/gdu
 export GO111MODULE := on
-export GOCACHE := on
+export GOPROXY=https://proxy.golang.org
 
 %:
 	dh $@ --buildsystem=golang --with=golang

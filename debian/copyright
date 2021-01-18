@@ -1,4 +1,4 @@
-Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gdu
 Upstream-Contact: Daniel Milde <daniel@milde.cz>
 Source: https://github.com/dundee/gdu
