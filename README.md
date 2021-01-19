@@ -91,17 +91,35 @@ Non-interactive mode is started automtically when TTY is not detected (using [go
 
 ## Benchmark
 
-Scanning 80G of data on 500 GB SSD.
+Benchmarks performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
+See `benchmark` target in [Makefile](Makefile) for more info.
 
-Tool        | Real time without cache | Real time with cache | CPU time without cache (user + sys)
- ---        | ---                     | ---                  | ---               
-gdu /       | 6.5                     | 2                    | 15   (8 + 7)
-dua /       | 7.5                     | 2                    | 17   (4 + 13)
-godu /      | 8                       | 3                    | 23   (11 + 12)
-nnn -T d /  | 31                      | 3                    | 7.2  (0.3 + 6.9)
-du -hs /    | 32                      | 4                    | 8.6  (0.9 + 7.7)
-duc index / | 34                      | 4.5                  | 11.3 (2.5 + 8.8)
-baobab /    | 38                      | 12                   | 25   (16 + 9)
-ncdu /      | 43                      | 13                   | 18.5 (1.5 + 17)
+# Cold cache
+
+Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_caches`.
+
+| Command | Mean [s] | Min [s] | Max [s] | Relative |
+|:---|---:|---:|---:|---:|
+| `gdu -npc ~` | 3.634 ± 0.016 | 3.613 | 3.657 | 1.13 ± 0.02 |
+| `dua ~` | 4.029 ± 0.051 | 3.993 | 4.160 | 1.25 ± 0.03 |
+| `duc index ~` | 27.731 ± 0.436 | 27.128 | 28.283 | 8.61 ± 0.22 |
+| `ncdu -0 -o /dev/null ~` | 27.238 ± 0.198 | 26.908 | 27.604 | 8.45 ± 0.18 |
+| `diskus -b ~` | 3.222 ± 0.063 | 3.149 | 3.351 | 1.00 |
+| `du -hs ~` | 25.966 ± 0.910 | 24.056 | 26.997 | 8.06 ± 0.32 |
+| `dust -d0 ~` | 18.661 ± 1.629 | 14.461 | 19.672 | 5.79 ± 0.52 |
+
+# Warm cache
+
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `gdu -npc ~` | 619.6 ± 28.0 | 574.0 | 657.7 | 2.57 ± 0.25 |
+| `dua ~` | 344.0 ± 10.8 | 327.3 | 358.8 | 1.43 ± 0.13 |
+| `duc index ~` | 1092.4 ± 11.3 | 1073.9 | 1103.6 | 4.54 ± 0.39 |
+| `ncdu -0 -o /dev/null ~` | 1512.5 ± 18.4 | 1488.4 | 1546.5 | 6.28 ± 0.54 |
+| `diskus -b ~` | 240.8 ± 20.6 | 207.8 | 289.1 | 1.00 |
+| `du -hs ~` | 876.9 ± 19.5 | 843.9 | 910.3 | 3.64 ± 0.32 |
+| `dust -d0 ~` | 7614.2 ± 45.6 | 7557.0 | 7687.5 | 31.61 ± 2.72 |
+
+
 
 Gdu is inspired by [ncdu](https://dev.yorhel.nl/ncdu), [godu](https://github.com/viktomas/godu), [dua](https://github.com/Byron/dua-cli) and [df](https://www.gnu.org/software/coreutils/manual/html_node/df-invocation.html).
