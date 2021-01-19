@@ -30,16 +30,6 @@ build:
 	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_*; do tar czf $$file.tgz $$file; done
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
 
-build-deb: clean
-	docker build -t debian_go .
-	docker run -v $(CURDIR)/..:/xxx -w /xxx/gdu debian_go bash -c "make build-deb-local"
-
-build-deb-local:
-	$(eval TAG := $(shell echo $(VERSION) | sed -e "s/-.*//g"))
-	$(eval DEB_VERSION := $(shell echo $(TAG) | sed -e "s/v//g"))
-	git archive --format=tar.gz HEAD >../gdu_$(DEB_VERSION).orig.tar.gz
-	debuild -us -uc -i
-
 test:
 	go test -v $(PACKAGES)
 
@@ -56,7 +46,6 @@ clean:
 	-rm coverage.txt
 	-rm -r test_dir
 	-rm -r dist
-	-sudo rm -r obj-x86_64-linux-gnu on *.deb
 
 clean-uncompressed-dist:
 	find dist -type f -not -name '*.tgz' -not -name '*.zip' -delete

@@ -1,9 +1,0 @@
-#!/usr/bin/make -f
-
-export GO111MODULE := on
-export GOPROXY=https://proxy.golang.org
-
-%:
-	dh $@ --buildsystem=golang --with=golang
-
-
