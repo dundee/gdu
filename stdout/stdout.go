@@ -115,6 +115,8 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 		emptyRow += " "
 	}
 
+	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
+
 	i := 0
 	for {
 		progress.Mutex.Lock()
@@ -126,20 +128,7 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 			return
 		}
 
-		switch i {
-		case 0:
-			fmt.Fprint(ui.output, "\r | ")
-			break
-		case 1:
-			fmt.Fprint(ui.output, "\r / ")
-			break
-		case 2:
-			fmt.Fprint(ui.output, "\r - ")
-			break
-		case 3:
-			fmt.Fprint(ui.output, "\r \\ ")
-			break
-		}
+		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
 
 		fmt.Fprint(ui.output, "Scanning... Total items: "+
 			ui.red.Sprint(progress.ItemCount)+
@@ -149,7 +138,7 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 
 		time.Sleep(100 * time.Millisecond)
 		i++
-		i %= 4
+		i %= 10
 	}
 }
 
