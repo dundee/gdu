@@ -21,9 +21,9 @@ Head for the [releases](https://github.com/dundee/gdu/releases) and download bin
 
 Using curl:
 
-    curl -L https://github.com/dundee/gdu/releases/latest/download/gdu-linux-amd64.tgz | tar xz
-    chmod +x gdu-linux-amd64
-    mv gdu-linux-amd64 /usr/bin/gdu
+    curl -L https://github.com/dundee/gdu/releases/latest/download/gdu_linux_amd64.tgz | tar xz
+    chmod +x gdu_linux_amd64
+    mv gdu_linux_amd64 /usr/bin/gdu
 
 [Arch Linux](https://aur.archlinux.org/packages/gdu/):
 
@@ -94,7 +94,7 @@ Non-interactive mode is started automtically when TTY is not detected (using [go
 Benchmarks performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
 See `benchmark` target in [Makefile](Makefile) for more info.
 
-# Cold cache
+### Cold cache
 
 Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_caches`.
 
@@ -108,7 +108,7 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 | `du -hs ~` | 25.966 ± 0.910 | 24.056 | 26.997 | 8.06 ± 0.32 |
 | `dust -d0 ~` | 18.661 ± 1.629 | 14.461 | 19.672 | 5.79 ± 0.52 |
 
-# Warm cache
+### Warm cache
 
 | Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
 |:---|---:|---:|---:|---:|
