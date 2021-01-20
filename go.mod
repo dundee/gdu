@@ -3,8 +3,8 @@ module github.com/dundee/gdu
 go 1.15
 
 require (
+	github.com/fatih/color v1.7.0
 	github.com/gdamore/tcell/v2 v2.1.0
-	github.com/gookit/color v1.3.6
 	github.com/mattn/go-isatty v0.0.12
 	github.com/rivo/tview v0.0.0-20201204190810-5406288b8e4e
 	github.com/spf13/cobra v1.1.1

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
-	"github.com/gookit/color"
+	"github.com/fatih/color"
 )
 
 // UI struct
@@ -19,9 +19,9 @@ type UI struct {
 	ignoreDirPaths map[string]bool
 	useColors      bool
 	showProgress   bool
-	red            color.Style
-	orange         color.Style
-	blue           color.Style
+	red            *color.Color
+	orange         *color.Color
+	blue           *color.Color
 }
 
 // CreateStdoutUI creates UI for stdout
@@ -32,12 +32,12 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool) *UI {
 		showProgress: showProgress,
 	}
 
-	ui.red = color.Style{color.FgRed, color.OpBold}
-	ui.orange = color.Style{color.FgYellow, color.OpBold}
-	ui.blue = color.Style{color.FgBlue, color.OpBold}
+	ui.red = color.New(color.FgRed).Add(color.Bold)
+	ui.orange = color.New(color.FgYellow).Add(color.Bold)
+	ui.blue = color.New(color.FgBlue).Add(color.Bold)
 
 	if !useColors {
-		color.Disable()
+		color.NoColor = true
 	}
 
 	return ui
