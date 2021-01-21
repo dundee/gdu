@@ -2,3 +2,11 @@
 /coverage.txt
 /dist
 /test_dir
+debian/gdu
+debian/files
+debian/.debhelper
+debian/debhelper-build-stamp
+/on
+obj-x86_64-linux-gnu
+*.deb
+*.substvars

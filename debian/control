@@ -1,0 +1,22 @@
+Source: gdu
+Section: admin
+Priority: optional
+Maintainer: Daniel Milde <daniel@milde.cz>
+Homepage: https://github.com/dundee/gdu
+Vcs-Git: https://github.com/dundee/gdu.git
+Vcs-Browser: https://github.com/dundee/gdu
+Standards-Version: 4.5.0
+XS-Go-Import-Path: github.com/dundee/gdu
+Build-Depends: debhelper (>= 9),
+                dh-golang,
+                golang-go,
+                git
+
+Package: gdu
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Pretty fast disk usage analyzer written in Go
+ Gdu is intended primarily for SSD disks where it can fully
+ utilize parallel processing. However HDDs work as well, but
+ the performance gain is not so huge.

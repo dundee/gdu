@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+
+export GO111MODULE := on
+export GOCACHE := on
+
+%:
+	dh $@ --buildsystem=golang --with=golang
+
+
