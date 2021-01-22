@@ -61,7 +61,7 @@ Flags:
   -i, --ignore-dirs strings   Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -l, --log-file string       Path to a logfile (default "/dev/null")
   -c, --no-color              Do not use colorized output
-  -p, --no-progress           Do not show progress
+  -p, --no-progress           Do not show progress in non-interactive mode
   -n, --non-interactive       Do not run in interactive mode
   -d, --show-disks            Show all mounted disks
   -v, --version               Print version
@@ -77,7 +77,7 @@ Flags:
     gdu -c /                              # use only white/gray/black colors
 
     gdu -n /                              # only print stats, do not start interactive mode
-    gdu -np /                             # do not show progress either
+    gdu -np /                             # do not show progress, useful when using its output in a script
     gdu / > file                          # write stats to file, do not start interactive mode
 
 Gdu has two modes: interactive (default) and non-interactive.
