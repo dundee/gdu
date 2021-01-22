@@ -43,8 +43,27 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool) *UI {
 	return ui
 }
 
+// ListDevices lists mounted devices and shows their disk usage
+func (ui *UI) ListDevices() {
+	devices, err := analyze.GetDevicesInfo("/proc/mounts")
+	if err != nil {
+		panic(err)
+	}
+
+	for _, device := range devices {
+		fmt.Fprintf(
+			ui.output,
+			"%s %s %s %s %s\n",
+			device.Name,
+			ui.formatSize(device.Size),
+			ui.formatSize(device.Size-device.Free),
+			ui.formatSize(device.Free),
+			device.MountPoint)
+	}
+}
+
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer) {
+func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, _ *analyze.File) {
 	abspath, _ := filepath.Abs(path)
 	var dir *analyze.File
 

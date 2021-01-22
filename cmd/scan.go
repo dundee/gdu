@@ -34,6 +34,7 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 	}
 
 	var path string
+	var ui tui.CommonUI
 
 	f, err := os.OpenFile(flags.logFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -49,23 +50,20 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 	}
 
 	if flags.nonInteractive || !istty {
-		ui := stdout.CreateStdoutUI(writer, !flags.noColor && istty, !flags.noProgress && istty)
-		ui.SetIgnoreDirPaths(flags.ignoreDirs)
-		ui.AnalyzePath(path, analyze.ProcessDir)
-		return
-	}
+		ui = stdout.CreateStdoutUI(writer, !flags.noColor && istty, !flags.noProgress && istty)
+	} else {
+		screen, err := tcell.NewScreen()
+		if err != nil {
+			panic(err)
+		}
+		screen.Init()
 
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		panic(err)
-	}
-	screen.Init()
+		ui = tui.CreateUI(screen, !flags.noColor)
 
-	if !flags.noColor {
-		tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
+		if !flags.noColor {
+			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
+		}
 	}
-
-	ui := tui.CreateUI(screen, !flags.noColor)
 
 	if flags.showDisks {
 		if runtime.GOOS == "linux" {
@@ -79,5 +77,8 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 		ui.AnalyzePath(path, analyze.ProcessDir, nil)
 	}
 
-	ui.StartUILoop()
+	switch ui.(type) {
+	case *tui.UI:
+		ui.(*tui.UI).StartUILoop()
+	}
 }

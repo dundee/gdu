@@ -35,6 +35,13 @@ const helpText = `
 			  [::b]c    [white:black:-]Sort by items (asc/desc)
 `
 
+// CommonUI is common interface for both terminal UI and text output
+type CommonUI interface {
+	ListDevices()
+	AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *analyze.File)
+	SetIgnoreDirPaths(paths []string)
+}
+
 // UI struct
 type UI struct {
 	app             *tview.Application

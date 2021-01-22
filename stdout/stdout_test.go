@@ -17,7 +17,7 @@ func TestAnalyzePath(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
 	assert.Contains(t, output.String(), "nested")
 }
@@ -31,7 +31,7 @@ func TestAnalyzePathWithColors(t *testing.T) {
 
 	ui := CreateStdoutUI(output, true, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir/nested", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir/nested", analyze.ProcessDir, nil)
 
 	assert.Contains(t, output.String(), "subnested")
 }
@@ -44,7 +44,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir", analyze.ProcessDir)
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
 	assert.Contains(t, output.String(), "nested")
 }

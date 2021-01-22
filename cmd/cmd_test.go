@@ -27,3 +27,14 @@ func TestAnalyzePath(t *testing.T) {
 
 	assert.Contains(t, buff.String(), "nested")
 }
+
+func TestListDevices(t *testing.T) {
+	fin := analyze.CreateTestDir()
+	defer fin()
+
+	buff := bytes.NewBuffer(make([]byte, 10))
+
+	scan(&scanFlags{logFile: "/dev/null", showDisks: true}, nil, false, buff)
+
+	assert.Contains(t, buff.String(), "dev")
+}
