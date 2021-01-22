@@ -35,7 +35,7 @@ However HDDs work as well, but the performance gain is not so huge.
 	flags.BoolVarP(&sf.showVersion, "version", "v", false, "Print version")
 	flags.BoolVarP(&sf.noColor, "no-color", "c", false, "Do not use colorized output")
 	flags.BoolVarP(&sf.nonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")
-	flags.BoolVarP(&sf.noProgress, "no-progress", "p", false, "Do not show progress")
+	flags.BoolVarP(&sf.noProgress, "no-progress", "p", false, "Do not show progress in non-interactive mode")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
