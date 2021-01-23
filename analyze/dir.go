@@ -20,7 +20,7 @@ type CurrentProgress struct {
 // ShouldDirBeIgnored whether path should be ignored
 type ShouldDirBeIgnored func(path string) bool
 
-// Analyzer is type for dir analyzing funcion
+// Analyzer is type for dir analyzing function
 type Analyzer func(path string, progress *CurrentProgress, ignore ShouldDirBeIgnored) *File
 
 // ProcessDir analyzes given path
