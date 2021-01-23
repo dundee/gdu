@@ -7,3 +7,6 @@ type Device struct {
 	Size       int64
 	Free       int64
 }
+
+// DevicesInfoGetter is type for GetDevicesInfo function
+type DevicesInfoGetter func(mountsPath string) ([]*Device, error)

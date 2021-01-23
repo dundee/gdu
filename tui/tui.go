@@ -37,7 +37,7 @@ const helpText = `
 
 // CommonUI is common interface for both terminal UI and text output
 type CommonUI interface {
-	ListDevices()
+	ListDevices(getter analyze.DevicesInfoGetter)
 	AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *analyze.File)
 	SetIgnoreDirPaths(paths []string)
 }
@@ -124,9 +124,9 @@ func CreateUI(screen tcell.Screen, useColors bool) *UI {
 }
 
 // ListDevices lists mounted devices and shows their disk usage
-func (ui *UI) ListDevices() {
+func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
 	var err error
-	ui.devices, err = analyze.GetDevicesInfo("/proc/mounts")
+	ui.devices, err = getter("/proc/mounts")
 	if err != nil {
 		panic(err)
 	}

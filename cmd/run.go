@@ -15,18 +15,20 @@ import (
 	"github.com/rivo/tview"
 )
 
-type scanFlags struct {
-	logFile        string
-	ignoreDirs     []string
-	showDisks      bool
-	showVersion    bool
-	noColor        bool
-	nonInteractive bool
-	noProgress     bool
+// RunFlags define flags accepted by Run
+type RunFlags struct {
+	LogFile        string
+	IgnoreDirs     []string
+	ShowDisks      bool
+	ShowVersion    bool
+	NoColor        bool
+	NonInteractive bool
+	NoProgress     bool
 }
 
-func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
-	if flags.showVersion {
+// Run starts gdu main logic
+func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing bool) {
+	if flags.ShowVersion {
 		fmt.Fprintln(writer, "Version:\t", build.Version)
 		fmt.Fprintln(writer, "Built time:\t", build.Time)
 		fmt.Fprintln(writer, "Built user:\t", build.User)
@@ -36,7 +38,7 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 	var path string
 	var ui tui.CommonUI
 
-	f, err := os.OpenFile(flags.logFile, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(flags.LogFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
 	}
@@ -49,32 +51,42 @@ func scan(flags *scanFlags, args []string, istty bool, writer io.Writer) {
 		path = "."
 	}
 
-	if flags.nonInteractive || !istty {
-		ui = stdout.CreateStdoutUI(writer, !flags.noColor && istty, !flags.noProgress && istty)
+	if flags.NonInteractive || !istty {
+		ui = stdout.CreateStdoutUI(writer, !flags.NoColor && istty, !flags.NoProgress && istty)
 	} else {
-		screen, err := tcell.NewScreen()
-		if err != nil {
-			panic(err)
+		var screen tcell.Screen
+
+		if testing {
+			screen = tcell.NewSimulationScreen("UTF-8")
+		} else {
+			screen, err = tcell.NewScreen()
+			if err != nil {
+				panic(err)
+			}
 		}
 		screen.Init()
 
-		ui = tui.CreateUI(screen, !flags.noColor)
+		ui = tui.CreateUI(screen, !flags.NoColor)
 
-		if !flags.noColor {
+		if !flags.NoColor {
 			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
 		}
 	}
 
-	if flags.showDisks {
+	if flags.ShowDisks {
 		if runtime.GOOS == "linux" {
-			ui.ListDevices()
+			ui.ListDevices(analyze.GetDevicesInfo)
 		} else {
 			fmt.Fprint(writer, "Listing devices is not yet supported for this platform")
 			return
 		}
 	} else {
-		ui.SetIgnoreDirPaths(flags.ignoreDirs)
+		ui.SetIgnoreDirPaths(flags.IgnoreDirs)
 		ui.AnalyzePath(path, analyze.ProcessDir, nil)
+	}
+
+	if testing {
+		return
 	}
 
 	switch ui.(type) {

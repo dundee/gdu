@@ -49,6 +49,21 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 	assert.Contains(t, output.String(), "nested")
 }
 
+func TestShowDevices(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, true)
+	ui.ListDevices(func(_ string) ([]*analyze.Device, error) {
+		item := &analyze.Device{
+			Name: "xxx",
+		}
+		return []*analyze.Device{item}, nil
+	})
+
+	assert.Contains(t, output.String(), "Device")
+	assert.Contains(t, output.String(), "xxx")
+}
+
 func printBuffer(buff *bytes.Buffer) {
 	for i, x := range buff.String() {
 		println(i, string(x))

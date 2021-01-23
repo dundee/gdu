@@ -221,7 +221,7 @@ func TestShowDevices(t *testing.T) {
 	simScreen.SetSize(50, 50)
 
 	ui := CreateUI(simScreen, false)
-	ui.ListDevices()
+	ui.ListDevices(getDevicesInfoMock)
 	ui.table.Draw(simScreen)
 	simScreen.Show()
 
@@ -244,7 +244,7 @@ func TestShowDevicesBW(t *testing.T) {
 	simScreen.SetSize(50, 50)
 
 	ui := CreateUI(simScreen, true)
-	ui.ListDevices()
+	ui.ListDevices(getDevicesInfoMock)
 	ui.table.Draw(simScreen)
 	simScreen.Show()
 
@@ -268,7 +268,7 @@ func TestSelectDevice(t *testing.T) {
 	ui := CreateUI(simScreen, true)
 	ui.SetIgnoreDirPaths([]string{"/"})
 	ui.analyzer = analyzeMock
-	ui.ListDevices()
+	ui.ListDevices(getDevicesInfoMock)
 
 	go func() {
 		time.Sleep(10 * time.Millisecond)
@@ -362,4 +362,11 @@ func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.
 		Name:     "xxx",
 		BasePath: ".",
 	}
+}
+
+func getDevicesInfoMock(_ string) ([]*analyze.Device, error) {
+	item := &analyze.Device{
+		Name: "xxx",
+	}
+	return []*analyze.Device{item}, nil
 }
