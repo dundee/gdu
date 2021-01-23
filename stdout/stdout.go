@@ -50,14 +50,35 @@ func (ui *UI) ListDevices() {
 		panic(err)
 	}
 
+	maxDeviceNameLenght := maxInt(maxLength(
+		devices,
+		func(device *analyze.Device) string { return device.Name },
+	), len("Devices"))
+
+	lineFormat := fmt.Sprintf("%%%ds %%9s %%9s %%9s %%5s %%s\n", maxDeviceNameLenght)
+
+	fmt.Fprintf(
+		ui.output,
+		lineFormat,
+		"Device",
+		"Size",
+		"Used",
+		"Free",
+		"Used%",
+		"Mount point",
+	)
+
 	for _, device := range devices {
+		usedPercent := math.Round(float64(device.Size-device.Free) / float64(device.Size) * 100)
+
 		fmt.Fprintf(
 			ui.output,
-			"%s %s %s %s %s\n",
+			lineFormat,
 			device.Name,
 			ui.formatSize(device.Size),
 			ui.formatSize(device.Size-device.Free),
 			ui.formatSize(device.Free),
+			ui.red.Sprintf("  %.f%%", usedPercent),
 			device.MountPoint)
 	}
 }
@@ -172,4 +193,23 @@ func (ui *UI) formatSize(size int64) string {
 		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 10)) + " KiB"
 	}
 	return ui.orange.Sprintf("%d", size) + " B"
+}
+
+func maxLength(list []*analyze.Device, keyGetter func(*analyze.Device) string) int {
+	maxLen := 0
+	var s string
+	for _, item := range list {
+		s = keyGetter(item)
+		if len(s) > maxLen {
+			maxLen = len(s)
+		}
+	}
+	return maxLen
+}
+
+func maxInt(x int, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }
