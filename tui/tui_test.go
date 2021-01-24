@@ -113,6 +113,8 @@ func TestDeleteDir(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
 		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'l', 1) // test selecting file
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
@@ -203,12 +205,25 @@ func TestShowConfirm(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'h', 1) // cannot go up
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, '?', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
+		simScreen.InjectKey(tcell.KeyRight, '1', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRight, '1', 1) // `..` cannot be selected by `l` or `right`
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1) // select file
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'h', 1) // cannot go up when confirm is shown
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'l', 1) // cannot go down when confirm is shown
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
@@ -309,6 +324,10 @@ func TestSelectDevice(t *testing.T) {
 	ui.ListDevices(getDevicesInfoMock)
 
 	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1) // device cannot be deleted
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'r', 1) // or refreshed
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
 		time.Sleep(10 * time.Millisecond)
@@ -345,7 +364,7 @@ func TestKeys(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, 'h', 1)
+		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
 		time.Sleep(10 * time.Millisecond)
@@ -404,7 +423,12 @@ func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.
 
 func getDevicesInfoMock(_ string) ([]*analyze.Device, error) {
 	item := &analyze.Device{
-		Name: "xxx",
+		Name:       "/dev/root",
+		MountPoint: "/",
 	}
-	return []*analyze.Device{item}, nil
+	item2 := &analyze.Device{
+		Name:       "/dev/boot",
+		MountPoint: "/boot",
+	}
+	return []*analyze.Device{item, item2}, nil
 }
