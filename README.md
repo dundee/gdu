@@ -31,7 +31,7 @@ Using curl:
 
 Debian:
 
-    dpkg -i gdu_*_all.deb
+    dpkg -i gdu_*_amd64.deb
 
 [NixOS](https://search.nixos.org/packages?channel=unstable&show=gdu&query=gdu):
 
