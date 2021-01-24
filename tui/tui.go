@@ -415,6 +415,14 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		if ui.currentDir == nil {
 			break
 		}
+
+		// do not allow deleting parent dir
+		row, column := ui.table.GetSelection()
+		selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
+		if selectedFile == ui.currentDir.Parent {
+			break
+		}
+
 		if ui.askBeforeDelete {
 			ui.confirmDeletion()
 		} else {

@@ -108,6 +108,11 @@ func TestDeleteDir(t *testing.T) {
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
@@ -117,6 +122,34 @@ func TestDeleteDir(t *testing.T) {
 	ui.StartUILoop()
 
 	assert.NoFileExists(t, "test_dir/nested/file2")
+}
+
+func TestDoNotDeleteParentDir(t *testing.T) {
+	fin := analyze.CreateTestDir()
+	defer fin()
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(simScreen, true)
+	ui.askBeforeDelete = false
+
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	assert.FileExists(t, "test_dir/nested/file2")
 }
 
 func TestDeleteDirWithConfirm(t *testing.T) {
@@ -138,6 +171,11 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyEnter, 'x', 1)
