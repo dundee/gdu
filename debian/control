@@ -5,7 +5,7 @@ Maintainer: Daniel Milde <daniel@milde.cz>
 Homepage: https://github.com/dundee/gdu
 Vcs-Git: https://github.com/dundee/gdu.git
 Vcs-Browser: https://github.com/dundee/gdu
-Standards-Version: 4.5.0
+Standards-Version: 4.3.0
 XS-Go-Import-Path: github.com/dundee/gdu
 Build-Depends: debhelper (>= 9),
                 dh-golang,
