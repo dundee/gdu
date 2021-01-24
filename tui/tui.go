@@ -315,6 +315,10 @@ func (ui *UI) fileItemSelected(row, column int) {
 func (ui *UI) deviceItemSelected(row, column int) {
 	selectedDevice := ui.table.GetCell(row, column).GetReference().(*analyze.Device)
 
+	if ui.ignoreDirPaths == nil {
+		ui.ignoreDirPaths = make(map[string]bool, 10)
+	}
+
 	for _, device := range ui.devices {
 		if device.Name != selectedDevice.Name && !strings.HasPrefix(selectedDevice.MountPoint, device.MountPoint) {
 			ui.ignoreDirPaths[device.MountPoint] = true

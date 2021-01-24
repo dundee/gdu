@@ -319,7 +319,6 @@ func TestSelectDevice(t *testing.T) {
 	simScreen.SetSize(50, 50)
 
 	ui := CreateUI(simScreen, true)
-	ui.SetIgnoreDirPaths([]string{"/"})
 	ui.analyzer = analyzeMock
 	ui.ListDevices(getDevicesInfoMock)
 
