@@ -55,11 +55,27 @@ func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
 		func(device *analyze.Device) string { return device.Name },
 	), len("Devices"))
 
-	lineFormat := fmt.Sprintf("%%%ds %%9s %%9s %%9s %%5s %%s\n", maxDeviceNameLenght)
+	var sizeLength, percentLength int
+	if ui.useColors {
+		sizeLength = 20
+		percentLength = 8
+	} else {
+		sizeLength = 9
+		percentLength = 5
+	}
+
+	lineFormat := fmt.Sprintf(
+		"%%%ds %%%ds %%%ds %%%ds %%%ds %%s\n",
+		maxDeviceNameLenght,
+		sizeLength,
+		sizeLength,
+		sizeLength,
+		percentLength,
+	)
 
 	fmt.Fprintf(
 		ui.output,
-		lineFormat,
+		fmt.Sprintf("%%%ds %%9s %%9s %%9s %%5s %%s\n", maxDeviceNameLenght),
 		"Device",
 		"Size",
 		"Used",
