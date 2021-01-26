@@ -44,6 +44,8 @@ Debian:
 [Snap](https://snapcraft.io/gdu-disk-usage-analyzer):
 
     snap install gdu-disk-usage-analyzer
+    snap connect gdu-disk-usage-analyzer.gdu:mount-observe :mount-observe
+    snap connect gdu-disk-usage-analyzer.gdu:system-backup :system-backup
     snap alias gdu-disk-usage-analyzer.gdu gdu
 
 [Go](https://pkg.go.dev/github.com/dundee/gdu):
