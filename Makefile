@@ -13,7 +13,7 @@ run:
 
 build:
 	@echo "Version: " $(VERSION)
-	-mkdir dist
+	mkdir -p dist
 	GOFLAGS="$(GOFLAGS)" go build -ldflags=$(LDFLAGS) -o dist/$(NAME) .
 
 build-all:
