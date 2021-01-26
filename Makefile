@@ -1,7 +1,6 @@
 NAME := gdu
 PACKAGE := github.com/dundee/$(NAME)
 VERSION := $(shell git describe --tags)
-PACKAGES := $(shell go list ./...)
 GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw
 LDFLAGS := "-s -w \
 	-X '$(PACKAGE)/build.Version=$(VERSION)' \
@@ -39,16 +38,16 @@ build-all:
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
 
 test:
-	go test -v $(PACKAGES)
+	go test -v ./...
 
 coverage:
-	go test -v -race -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)
+	go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
 coverage-html: coverage
 	go tool cover -html=coverage.txt
 
 gobench:
-	go test -bench=. $(PACKAGES)
+	go test -bench=. ./...
 
 benchmark:
 	hyperfine --export-markdown=bench-cold.md \
