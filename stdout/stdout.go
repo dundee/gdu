@@ -58,7 +58,7 @@ func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
 	var sizeLength, percentLength int
 	if ui.useColors {
 		sizeLength = 20
-		percentLength = 8
+		percentLength = 16
 	} else {
 		sizeLength = 9
 		percentLength = 5
@@ -94,7 +94,7 @@ func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
 			ui.formatSize(device.Size),
 			ui.formatSize(device.Size-device.Free),
 			ui.formatSize(device.Free),
-			ui.red.Sprintf("  %.f%%", usedPercent),
+			ui.red.Sprintf("%.f%%", usedPercent),
 			device.MountPoint)
 	}
 }
