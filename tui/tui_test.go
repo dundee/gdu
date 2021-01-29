@@ -320,6 +320,7 @@ func TestSelectDevice(t *testing.T) {
 
 	ui := CreateUI(simScreen, true)
 	ui.analyzer = analyzeMock
+	ui.SetIgnoreDirPaths([]string{"/proc"})
 	ui.ListDevices(getDevicesInfoMock)
 
 	go func() {
