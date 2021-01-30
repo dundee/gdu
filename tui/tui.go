@@ -357,6 +357,7 @@ func (ui *UI) deleteSelected() {
 		panic(err)
 	}
 	ui.showDir()
+	ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
 }
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
@@ -582,4 +583,11 @@ func getDeviceUsagePart(item *analyze.Device) string {
 	}
 	row += "]"
 	return row
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
