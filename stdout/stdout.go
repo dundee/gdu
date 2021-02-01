@@ -15,21 +15,23 @@ import (
 
 // UI struct
 type UI struct {
-	output         io.Writer
-	ignoreDirPaths map[string]bool
-	useColors      bool
-	showProgress   bool
-	red            *color.Color
-	orange         *color.Color
-	blue           *color.Color
+	output           io.Writer
+	ignoreDirPaths   map[string]bool
+	useColors        bool
+	showProgress     bool
+	showApparentSize bool
+	red              *color.Color
+	orange           *color.Color
+	blue             *color.Color
 }
 
 // CreateStdoutUI creates UI for stdout
-func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool) *UI {
+func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApparentSize bool) *UI {
 	ui := &UI{
-		output:       output,
-		useColors:    useColors,
-		showProgress: showProgress,
+		output:           output,
+		useColors:        useColors,
+		showProgress:     showProgress,
+		showApparentSize: showApparentSize,
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -137,16 +139,24 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, _ *analyze.Fil
 		lineFormat = "%9s %s\n"
 	}
 
+	var size int64
+
 	for _, file := range dir.Files {
+		if ui.showApparentSize {
+			size = file.Size
+		} else {
+			size = file.Usage
+		}
+
 		if file.IsDir {
 			fmt.Fprintf(ui.output,
 				lineFormat,
-				ui.formatSize(file.Size),
+				ui.formatSize(size),
 				ui.blue.Sprintf("/"+file.Name))
 		} else {
 			fmt.Fprintf(ui.output,
 				lineFormat,
-				ui.formatSize(file.Size),
+				ui.formatSize(size),
 				file.Name)
 		}
 	}

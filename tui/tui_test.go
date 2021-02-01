@@ -18,18 +18,20 @@ func TestFooter(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(15, 15)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, true)
 
 	dir := analyze.File{
 		Name:      "xxx",
 		BasePath:  ".",
 		Size:      5,
+		Usage:     4096,
 		ItemCount: 2,
 	}
 
 	file := analyze.File{
 		Name:      "yyy",
 		Size:      2,
+		Usage:     4096,
 		ItemCount: 1,
 		Parent:    &dir,
 	}
@@ -44,7 +46,7 @@ func TestFooter(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	text := []byte(" Apparent size: 5 B Items: 2")
+	text := []byte(" Total disk usage: 4.0 KiB Apparent size: 5 B Items: 2")
 	for i, r := range b {
 		if i >= len(text) {
 			break
@@ -61,7 +63,7 @@ func TestUpdateProgress(t *testing.T) {
 
 	progress := &analyze.CurrentProgress{Mutex: &sync.Mutex{}, Done: true}
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, false)
 	progress.CurrentItemName = "xxx"
 	ui.updateProgress(progress)
 	assert.True(t, true)
@@ -73,16 +75,16 @@ func TestHelp(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, true)
 	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
 
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[257 : 257+7]
+	cells := b[264 : 264+9]
 
-	text := []byte("selected")
+	text := []byte("directory")
 	for i, r := range cells {
 		assert.Equal(t, text[i], r.Bytes[0])
 	}
@@ -96,7 +98,7 @@ func TestDeleteDir(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, false)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -117,6 +119,8 @@ func TestDeleteDir(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'a', 1)
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
 	}()
@@ -134,7 +138,7 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, true)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -162,7 +166,7 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -199,7 +203,7 @@ func TestShowConfirm(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -242,7 +246,7 @@ func TestRescan(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -273,7 +277,7 @@ func TestShowDevices(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, true)
 	ui.ListDevices(getDevicesInfoMock)
 	ui.table.Draw(simScreen)
 	simScreen.Show()
@@ -296,7 +300,7 @@ func TestShowDevicesBW(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, false)
 	ui.ListDevices(getDevicesInfoMock)
 	ui.table.Draw(simScreen)
 	simScreen.Show()
@@ -318,7 +322,7 @@ func TestSelectDevice(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, true)
 	ui.analyzer = analyzeMock
 	ui.SetIgnoreDirPaths([]string{"/proc"})
 	ui.ListDevices(getDevicesInfoMock)
@@ -345,7 +349,7 @@ func TestKeys(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, false)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -385,7 +389,7 @@ func TestSetIgnoreDirPaths(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, true)
 
 	path, _ := filepath.Abs("test_dir/nested/subnested")
 	ui.SetIgnoreDirPaths([]string{path})

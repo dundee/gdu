@@ -31,6 +31,7 @@ However HDDs work as well, but the performance gain is not so huge.
 	flags.StringVarP(&rf.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringSliceVarP(&rf.IgnoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
 	flags.BoolVarP(&rf.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
+	flags.BoolVarP(&rf.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")
 	flags.BoolVarP(&rf.ShowVersion, "version", "v", false, "Print version")
 	flags.BoolVarP(&rf.NoColor, "no-color", "c", false, "Do not use colorized output")
 	flags.BoolVarP(&rf.NonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")

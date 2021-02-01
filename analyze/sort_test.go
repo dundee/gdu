@@ -7,6 +7,46 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSortByUsage(t *testing.T) {
+	files := Files{
+		&File{
+			Usage: 1,
+		},
+		&File{
+			Usage: 2,
+		},
+		&File{
+			Usage: 3,
+		},
+	}
+
+	sort.Sort(files)
+
+	assert.Equal(t, int64(3), files[0].Usage)
+	assert.Equal(t, int64(2), files[1].Usage)
+	assert.Equal(t, int64(1), files[2].Usage)
+}
+
+func TestSortByUsageAsc(t *testing.T) {
+	files := Files{
+		&File{
+			Size: 1,
+		},
+		&File{
+			Size: 2,
+		},
+		&File{
+			Size: 3,
+		},
+	}
+
+	sort.Sort(sort.Reverse(files))
+
+	assert.Equal(t, int64(1), files[0].Size)
+	assert.Equal(t, int64(2), files[1].Size)
+	assert.Equal(t, int64(3), files[2].Size)
+}
+
 func TestSortBySize(t *testing.T) {
 	files := Files{
 		&File{
@@ -20,7 +60,7 @@ func TestSortBySize(t *testing.T) {
 		},
 	}
 
-	sort.Sort(files)
+	sort.Sort(ByApparentSize(files))
 
 	assert.Equal(t, int64(3), files[0].Size)
 	assert.Equal(t, int64(2), files[1].Size)
@@ -40,7 +80,7 @@ func TestSortBySizeAsc(t *testing.T) {
 		},
 	}
 
-	sort.Sort(sort.Reverse(files))
+	sort.Sort(sort.Reverse(ByApparentSize(files)))
 
 	assert.Equal(t, int64(1), files[0].Size)
 	assert.Equal(t, int64(2), files[1].Size)

@@ -17,13 +17,14 @@ import (
 
 // RunFlags define flags accepted by Run
 type RunFlags struct {
-	LogFile        string
-	IgnoreDirs     []string
-	ShowDisks      bool
-	ShowVersion    bool
-	NoColor        bool
-	NonInteractive bool
-	NoProgress     bool
+	LogFile          string
+	IgnoreDirs       []string
+	ShowDisks        bool
+	ShowApparentSize bool
+	ShowVersion      bool
+	NoColor          bool
+	NonInteractive   bool
+	NoProgress       bool
 }
 
 // Run starts gdu main logic
@@ -52,7 +53,12 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 	}
 
 	if flags.NonInteractive || !istty {
-		ui = stdout.CreateStdoutUI(writer, !flags.NoColor && istty, !flags.NoProgress && istty)
+		ui = stdout.CreateStdoutUI(
+			writer,
+			!flags.NoColor && istty,
+			!flags.NoProgress && istty,
+			flags.ShowApparentSize,
+		)
 	} else {
 		var screen tcell.Screen
 
@@ -66,7 +72,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 		}
 		screen.Init()
 
-		ui = tui.CreateUI(screen, !flags.NoColor)
+		ui = tui.CreateUI(screen, !flags.NoColor, flags.ShowApparentSize)
 
 		if !flags.NoColor {
 			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)

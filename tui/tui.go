@@ -20,6 +20,7 @@ const helpTextColorized = `
         [red]left, h    [white]Go to parent directory
 			  [red]d    [white]Delete selected file or directory
 			  [red]r    [white]Rescan current directory
+			  [red]a    [white]Toggle between showing disk usage and apparent size
 			  [red]n    [white]Sort by name (asc/desc)
 			  [red]s    [white]Sort by size (asc/desc)
 			  [red]c    [white]Sort by items (asc/desc)
@@ -30,6 +31,7 @@ const helpText = `
         [::b]left, h    [white:black:-]Go to parent directory
 			  [::b]d    [white:black:-]Delete selected file or directory
 			  [::b]r    [white:black:-]Rescan current directory
+			  [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
 			  [::b]n    [white:black:-]Sort by name (asc/desc)
 			  [::b]s    [white:black:-]Sort by size (asc/desc)
 			  [::b]c    [white:black:-]Sort by items (asc/desc)
@@ -44,35 +46,37 @@ type CommonUI interface {
 
 // UI struct
 type UI struct {
-	app             *tview.Application
-	header          *tview.TextView
-	footer          *tview.TextView
-	currentDirLabel *tview.TextView
-	pages           *tview.Pages
-	progress        *tview.TextView
-	help            *tview.Flex
-	table           *tview.Table
-	currentDir      *analyze.File
-	devices         []*analyze.Device
-	analyzer        analyze.Analyzer
-	topDir          *analyze.File
-	topDirPath      string
-	currentDirPath  string
-	askBeforeDelete bool
-	ignoreDirPaths  map[string]bool
-	sortBy          string
-	sortOrder       string
-	useColors       bool
+	app              *tview.Application
+	header           *tview.TextView
+	footer           *tview.TextView
+	currentDirLabel  *tview.TextView
+	pages            *tview.Pages
+	progress         *tview.TextView
+	help             *tview.Flex
+	table            *tview.Table
+	currentDir       *analyze.File
+	devices          []*analyze.Device
+	analyzer         analyze.Analyzer
+	topDir           *analyze.File
+	topDirPath       string
+	currentDirPath   string
+	askBeforeDelete  bool
+	ignoreDirPaths   map[string]bool
+	sortBy           string
+	sortOrder        string
+	useColors        bool
+	showApparentSize bool
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(screen tcell.Screen, useColors bool) *UI {
+func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 	ui := &UI{
-		askBeforeDelete: true,
-		sortBy:          "size",
-		sortOrder:       "desc",
-		useColors:       useColors,
-		analyzer:        analyze.ProcessDir,
+		askBeforeDelete:  true,
+		sortBy:           "size",
+		sortOrder:        "desc",
+		useColors:        useColors,
+		showApparentSize: showApparentSize,
+		analyzer:         analyze.ProcessDir,
 	}
 
 	ui.app = tview.NewApplication()
@@ -149,10 +153,10 @@ func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
 
 	for i, device := range ui.devices {
 		ui.table.SetCell(i+1, 0, tview.NewTableCell(textColor+device.Name).SetReference(ui.devices[i]))
-		ui.table.SetCell(i+1, 1, tview.NewTableCell(formatSize(device.Size, false, ui.useColors)))
-		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+formatSize(device.Size-device.Free, false, ui.useColors)))
+		ui.table.SetCell(i+1, 1, tview.NewTableCell(ui.formatSize(device.Size, false)))
+		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+ui.formatSize(device.Size-device.Free, false)))
 		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device)))
-		ui.table.SetCell(i+1, 4, tview.NewTableCell(formatSize(device.Free, false, ui.useColors)))
+		ui.table.SetCell(i+1, 4, tview.NewTableCell(ui.formatSize(device.Free, false)))
 		ui.table.SetCell(i+1, 5, tview.NewTableCell(textColor+device.MountPoint))
 	}
 
@@ -250,7 +254,7 @@ func (ui *UI) showDir() {
 	ui.sortItems()
 
 	for i, item := range ui.currentDir.Files {
-		cell := tview.NewTableCell(formatFileRow(item, ui.useColors))
+		cell := tview.NewTableCell(ui.formatFileRow(item))
 		cell.SetReference(ui.currentDir.Files[i])
 
 		ui.table.SetCell(rowIndex, 0, cell)
@@ -267,12 +271,16 @@ func (ui *UI) showDir() {
 	}
 
 	ui.footer.SetText(
-		" Apparent size: " +
+		" Total disk usage: " +
 			footerNumberColor +
-			formatSize(ui.currentDir.Size, true, ui.useColors) +
+			ui.formatSize(ui.currentDir.Usage, true) +
+			" Apparent size: " +
+			footerNumberColor +
+			ui.formatSize(ui.currentDir.Size, true) +
 			" Items: " + footerNumberColor + fmt.Sprint(ui.currentDir.ItemCount) +
 			footerTextColor +
 			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
+
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
 	ui.app.SetFocus(ui.table)
@@ -280,10 +288,18 @@ func (ui *UI) showDir() {
 
 func (ui *UI) sortItems() {
 	if ui.sortBy == "size" {
-		if ui.sortOrder == "desc" {
-			sort.Sort(ui.currentDir.Files)
+		if ui.showApparentSize {
+			if ui.sortOrder == "desc" {
+				sort.Sort(analyze.ByApparentSize(ui.currentDir.Files))
+			} else {
+				sort.Sort(sort.Reverse(analyze.ByApparentSize(ui.currentDir.Files)))
+			}
 		} else {
-			sort.Sort(sort.Reverse(ui.currentDir.Files))
+			if ui.sortOrder == "desc" {
+				sort.Sort(ui.currentDir.Files)
+			} else {
+				sort.Sort(sort.Reverse(ui.currentDir.Files))
+			}
 		}
 	}
 	if ui.sortBy == "itemCount" {
@@ -430,6 +446,12 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.deleteSelected()
 		}
 		break
+	case 'a':
+		ui.showApparentSize = !ui.showApparentSize
+		if ui.currentDir != nil {
+			ui.showDir()
+		}
+		break
 	case 'r':
 		if ui.currentDir == nil {
 			break
@@ -482,7 +504,7 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 				fmt.Sprint(progress.ItemCount) +
 				"[white:black:-] size: " +
 				color +
-				formatSize(progress.TotalSize, false, ui.useColors) +
+				ui.formatSize(progress.TotalSize, false) +
 				"[white:black:-]\nCurrent item: [white:black:b]" +
 				progress.CurrentItemName)
 		})
@@ -508,17 +530,61 @@ func (ui *UI) showHelp() {
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
 			AddItem(text, 15, 1, false).
-			AddItem(nil, 0, 1, false), 60, 1, false).
+			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	ui.help = flex
 	ui.pages.AddPage("help", flex, true, true)
 }
 
-func formatSize(size int64, reverseColor bool, useColors bool) string {
+func (ui *UI) formatFileRow(item *analyze.File) string {
+	var part int
+
+	if ui.showApparentSize {
+		part = int(float64(item.Size) / float64(item.Parent.Size) * 10.0)
+	} else {
+		part = int(float64(item.Usage) / float64(item.Parent.Usage) * 10.0)
+	}
+
+	var row string
+
+	if ui.useColors {
+		row = "[#edb20a:black:b]"
+	} else {
+		row = "[white:black:b]"
+	}
+
+	if ui.showApparentSize {
+		row += fmt.Sprintf("%25s", ui.formatSize(item.Size, false))
+	} else {
+		row += fmt.Sprintf("%25s", ui.formatSize(item.Usage, false))
+	}
+
+	row += " ["
+	for i := 0; i < 10; i++ {
+		if part > i {
+			row += "#"
+		} else {
+			row += " "
+		}
+	}
+	row += "] "
+
+	if item.IsDir {
+		if ui.useColors {
+			row += "[#3498db::b]/"
+		} else {
+			row += "[::b]/"
+		}
+	}
+	row += item.Name
+	return row
+}
+
+func (ui *UI) formatSize(size int64, reverseColor bool) string {
 	var color string
 	if reverseColor {
-		if useColors {
+		if ui.useColors {
 			color = "[white:#2479d0:-]"
 		} else {
 			color = "[black:white:-]"
@@ -537,38 +603,6 @@ func formatSize(size int64, reverseColor bool, useColors bool) string {
 		return fmt.Sprintf("%.1f%s KiB", float64(size)/math.Pow(2, 10), color)
 	}
 	return fmt.Sprintf("%d%s B", size, color)
-}
-
-func formatFileRow(item *analyze.File, useColor bool) string {
-	part := int(float64(item.Size) / float64(item.Parent.Size) * 10.0)
-	var row string
-
-	if useColor {
-		row = "[#edb20a:black:b]"
-	} else {
-		row = "[white:black:b]"
-	}
-
-	row += fmt.Sprintf("%25s", formatSize(item.Size, false, useColor))
-	row += " ["
-	for i := 0; i < 10; i++ {
-		if part > i {
-			row += "#"
-		} else {
-			row += " "
-		}
-	}
-	row += "] "
-
-	if item.IsDir {
-		if useColor {
-			row += "[#3498db::b]/"
-		} else {
-			row += "[::b]/"
-		}
-	}
-	row += item.Name
-	return row
 }
 
 func getDeviceUsagePart(item *analyze.Device) string {

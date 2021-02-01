@@ -15,7 +15,7 @@ func TestProcessDir(t *testing.T) {
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
-	assert.Equal(t, int64(7), dir.Size)
+	assert.Equal(t, int64(7+4096*3), dir.Size)
 	assert.Equal(t, 5, dir.ItemCount)
 	assert.True(t, dir.IsDir)
 

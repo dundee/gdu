@@ -65,6 +65,7 @@ Flags:
   -c, --no-color              Do not use colorized output
   -p, --no-progress           Do not show progress in non-interactive mode
   -n, --non-interactive       Do not run in interactive mode
+  -a, --show-apparent-size    Show apparent size
   -d, --show-disks            Show all mounted disks
   -v, --version               Print version
 ```
@@ -72,6 +73,7 @@ Flags:
 ## Examples
 
     gdu                                   # analyze current dir
+    gdu -a                                # show apparent size instead of disk usage
     gdu <some_dir_to_analyze>             # analyze given dir
     gdu -d                                # show all mounted disks
     gdu -l ./gdu.log <some_dir>           # write errors to log file

@@ -10,6 +10,7 @@ type File struct {
 	Name      string
 	BasePath  string
 	Size      int64
+	Usage     int64
 	ItemCount int
 	IsDir     bool
 	Files     Files
@@ -51,15 +52,18 @@ func (f *File) UpdateStats() {
 	if !f.IsDir {
 		return
 	}
-	var totalSize int64
+	totalSize := int64(4096)
+	totalUsage := int64(4096)
 	var itemCount int
 	for _, entry := range f.Files {
 		entry.UpdateStats()
 		totalSize += entry.Size
+		totalUsage += entry.Usage
 		itemCount += entry.ItemCount
 	}
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize
+	f.Usage = totalUsage
 }
 
 // Files - slice of pointers to File

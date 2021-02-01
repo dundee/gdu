@@ -17,7 +17,7 @@ func TestSortBySizeAsc(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -48,7 +48,7 @@ func TestSortByName(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -79,7 +79,7 @@ func TestSortByNameDesc(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -112,7 +112,7 @@ func TestSortByItemCount(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true)
+	ui := CreateUI(simScreen, true, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -143,7 +143,7 @@ func TestSortByItemCountDesc(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false)
+	ui := CreateUI(simScreen, false, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
