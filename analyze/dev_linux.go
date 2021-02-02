@@ -32,7 +32,7 @@ func processMounts(file io.Reader) ([]*Device, error) {
 			continue
 		}
 
-		if line[0:4] == "/dev" || strings.Contains(line, " zfs ") {
+		if strings.HasPrefix(line, "/dev") || strings.Contains(line, " zfs ") {
 			parts := strings.Fields(line)
 			info := &syscall.Statfs_t{}
 			syscall.Statfs(parts[1], info)
