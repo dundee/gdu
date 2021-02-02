@@ -13,9 +13,8 @@ const devBSize = 512
 func getUsage(f os.FileInfo) int64 {
 	var usage int64 = 0
 
-	switch f.Sys().(type) {
+	switch stat := f.Sys().(type) {
 	case *syscall.Stat_t:
-		stat := f.Sys().(*syscall.Stat_t)
 		usage = stat.Blocks * devBSize
 	}
 	return usage

@@ -101,8 +101,8 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 		return
 	}
 
-	switch ui.(type) {
+	switch u := ui.(type) {
 	case *tui.UI:
-		ui.(*tui.UI).StartUILoop()
+		u.StartUILoop()
 	}
 }
