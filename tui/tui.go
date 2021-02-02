@@ -350,7 +350,7 @@ func (ui *UI) confirmDeletion() {
 			switch buttonIndex {
 			case 2:
 				ui.askBeforeDelete = false
-				ui.deleteSelected()
+				fallthrough
 			case 0:
 				ui.deleteSelected()
 			}
