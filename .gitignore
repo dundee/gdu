@@ -1,4 +1,4 @@
-.vscode
-coverage.txt
-dist
-test_dir
+/.vscode
+/coverage.txt
+/dist
+/test_dir
