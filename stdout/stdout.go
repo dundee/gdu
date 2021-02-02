@@ -209,16 +209,18 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 }
 
 func (ui *UI) formatSize(size int64) string {
-	if size > 1e12 {
+	switch {
+	case size > 1e12:
 		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 40)) + " TiB"
-	} else if size > 1e9 {
+	case size > 1e9:
 		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 30)) + " GiB"
-	} else if size > 1e6 {
+	case size > 1e6:
 		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 20)) + " MiB"
-	} else if size > 1e3 {
+	case size > 1e3:
 		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 10)) + " KiB"
+	default:
+		return ui.orange.Sprintf("%d", size) + " B"
 	}
-	return ui.orange.Sprintf("%d", size) + " B"
 }
 
 func maxLength(list []*analyze.Device, keyGetter func(*analyze.Device) string) int {

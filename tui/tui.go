@@ -347,14 +347,12 @@ func (ui *UI) confirmDeletion() {
 		SetText("Are you sure you want to delete \"" + selectedFile.Name + "\"").
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonIndex == 0 || buttonIndex == 2 {
-				ui.deleteSelected()
-			}
-			if buttonIndex == 1 {
-				ui.pages.RemovePage("confirm")
-				return
-			} else if buttonIndex == 2 {
+			switch buttonIndex {
+			case 2:
 				ui.askBeforeDelete = false
+				ui.deleteSelected()
+			case 0:
+				ui.deleteSelected()
 			}
 			ui.pages.RemovePage("confirm")
 		})
@@ -593,16 +591,18 @@ func (ui *UI) formatSize(size int64, reverseColor bool) string {
 		color = "[white:black:-]"
 	}
 
-	if size > 1e12 {
+	switch {
+	case size > 1e12:
 		return fmt.Sprintf("%.1f%s TiB", float64(size)/math.Pow(2, 40), color)
-	} else if size > 1e9 {
+	case size > 1e9:
 		return fmt.Sprintf("%.1f%s GiB", float64(size)/math.Pow(2, 30), color)
-	} else if size > 1e6 {
+	case size > 1e6:
 		return fmt.Sprintf("%.1f%s MiB", float64(size)/math.Pow(2, 20), color)
-	} else if size > 1e3 {
+	case size > 1e3:
 		return fmt.Sprintf("%.1f%s KiB", float64(size)/math.Pow(2, 10), color)
+	default:
+		return fmt.Sprintf("%d%s B", size, color)
 	}
-	return fmt.Sprintf("%d%s B", size, color)
 }
 
 func getDeviceUsagePart(item *analyze.Device) string {
