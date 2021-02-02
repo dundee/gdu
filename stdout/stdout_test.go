@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/analyze"
+	testDir "github.com/dundee/gdu/internal/testing"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAnalyzePath(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	buff := make([]byte, 10)
@@ -23,7 +24,7 @@ func TestAnalyzePath(t *testing.T) {
 }
 
 func TestAnalyzePathWithColors(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	buff := make([]byte, 10)
@@ -37,7 +38,7 @@ func TestAnalyzePathWithColors(t *testing.T) {
 }
 
 func TestAnalyzePathWithProgress(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	output := bytes.NewBuffer(make([]byte, 10))

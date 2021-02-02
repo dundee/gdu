@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	testDir "github.com/dundee/gdu/internal/testing"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -91,7 +92,7 @@ func TestHelp(t *testing.T) {
 }
 
 func TestDeleteDir(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -131,7 +132,7 @@ func TestDeleteDir(t *testing.T) {
 }
 
 func TestDoNotDeleteParentDir(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -159,7 +160,7 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 }
 
 func TestDeleteDirWithConfirm(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -196,7 +197,7 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 }
 
 func TestShowConfirm(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -239,7 +240,7 @@ func TestShowConfirm(t *testing.T) {
 }
 
 func TestRescan(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -342,7 +343,7 @@ func TestSelectDevice(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -382,7 +383,7 @@ func TestKeys(t *testing.T) {
 }
 
 func TestSetIgnoreDirPaths(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")

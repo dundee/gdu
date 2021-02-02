@@ -1,4 +1,4 @@
-package analyze
+package testing
 
 import (
 	"io/ioutil"

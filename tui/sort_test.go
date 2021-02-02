@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	testDir "github.com/dundee/gdu/internal/testing"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSortBySizeAsc(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -41,7 +42,7 @@ func TestSortBySizeAsc(t *testing.T) {
 }
 
 func TestSortByName(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -72,7 +73,7 @@ func TestSortByName(t *testing.T) {
 }
 
 func TestSortByNameDesc(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -105,7 +106,7 @@ func TestSortByNameDesc(t *testing.T) {
 }
 
 func TestSortByItemCount(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -136,7 +137,7 @@ func TestSortByItemCount(t *testing.T) {
 }
 
 func TestSortByItemCountDesc(t *testing.T) {
-	fin := analyze.CreateTestDir()
+	fin := testDir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
