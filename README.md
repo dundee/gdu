@@ -48,6 +48,10 @@ Debian:
     snap connect gdu-disk-usage-analyzer:system-backup :system-backup
     snap alias gdu-disk-usage-analyzer.gdu gdu
 
+[Binenv](https://github.com/devops-works/binenv)
+
+    binenv install gdu
+
 [Go](https://pkg.go.dev/github.com/dundee/gdu):
 
     go get -u github.com/dundee/gdu
