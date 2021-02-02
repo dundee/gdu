@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/device"
 	"github.com/dundee/gdu/internal/test_dev"
 	"github.com/dundee/gdu/internal/test_dir"
 	"github.com/stretchr/testify/assert"
@@ -77,12 +78,12 @@ func printBuffer(buff *bytes.Buffer) {
 	}
 }
 
-func getDevicesInfoMock() analyze.DevicesInfoGetter {
-	item := &analyze.Device{
+func getDevicesInfoMock() device.DevicesInfoGetter {
+	item := &device.Device{
 		Name: "xxx",
 	}
 
 	mock := test_dev.DevicesInfoGetterMock{}
-	mock.Devices = []*analyze.Device{item}
+	mock.Devices = []*device.Device{item}
 	return mock
 }

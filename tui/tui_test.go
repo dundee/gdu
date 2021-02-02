@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/device"
 	"github.com/dundee/gdu/internal/test_dev"
 	"github.com/dundee/gdu/internal/test_dir"
 	"github.com/gdamore/tcell/v2"
@@ -427,17 +428,17 @@ func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.
 	}
 }
 
-func getDevicesInfoMock() analyze.DevicesInfoGetter {
-	item := &analyze.Device{
+func getDevicesInfoMock() device.DevicesInfoGetter {
+	item := &device.Device{
 		Name:       "/dev/root",
 		MountPoint: "/",
 	}
-	item2 := &analyze.Device{
+	item2 := &device.Device{
 		Name:       "/dev/boot",
 		MountPoint: "/boot",
 	}
 
 	mock := test_dev.DevicesInfoGetterMock{}
-	mock.Devices = []*analyze.Device{item, item2}
+	mock.Devices = []*device.Device{item, item2}
 	return mock
 }

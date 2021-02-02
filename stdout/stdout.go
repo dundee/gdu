@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/device"
 	"github.com/fatih/color"
 )
 
@@ -46,7 +47,7 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 }
 
 // ListDevices lists mounted devices and shows their disk usage
-func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
+func (ui *UI) ListDevices(getter device.DevicesInfoGetter) {
 	devices, err := getter.GetDevicesInfo()
 	if err != nil {
 		panic(err)
@@ -54,7 +55,7 @@ func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
 
 	maxDeviceNameLenght := maxInt(maxLength(
 		devices,
-		func(device *analyze.Device) string { return device.Name },
+		func(device *device.Device) string { return device.Name },
 	), len("Devices"))
 
 	var sizeLength, percentLength int
@@ -223,7 +224,7 @@ func (ui *UI) formatSize(size int64) string {
 	}
 }
 
-func maxLength(list []*analyze.Device, keyGetter func(*analyze.Device) string) int {
+func maxLength(list []*device.Device, keyGetter func(*device.Device) string) int {
 	maxLen := 0
 	var s string
 	for _, item := range list {

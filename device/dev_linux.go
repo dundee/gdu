@@ -1,6 +1,6 @@
 // +build linux
 
-package analyze
+package device
 
 import (
 	"bufio"

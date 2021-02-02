@@ -1,4 +1,4 @@
-package analyze
+package device
 
 // Device struct
 type Device struct {

@@ -1,6 +1,6 @@
 // +build windows darwin openbsd freebsd netbsd plan9
 
-package analyze
+package device
 
 import "errors"
 

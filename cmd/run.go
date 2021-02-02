@@ -9,6 +9,7 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/build"
+	"github.com/dundee/gdu/device"
 	"github.com/dundee/gdu/stdout"
 	"github.com/dundee/gdu/tui"
 	"github.com/gdamore/tcell/v2"
@@ -88,7 +89,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 		if runtime.GOOS == "linux" {
 			ui.SetIgnoreDirPaths(flags.IgnoreDirs)
 			ui.ListDevices(
-				analyze.LinuxDevicesInfoGetter{
+				device.LinuxDevicesInfoGetter{
 					MountsPath: "/proc/mounts",
 				},
 			)

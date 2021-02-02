@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -39,7 +40,7 @@ const helpText = `
 
 // CommonUI is common interface for both terminal UI and text output
 type CommonUI interface {
-	ListDevices(getter analyze.DevicesInfoGetter)
+	ListDevices(getter device.DevicesInfoGetter)
 	AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *analyze.File)
 	SetIgnoreDirPaths(paths []string)
 }
@@ -55,7 +56,7 @@ type UI struct {
 	help             *tview.Flex
 	table            *tview.Table
 	currentDir       *analyze.File
-	devices          []*analyze.Device
+	devices          []*device.Device
 	analyzer         analyze.Analyzer
 	topDir           *analyze.File
 	topDirPath       string
@@ -128,7 +129,7 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 }
 
 // ListDevices lists mounted devices and shows their disk usage
-func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
+func (ui *UI) ListDevices(getter device.DevicesInfoGetter) {
 	var err error
 	ui.devices, err = getter.GetDevicesInfo()
 	if err != nil {
@@ -329,7 +330,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 }
 
 func (ui *UI) deviceItemSelected(row, column int) {
-	selectedDevice := ui.table.GetCell(row, column).GetReference().(*analyze.Device)
+	selectedDevice := ui.table.GetCell(row, column).GetReference().(*device.Device)
 
 	for _, device := range ui.devices {
 		if device.Name != selectedDevice.Name && !strings.HasPrefix(selectedDevice.MountPoint, device.MountPoint) {
@@ -605,7 +606,7 @@ func (ui *UI) formatSize(size int64, reverseColor bool) string {
 	}
 }
 
-func getDeviceUsagePart(item *analyze.Device) string {
+func getDeviceUsagePart(item *device.Device) string {
 	part := int(float64(item.Size-item.Free) / float64(item.Size) * 10.0)
 	row := "["
 	for i := 0; i < 10; i++ {

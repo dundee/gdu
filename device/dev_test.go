@@ -1,4 +1,4 @@
-package analyze
+package device
 
 import (
 	"strings"
