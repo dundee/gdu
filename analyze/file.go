@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 )
@@ -16,6 +17,9 @@ type File struct {
 	Files     Files
 	Parent    *File
 }
+
+// ErrNotFound is returned when File item is not found in Files
+var ErrNotFound = errors.New("File item not found")
 
 // Path retruns absolute path of the file
 func (f *File) Path() string {
@@ -69,40 +73,65 @@ func (f *File) UpdateStats() {
 // Files - slice of pointers to File
 type Files []*File
 
-// Find searches File in Files and returns its index, or -1
-func (s Files) Find(file *File) int {
-	for i, item := range s {
+// IndexOf searches File in Files and returns its index, or -1
+func (f Files) IndexOf(file *File) (int, error) {
+	for i, item := range f {
 		if item == file {
-			return i
+			return i, nil
 		}
 	}
-	return -1
+	return 0, ErrNotFound
 }
 
 // FindByName searches name in Files and returns its index, or -1
-func (s Files) FindByName(name string) int {
-	for i, item := range s {
+func (f Files) FindByName(name string) (int, error) {
+	for i, item := range f {
 		if item.Name == name {
-			return i
+			return i, nil
 		}
 	}
-	return -1
+	return 0, ErrNotFound
 }
 
 // Remove removes File from Files
-func (s Files) Remove(file *File) Files {
-	index := s.Find(file)
-	if index == -1 {
-		return s
+func (f Files) Remove(file *File) Files {
+	index, err := f.IndexOf(file)
+	if err != nil {
+		return f
 	}
-	return append(s[:index], s[index+1:]...)
+	return append(f[:index], f[index+1:]...)
 }
 
 // RemoveByName removes File from Files
-func (s Files) RemoveByName(name string) Files {
-	index := s.FindByName(name)
-	if index == -1 {
-		return s
+func (f Files) RemoveByName(name string) Files {
+	index, err := f.FindByName(name)
+	if err != nil {
+		return f
 	}
-	return append(s[:index], s[index+1:]...)
+	return append(f[:index], f[index+1:]...)
 }
+
+func (f Files) Len() int           { return len(f) }
+func (f Files) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+func (f Files) Less(i, j int) bool { return f[i].Usage > f[j].Usage }
+
+// ByApparentSize sorts files by apparent size
+type ByApparentSize Files
+
+func (f ByApparentSize) Len() int           { return len(f) }
+func (f ByApparentSize) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+func (f ByApparentSize) Less(i, j int) bool { return f[i].Size > f[j].Size }
+
+// ByItemCount sorts files by item count
+type ByItemCount Files
+
+func (f ByItemCount) Len() int           { return len(f) }
+func (f ByItemCount) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+func (f ByItemCount) Less(i, j int) bool { return f[i].ItemCount > f[j].ItemCount }
+
+// ByName sorts files by name
+type ByName Files
+
+func (f ByName) Len() int           { return len(f) }
+func (f ByName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+func (f ByName) Less(i, j int) bool { return f[i].Name > f[j].Name }

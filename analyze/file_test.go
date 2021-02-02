@@ -27,8 +27,10 @@ func TestFind(t *testing.T) {
 	}
 	dir.Files = []*File{file, file2}
 
-	assert.Equal(t, 0, dir.Files.Find(file))
-	assert.Equal(t, 1, dir.Files.Find(file2))
+	i, _ := dir.Files.IndexOf(file)
+	assert.Equal(t, 0, i)
+	i, _ = dir.Files.IndexOf(file2)
+	assert.Equal(t, 1, i)
 }
 
 func TestRemove(t *testing.T) {
@@ -105,7 +107,8 @@ func TestRemoveNotInDir(t *testing.T) {
 	}
 	dir.Files = []*File{file}
 
-	assert.Equal(t, -1, dir.Files.Find(file2))
+	_, err := dir.Files.IndexOf(file2)
+	assert.Equal(t, ErrNotFound, err)
 
 	dir.Files = dir.Files.Remove(file2)
 
@@ -132,7 +135,8 @@ func TestRemoveByNameNotInDir(t *testing.T) {
 	}
 	dir.Files = []*File{file}
 
-	assert.Equal(t, -1, dir.Files.Find(file2))
+	_, err := dir.Files.IndexOf(file2)
+	assert.Equal(t, ErrNotFound, err)
 
 	dir.Files = dir.Files.RemoveByName("zzz")
 
