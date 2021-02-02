@@ -1,4 +1,4 @@
-// +build windows darwin openbsd freebsd netbsd
+// +build windows darwin openbsd freebsd netbsd plan9
 
 package analyze
 

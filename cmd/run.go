@@ -52,6 +52,11 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 		path = "."
 	}
 
+	// we are not able to analyze disk usage on Windows and Plan9
+	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
+		flags.ShowApparentSize = true
+	}
+
 	if flags.NonInteractive || !istty {
 		ui = stdout.CreateStdoutUI(
 			writer,

@@ -6,10 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
-	"syscall"
 )
-
-const DevBSize = 512
 
 // CurrentProgress struct
 type CurrentProgress struct {
@@ -84,15 +81,9 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 			file = &File{
 				Name:      f.Name(),
 				Size:      f.Size(),
+				Usage:     getUsage(f),
 				ItemCount: 1,
-
-				Parent: &dir,
-			}
-
-			switch f.Sys().(type) {
-			case *syscall.Stat_t:
-				stat := f.Sys().(*syscall.Stat_t)
-				file.Usage = stat.Blocks * DevBSize
+				Parent:    &dir,
 			}
 
 			totalSize += f.Size()
