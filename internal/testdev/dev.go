@@ -1,4 +1,4 @@
-package test_dev
+package testdev
 
 import "github.com/dundee/gdu/device"
 

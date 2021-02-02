@@ -1,4 +1,4 @@
-package test_dir
+package testdir
 
 import (
 	"io/ioutil"

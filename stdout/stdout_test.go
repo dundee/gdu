@@ -6,13 +6,13 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
-	"github.com/dundee/gdu/internal/test_dev"
-	"github.com/dundee/gdu/internal/test_dir"
+	"github.com/dundee/gdu/internal/testdev"
+	"github.com/dundee/gdu/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAnalyzePath(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	buff := make([]byte, 10)
@@ -26,7 +26,7 @@ func TestAnalyzePath(t *testing.T) {
 }
 
 func TestAnalyzePathWithColors(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	buff := make([]byte, 10)
@@ -40,7 +40,7 @@ func TestAnalyzePathWithColors(t *testing.T) {
 }
 
 func TestAnalyzePathWithProgress(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	output := bytes.NewBuffer(make([]byte, 10))
@@ -83,7 +83,7 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 		Name: "xxx",
 	}
 
-	mock := test_dev.DevicesInfoGetterMock{}
+	mock := testdev.DevicesInfoGetterMock{}
 	mock.Devices = []*device.Device{item}
 	return mock
 }

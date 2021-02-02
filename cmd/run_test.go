@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/dundee/gdu/internal/test_dir"
+	"github.com/dundee/gdu/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +18,7 @@ func TestVersion(t *testing.T) {
 }
 
 func TestAnalyzePath(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	buff := bytes.NewBuffer(make([]byte, 10))
@@ -29,7 +29,7 @@ func TestAnalyzePath(t *testing.T) {
 }
 
 func TestAnalyzePathWithGui(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	buff := bytes.NewBuffer(make([]byte, 10))
@@ -38,7 +38,7 @@ func TestAnalyzePathWithGui(t *testing.T) {
 }
 
 func TestListDevices(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	buff := bytes.NewBuffer(make([]byte, 10))
@@ -49,7 +49,7 @@ func TestListDevices(t *testing.T) {
 }
 
 func TestListDevicesWithGui(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	buff := bytes.NewBuffer(make([]byte, 10))

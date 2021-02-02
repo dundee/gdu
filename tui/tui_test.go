@@ -9,8 +9,8 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
-	"github.com/dundee/gdu/internal/test_dev"
-	"github.com/dundee/gdu/internal/test_dir"
+	"github.com/dundee/gdu/internal/testdev"
+	"github.com/dundee/gdu/internal/testdir"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -94,7 +94,7 @@ func TestHelp(t *testing.T) {
 }
 
 func TestDeleteDir(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -134,7 +134,7 @@ func TestDeleteDir(t *testing.T) {
 }
 
 func TestDoNotDeleteParentDir(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -162,7 +162,7 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 }
 
 func TestDeleteDirWithConfirm(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -199,7 +199,7 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 }
 
 func TestShowConfirm(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -242,7 +242,7 @@ func TestShowConfirm(t *testing.T) {
 }
 
 func TestRescan(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -345,7 +345,7 @@ func TestSelectDevice(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -385,7 +385,7 @@ func TestKeys(t *testing.T) {
 }
 
 func TestSetIgnoreDirPaths(t *testing.T) {
-	fin := test_dir.CreateTestDir()
+	fin := testdir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -438,7 +438,7 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 		MountPoint: "/boot",
 	}
 
-	mock := test_dev.DevicesInfoGetterMock{}
+	mock := testdev.DevicesInfoGetterMock{}
 	mock.Devices = []*device.Device{item, item2}
 	return mock
 }
