@@ -4,12 +4,12 @@ import (
 	"sync"
 	"testing"
 
-	testDir "github.com/dundee/gdu/internal/testing"
+	"github.com/dundee/gdu/internal/test_dir"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestProcessDir(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	dir := ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return false })
@@ -36,7 +36,7 @@ func TestProcessDir(t *testing.T) {
 }
 
 func TestIgnoreDir(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	dir := ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return true })
@@ -46,7 +46,7 @@ func TestIgnoreDir(t *testing.T) {
 }
 
 func BenchmarkProcessDir(b *testing.B) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	b.ResetTimer()

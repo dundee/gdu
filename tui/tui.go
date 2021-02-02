@@ -130,7 +130,7 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
 	var err error
-	ui.devices, err = getter("/proc/mounts")
+	ui.devices, err = getter.GetDevicesInfo()
 	if err != nil {
 		panic(err)
 	}

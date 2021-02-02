@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
-	testDir "github.com/dundee/gdu/internal/testing"
+	"github.com/dundee/gdu/internal/test_dev"
+	"github.com/dundee/gdu/internal/test_dir"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -92,7 +93,7 @@ func TestHelp(t *testing.T) {
 }
 
 func TestDeleteDir(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -132,7 +133,7 @@ func TestDeleteDir(t *testing.T) {
 }
 
 func TestDoNotDeleteParentDir(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -160,7 +161,7 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 }
 
 func TestDeleteDirWithConfirm(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -197,7 +198,7 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 }
 
 func TestShowConfirm(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -240,7 +241,7 @@ func TestShowConfirm(t *testing.T) {
 }
 
 func TestRescan(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -279,7 +280,7 @@ func TestShowDevices(t *testing.T) {
 	simScreen.SetSize(50, 50)
 
 	ui := CreateUI(simScreen, false, true)
-	ui.ListDevices(getDevicesInfoMock)
+	ui.ListDevices(getDevicesInfoMock())
 	ui.table.Draw(simScreen)
 	simScreen.Show()
 
@@ -302,7 +303,7 @@ func TestShowDevicesBW(t *testing.T) {
 	simScreen.SetSize(50, 50)
 
 	ui := CreateUI(simScreen, true, false)
-	ui.ListDevices(getDevicesInfoMock)
+	ui.ListDevices(getDevicesInfoMock())
 	ui.table.Draw(simScreen)
 	simScreen.Show()
 
@@ -326,7 +327,7 @@ func TestSelectDevice(t *testing.T) {
 	ui := CreateUI(simScreen, true, true)
 	ui.analyzer = analyzeMock
 	ui.SetIgnoreDirPaths([]string{"/proc"})
-	ui.ListDevices(getDevicesInfoMock)
+	ui.ListDevices(getDevicesInfoMock())
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -343,7 +344,7 @@ func TestSelectDevice(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -383,7 +384,7 @@ func TestKeys(t *testing.T) {
 }
 
 func TestSetIgnoreDirPaths(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	simScreen := tcell.NewSimulationScreen("UTF-8")
@@ -426,7 +427,7 @@ func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.
 	}
 }
 
-func getDevicesInfoMock(_ string) ([]*analyze.Device, error) {
+func getDevicesInfoMock() analyze.DevicesInfoGetter {
 	item := &analyze.Device{
 		Name:       "/dev/root",
 		MountPoint: "/",
@@ -435,5 +436,8 @@ func getDevicesInfoMock(_ string) ([]*analyze.Device, error) {
 		Name:       "/dev/boot",
 		MountPoint: "/boot",
 	}
-	return []*analyze.Device{item, item2}, nil
+
+	mock := test_dev.DevicesInfoGetterMock{}
+	mock.Devices = []*analyze.Device{item, item2}
+	return mock
 }

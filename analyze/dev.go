@@ -9,4 +9,6 @@ type Device struct {
 }
 
 // DevicesInfoGetter is type for GetDevicesInfo function
-type DevicesInfoGetter func(mountsPath string) ([]*Device, error)
+type DevicesInfoGetter interface {
+	GetDevicesInfo() ([]*Device, error)
+}

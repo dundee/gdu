@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/analyze"
-	testDir "github.com/dundee/gdu/internal/testing"
+	"github.com/dundee/gdu/internal/test_dev"
+	"github.com/dundee/gdu/internal/test_dir"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAnalyzePath(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	buff := make([]byte, 10)
@@ -24,7 +25,7 @@ func TestAnalyzePath(t *testing.T) {
 }
 
 func TestAnalyzePathWithColors(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	buff := make([]byte, 10)
@@ -38,7 +39,7 @@ func TestAnalyzePathWithColors(t *testing.T) {
 }
 
 func TestAnalyzePathWithProgress(t *testing.T) {
-	fin := testDir.CreateTestDir()
+	fin := test_dir.CreateTestDir()
 	defer fin()
 
 	output := bytes.NewBuffer(make([]byte, 10))
@@ -54,12 +55,7 @@ func TestShowDevices(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	ui := CreateStdoutUI(output, false, true, false)
-	ui.ListDevices(func(_ string) ([]*analyze.Device, error) {
-		item := &analyze.Device{
-			Name: "xxx",
-		}
-		return []*analyze.Device{item}, nil
-	})
+	ui.ListDevices(getDevicesInfoMock())
 
 	assert.Contains(t, output.String(), "Device")
 	assert.Contains(t, output.String(), "xxx")
@@ -69,12 +65,7 @@ func TestShowDevicesWithColor(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	ui := CreateStdoutUI(output, true, true, true)
-	ui.ListDevices(func(_ string) ([]*analyze.Device, error) {
-		item := &analyze.Device{
-			Name: "xxx",
-		}
-		return []*analyze.Device{item}, nil
-	})
+	ui.ListDevices(getDevicesInfoMock())
 
 	assert.Contains(t, output.String(), "Device")
 	assert.Contains(t, output.String(), "xxx")
@@ -84,4 +75,14 @@ func printBuffer(buff *bytes.Buffer) {
 	for i, x := range buff.String() {
 		println(i, string(x))
 	}
+}
+
+func getDevicesInfoMock() analyze.DevicesInfoGetter {
+	item := &analyze.Device{
+		Name: "xxx",
+	}
+
+	mock := test_dev.DevicesInfoGetterMock{}
+	mock.Devices = []*analyze.Device{item}
+	return mock
 }

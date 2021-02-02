@@ -47,7 +47,7 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter analyze.DevicesInfoGetter) {
-	devices, err := getter("/proc/mounts")
+	devices, err := getter.GetDevicesInfo()
 	if err != nil {
 		panic(err)
 	}

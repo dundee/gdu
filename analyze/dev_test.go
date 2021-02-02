@@ -8,12 +8,14 @@ import (
 )
 
 func TestGetDevicesInfo(t *testing.T) {
-	devices, _ := GetDevicesInfo("/proc/mounts")
+	getter := LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
+	devices, _ := getter.GetDevicesInfo()
 	assert.NotEmpty(t, devices)
 }
 
 func TestGetDevicesInfoFail(t *testing.T) {
-	_, err := GetDevicesInfo("/xxxyyy")
+	getter := LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"}
+	_, err := getter.GetDevicesInfo()
 	assert.Equal(t, "open /xxxyyy: no such file or directory", err.Error())
 }
 

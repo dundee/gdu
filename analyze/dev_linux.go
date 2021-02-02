@@ -10,9 +10,14 @@ import (
 	"syscall"
 )
 
+// LinuxDevicesInfoGetter retruns info for Linux devices
+type LinuxDevicesInfoGetter struct {
+	MountsPath string
+}
+
 // GetDevicesInfo returns usage info about mounted devices (by calling Statfs syscall)
-func GetDevicesInfo(mountsPath string) ([]*Device, error) {
-	file, err := os.Open(mountsPath)
+func (t LinuxDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
+	file, err := os.Open(t.MountsPath)
 	if err != nil {
 		return nil, err
 	}
