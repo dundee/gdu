@@ -117,15 +117,15 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, _ *analyze.Fil
 	if ui.showProgress {
 		wait.Add(1)
 		go func() {
+			defer wait.Done()
 			ui.updateProgress(progress)
-			wait.Done()
 		}()
 	}
 
 	wait.Add(1)
 	go func() {
+		defer wait.Done()
 		dir = analyzer(abspath, progress, ui.ShouldDirBeIgnored)
-		wait.Done()
 	}()
 
 	wait.Wait()
