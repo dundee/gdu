@@ -15,6 +15,9 @@ type LinuxDevicesInfoGetter struct {
 	MountsPath string
 }
 
+// Getter is current instance of DevicesInfoGetter
+var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
+
 // GetDevicesInfo returns usage info about mounted devices (by calling Statfs syscall)
 func (t LinuxDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
 	file, err := os.Open(t.MountsPath)

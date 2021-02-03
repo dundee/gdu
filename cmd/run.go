@@ -88,11 +88,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 	if flags.ShowDisks {
 		if runtime.GOOS == "linux" {
 			ui.SetIgnoreDirPaths(flags.IgnoreDirs)
-			ui.ListDevices(
-				device.LinuxDevicesInfoGetter{
-					MountsPath: "/proc/mounts",
-				},
-			)
+			ui.ListDevices(device.Getter)
 		} else {
 			fmt.Fprint(writer, "Listing devices is not yet supported for this platform")
 			return
