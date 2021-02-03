@@ -42,6 +42,7 @@ func (f *File) RemoveFile(file *File) error {
 	for {
 		cur.ItemCount -= file.ItemCount
 		cur.Size -= file.Size
+		cur.Usage -= file.Usage
 
 		if cur.Parent == nil {
 			break
