@@ -97,7 +97,7 @@ Non-interactive mode is started automtically when TTY is not detected (using [go
     make test
 
 
-## Benchmark
+## Benchmarks
 
 Benchmarks performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
 See `benchmark` target in [Makefile](Makefile) for more info.
