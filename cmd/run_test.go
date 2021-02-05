@@ -45,7 +45,7 @@ func TestListDevices(t *testing.T) {
 
 	Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, false, buff, true)
 
-	assert.Contains(t, buff.String(), "dev")
+	assert.Contains(t, buff.String(), "Device")
 }
 
 func TestListDevicesWithGui(t *testing.T) {
