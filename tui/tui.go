@@ -87,7 +87,7 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 	ui.header = tview.NewTextView()
 	ui.header.SetText(" gdu ~ Use arrow keys to navigate, press ? for help ")
 	if ui.useColors {
-		ui.header.SetTextColor(tcell.NewRGBColor(255, 255, 255))
+		ui.header.SetTextColor(tcell.NewRGBColor(0, 0, 0))
 		ui.header.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
 	} else {
 		ui.header.SetTextColor(tcell.NewRGBColor(0, 0, 0))
@@ -98,19 +98,9 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 
 	ui.table = tview.NewTable().SetSelectable(true, false)
 
-	if ui.useColors {
-		ui.table.SetSelectedStyle(tcell.Style{}.
-			Foreground(tcell.NewRGBColor(0, 0, 0)).
-			Background(tcell.NewRGBColor(52, 152, 219)))
-	} else {
-		ui.table.SetSelectedStyle(tcell.Style{}.
-			Foreground(tcell.NewRGBColor(0, 0, 0)).
-			Background(tcell.NewRGBColor(255, 255, 255)))
-	}
-
 	ui.footer = tview.NewTextView().SetDynamicColors(true)
 	if ui.useColors {
-		ui.footer.SetTextColor(tcell.NewRGBColor(255, 255, 255))
+		ui.footer.SetTextColor(tcell.NewRGBColor(0, 0, 0))
 		ui.footer.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
 	} else {
 		ui.footer.SetTextColor(tcell.NewRGBColor(0, 0, 0))
@@ -268,8 +258,8 @@ func (ui *UI) showDir() {
 
 	var footerNumberColor, footerTextColor string
 	if ui.useColors {
-		footerNumberColor = "[#e74c3c:#2479d0:b]"
-		footerTextColor = "[white:#2479d0:-]"
+		footerNumberColor = "[#e67100:#2479d0:b]"
+		footerTextColor = "[black:#2479d0:-]"
 	} else {
 		footerNumberColor = "[black:white:b]"
 		footerTextColor = "[black:white:-]"
@@ -552,7 +542,7 @@ func (ui *UI) formatFileRow(item *analyze.File) string {
 	var row string
 
 	if ui.useColors {
-		row = "[#edb20a:black:b]"
+		row = "[#e67100:black:b]"
 	} else {
 		row = "[white:black:b]"
 	}
@@ -588,7 +578,7 @@ func (ui *UI) formatSize(size int64, reverseColor bool) string {
 	var color string
 	if reverseColor {
 		if ui.useColors {
-			color = "[white:#2479d0:-]"
+			color = "[black:#2479d0:-]"
 		} else {
 			color = "[black:white:-]"
 		}
