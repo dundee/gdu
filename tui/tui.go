@@ -87,11 +87,11 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 	ui.header = tview.NewTextView()
 	ui.header.SetText(" gdu ~ Use arrow keys to navigate, press ? for help ")
 	if ui.useColors {
-		ui.header.SetTextColor(tcell.ColorWhite)
+		ui.header.SetTextColor(tcell.NewRGBColor(255, 255, 255))
 		ui.header.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
 	} else {
-		ui.header.SetTextColor(tcell.ColorBlack)
-		ui.header.SetBackgroundColor(tcell.ColorWhite)
+		ui.header.SetTextColor(tcell.NewRGBColor(0, 0, 0))
+		ui.header.SetBackgroundColor(tcell.NewRGBColor(255, 255, 255))
 	}
 
 	ui.currentDirLabel = tview.NewTextView()
@@ -100,17 +100,21 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 
 	if ui.useColors {
 		ui.table.SetSelectedStyle(tcell.Style{}.
-			Foreground(tcell.ColorBlack).
+			Foreground(tcell.NewRGBColor(0, 0, 0)).
 			Background(tcell.NewRGBColor(52, 152, 219)))
+	} else {
+		ui.table.SetSelectedStyle(tcell.Style{}.
+			Foreground(tcell.NewRGBColor(0, 0, 0)).
+			Background(tcell.NewRGBColor(255, 255, 255)))
 	}
 
 	ui.footer = tview.NewTextView().SetDynamicColors(true)
 	if ui.useColors {
-		ui.footer.SetTextColor(tcell.ColorWhite)
+		ui.footer.SetTextColor(tcell.NewRGBColor(255, 255, 255))
 		ui.footer.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
 	} else {
-		ui.footer.SetTextColor(tcell.ColorBlack)
-		ui.footer.SetBackgroundColor(tcell.ColorWhite)
+		ui.footer.SetTextColor(tcell.NewRGBColor(0, 0, 0))
+		ui.footer.SetBackgroundColor(tcell.NewRGBColor(255, 255, 255))
 	}
 	ui.footer.SetText(" No items to display. ")
 
