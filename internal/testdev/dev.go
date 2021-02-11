@@ -11,3 +11,8 @@ type DevicesInfoGetterMock struct {
 func (t DevicesInfoGetterMock) GetDevicesInfo() ([]*device.Device, error) {
 	return t.Devices, nil
 }
+
+// GetMounts returns all mounted filesystems from /proc/mounts
+func (t DevicesInfoGetterMock) GetMounts() ([]*device.Device, error) {
+	return t.Devices, nil
+}

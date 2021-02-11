@@ -18,45 +18,66 @@ type LinuxDevicesInfoGetter struct {
 // Getter is current instance of DevicesInfoGetter
 var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
 
-// GetDevicesInfo returns usage info about mounted devices (by calling Statfs syscall)
-func (t LinuxDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
+// GetMounts returns all mounted filesystems from /proc/mounts
+func (t LinuxDevicesInfoGetter) GetMounts() ([]*Device, error) {
 	file, err := os.Open(t.MountsPath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return processMounts(file)
+	return readMountsFile(file)
 }
 
-func processMounts(file io.Reader) ([]*Device, error) {
-	devices := []*Device{}
+// GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
+func (t LinuxDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
+	mounts, err := t.GetMounts()
+	if err != nil {
+		return nil, err
+	}
+
+	return processMounts(mounts)
+}
+
+func readMountsFile(file io.Reader) ([]*Device, error) {
+	mounts := []*Device{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
+		parts := strings.Fields(line)
 
-		if strings.Contains(line, "/snap/") {
-			continue
+		device := &Device{
+			Name:       parts[0],
+			MountPoint: parts[1],
+			Fstype:     parts[2],
 		}
-
-		if strings.HasPrefix(line, "/dev") || strings.Contains(line, " zfs ") {
-			parts := strings.Fields(line)
-			info := &syscall.Statfs_t{}
-			syscall.Statfs(parts[1], info)
-
-			device := &Device{
-				Name:       parts[0],
-				MountPoint: parts[1],
-				Size:       int64(info.Bsize) * int64(info.Blocks),
-				Free:       int64(info.Bsize) * int64(info.Bavail),
-			}
-			devices = append(devices, device)
-		}
+		mounts = append(mounts, device)
 	}
 
 	if err := scanner.Err(); err != nil {
 		return nil, err
+	}
+
+	return mounts, nil
+}
+
+func processMounts(mounts []*Device) ([]*Device, error) {
+	devices := []*Device{}
+
+	for _, mount := range mounts {
+		if strings.Contains(mount.MountPoint, "/snap/") {
+			continue
+		}
+
+		if strings.HasPrefix(mount.Name, "/dev") || mount.Fstype == "zfs" {
+			info := &syscall.Statfs_t{}
+			syscall.Statfs(mount.MountPoint, info)
+
+			mount.Size = int64(info.Bsize) * int64(info.Blocks)
+			mount.Free = int64(info.Bsize) * int64(info.Bavail)
+			devices = append(devices, mount)
+		}
 	}
 
 	return devices, nil

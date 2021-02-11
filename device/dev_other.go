@@ -10,7 +10,12 @@ type OtherDevicesInfoGetter struct{}
 // Getter is current instance of DevicesInfoGetter
 var Getter DevicesInfoGetter = OtherDevicesInfoGetter{}
 
-// GetDevicesInfo returns usage info about mounted devices (by calling Statfs syscall)
+// GetDevicesInfo returns result of GetMounts with usage info about mounted devices
 func (t OtherDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
 	return nil, errors.New("Only Linux platform is supported for listing devices")
+}
+
+// GetMounts returns all mounted filesystems
+func (t LinuxDevicesInfoGetter) GetMounts() ([]*Device, error) {
+	return nil, errors.New("Only Linux platform is supported for listing mounts")
 }
