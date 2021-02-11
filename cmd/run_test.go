@@ -37,6 +37,17 @@ func TestAnalyzePathWithGui(t *testing.T) {
 	Run(&RunFlags{LogFile: "/dev/null"}, []string{"test_dir"}, true, buff, true)
 }
 
+func TestNoCross(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := bytes.NewBuffer(make([]byte, 10))
+
+	Run(&RunFlags{LogFile: "/dev/null", NoCross: true}, []string{"test_dir"}, false, buff, true)
+
+	assert.Contains(t, buff.String(), "nested")
+}
+
 func TestListDevices(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

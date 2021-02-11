@@ -17,5 +17,5 @@ func (t OtherDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 
 // GetMounts returns all mounted filesystems
 func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
-	return nil, errors.New("Only Linux platform is supported for listing mounts")
+	return nil, errors.New("Only Linux platform is supported for listing mount points")
 }

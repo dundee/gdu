@@ -36,6 +36,7 @@ However HDDs work as well, but the performance gain is not so huge.
 	flags.BoolVarP(&rf.NoColor, "no-color", "c", false, "Do not use colorized output")
 	flags.BoolVarP(&rf.NonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")
 	flags.BoolVarP(&rf.NoProgress, "no-progress", "p", false, "Do not show progress in non-interactive mode")
+	flags.BoolVarP(&rf.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

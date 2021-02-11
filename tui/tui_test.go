@@ -359,6 +359,10 @@ func TestKeys(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 's', 1) // sort asc
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 's', 1) // sort desc
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'l', 1)

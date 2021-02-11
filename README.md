@@ -67,6 +67,7 @@ Flags:
   -i, --ignore-dirs strings   Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -l, --log-file string       Path to a logfile (default "/dev/null")
   -c, --no-color              Do not use colorized output
+  -x, --no-cross              Do not cross filesystem boundaries
   -p, --no-progress           Do not show progress in non-interactive mode
   -n, --non-interactive       Do not run in interactive mode
   -a, --show-apparent-size    Show apparent size

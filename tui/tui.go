@@ -5,7 +5,6 @@ import (
 	"math"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -326,10 +325,9 @@ func (ui *UI) fileItemSelected(row, column int) {
 func (ui *UI) deviceItemSelected(row, column int) {
 	selectedDevice := ui.table.GetCell(row, column).GetReference().(*device.Device)
 
-	for _, device := range ui.devices {
-		if device.Name != selectedDevice.Name && !strings.HasPrefix(selectedDevice.MountPoint, device.MountPoint) {
-			ui.ignoreDirPaths[device.MountPoint] = true
-		}
+	paths := device.GetNestedMountpointsPaths(selectedDevice.MountPoint, ui.devices)
+	for _, path := range paths {
+		ui.ignoreDirPaths[path] = true
 	}
 
 	ui.AnalyzePath(selectedDevice.MountPoint, ui.analyzer, nil)

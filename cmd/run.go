@@ -26,6 +26,7 @@ type RunFlags struct {
 	NoColor          bool
 	NonInteractive   bool
 	NoProgress       bool
+	NoCross          bool
 }
 
 // Run starts gdu main logic
@@ -85,16 +86,25 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 		}
 	}
 
+	if flags.NoCross {
+		mounts, err := device.Getter.GetMounts()
+		if err != nil {
+			panic(err)
+		}
+		paths := device.GetNestedMountpointsPaths(path, mounts)
+		flags.IgnoreDirs = append(flags.IgnoreDirs, paths...)
+	}
+
+	ui.SetIgnoreDirPaths(flags.IgnoreDirs)
+
 	if flags.ShowDisks {
 		if runtime.GOOS == "linux" {
-			ui.SetIgnoreDirPaths(flags.IgnoreDirs)
 			ui.ListDevices(device.Getter)
 		} else {
 			fmt.Fprint(writer, "Listing devices is not yet supported for this platform")
 			return
 		}
 	} else {
-		ui.SetIgnoreDirPaths(flags.IgnoreDirs)
 		ui.AnalyzePath(path, analyze.ProcessDir, nil)
 	}
 
