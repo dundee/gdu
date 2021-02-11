@@ -113,8 +113,8 @@ func TestRemoveNotInDir(t *testing.T) {
 	}
 	dir.Files = []*File{file}
 
-	_, err := dir.Files.IndexOf(file2)
-	assert.Equal(t, ErrNotFound, err)
+	_, ok := dir.Files.IndexOf(file2)
+	assert.Equal(t, false, ok)
 
 	dir.Files = dir.Files.Remove(file2)
 
@@ -144,8 +144,8 @@ func TestRemoveByNameNotInDir(t *testing.T) {
 	}
 	dir.Files = []*File{file}
 
-	_, err := dir.Files.IndexOf(file2)
-	assert.Equal(t, ErrNotFound, err)
+	_, ok := dir.Files.IndexOf(file2)
+	assert.Equal(t, false, ok)
 
 	dir.Files = dir.Files.RemoveByName("zzz")
 

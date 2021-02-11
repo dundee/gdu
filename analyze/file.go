@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 )
@@ -17,9 +16,6 @@ type File struct {
 	Files     Files
 	Parent    *File
 }
-
-// ErrNotFound is returned when File item is not found in Files
-var ErrNotFound = errors.New("File item not found")
 
 // Path retruns absolute path of the file
 func (f *File) Path() string {
@@ -74,30 +70,30 @@ func (f *File) UpdateStats() {
 // Files - slice of pointers to File
 type Files []*File
 
-// IndexOf searches File in Files and returns its index, or -1
-func (f Files) IndexOf(file *File) (int, error) {
+// IndexOf searches File in Files and returns its index
+func (f Files) IndexOf(file *File) (int, bool) {
 	for i, item := range f {
 		if item == file {
-			return i, nil
+			return i, true
 		}
 	}
-	return 0, ErrNotFound
+	return 0, false
 }
 
-// FindByName searches name in Files and returns its index, or -1
-func (f Files) FindByName(name string) (int, error) {
+// FindByName searches name in Files and returns its index
+func (f Files) FindByName(name string) (int, bool) {
 	for i, item := range f {
 		if item.Name == name {
-			return i, nil
+			return i, true
 		}
 	}
-	return 0, ErrNotFound
+	return 0, false
 }
 
 // Remove removes File from Files
 func (f Files) Remove(file *File) Files {
-	index, err := f.IndexOf(file)
-	if err != nil {
+	index, ok := f.IndexOf(file)
+	if !ok {
 		return f
 	}
 	return append(f[:index], f[index+1:]...)
@@ -105,8 +101,8 @@ func (f Files) Remove(file *File) Files {
 
 // RemoveByName removes File from Files
 func (f Files) RemoveByName(name string) Files {
-	index, err := f.FindByName(name)
-	if err != nil {
+	index, ok := f.FindByName(name)
+	if !ok {
 		return f
 	}
 	return append(f[:index], f[index+1:]...)
