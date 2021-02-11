@@ -11,6 +11,10 @@ type Device struct {
 
 // DevicesInfoGetter is type for GetDevicesInfo function
 type DevicesInfoGetter interface {
-	GetMounts() ([]*Device, error)
-	GetDevicesInfo() ([]*Device, error)
+	GetMounts() (Devices, error)
+	GetDevicesInfo() (Devices, error)
+}
+
+// Devices if slice of Device items
+type Devices []*Device
 }

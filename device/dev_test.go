@@ -10,7 +10,7 @@ import (
 func TestGetDevicesInfo(t *testing.T) {
 	getter := LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
 	devices, _ := getter.GetDevicesInfo()
-	assert.IsType(t, []*Device{}, devices)
+	assert.IsType(t, Devices{}, devices)
 }
 
 func TestGetDevicesInfoFail(t *testing.T) {

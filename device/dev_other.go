@@ -11,11 +11,11 @@ type OtherDevicesInfoGetter struct{}
 var Getter DevicesInfoGetter = OtherDevicesInfoGetter{}
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices
-func (t OtherDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
+func (t OtherDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 	return nil, errors.New("Only Linux platform is supported for listing devices")
 }
 
 // GetMounts returns all mounted filesystems
-func (t LinuxDevicesInfoGetter) GetMounts() ([]*Device, error) {
+func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
 	return nil, errors.New("Only Linux platform is supported for listing mounts")
 }

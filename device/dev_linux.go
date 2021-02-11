@@ -19,7 +19,7 @@ type LinuxDevicesInfoGetter struct {
 var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
 
 // GetMounts returns all mounted filesystems from /proc/mounts
-func (t LinuxDevicesInfoGetter) GetMounts() ([]*Device, error) {
+func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
 	file, err := os.Open(t.MountsPath)
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func (t LinuxDevicesInfoGetter) GetMounts() ([]*Device, error) {
 }
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
-func (t LinuxDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
+func (t LinuxDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 	mounts, err := t.GetMounts()
 	if err != nil {
 		return nil, err
@@ -39,8 +39,8 @@ func (t LinuxDevicesInfoGetter) GetDevicesInfo() ([]*Device, error) {
 	return processMounts(mounts)
 }
 
-func readMountsFile(file io.Reader) ([]*Device, error) {
-	mounts := []*Device{}
+func readMountsFile(file io.Reader) (Devices, error) {
+	mounts := Devices{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -62,8 +62,8 @@ func readMountsFile(file io.Reader) ([]*Device, error) {
 	return mounts, nil
 }
 
-func processMounts(mounts []*Device) ([]*Device, error) {
-	devices := []*Device{}
+func processMounts(mounts Devices) (Devices, error) {
+	devices := Devices{}
 
 	for _, mount := range mounts {
 		if strings.Contains(mount.MountPoint, "/snap/") {
@@ -76,6 +76,7 @@ func processMounts(mounts []*Device) ([]*Device, error) {
 
 			mount.Size = int64(info.Bsize) * int64(info.Blocks)
 			mount.Free = int64(info.Bsize) * int64(info.Bavail)
+
 			devices = append(devices, mount)
 		}
 	}
