@@ -78,6 +78,8 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 			}
 		}
 		screen.Init()
+		defer screen.Clear()
+		defer screen.Fini()
 
 		ui = tui.CreateUI(screen, !flags.NoColor, flags.ShowApparentSize)
 
