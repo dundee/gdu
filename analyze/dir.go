@@ -3,6 +3,7 @@ package analyze
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -48,8 +49,19 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 		log.Print(err.Error())
 	}
 
+	var flag rune
+	switch {
+	case err != nil:
+		flag = '!'
+	case len(files) == 0:
+		flag = 'e'
+	default:
+		flag = ' '
+	}
+
 	dir := File{
 		Name:      filepath.Base(path),
+		Flag:      flag,
 		IsDir:     true,
 		ItemCount: 1,
 		Files:     make([]*File, 0, len(files)),
@@ -71,15 +83,36 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 				concurrencyLimitChannel <- true
 				subdir := processDir(entryPath, progress, concurrencyLimitChannel, wait, ignoreDir)
 				subdir.Parent = &dir
+
 				mutex.Lock()
+
 				dir.Files = append(dir.Files, subdir)
+
+				switch subdir.Flag {
+				case '!', '.':
+					if dir.Flag != '!' {
+						dir.Flag = '.'
+					}
+				}
+
 				mutex.Unlock()
+
 				<-concurrencyLimitChannel
 				wait.Done()
 			}()
 		} else {
+			switch {
+			case f.Mode()&os.ModeSymlink != 0:
+				fallthrough
+			case f.Mode()&os.ModeSocket != 0:
+				flag = '@'
+			default:
+				flag = ' '
+			}
+
 			file = &File{
 				Name:      f.Name(),
+				Flag:      flag,
 				Size:      f.Size(),
 				Usage:     getUsage(f),
 				ItemCount: 1,

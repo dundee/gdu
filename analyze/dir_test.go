@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"os"
 	"sync"
 	"testing"
 
@@ -43,6 +44,24 @@ func TestIgnoreDir(t *testing.T) {
 
 	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, 1, dir.ItemCount)
+}
+
+func TestFlags(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	os.Symlink("test_dir/nested/file2", "test_dir/nested/file3")
+
+	dir := ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return false })
+
+	assert.Equal(t, int64(28+4096*3), dir.Size)
+	assert.Equal(t, 6, dir.ItemCount)
+
+	// test file3
+	assert.Equal(t, "file3", dir.Files[0].Files[1].Name)
+	assert.Equal(t, int64(21), dir.Files[0].Files[1].Size)
+	assert.Equal(t, int64(0), dir.Files[0].Files[1].Usage)
+	assert.Equal(t, '@', dir.Files[0].Files[1].Flag)
 }
 
 func BenchmarkProcessDir(b *testing.B) {

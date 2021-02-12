@@ -7,14 +7,15 @@ import (
 
 // File struct
 type File struct {
-	Name      string
-	BasePath  string
-	Size      int64
-	Usage     int64
-	ItemCount int
-	IsDir     bool
-	Files     Files
-	Parent    *File
+	Name           string
+	BasePath       string
+	Flag           rune
+	Size           int64
+	Usage          int64
+	ItemCount      int
+	IsDir          bool
+	Files          Files
+	Parent         *File
 }
 
 // Path retruns absolute path of the file

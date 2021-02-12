@@ -135,9 +135,9 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, _ *analyze.Fil
 
 	var lineFormat string
 	if ui.useColors {
-		lineFormat = "%20s %s\n"
+		lineFormat = "%s %20s %s\n"
 	} else {
-		lineFormat = "%9s %s\n"
+		lineFormat = "%s %9s %s\n"
 	}
 
 	var size int64
@@ -152,11 +152,13 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, _ *analyze.Fil
 		if file.IsDir {
 			fmt.Fprintf(ui.output,
 				lineFormat,
+				string(file.Flag),
 				ui.formatSize(size),
 				ui.blue.Sprintf("/"+file.Name))
 		} else {
 			fmt.Fprintf(ui.output,
 				lineFormat,
+				string(file.Flag),
 				ui.formatSize(size),
 				file.Name)
 		}

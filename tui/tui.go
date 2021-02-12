@@ -537,12 +537,12 @@ func (ui *UI) formatFileRow(item *analyze.File) string {
 		part = int(float64(item.Usage) / float64(item.Parent.Usage) * 10.0)
 	}
 
-	var row string
+	row := string(item.Flag)
 
 	if ui.useColors {
-		row = "[#e67100:black:b]"
+		row += "[#e67100:black:b]"
 	} else {
-		row = "[white:black:b]"
+		row += "[white:black:b]"
 	}
 
 	if ui.showApparentSize {
