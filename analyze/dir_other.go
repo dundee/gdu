@@ -6,6 +6,4 @@ import (
 	"os"
 )
 
-func getUsage(f os.FileInfo) int64 {
-	return int64(0)
-}
+func setPlatformSpecificAttrs(file *File, f os.FileInfo) {}

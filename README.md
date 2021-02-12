@@ -93,6 +93,8 @@ Gdu has two modes: interactive (default) and non-interactive.
 
 Non-interactive mode is started automtically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
 
+Hard links are counted only once.
+
 ## Running tests
 
     make test

@@ -31,7 +31,9 @@ func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnore
 	dir := processDir(path, progress, concurrencyLimitChannel, &wait, ignore)
 	dir.BasePath = filepath.Dir(path)
 	wait.Wait()
-	dir.UpdateStats()
+
+	links := make(AlreadyCountedHardlinks, 10)
+	dir.UpdateStats(links)
 
 	progress.Mutex.Lock()
 	progress.Done = true
@@ -114,10 +116,11 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 				Name:      f.Name(),
 				Flag:      flag,
 				Size:      f.Size(),
-				Usage:     getUsage(f),
 				ItemCount: 1,
 				Parent:    &dir,
 			}
+
+			setPlatformSpecificAttrs(file, f)
 
 			totalSize += f.Size()
 

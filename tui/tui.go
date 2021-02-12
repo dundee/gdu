@@ -194,7 +194,9 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *ana
 			ui.currentDir.Parent = parentDir
 			parentDir.Files = parentDir.Files.RemoveByName(ui.currentDir.Name)
 			parentDir.Files = append(parentDir.Files, ui.currentDir)
-			ui.topDir.UpdateStats()
+
+			links := make(analyze.AlreadyCountedHardlinks, 10)
+			ui.topDir.UpdateStats(links)
 		} else {
 			ui.topDirPath = abspath
 			ui.topDir = ui.currentDir

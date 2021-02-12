@@ -16,7 +16,11 @@ type File struct {
 	IsDir          bool
 	Files          Files
 	Parent         *File
+	MutliLinkInode uint64 // Inode number of file with multiple links (hard link)
 }
+
+// AlreadyCountedHardlinks holds all files with hardlinks that have already been counted
+type AlreadyCountedHardlinks map[uint64]bool
 
 // Path retruns absolute path of the file
 func (f *File) Path() string {
@@ -50,7 +54,7 @@ func (f *File) RemoveFile(file *File) error {
 }
 
 // UpdateStats recursively updates size and item count
-func (f *File) UpdateStats() {
+func (f *File) UpdateStats(links AlreadyCountedHardlinks) {
 	if !f.IsDir {
 		return
 	}
@@ -58,10 +62,22 @@ func (f *File) UpdateStats() {
 	totalUsage := int64(4096)
 	var itemCount int
 	for _, entry := range f.Files {
-		entry.UpdateStats()
+		if entry.IsDir {
+			entry.UpdateStats(links)
+		}
+
+		itemCount += entry.ItemCount
+
+		if entry.MutliLinkInode > 0 {
+			if !links[entry.MutliLinkInode] {
+				links[entry.MutliLinkInode] = true
+			} else {
+				entry.Flag = 'H'
+				continue
+			}
+		}
 		totalSize += entry.Size
 		totalUsage += entry.Usage
-		itemCount += entry.ItemCount
 	}
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize

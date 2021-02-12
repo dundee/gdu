@@ -10,12 +10,13 @@ import (
 
 const devBSize = 512
 
-func getUsage(f os.FileInfo) int64 {
-	var usage int64 = 0
-
+func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
 	switch stat := f.Sys().(type) {
 	case *syscall.Stat_t:
-		usage = stat.Blocks * devBSize
+		file.Usage = stat.Blocks * devBSize
+
+		if stat.Nlink > 1 {
+			file.MutliLinkInode = stat.Ino
+		}
 	}
-	return usage
 }
