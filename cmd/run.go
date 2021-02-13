@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"runtime"
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/build"
@@ -31,7 +30,7 @@ type RunFlags struct {
 }
 
 // Run starts gdu main logic
-func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app common.Application) error {
+func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app common.Application, getter device.DevicesInfoGetter) error {
 	if flags.ShowVersion {
 		fmt.Fprintln(writer, "Version:\t", build.Version)
 		fmt.Fprintln(writer, "Built time:\t", build.Time)
@@ -55,11 +54,6 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app commo
 		path = "."
 	}
 
-	// we are not able to analyze disk usage on Windows and Plan9
-	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
-		flags.ShowApparentSize = true
-	}
-
 	if flags.NonInteractive || !istty {
 		ui = stdout.CreateStdoutUI(
 			writer,
@@ -76,7 +70,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app commo
 	}
 
 	if flags.NoCross {
-		mounts, err := device.Getter.GetMounts()
+		mounts, err := getter.GetMounts()
 		if err != nil {
 			return fmt.Errorf("Error loading mount points: %w", err)
 		}
@@ -87,8 +81,8 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app commo
 	ui.SetIgnoreDirPaths(flags.IgnoreDirs)
 
 	if flags.ShowDisks {
-		if err := ui.ListDevices(device.Getter); err != nil {
-			return err
+		if err := ui.ListDevices(getter); err != nil {
+			return fmt.Errorf("Error loading mount points: %w", err)
 		}
 	} else {
 		ui.AnalyzePath(path, analyze.ProcessDir, nil)

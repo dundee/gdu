@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/dundee/gdu/cmd"
+	"github.com/dundee/gdu/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
 	"github.com/rivo/tview"
@@ -27,6 +29,11 @@ However HDDs work as well, but the performance gain is not so huge.
 		RunE: func(command *cobra.Command, args []string) error {
 			istty := isatty.IsTerminal(os.Stdout.Fd())
 
+			// we are not able to analyze disk usage on Windows and Plan9
+			if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
+				rf.ShowApparentSize = true
+			}
+
 			var app *tview.Application = nil
 
 			if !rf.NonInteractive && istty {
@@ -42,7 +49,7 @@ However HDDs work as well, but the performance gain is not so huge.
 				app.SetScreen(screen)
 			}
 
-			return cmd.Run(rf, args, istty, os.Stdout, app)
+			return cmd.Run(rf, args, istty, os.Stdout, app, device.Getter)
 		},
 	}
 
