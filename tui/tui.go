@@ -359,11 +359,28 @@ func (ui *UI) confirmDeletion() {
 	ui.pages.AddPage("confirm", modal, true, true)
 }
 
+func (ui *UI) showErr(msg string, err error) {
+	modal := tview.NewModal().
+		SetText(msg + ": " + err.Error()).
+		AddButtons([]string{"ok"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			ui.pages.RemovePage("error")
+		})
+
+	if !ui.useColors {
+		modal.SetBackgroundColor(tcell.ColorGray)
+	}
+
+	ui.pages.AddPage("error", modal, true, true)
+}
+
 func (ui *UI) deleteSelected() {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
 	if err := ui.currentDir.RemoveFile(selectedFile); err != nil {
-		panic(err)
+		msg := "Can't delete " + selectedFile.Name
+		ui.showErr(msg, err)
+		return
 	}
 	ui.showDir()
 	ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)

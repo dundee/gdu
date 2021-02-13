@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -150,6 +151,7 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
 		time.Sleep(10 * time.Millisecond)
+		// .. is selected now, cannot be deleted
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
@@ -239,6 +241,37 @@ func TestShowConfirm(t *testing.T) {
 	ui.StartUILoop()
 
 	assert.FileExists(t, "test_dir/nested/file2")
+}
+
+func TestDeleteWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	os.Chmod("test_dir/nested", 0)
+	defer os.Chmod("test_dir/nested", 0755)
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(simScreen, true, true)
+	ui.askBeforeDelete = false
+
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	assert.DirExists(t, "test_dir/nested")
 }
 
 func TestRescan(t *testing.T) {

@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"os"
+	"sort"
 	"sync"
 	"testing"
 
@@ -50,18 +51,24 @@ func TestFlags(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
+	os.Mkdir("test_dir/empty", 0644)
+
 	os.Symlink("test_dir/nested/file2", "test_dir/nested/file3")
 
 	dir := ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return false })
+	sort.Sort(dir.Files)
 
-	assert.Equal(t, int64(28+4096*3), dir.Size)
-	assert.Equal(t, 6, dir.ItemCount)
+	assert.Equal(t, int64(28+4096*4), dir.Size)
+	assert.Equal(t, 7, dir.ItemCount)
 
 	// test file3
+	assert.Equal(t, "nested", dir.Files[0].Name)
 	assert.Equal(t, "file3", dir.Files[0].Files[1].Name)
 	assert.Equal(t, int64(21), dir.Files[0].Files[1].Size)
 	assert.Equal(t, int64(0), dir.Files[0].Files[1].Usage)
 	assert.Equal(t, '@', dir.Files[0].Files[1].Flag)
+
+	assert.Equal(t, 'e', dir.Files[1].Flag)
 }
 
 func TestHardlink(t *testing.T) {
@@ -81,6 +88,23 @@ func TestHardlink(t *testing.T) {
 	assert.Equal(t, int64(2), dir.Files[0].Files[1].Size)
 	assert.Equal(t, int64(4096), dir.Files[0].Files[1].Usage)
 	assert.Equal(t, 'H', dir.Files[0].Files[1].Flag)
+}
+
+func TestErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	os.Chmod("test_dir/nested", 0)
+	defer os.Chmod("test_dir/nested", 0755)
+
+	dir := ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return false })
+
+	assert.Equal(t, "test_dir", dir.Name)
+	assert.Equal(t, 2, dir.ItemCount)
+	assert.Equal(t, '.', dir.Flag)
+
+	assert.Equal(t, "nested", dir.Files[0].Name)
+	assert.Equal(t, '!', dir.Files[0].Flag)
 }
 
 func BenchmarkProcessDir(b *testing.B) {
