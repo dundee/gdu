@@ -47,10 +47,10 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 }
 
 // ListDevices lists mounted devices and shows their disk usage
-func (ui *UI) ListDevices(getter device.DevicesInfoGetter) {
+func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	devices, err := getter.GetDevicesInfo()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	maxDeviceNameLenght := maxInt(maxLength(
@@ -100,6 +100,8 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) {
 			ui.red.Sprintf("%.f%%", usedPercent),
 			device.MountPoint)
 	}
+
+	return nil
 }
 
 // AnalyzePath analyzes recursively disk usage in given path

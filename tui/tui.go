@@ -39,7 +39,7 @@ const helpText = `
 
 // CommonUI is common interface for both terminal UI and text output
 type CommonUI interface {
-	ListDevices(getter device.DevicesInfoGetter)
+	ListDevices(getter device.DevicesInfoGetter) error
 	AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *analyze.File)
 	SetIgnoreDirPaths(paths []string)
 }
@@ -122,11 +122,11 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 }
 
 // ListDevices lists mounted devices and shows their disk usage
-func (ui *UI) ListDevices(getter device.DevicesInfoGetter) {
+func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	var err error
 	ui.devices, err = getter.GetDevicesInfo()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
@@ -157,6 +157,8 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) {
 	ui.table.Select(1, 0)
 	ui.footer.SetText("")
 	ui.table.SetSelectedFunc(ui.deviceItemSelected)
+
+	return nil
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
@@ -210,10 +212,11 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *ana
 }
 
 // StartUILoop starts tview application
-func (ui *UI) StartUILoop() {
+func (ui *UI) StartUILoop() error {
 	if err := ui.app.Run(); err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 // SetIgnoreDirPaths sets paths to ignore

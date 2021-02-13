@@ -30,12 +30,12 @@ type RunFlags struct {
 }
 
 // Run starts gdu main logic
-func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing bool) {
+func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing bool) error {
 	if flags.ShowVersion {
 		fmt.Fprintln(writer, "Version:\t", build.Version)
 		fmt.Fprintln(writer, "Built time:\t", build.Time)
 		fmt.Fprintln(writer, "Built user:\t", build.User)
-		return
+		return nil
 	}
 
 	var path string
@@ -43,7 +43,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 
 	f, err := os.OpenFile(flags.LogFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+		return fmt.Errorf("Error opening log file: %w", err)
 	}
 	defer f.Close()
 	log.SetOutput(f)
@@ -74,7 +74,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 		} else {
 			screen, err = tcell.NewScreen()
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("Error creating screen: %w", err)
 			}
 		}
 		screen.Init()
@@ -91,7 +91,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 	if flags.NoCross {
 		mounts, err := device.Getter.GetMounts()
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("Error loading mount points: %w", err)
 		}
 		paths := device.GetNestedMountpointsPaths(path, mounts)
 		flags.IgnoreDirs = append(flags.IgnoreDirs, paths...)
@@ -100,22 +100,23 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 	ui.SetIgnoreDirPaths(flags.IgnoreDirs)
 
 	if flags.ShowDisks {
-		if runtime.GOOS == "linux" {
-			ui.ListDevices(device.Getter)
-		} else {
-			fmt.Fprint(writer, "Listing devices is not yet supported for this platform")
-			return
+		if err := ui.ListDevices(device.Getter); err != nil {
+			return err
 		}
 	} else {
 		ui.AnalyzePath(path, analyze.ProcessDir, nil)
 	}
 
 	if testing {
-		return
+		return nil
 	}
 
 	switch u := ui.(type) {
 	case *tui.UI:
-		u.StartUILoop()
+		if err := u.StartUILoop(); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

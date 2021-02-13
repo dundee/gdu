@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/dundee/gdu/cmd"
@@ -20,10 +19,11 @@ func main() {
 Gdu is intended primarily for SSD disks where it can fully utilize parallel processing.
 However HDDs work as well, but the performance gain is not so huge.
 `,
-		Args: cobra.MaximumNArgs(1),
-		Run: func(command *cobra.Command, args []string) {
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		RunE: func(command *cobra.Command, args []string) error {
 			istty := isatty.IsTerminal(os.Stdout.Fd())
-			cmd.Run(rf, args, istty, os.Stdout, false)
+			return cmd.Run(rf, args, istty, os.Stdout, false)
 		},
 	}
 
@@ -39,7 +39,6 @@ However HDDs work as well, but the performance gain is not so huge.
 	flags.BoolVarP(&rf.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
