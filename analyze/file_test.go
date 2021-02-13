@@ -1,8 +1,10 @@
 package analyze
 
 import (
+	"os"
 	"testing"
 
+	"github.com/dundee/gdu/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -187,4 +189,78 @@ func TestRemoveFile(t *testing.T) {
 	assert.Equal(t, 1, len(dir.Files))
 	assert.Equal(t, 2, dir.ItemCount)
 	assert.Equal(t, int64(2), dir.Size)
+}
+
+func TestRemoveFileWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	os.Chmod("test_dir/nested", 0)
+	defer os.Chmod("test_dir/nested", 0755)
+
+	dir := &File{
+		Name:     "test_dir",
+		BasePath: ".",
+	}
+
+	subdir := &File{
+		Name:   "nested",
+		Parent: dir,
+	}
+
+	err := dir.RemoveFile(subdir)
+	assert.Contains(t, err.Error(), "permission denied")
+}
+
+func TestUpdateStats(t *testing.T) {
+	dir := File{
+		Name:      "xxx",
+		Size:      1,
+		ItemCount: 1,
+		IsDir:     true,
+	}
+
+	file := &File{
+		Name:      "yyy",
+		Size:      2,
+		ItemCount: 1,
+		Parent:    &dir,
+	}
+	file2 := &File{
+		Name:      "zzz",
+		Size:      3,
+		ItemCount: 1,
+		Parent:    &dir,
+	}
+	dir.Files = []*File{file, file2}
+
+	dir.UpdateStats(nil)
+
+	assert.Equal(t, int64(4096+5), dir.Size)
+}
+
+func TestUpdateStatsFile(t *testing.T) {
+	notDir := File{
+		Name:      "xxx",
+		Size:      1,
+		ItemCount: 1,
+	}
+
+	file := &File{
+		Name:      "yyy",
+		Size:      2,
+		ItemCount: 1,
+		Parent:    &notDir,
+	}
+	file2 := &File{
+		Name:      "zzz",
+		Size:      3,
+		ItemCount: 1,
+		Parent:    &notDir,
+	}
+	notDir.Files = []*File{file, file2}
+
+	notDir.UpdateStats(nil)
+
+	assert.Equal(t, int64(1), notDir.Size)
 }

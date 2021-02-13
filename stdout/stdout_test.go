@@ -21,6 +21,7 @@ func TestAnalyzePath(t *testing.T) {
 	ui := CreateStdoutUI(output, false, false, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.StartUILoop()
 
 	assert.Contains(t, output.String(), "nested")
 }
