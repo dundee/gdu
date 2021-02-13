@@ -200,6 +200,47 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 	assert.NoFileExists(t, "test_dir/nested/file2")
 }
 
+func TestDeleteDirWithConfirmNoAskAgain(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(simScreen, false, false)
+
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, '?', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRight, ' ', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRight, ' ', 1) // select "do not ask again"
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	assert.NoFileExists(t, "test_dir/nested/file2")
+}
+
 func TestShowConfirm(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -274,6 +315,37 @@ func TestDeleteWithErr(t *testing.T) {
 	assert.DirExists(t, "test_dir/nested")
 }
 
+func TestDeleteWithErrBW(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	os.Chmod("test_dir/nested", 0)
+	defer os.Chmod("test_dir/nested", 0755)
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	ui := CreateUI(simScreen, false, false)
+	ui.askBeforeDelete = false
+
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
+		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+
+	assert.DirExists(t, "test_dir/nested")
+}
+
 func TestRescan(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -313,7 +385,7 @@ func TestShowDevices(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false, true)
+	ui := CreateUI(simScreen, true, true)
 	ui.ListDevices(getDevicesInfoMock())
 	ui.table.Draw(simScreen)
 	simScreen.Show()
@@ -336,7 +408,7 @@ func TestShowDevicesBW(t *testing.T) {
 	simScreen.Init()
 	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true, false)
+	ui := CreateUI(simScreen, false, false)
 	ui.ListDevices(getDevicesInfoMock())
 	ui.table.Draw(simScreen)
 	simScreen.Show()
@@ -347,6 +419,24 @@ func TestShowDevicesBW(t *testing.T) {
 	for i, r := range b[0:11] {
 		assert.Equal(t, text[i], r.Bytes[0])
 	}
+}
+
+func TestShowDevicesWithError(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		return
+	}
+
+	simScreen := tcell.NewSimulationScreen("UTF-8")
+	defer simScreen.Fini()
+	simScreen.Init()
+	simScreen.SetSize(50, 50)
+
+	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
+
+	ui := CreateUI(simScreen, false, false)
+	err := ui.ListDevices(getter)
+
+	assert.Contains(t, err.Error(), "no such file")
 }
 
 func TestSelectDevice(t *testing.T) {

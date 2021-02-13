@@ -17,6 +17,13 @@ func TestVersion(t *testing.T) {
 	assert.Contains(t, buff.String(), "Version:\t development")
 }
 
+func TestLogError(t *testing.T) {
+	buff := bytes.NewBuffer(make([]byte, 10))
+	err := Run(&RunFlags{LogFile: "/xyzxyz"}, []string{}, false, buff, true)
+
+	assert.Contains(t, err.Error(), "permission denied")
+}
+
 func TestAnalyzePath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

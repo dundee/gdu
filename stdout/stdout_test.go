@@ -72,6 +72,16 @@ func TestShowDevicesWithColor(t *testing.T) {
 	assert.Contains(t, output.String(), "xxx")
 }
 
+func TestShowDevicesWithErr(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
+	ui := CreateStdoutUI(output, false, true, false)
+	err := ui.ListDevices(getter)
+
+	assert.Contains(t, err.Error(), "no such file")
+}
+
 func printBuffer(buff *bytes.Buffer) {
 	for i, x := range buff.String() {
 		println(i, string(x))
