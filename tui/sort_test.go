@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/internal/testapp"
 	"github.com/dundee/gdu/internal/testdir"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
@@ -14,11 +15,9 @@ func TestSortBySizeAsc(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, true)
+	ui := CreateUI(app, true, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -45,11 +44,9 @@ func TestSortByName(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -76,11 +73,9 @@ func TestSortByNameDesc(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, true)
+	ui := CreateUI(app, false, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -109,11 +104,9 @@ func TestSortByItemCount(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, false)
+	ui := CreateUI(app, true, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -140,11 +133,9 @@ func TestSortByItemCountDesc(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, true)
+	ui := CreateUI(app, false, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 

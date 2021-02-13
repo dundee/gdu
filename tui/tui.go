@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/common"
 	"github.com/dundee/gdu/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -37,16 +38,9 @@ const helpText = `
 			  [::b]c    [white:black:-]Sort by items (asc/desc)
 `
 
-// CommonUI is common interface for both terminal UI and text output
-type CommonUI interface {
-	ListDevices(getter device.DevicesInfoGetter) error
-	AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *analyze.File)
-	SetIgnoreDirPaths(paths []string)
-}
-
 // UI struct
 type UI struct {
-	app              *tview.Application
+	app              common.Application
 	header           *tview.TextView
 	footer           *tview.TextView
 	currentDirLabel  *tview.TextView
@@ -69,7 +63,7 @@ type UI struct {
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
+func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI {
 	ui := &UI{
 		askBeforeDelete:  true,
 		sortBy:           "size",
@@ -79,8 +73,7 @@ func CreateUI(screen tcell.Screen, useColors bool, showApparentSize bool) *UI {
 		analyzer:         analyze.ProcessDir,
 	}
 
-	ui.app = tview.NewApplication()
-	ui.app.SetScreen(screen)
+	ui.app = app
 	ui.app.SetInputCapture(ui.keyPressed)
 
 	ui.header = tview.NewTextView()

@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/dundee/gdu/cmd"
+	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
+	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +26,23 @@ However HDDs work as well, but the performance gain is not so huge.
 		SilenceUsage: true,
 		RunE: func(command *cobra.Command, args []string) error {
 			istty := isatty.IsTerminal(os.Stdout.Fd())
-			return cmd.Run(rf, args, istty, os.Stdout, false)
+
+			var app *tview.Application = nil
+
+			if !rf.NonInteractive && istty {
+				screen, err := tcell.NewScreen()
+				if err != nil {
+					return fmt.Errorf("Error creating screen: %w", err)
+				}
+				screen.Init()
+				defer screen.Clear()
+				defer screen.Fini()
+
+				app = tview.NewApplication()
+				app.SetScreen(screen)
+			}
+
+			return cmd.Run(rf, args, istty, os.Stdout, app)
 		},
 	}
 

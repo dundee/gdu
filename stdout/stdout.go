@@ -46,6 +46,11 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 	return ui
 }
 
+// StartUILoop stub
+func (ui *UI) StartUILoop() error {
+	return nil
+}
+
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	devices, err := getter.GetDevicesInfo()

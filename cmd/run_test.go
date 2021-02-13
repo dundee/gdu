@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/dundee/gdu/internal/testapp"
 	"github.com/dundee/gdu/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,14 +13,14 @@ func TestVersion(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{ShowVersion: true}, []string{}, false, buff, true)
+	Run(&RunFlags{ShowVersion: true}, []string{}, false, buff, testapp.CreateMockedApp())
 
 	assert.Contains(t, buff.String(), "Version:\t development")
 }
 
 func TestLogError(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
-	err := Run(&RunFlags{LogFile: "/xyzxyz"}, []string{}, false, buff, true)
+	err := Run(&RunFlags{LogFile: "/xyzxyz"}, []string{}, false, buff, testapp.CreateMockedApp())
 
 	assert.Contains(t, err.Error(), "permission denied")
 }
@@ -30,7 +31,7 @@ func TestAnalyzePath(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null"}, []string{"test_dir"}, false, buff, true)
+	Run(&RunFlags{LogFile: "/dev/null"}, []string{"test_dir"}, false, buff, testapp.CreateMockedApp())
 
 	assert.Contains(t, buff.String(), "nested")
 }
@@ -41,7 +42,7 @@ func TestAnalyzePathWithGui(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null"}, []string{"test_dir"}, true, buff, true)
+	Run(&RunFlags{LogFile: "/dev/null"}, []string{"test_dir"}, true, buff, testapp.CreateMockedApp())
 }
 
 func TestNoCross(t *testing.T) {
@@ -50,7 +51,7 @@ func TestNoCross(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null", NoCross: true}, []string{"test_dir"}, false, buff, true)
+	Run(&RunFlags{LogFile: "/dev/null", NoCross: true}, []string{"test_dir"}, false, buff, testapp.CreateMockedApp())
 
 	assert.Contains(t, buff.String(), "nested")
 }
@@ -61,7 +62,7 @@ func TestListDevices(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, false, buff, true)
+	Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, false, buff, testapp.CreateMockedApp())
 
 	assert.Contains(t, buff.String(), "Device")
 }
@@ -72,5 +73,5 @@ func TestListDevicesWithGui(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, true, buff, true)
+	Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, true, buff, testapp.CreateMockedApp())
 }

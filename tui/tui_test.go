@@ -10,6 +10,7 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
+	"github.com/dundee/gdu/internal/testapp"
 	"github.com/dundee/gdu/internal/testdev"
 	"github.com/dundee/gdu/internal/testdir"
 	"github.com/gdamore/tcell/v2"
@@ -17,12 +18,10 @@ import (
 )
 
 func TestFooter(t *testing.T) {
-	simScreen := tcell.NewSimulationScreen("UTF-8")
+	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
 	defer simScreen.Fini()
-	simScreen.Init()
-	simScreen.SetSize(15, 15)
 
-	ui := CreateUI(simScreen, false, true)
+	ui := CreateUI(app, false, true)
 
 	dir := analyze.File{
 		Name:      "xxx",
@@ -60,26 +59,22 @@ func TestFooter(t *testing.T) {
 }
 
 func TestUpdateProgress(t *testing.T) {
-	simScreen := tcell.NewSimulationScreen("UTF-8")
+	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
 	defer simScreen.Fini()
-	simScreen.Init()
-	simScreen.SetSize(15, 15)
 
 	progress := &analyze.CurrentProgress{Mutex: &sync.Mutex{}, Done: true}
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 	progress.CurrentItemName = "xxx"
 	ui.updateProgress(progress)
 	assert.True(t, true)
 }
 
 func TestHelp(t *testing.T) {
-	simScreen := tcell.NewSimulationScreen("UTF-8")
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false, true)
+	ui := CreateUI(app, false, true)
 	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
@@ -98,11 +93,9 @@ func TestDeleteDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, false)
+	ui := CreateUI(app, true, false)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -138,11 +131,9 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, true)
+	ui := CreateUI(app, true, true)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -167,11 +158,9 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -204,11 +193,9 @@ func TestDeleteDirWithConfirmNoAskAgain(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -245,11 +232,9 @@ func TestShowConfirm(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, true)
+	ui := CreateUI(app, true, true)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -291,11 +276,9 @@ func TestDeleteWithErr(t *testing.T) {
 	os.Chmod("test_dir/nested", 0)
 	defer os.Chmod("test_dir/nested", 0755)
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, true)
+	ui := CreateUI(app, true, true)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -322,11 +305,9 @@ func TestDeleteWithErrBW(t *testing.T) {
 	os.Chmod("test_dir/nested", 0)
 	defer os.Chmod("test_dir/nested", 0755)
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -350,11 +331,9 @@ func TestRescan(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, false)
+	ui := CreateUI(app, true, false)
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
 
@@ -380,12 +359,10 @@ func TestShowDevices(t *testing.T) {
 		return
 	}
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, true, true)
+	ui := CreateUI(app, true, true)
 	ui.ListDevices(getDevicesInfoMock())
 	ui.table.Draw(simScreen)
 	simScreen.Show()
@@ -403,12 +380,10 @@ func TestShowDevicesBW(t *testing.T) {
 		return
 	}
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 	ui.ListDevices(getDevicesInfoMock())
 	ui.table.Draw(simScreen)
 	simScreen.Show()
@@ -426,14 +401,12 @@ func TestShowDevicesWithError(t *testing.T) {
 		return
 	}
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
 
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 	err := ui.ListDevices(getter)
 
 	assert.Contains(t, err.Error(), "no such file")
@@ -444,11 +417,9 @@ func TestSelectDevice(t *testing.T) {
 		return
 	}
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, true, true)
+	ui := CreateUI(app, true, true)
 	ui.analyzer = analyzeMock
 	ui.SetIgnoreDirPaths([]string{"/proc"})
 	ui.ListDevices(getDevicesInfoMock())
@@ -471,11 +442,9 @@ func TestKeys(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, false)
+	ui := CreateUI(app, false, false)
 	ui.askBeforeDelete = false
 
 	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
@@ -515,11 +484,9 @@ func TestSetIgnoreDirPaths(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	simScreen := tcell.NewSimulationScreen("UTF-8")
-	simScreen.Init()
-	simScreen.SetSize(50, 50)
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 
-	ui := CreateUI(simScreen, false, true)
+	ui := CreateUI(app, false, true)
 
 	path, _ := filepath.Abs("test_dir/nested/subnested")
 	ui.SetIgnoreDirPaths([]string{path})
@@ -537,7 +504,6 @@ func TestSetIgnoreDirPaths(t *testing.T) {
 	dir := ui.currentDir
 
 	assert.Equal(t, 3, dir.ItemCount)
-
 }
 
 func printScreen(simScreen tcell.SimulationScreen) {

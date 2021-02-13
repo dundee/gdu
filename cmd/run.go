@@ -9,6 +9,7 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/build"
+	"github.com/dundee/gdu/common"
 	"github.com/dundee/gdu/device"
 	"github.com/dundee/gdu/stdout"
 	"github.com/dundee/gdu/tui"
@@ -30,7 +31,7 @@ type RunFlags struct {
 }
 
 // Run starts gdu main logic
-func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing bool) error {
+func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app common.Application) error {
 	if flags.ShowVersion {
 		fmt.Fprintln(writer, "Version:\t", build.Version)
 		fmt.Fprintln(writer, "Built time:\t", build.Time)
@@ -39,7 +40,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 	}
 
 	var path string
-	var ui tui.CommonUI
+	var ui common.UI
 
 	f, err := os.OpenFile(flags.LogFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -67,21 +68,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 			flags.ShowApparentSize,
 		)
 	} else {
-		var screen tcell.Screen
-
-		if testing {
-			screen = tcell.NewSimulationScreen("UTF-8")
-		} else {
-			screen, err = tcell.NewScreen()
-			if err != nil {
-				return fmt.Errorf("Error creating screen: %w", err)
-			}
-		}
-		screen.Init()
-		defer screen.Clear()
-		defer screen.Fini()
-
-		ui = tui.CreateUI(screen, !flags.NoColor, flags.ShowApparentSize)
+		ui = tui.CreateUI(app, !flags.NoColor, flags.ShowApparentSize)
 
 		if !flags.NoColor {
 			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
@@ -107,16 +94,5 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, testing b
 		ui.AnalyzePath(path, analyze.ProcessDir, nil)
 	}
 
-	if testing {
-		return nil
-	}
-
-	switch u := ui.(type) {
-	case *tui.UI:
-		if err := u.StartUILoop(); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return ui.StartUILoop()
 }
