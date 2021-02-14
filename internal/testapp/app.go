@@ -1,6 +1,8 @@
 package testapp
 
 import (
+	"errors"
+
 	"github.com/dundee/gdu/common"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -19,16 +21,24 @@ func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.Si
 }
 
 // CreateMockedApp returns app with simulation screen for tests
-func CreateMockedApp() common.Application {
-	app := &MockedApp{}
+func CreateMockedApp(failRun bool) common.Application {
+	app := &MockedApp{
+		FailRun: failRun,
+	}
 	return app
 }
 
 // MockedApp is tview.Application with mocked methods
-type MockedApp struct{}
+type MockedApp struct {
+	FailRun bool
+}
 
 // Run does nothing
 func (app *MockedApp) Run() error {
+	if app.FailRun {
+		return errors.New("Fail")
+	}
+
 	return nil
 }
 

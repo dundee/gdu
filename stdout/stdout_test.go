@@ -6,6 +6,7 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
+	"github.com/dundee/gdu/internal/testanalyze"
 	"github.com/dundee/gdu/internal/testdev"
 	"github.com/dundee/gdu/internal/testdir"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,18 @@ func TestAnalyzePathWithColors(t *testing.T) {
 	ui.AnalyzePath("test_dir/nested", analyze.ProcessDir, nil)
 
 	assert.Contains(t, output.String(), "subnested")
+}
+
+func TestItemRows(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, true, false)
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	assert.Contains(t, output.String(), "TiB")
+	assert.Contains(t, output.String(), "GiB")
+	assert.Contains(t, output.String(), "MiB")
+	assert.Contains(t, output.String(), "KiB")
 }
 
 func TestAnalyzePathWithProgress(t *testing.T) {
@@ -81,6 +94,11 @@ func TestShowDevicesWithErr(t *testing.T) {
 	err := ui.ListDevices(getter)
 
 	assert.Contains(t, err.Error(), "no such file")
+}
+
+func TestMaxInt(t *testing.T) {
+	assert.Equal(t, 5, maxInt(2, 5))
+	assert.Equal(t, 4, maxInt(4, 2))
 }
 
 func printBuffer(buff *bytes.Buffer) {

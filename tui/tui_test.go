@@ -10,6 +10,7 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
+	"github.com/dundee/gdu/internal/testanalyze"
 	"github.com/dundee/gdu/internal/testapp"
 	"github.com/dundee/gdu/internal/testdev"
 	"github.com/dundee/gdu/internal/testdir"
@@ -354,6 +355,23 @@ func TestRescan(t *testing.T) {
 	ui.StartUILoop()
 }
 
+// TestItemRows tests that item with different sizes are shown
+func TestItemRows(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+
+	ui := CreateUI(app, true, false)
+
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	ui.StartUILoop()
+}
+
 func TestShowDevices(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		return
@@ -506,6 +524,25 @@ func TestSetIgnoreDirPaths(t *testing.T) {
 	assert.Equal(t, 3, dir.ItemCount)
 }
 
+func TestAppRunWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	// app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	app := testapp.CreateMockedApp(true)
+
+	ui := CreateUI(app, false, true)
+
+	err := ui.StartUILoop()
+
+	assert.Equal(t, "Fail", err.Error())
+}
+
+func TestMin(t *testing.T) {
+	assert.Equal(t, 2, min(2, 5))
+	assert.Equal(t, 3, min(4, 3))
+}
+
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()
 
@@ -525,10 +562,14 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 	item := &device.Device{
 		Name:       "/dev/root",
 		MountPoint: "/",
+		Size:       1e9,
+		Free:       1e3,
 	}
 	item2 := &device.Device{
 		Name:       "/dev/boot",
 		MountPoint: "/boot",
+		Size:       1e12,
+		Free:       1e6,
 	}
 
 	mock := testdev.DevicesInfoGetterMock{}
