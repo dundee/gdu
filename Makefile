@@ -7,6 +7,8 @@ LDFLAGS := "-s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
 	-X '$(PACKAGE)/build.Time=$(shell LC_ALL=en_US.UTF-8 date)'"
 
+all: build-all gdu.1
+
 run:
 	go run .
 
@@ -38,6 +40,12 @@ build-all:
 
 	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_*; do tar czf $$file.tgz $$file; done
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
+
+gdu.1: gdu.1.md
+	pandoc gdu.1.md -s -t man > gdu.1
+
+show-man:
+	pandoc gdu.1.md -s -t man | man -l -
 
 test:
 	go test -v ./...
