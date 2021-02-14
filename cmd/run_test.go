@@ -15,14 +15,28 @@ func TestVersion(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{ShowVersion: true}, []string{}, false, buff, testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{})
+	Run(
+		&RunFlags{ShowVersion: true},
+		[]string{},
+		false,
+		buff,
+		testapp.CreateMockedApp(false),
+		testdev.DevicesInfoGetterMock{},
+	)
 
 	assert.Contains(t, buff.String(), "Version:\t development")
 }
 
 func TestLogError(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
-	err := Run(&RunFlags{LogFile: "/xyzxyz"}, []string{}, false, buff, testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{})
+	err := Run(
+		&RunFlags{LogFile: "/xyzxyz"},
+		[]string{},
+		false,
+		buff,
+		testapp.CreateMockedApp(false),
+		testdev.DevicesInfoGetterMock{},
+	)
 
 	assert.Contains(t, err.Error(), "permission denied")
 }
@@ -33,7 +47,14 @@ func TestAnalyzePath(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null"}, []string{"test_dir"}, false, buff, testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{})
+	Run(
+		&RunFlags{LogFile: "/dev/null"},
+		[]string{"test_dir"},
+		false,
+		buff,
+		testapp.CreateMockedApp(false),
+		testdev.DevicesInfoGetterMock{},
+	)
 
 	assert.Contains(t, buff.String(), "nested")
 }
@@ -44,7 +65,13 @@ func TestAnalyzePathWithGui(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null"}, []string{"test_dir"}, true, buff, testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{})
+	Run(
+		&RunFlags{LogFile: "/dev/null"},
+		[]string{"test_dir"},
+		true,
+		buff,
+		testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{},
+	)
 }
 
 func TestNoCross(t *testing.T) {
@@ -53,7 +80,14 @@ func TestNoCross(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null", NoCross: true}, []string{"test_dir"}, false, buff, testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{})
+	Run(
+		&RunFlags{LogFile: "/dev/null", NoCross: true},
+		[]string{"test_dir"},
+		false,
+		buff,
+		testapp.CreateMockedApp(false),
+		testdev.DevicesInfoGetterMock{},
+	)
 
 	assert.Contains(t, buff.String(), "nested")
 }
@@ -65,7 +99,14 @@ func TestNoCrossWithErr(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"}
-	err := Run(&RunFlags{LogFile: "/dev/null", NoCross: true}, []string{"test_dir"}, false, buff, testapp.CreateMockedApp(false), getter)
+	err := Run(
+		&RunFlags{LogFile: "/dev/null", NoCross: true},
+		[]string{"test_dir"},
+		false,
+		buff,
+		testapp.CreateMockedApp(false),
+		getter,
+	)
 
 	assert.Equal(t, "Error loading mount points: open /xxxyyy: no such file or directory", err.Error())
 }
@@ -76,7 +117,13 @@ func TestListDevices(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, false, buff, testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{})
+	Run(
+		&RunFlags{LogFile: "/dev/null", ShowDisks: true},
+		nil,
+		false,
+		buff,
+		testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{},
+	)
 
 	assert.Contains(t, buff.String(), "Device")
 }
@@ -88,7 +135,14 @@ func TestListDevicesWithErr(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"}
 
-	err := Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, false, buff, testapp.CreateMockedApp(false), getter)
+	err := Run(
+		&RunFlags{LogFile: "/dev/null", ShowDisks: true},
+		nil,
+		false,
+		buff,
+		testapp.CreateMockedApp(false),
+		getter,
+	)
 
 	assert.Equal(t, "Error loading mount points: open /xxxyyy: no such file or directory", err.Error())
 }
@@ -99,5 +153,12 @@ func TestListDevicesWithGui(t *testing.T) {
 
 	buff := bytes.NewBuffer(make([]byte, 10))
 
-	Run(&RunFlags{LogFile: "/dev/null", ShowDisks: true}, nil, true, buff, testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{})
+	Run(
+		&RunFlags{LogFile: "/dev/null", ShowDisks: true},
+		nil,
+		true,
+		buff,
+		testapp.CreateMockedApp(false),
+		testdev.DevicesInfoGetterMock{},
+	)
 }
