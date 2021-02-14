@@ -1,9 +1,19 @@
 #!/usr/bin/make -f
 
-export GO111MODULE := on
-export GOCACHE := on
+DH_GOPKG = github.com/dundee/gdu
+VERSION ?= $(shell dpkg-parsechangelog -SVersion)
+
+GOLDFLAGS ?= \
+	-s -w \
+	-X '$(DH_GOPKG)/build.Version=$(VERSION)' \
+	-X '$(DH_GOPKG)/build.User=debian' \
+	-X '$(DH_GOPKG)/build.Time=$(shell TZ=Etc/UTC date +'%F_%T' -d @$(SOURCE_DATE_EPOCH))'
 
 %:
-	dh $@ --buildsystem=golang --with=golang
+	dh $@ --builddirectory=_build --buildsystem=golang --with=golang
 
+override_dh_auto_install:
+	dh_auto_install -- --no-source
 
+override_dh_auto_build:
+	dh_auto_build -- -ldflags "$(GOLDFLAGS)"

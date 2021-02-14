@@ -1,22 +1,32 @@
 Source: gdu
+Maintainer: Debian Go Packaging Team <team+pkg-go@tracker.debian.org>
+Uploaders: Daniel Milde <daniel@milde.cz>
 Section: admin
+Testsuite: autopkgtest-pkg-go
 Priority: optional
-Maintainer: Daniel Milde <daniel@milde.cz>
+Build-Depends: debhelper-compat (= 13),
+               dh-golang,
+               golang-any,
+               golang-github-gdamore-tcell.v2-dev,
+               golang-github-mattn-go-isatty-dev,
+               golang-github-rivo-tview-dev (>= 0.0~git20210122),
+               golang-github-spf13-cobra-dev,
+               golang-github-fatih-color-dev,
+               golang-github-stretchr-testify-dev
+Standards-Version: 4.5.1
+Vcs-Browser: https://salsa.debian.org/go-team/packages/gdu
+Vcs-Git: https://salsa.debian.org/go-team/packages/gdu.git
 Homepage: https://github.com/dundee/gdu
-Vcs-Git: https://github.com/dundee/gdu.git
-Vcs-Browser: https://github.com/dundee/gdu
-Standards-Version: 4.3.0
+Rules-Requires-Root: no
 XS-Go-Import-Path: github.com/dundee/gdu
-Build-Depends: debhelper (>= 9),
-                dh-golang,
-                golang-go,
-                git
 
 Package: gdu
 Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
 Built-Using: ${misc:Built-Using}
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Pretty fast disk usage analyzer written in Go
- Gdu is intended primarily for SSD disks where it can fully
+Description: Pretty fast disk usage analyzer
+ Disk usage analyzer with console interface written in Go.
+ Intended primarily for SSD disks where it can fully
  utilize parallel processing. However HDDs work as well, but
  the performance gain is not so huge.
