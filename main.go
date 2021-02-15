@@ -36,7 +36,7 @@ However HDDs work as well, but the performance gain is not so huge.
 
 			var app *tview.Application = nil
 
-			if !rf.NonInteractive && istty {
+			if !rf.ShowVersion && !rf.NonInteractive && istty {
 				screen, err := tcell.NewScreen()
 				if err != nil {
 					return fmt.Errorf("Error creating screen: %w", err)
