@@ -64,3 +64,8 @@ func (app *MockedApp) SetInputCapture(capture func(event *tcell.EventKey) *tcell
 func (app *MockedApp) QueueUpdateDraw(f func()) *tview.Application {
 	return nil
 }
+
+// SetBeforeDrawFunc does nothing
+func (app *MockedApp) SetBeforeDrawFunc(func(screen tcell.Screen) bool) *tview.Application {
+	return nil
+}

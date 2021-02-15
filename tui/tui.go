@@ -73,6 +73,11 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 		analyzer:         analyze.ProcessDir,
 	}
 
+	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
+		screen.Clear()
+		return false
+	})
+
 	ui.app = app
 	ui.app.SetInputCapture(ui.keyPressed)
 
@@ -87,8 +92,13 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 	}
 
 	ui.currentDirLabel = tview.NewTextView()
+	ui.currentDirLabel.SetBackgroundColor(tcell.ColorDefault)
 
 	ui.table = tview.NewTable().SetSelectable(true, false)
+	ui.table.SetBackgroundColor(tcell.ColorDefault)
+	ui.table.SetSelectedStyle(tcell.Style{}.
+		Foreground(tcell.ColorBlack).
+		Background(tcell.ColorWhite))
 
 	ui.footer = tview.NewTextView().SetDynamicColors(true)
 	if ui.useColors {
@@ -108,6 +118,7 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 
 	ui.pages = tview.NewPages().
 		AddPage("background", grid, true, true)
+	ui.pages.SetBackgroundColor(tcell.ColorDefault)
 
 	ui.app.SetRoot(ui.pages, true)
 
@@ -131,11 +142,11 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 
 	var textColor, sizeColor string
 	if ui.useColors {
-		textColor = "[#3498db:black:b]"
-		sizeColor = "[#edb20a:black:b]"
+		textColor = "[#3498db:-:b]"
+		sizeColor = "[#edb20a:-:b]"
 	} else {
-		textColor = "[white:black:b]"
-		sizeColor = "[white:black:b]"
+		textColor = "[white:-:b]"
+		sizeColor = "[white:-:b]"
 	}
 
 	for i, device := range ui.devices {
@@ -159,7 +170,7 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *ana
 	abspath, _ := filepath.Abs(path)
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
-	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
+	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2).SetBackgroundColor(tcell.ColorDefault)
 	ui.progress.SetTitle(" Scanning... ")
 	ui.progress.SetDynamicColors(true)
 
@@ -199,7 +210,7 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *ana
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()
-			ui.pages.HidePage("progress")
+			ui.pages.RemovePage("progress")
 		})
 	}()
 }
@@ -237,7 +248,7 @@ func (ui *UI) showDir() {
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
-		cell := tview.NewTableCell("                        [::b]/..")
+		cell := tview.NewTableCell("                         [::b]/..")
 		cell.SetReference(ui.currentDir.Parent)
 		ui.table.SetCell(0, 0, cell)
 		rowIndex++
@@ -492,9 +503,9 @@ func (ui *UI) setSorting(newOrder string) {
 }
 
 func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
-	color := "[white:black:b]"
+	color := "[white:-:b]"
 	if ui.useColors {
-		color = "[red:black:b]"
+		color = "[red:-:b]"
 	}
 
 	for {
@@ -508,10 +519,10 @@ func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
 			ui.progress.SetText("Total items: " +
 				color +
 				fmt.Sprint(progress.ItemCount) +
-				"[white:black:-] size: " +
+				"[white:-:-] size: " +
 				color +
 				ui.formatSize(progress.TotalSize, false) +
-				"[white:black:-]\nCurrent item: [white:black:b]" +
+				"[white:-:-]\nCurrent item: [white:-:b]" +
 				progress.CurrentItemName)
 		})
 		progress.Mutex.Unlock()
@@ -555,15 +566,15 @@ func (ui *UI) formatFileRow(item *analyze.File) string {
 	row := string(item.Flag)
 
 	if ui.useColors {
-		row += "[#e67100:black:b]"
+		row += "[#e67100:-:b]"
 	} else {
-		row += "[white:black:b]"
+		row += "[white:-:b]"
 	}
 
 	if ui.showApparentSize {
-		row += fmt.Sprintf("%25s", ui.formatSize(item.Size, false))
+		row += fmt.Sprintf("%21s", ui.formatSize(item.Size, false))
 	} else {
-		row += fmt.Sprintf("%25s", ui.formatSize(item.Usage, false))
+		row += fmt.Sprintf("%21s", ui.formatSize(item.Usage, false))
 	}
 
 	row += " ["
@@ -596,7 +607,7 @@ func (ui *UI) formatSize(size int64, reverseColor bool) string {
 			color = "[black:white:-]"
 		}
 	} else {
-		color = "[white:black:-]"
+		color = "[white:-:-]"
 	}
 
 	switch {

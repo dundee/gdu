@@ -13,4 +13,5 @@ type Application interface {
 	SetFocus(p tview.Primitive) *tview.Application
 	SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) *tview.Application
 	QueueUpdateDraw(f func()) *tview.Application
+	SetBeforeDrawFunc(func(screen tcell.Screen) bool) *tview.Application
 }
