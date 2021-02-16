@@ -145,7 +145,7 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		// .. is selected now, cannot be deleted
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
 	}()
@@ -256,7 +256,7 @@ func TestShowConfirm(t *testing.T) {
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1) // select file
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'h', 1) // cannot go up when confirm is shown
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'l', 1) // cannot go down when confirm is shown
@@ -528,7 +528,6 @@ func TestAppRunWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	// app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	app := testapp.CreateMockedApp(true)
 
 	ui := CreateUI(app, false, true)
