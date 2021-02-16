@@ -49,22 +49,22 @@ non-interactive mode
 Files and directories may be prefixed by a one-character
 flag with following meaning:
 
-!
+**!**
 
 :   An error occurred while reading this directory.
 
-.
+**.**
 
 :   An error occurred while reading a subdirectory, size may be not correct.
 
-@
+**\@**
 
 :  File is symlink or socket.
 
-H
+**H**
 
 :  Same file was already counted (hard link).
 
-e
+**e**
 
 :  Directory is empty.

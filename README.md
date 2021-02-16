@@ -95,6 +95,21 @@ Non-interactive mode is started automtically when TTY is not detected (using [go
 
 Hard links are counted only once.
 
+## File flags
+
+Files and directories may be prefixed by a one-character
+flag with following meaning:
+
+* `!` An error occurred while reading this directory.
+
+* `.` An error occurred while reading a subdirectory, size may be not correct.
+
+* `@` File is symlink or socket.
+
+* `H` Same file was already counted (hard link).
+
+* `e` Directory is empty.
+
 ## Running tests
 
     make test
