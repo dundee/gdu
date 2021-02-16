@@ -66,6 +66,13 @@ func (f *File) UpdateStats(links AlreadyCountedHardlinks) {
 			entry.UpdateStats(links)
 		}
 
+		switch entry.Flag {
+		case '!', '.':
+			if f.Flag != '!' {
+				f.Flag = '.'
+			}
+		}
+
 		itemCount += entry.ItemCount
 
 		if entry.MutliLinkInode > 0 {

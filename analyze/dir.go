@@ -87,16 +87,7 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 				subdir.Parent = &dir
 
 				mutex.Lock()
-
 				dir.Files = append(dir.Files, subdir)
-
-				switch subdir.Flag {
-				case '!', '.':
-					if dir.Flag != '!' {
-						dir.Flag = '.'
-					}
-				}
-
 				mutex.Unlock()
 
 				<-concurrencyLimitChannel
