@@ -116,7 +116,7 @@ func TestDeleteDir(t *testing.T) {
 		simScreen.InjectKey(tcell.KeyRune, 'l', 1) // test selecting file
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'a', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
@@ -145,7 +145,7 @@ func TestDoNotDeleteParentDir(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		// .. is selected now, cannot be deleted
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
 	}()
@@ -179,8 +179,8 @@ func TestDeleteDirWithConfirm(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
 		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, 'x', 1)
-		time.Sleep(10 * time.Millisecond)
+		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
 	}()
@@ -219,7 +219,7 @@ func TestDeleteDirWithConfirmNoAskAgain(t *testing.T) {
 		simScreen.InjectKey(tcell.KeyRight, ' ', 1) // select "do not ask again"
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
 		time.Sleep(10 * time.Millisecond)
 	}()
@@ -256,7 +256,7 @@ func TestShowConfirm(t *testing.T) {
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1) // select file
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'h', 1) // cannot go up when confirm is shown
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'l', 1) // cannot go down when confirm is shown
@@ -287,7 +287,7 @@ func TestDeleteWithErr(t *testing.T) {
 	go func() {
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
@@ -316,7 +316,7 @@ func TestDeleteWithErrBW(t *testing.T) {
 	go func() {
 		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
@@ -484,7 +484,7 @@ func TestKeys(t *testing.T) {
 		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
 		time.Sleep(10 * time.Millisecond)
 		simScreen.InjectKey(tcell.KeyRune, 'h', 1)

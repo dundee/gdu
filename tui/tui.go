@@ -384,19 +384,38 @@ func (ui *UI) showErr(msg string, err error) {
 func (ui *UI) deleteSelected() {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
-	if err := ui.currentDir.RemoveFile(selectedFile); err != nil {
-		msg := "Can't delete " + selectedFile.Name
-		ui.showErr(msg, err)
-		return
-	}
-	ui.showDir()
-	ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
+
+	modal := tview.NewModal().SetText("Deleting " + selectedFile.Name + "...")
+	ui.pages.AddPage("deleting", modal, true, true)
+
+	currentDir := ui.currentDir
+
+	go func() {
+		if err := currentDir.RemoveFile(selectedFile); err != nil {
+			msg := "Can't delete " + selectedFile.Name
+			ui.app.QueueUpdateDraw(func() {
+				ui.pages.RemovePage("deleting")
+				ui.showErr(msg, err)
+			})
+			return
+		}
+
+		ui.app.QueueUpdateDraw(func() {
+			ui.pages.RemovePage("deleting")
+			ui.showDir()
+			ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
+		})
+	}()
 }
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if (key.Key() == tcell.KeyEsc || key.Rune() == 'q') && ui.pages.HasPage("help") {
 		ui.pages.RemovePage("help")
 		ui.app.SetFocus(ui.table)
+		return key
+	}
+
+	if ui.pages.HasPage("deleting") && key.Rune() != 'q' {
 		return key
 	}
 
