@@ -98,7 +98,7 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 	ui.table.SetBackgroundColor(tcell.ColorDefault)
 	ui.table.SetSelectedStyle(tcell.Style{}.
 		Foreground(tcell.ColorBlack).
-		Background(tcell.ColorWhite))
+		Background(tcell.ColorWhite).Bold(true))
 
 	ui.footer = tview.NewTextView().SetDynamicColors(true)
 	if ui.useColors {
