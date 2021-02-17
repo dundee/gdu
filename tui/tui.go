@@ -62,6 +62,8 @@ type UI struct {
 	sortOrder        string
 	useColors        bool
 	showApparentSize bool
+	done             chan struct{}
+	remover          func(*analyze.File, *analyze.File) error
 }
 
 // CreateUI creates the whole UI app
@@ -73,6 +75,7 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 		useColors:        useColors,
 		showApparentSize: showApparentSize,
 		analyzer:         analyze.ProcessDir,
+		remover:          analyze.RemoveFileFromDir,
 	}
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
@@ -214,6 +217,10 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *ana
 			ui.showDir()
 			ui.pages.RemovePage("progress")
 		})
+
+		if ui.done != nil {
+			ui.done <- struct{}{}
+		}
 	}()
 }
 
@@ -393,12 +400,15 @@ func (ui *UI) deleteSelected() {
 	currentDir := ui.currentDir
 
 	go func() {
-		if err := currentDir.RemoveFile(selectedFile); err != nil {
+		if err := ui.remover(currentDir, selectedFile); err != nil {
 			msg := "Can't delete " + selectedFile.Name
 			ui.app.QueueUpdateDraw(func() {
 				ui.pages.RemovePage("deleting")
 				ui.showErr(msg, err)
 			})
+			if ui.done != nil {
+				ui.done <- struct{}{}
+			}
 			return
 		}
 
@@ -407,6 +417,10 @@ func (ui *UI) deleteSelected() {
 			ui.showDir()
 			ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
 		})
+
+		if ui.done != nil {
+			ui.done <- struct{}{}
+		}
 	}()
 }
 
@@ -465,7 +479,6 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case '?':
 		ui.showHelp()
-		break
 	case 'd':
 		if ui.currentDir == nil {
 			break
@@ -483,28 +496,21 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		} else {
 			ui.deleteSelected()
 		}
-		break
 	case 'a':
 		ui.showApparentSize = !ui.showApparentSize
 		if ui.currentDir != nil {
 			ui.showDir()
 		}
-		break
 	case 'r':
-		if ui.currentDir == nil {
-			break
+		if ui.currentDir != nil {
+			ui.rescanDir()
 		}
-		ui.rescanDir()
-		break
 	case 's':
 		ui.setSorting("size")
-		break
 	case 'c':
 		ui.setSorting("itemCount")
-		break
 	case 'n':
 		ui.setSorting("name")
-		break
 	}
 	return key
 }

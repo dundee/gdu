@@ -20,17 +20,21 @@ func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.Si
 	return app, screen
 }
 
+// MockedApp is tview.Application with mocked methods
+type MockedApp struct {
+	FailRun     bool
+	UpdateDraws []func()
+	BeforeDraws []func(screen tcell.Screen) bool
+}
+
 // CreateMockedApp returns app with simulation screen for tests
 func CreateMockedApp(failRun bool) common.Application {
 	app := &MockedApp{
-		FailRun: failRun,
+		FailRun:     failRun,
+		UpdateDraws: make([]func(), 0, 1),
+		BeforeDraws: make([]func(screen tcell.Screen) bool, 0, 1),
 	}
 	return app
-}
-
-// MockedApp is tview.Application with mocked methods
-type MockedApp struct {
-	FailRun bool
 }
 
 // Run does nothing
@@ -62,10 +66,12 @@ func (app *MockedApp) SetInputCapture(capture func(event *tcell.EventKey) *tcell
 
 // QueueUpdateDraw does nothing
 func (app *MockedApp) QueueUpdateDraw(f func()) *tview.Application {
+	app.UpdateDraws = append(app.UpdateDraws, f)
 	return nil
 }
 
 // SetBeforeDrawFunc does nothing
-func (app *MockedApp) SetBeforeDrawFunc(func(screen tcell.Screen) bool) *tview.Application {
+func (app *MockedApp) SetBeforeDrawFunc(f func(screen tcell.Screen) bool) *tview.Application {
+	app.BeforeDraws = append(app.BeforeDraws, f)
 	return nil
 }

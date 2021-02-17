@@ -180,7 +180,7 @@ func TestRemoveFile(t *testing.T) {
 	dir.Files = []*File{subdir}
 	subdir.Files = []*File{file}
 
-	subdir.RemoveFile(file)
+	RemoveFileFromDir(subdir, file)
 
 	assert.Equal(t, 0, len(subdir.Files))
 	assert.Equal(t, 1, subdir.ItemCount)
@@ -208,7 +208,7 @@ func TestRemoveFileWithErr(t *testing.T) {
 		Parent: dir,
 	}
 
-	err := dir.RemoveFile(subdir)
+	err := RemoveFileFromDir(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }
 

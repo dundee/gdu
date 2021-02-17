@@ -1,12 +1,10 @@
 package tui
 
 import (
-	"os"
-	"path/filepath"
+	"errors"
 	"runtime"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
@@ -75,6 +73,28 @@ func TestHelp(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
+	ui := CreateUI(app, true, true)
+	ui.showHelp()
+
+	assert.True(t, ui.pages.HasPage("help"))
+
+	ui.help.Draw(simScreen)
+	simScreen.Show()
+
+	b, _, _ := simScreen.GetContents()
+
+	cells := b[356 : 356+9]
+
+	text := []byte("directory")
+	for i, r := range cells {
+		assert.Equal(t, text[i], r.Bytes[0])
+	}
+}
+
+func TestHelpBw(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	ui := CreateUI(app, false, true)
 	ui.showHelp()
 	ui.help.Draw(simScreen)
@@ -90,293 +110,7 @@ func TestHelp(t *testing.T) {
 	}
 }
 
-func TestDeleteDir(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, true, false)
-	ui.askBeforeDelete = false
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, '?', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1) // test selecting file
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'a', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.NoFileExists(t, "test_dir/nested/file2")
-}
-
-func TestDoNotDeleteParentDir(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, true, true)
-	ui.askBeforeDelete = false
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(10 * time.Millisecond)
-		// .. is selected now, cannot be deleted
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.FileExists(t, "test_dir/nested/file2")
-}
-
-func TestDeleteDirWithConfirm(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, false, false)
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, '?', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.NoFileExists(t, "test_dir/nested/file2")
-}
-
-func TestDeleteDirWithConfirmNoAskAgain(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, false, false)
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, '?', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRight, ' ', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRight, ' ', 1) // select "do not ask again"
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.NoFileExists(t, "test_dir/nested/file2")
-}
-
-func TestShowConfirm(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, true, true)
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'h', 1) // cannot go up
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, '?', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRight, '1', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRight, '1', 1) // `..` cannot be selected by `l` or `right`
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1) // select file
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'h', 1) // cannot go up when confirm is shown
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1) // cannot go down when confirm is shown
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.FileExists(t, "test_dir/nested/file2")
-}
-
-func TestDeleteWithErr(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	os.Chmod("test_dir/nested", 0)
-	defer os.Chmod("test_dir/nested", 0755)
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, true, true)
-	ui.askBeforeDelete = false
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.DirExists(t, "test_dir/nested")
-}
-
-func TestDeleteWithErrBW(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	os.Chmod("test_dir/nested", 0)
-	defer os.Chmod("test_dir/nested", 0755)
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, false, false)
-	ui.askBeforeDelete = false
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, ' ', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.DirExists(t, "test_dir/nested")
-}
-
-func TestRescan(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, true, false)
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyEnter, '1', 1)
-		time.Sleep(10 * time.Millisecond)
-
-		// rescan subdir
-		simScreen.InjectKey(tcell.KeyRune, 'r', 1)
-		time.Sleep(100 * time.Millisecond)
-
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-}
-
-// TestItemRows tests that item with different sizes are shown
-func TestItemRows(t *testing.T) {
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, true, false)
-
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-}
-
 func TestShowDevices(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		return
-	}
-
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
@@ -394,10 +128,6 @@ func TestShowDevices(t *testing.T) {
 }
 
 func TestShowDevicesBW(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		return
-	}
-
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
@@ -430,111 +160,341 @@ func TestShowDevicesWithError(t *testing.T) {
 	assert.Contains(t, err.Error(), "no such file")
 }
 
-func TestSelectDevice(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		return
-	}
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
+func TestDeviceSelected(t *testing.T) {
+	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = analyzeMock
-	ui.SetIgnoreDirPaths([]string{"/proc"})
+	ui.analyzer = testanalyze.MockedProcessDir
+	ui.done = make(chan struct{})
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	ui.ListDevices(getDevicesInfoMock())
 
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1) // device cannot be deleted
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'r', 1) // or refreshed
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-	}()
+	assert.Equal(t, 3, ui.table.GetRowCount())
 
-	ui.StartUILoop()
+	ui.deviceItemSelected(1, 0)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
 }
 
-func TestKeys(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, false, false)
-	ui.askBeforeDelete = false
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 's', 1) // sort asc
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 's', 1) // sort desc
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'd', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'h', 1)
-		time.Sleep(10 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	assert.NoFileExists(t, "test_dir/nested/subnested/file")
-}
-
-func TestSetIgnoreDirPaths(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
+func TestAppRun(t *testing.T) {
+	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, false, true)
 
-	path, _ := filepath.Abs("test_dir/nested/subnested")
-	ui.SetIgnoreDirPaths([]string{path})
+	err := ui.StartUILoop()
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(10 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	dir := ui.currentDir
-
-	assert.Equal(t, 3, dir.ItemCount)
+	assert.Nil(t, err)
 }
 
 func TestAppRunWithErr(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
 	app := testapp.CreateMockedApp(true)
-
 	ui := CreateUI(app, false, true)
 
 	err := ui.StartUILoop()
 
 	assert.Equal(t, "Fail", err.Error())
+}
+
+func TestAnalyzePath(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+}
+
+func TestAnalyzePathBW(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+}
+
+func TestAnalyzePathWithParentDir(t *testing.T) {
+	parentDir := &analyze.File{
+		Name:  "parent",
+		IsDir: true,
+		Files: make([]*analyze.File, 0, 1),
+	}
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.topDir = parentDir
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, parentDir)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, parentDir, ui.currentDir.Parent)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+}
+
+func TestRescanDir(t *testing.T) {
+	parentDir := &analyze.File{
+		Name:  "parent",
+		IsDir: true,
+		Files: make([]*analyze.File, 0, 1),
+	}
+	currentDir := &analyze.File{
+		Name:   "sub",
+		IsDir:  true,
+		Parent: parentDir,
+	}
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.analyzer = testanalyze.MockedProcessDir
+	ui.currentDir = currentDir
+	ui.topDir = parentDir
+	ui.rescanDir()
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, parentDir, ui.currentDir.Parent)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+}
+
+func TestDirSelected(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.fileItemSelected(0, 0)
+
+	assert.Equal(t, 3, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "subnested")
+}
+
+func TestFileSelected(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.fileItemSelected(1, 0)
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+}
+
+func TestBeforeDraw(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	screen.Init()
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+
+	for _, f := range ui.app.(*testapp.MockedApp).BeforeDraws {
+		assert.False(t, f(screen))
+	}
+}
+
+func TestIgnorePaths(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+
+	ui.SetIgnoreDirPaths([]string{"/aaa", "/bbb"})
+
+	assert.True(t, ui.ignoreDirPaths["/aaa"])
+	assert.True(t, ui.ignoreDirPaths["/bbb"])
+	assert.False(t, ui.ignoreDirPaths["/ccc"])
+
+	assert.True(t, ui.ShouldDirBeIgnored("/aaa"))
+}
+
+func TestConfirmDeletion(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.table.Select(1, 0)
+
+	ui.confirmDeletion()
+
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmDeletionBW(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.table.Select(1, 0)
+
+	ui.confirmDeletion()
+
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestDeleteSelected(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.deleteSelected()
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestDeleteSelectedWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.remover = testanalyze.RemoveFileFromDirWithErr
+	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.deleteSelected()
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.True(t, ui.pages.HasPage("error"))
+	assert.DirExists(t, "test_dir/nested")
+}
+
+func TestShowErr(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+
+	ui.showErr("Something went wrong", errors.New("error"))
+
+	assert.True(t, ui.pages.HasPage("error"))
+}
+
+func TestShowErrBW(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+
+	ui.showErr("Something went wrong", errors.New("error"))
+
+	assert.True(t, ui.pages.HasPage("error"))
 }
 
 func TestMin(t *testing.T) {

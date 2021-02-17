@@ -2,160 +2,219 @@ package tui
 
 import (
 	"testing"
-	"time"
 
-	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/internal/testanalyze"
 	"github.com/dundee/gdu/internal/testapp"
-	"github.com/dundee/gdu/internal/testdir"
-	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSortBySizeAsc(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
+func TestAnalyzeByApparentSize(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
 
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	<-ui.done
 
-	ui := CreateUI(app, true, true)
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
 
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 's', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(100 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	dir := ui.currentDir
-
-	assert.Equal(t, "file2", dir.Files[0].Name)
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "ddd")
 }
 
-func TestSortByName(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
+func TestSortByApparentSizeAsc(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.sortOrder = "asc"
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
 
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	<-ui.done
 
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "aaa")
+}
+
+func TestAnalyzeBySize(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	<-ui.done
 
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'n', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(100 * time.Millisecond)
-	}()
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
-	ui.StartUILoop()
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
 
-	dir := ui.currentDir
-
-	assert.Equal(t, "file2", dir.Files[0].Name)
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "ddd")
 }
 
-func TestSortByNameDesc(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
+func TestSortBySizeAsc(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, false)
+	ui.done = make(chan struct{})
+	ui.sortOrder = "asc"
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
 
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	<-ui.done
 
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "aaa")
+}
+
+func TestAnalyzeByName(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.sortBy = "name"
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	<-ui.done
 
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'n', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'n', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(100 * time.Millisecond)
-	}()
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
-	ui.StartUILoop()
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
 
-	dir := ui.currentDir
-
-	assert.Equal(t, "subnested", dir.Files[0].Name)
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "aaa")
 }
 
-func TestSortByItemCount(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
-	ui := CreateUI(app, true, false)
-
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
-
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'c', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(100 * time.Millisecond)
-	}()
-
-	ui.StartUILoop()
-
-	dir := ui.currentDir
-
-	assert.Equal(t, "file2", dir.Files[0].Name)
-}
-
-func TestSortByItemCountDesc(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-
+func TestAnalyzeByNameAsc(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.sortBy = "name"
+	ui.sortOrder = "asc"
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
 
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	<-ui.done
 
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'j', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'l', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'c', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'c', 1)
-		time.Sleep(100 * time.Millisecond)
-		simScreen.InjectKey(tcell.KeyRune, 'q', 1)
-		time.Sleep(100 * time.Millisecond)
-	}()
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
-	ui.StartUILoop()
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
 
-	dir := ui.currentDir
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "ddd")
+}
 
-	assert.Equal(t, "subnested", dir.Files[0].Name)
+func TestAnalyzeByItemCount(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.sortBy = "itemCount"
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "ddd")
+}
+
+func TestAnalyzeByItemCountAsc(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.sortBy = "itemCount"
+	ui.sortOrder = "asc"
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 5, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(4, 0).Text, "aaa")
+}
+
+func TestSetSorting(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.sortBy = "itemCount"
+	ui.sortOrder = "asc"
+	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+
+	<-ui.done
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.setSorting("name")
+	assert.Equal(t, "name", ui.sortBy)
+	assert.Equal(t, "asc", ui.sortOrder)
+	ui.setSorting("name")
+	assert.Equal(t, "name", ui.sortBy)
+	assert.Equal(t, "desc", ui.sortOrder)
+	ui.setSorting("name")
+	assert.Equal(t, "name", ui.sortBy)
+	assert.Equal(t, "asc", ui.sortOrder)
 }

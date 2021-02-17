@@ -30,16 +30,16 @@ func (f *File) Path() string {
 	return filepath.Join(f.Parent.Path(), f.Name)
 }
 
-// RemoveFile removes file from dir
-func (f *File) RemoveFile(file *File) error {
+// RemoveFileFromDir removes file from dir
+func RemoveFileFromDir(dir *File, file *File) error {
 	error := os.RemoveAll(file.Path())
 	if error != nil {
 		return error
 	}
 
-	f.Files = f.Files.Remove(file)
+	dir.Files = dir.Files.Remove(file)
 
-	cur := f
+	cur := dir
 	for {
 		cur.ItemCount -= file.ItemCount
 		cur.Size -= file.Size
