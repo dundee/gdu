@@ -29,7 +29,7 @@ Using curl:
 
     yay -S gdu
 
-Debian:
+[Debian](https://packages.debian.org/sid/gdu):
 
     dpkg -i gdu_*_amd64.deb
 
