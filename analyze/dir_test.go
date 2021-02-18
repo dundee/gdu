@@ -80,13 +80,11 @@ func TestHardlink(t *testing.T) {
 	dir := ProcessDir("test_dir", &CurrentProgress{Mutex: &sync.Mutex{}}, func(_ string) bool { return false })
 
 	assert.Equal(t, int64(7+4096*3), dir.Size) // file2 and file3 are counted just once for size
-	assert.Equal(t, int64(4096*5), dir.Usage)  // and usage
 	assert.Equal(t, 6, dir.ItemCount)          // but twice for item count
 
 	// test file3
 	assert.Equal(t, "file3", dir.Files[0].Files[1].Name)
 	assert.Equal(t, int64(2), dir.Files[0].Files[1].Size)
-	assert.Equal(t, int64(4096), dir.Files[0].Files[1].Usage)
 	assert.Equal(t, 'H', dir.Files[0].Files[1].Flag)
 }
 
