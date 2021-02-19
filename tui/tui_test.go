@@ -364,11 +364,9 @@ func TestIgnorePaths(t *testing.T) {
 
 	ui.SetIgnoreDirPaths([]string{"/aaa", "/bbb"})
 
-	assert.True(t, ui.ignoreDirPaths["/aaa"])
-	assert.True(t, ui.ignoreDirPaths["/bbb"])
-	assert.False(t, ui.ignoreDirPaths["/ccc"])
-
 	assert.True(t, ui.ShouldDirBeIgnored("/aaa"))
+	assert.True(t, ui.ShouldDirBeIgnored("/bbb"))
+	assert.False(t, ui.ShouldDirBeIgnored("/ccc"))
 }
 
 func TestConfirmDeletion(t *testing.T) {

@@ -57,7 +57,7 @@ type UI struct {
 	topDirPath       string
 	currentDirPath   string
 	askBeforeDelete  bool
-	ignoreDirPaths   map[string]bool
+	ignoreDirPaths   map[string]struct{}
 	sortBy           string
 	sortOrder        string
 	useColors        bool
@@ -234,9 +234,9 @@ func (ui *UI) StartUILoop() error {
 
 // SetIgnoreDirPaths sets paths to ignore
 func (ui *UI) SetIgnoreDirPaths(paths []string) {
-	ui.ignoreDirPaths = make(map[string]bool, len(paths))
+	ui.ignoreDirPaths = make(map[string]struct{}, len(paths))
 	for _, path := range paths {
-		ui.ignoreDirPaths[path] = true
+		ui.ignoreDirPaths[path] = struct{}{}
 	}
 }
 
@@ -246,7 +246,8 @@ func (ui *UI) rescanDir() {
 
 // ShouldDirBeIgnored returns true if given path should be ignored
 func (ui *UI) ShouldDirBeIgnored(path string) bool {
-	return ui.ignoreDirPaths[path]
+	_, ok := ui.ignoreDirPaths[path]
+	return ok
 }
 
 func (ui *UI) showDir() {
@@ -345,7 +346,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 	paths := device.GetNestedMountpointsPaths(selectedDevice.MountPoint, ui.devices)
 	for _, path := range paths {
-		ui.ignoreDirPaths[path] = true
+		ui.ignoreDirPaths[path] = struct{}{}
 	}
 
 	ui.AnalyzePath(selectedDevice.MountPoint, ui.analyzer, nil)

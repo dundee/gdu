@@ -26,7 +26,7 @@ type Analyzer func(path string, progress *CurrentProgress, ignore ShouldDirBeIgn
 
 // ProcessDir analyzes given path
 func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnored) *File {
-	concurrencyLimitChannel := make(chan bool, 2*runtime.NumCPU())
+	concurrencyLimitChannel := make(chan struct{}, 2*runtime.NumCPU())
 	var wait sync.WaitGroup
 	dir := processDir(path, progress, concurrencyLimitChannel, &wait, ignore)
 	dir.BasePath = filepath.Dir(path)
@@ -42,7 +42,7 @@ func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnore
 	return dir
 }
 
-func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel chan bool, wait *sync.WaitGroup, ignoreDir ShouldDirBeIgnored) *File {
+func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel chan struct{}, wait *sync.WaitGroup, ignoreDir ShouldDirBeIgnored) *File {
 	var file *File
 	var err error
 
@@ -82,7 +82,7 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 
 			wait.Add(1)
 			go func() {
-				concurrencyLimitChannel <- true
+				concurrencyLimitChannel <- struct{}{}
 				subdir := processDir(entryPath, progress, concurrencyLimitChannel, wait, ignoreDir)
 				subdir.Parent = &dir
 
