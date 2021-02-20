@@ -49,6 +49,9 @@ func runE(command *cobra.Command, args []string) error {
 	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
 		rf.ShowApparentSize = true
 	}
+	if runtime.GOOS == "windows" && rf.LogFile == "/dev/null" {
+		rf.LogFile = "nul"
+	}
 
 	var app *tview.Application = nil
 
