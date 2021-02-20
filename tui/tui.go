@@ -86,15 +86,19 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 	ui.app = app
 	ui.app.SetInputCapture(ui.keyPressed)
 
+	var textColor, textBgColor tcell.Color
+	if ui.useColors {
+		textColor = tcell.NewRGBColor(0, 0, 0)
+		textBgColor = tcell.NewRGBColor(36, 121, 208)
+	} else {
+		textColor = tcell.NewRGBColor(0, 0, 0)
+		textBgColor = tcell.NewRGBColor(255, 255, 255)
+	}
+
 	ui.header = tview.NewTextView()
 	ui.header.SetText(" gdu ~ Use arrow keys to navigate, press ? for help ")
-	if ui.useColors {
-		ui.header.SetTextColor(tcell.NewRGBColor(0, 0, 0))
-		ui.header.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
-	} else {
-		ui.header.SetTextColor(tcell.NewRGBColor(0, 0, 0))
-		ui.header.SetBackgroundColor(tcell.NewRGBColor(255, 255, 255))
-	}
+	ui.header.SetTextColor(textColor)
+	ui.header.SetBackgroundColor(textBgColor)
 
 	ui.currentDirLabel = tview.NewTextView()
 	ui.currentDirLabel.SetBackgroundColor(tcell.ColorDefault)
@@ -106,13 +110,8 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 		Background(tcell.ColorWhite).Bold(true))
 
 	ui.footer = tview.NewTextView().SetDynamicColors(true)
-	if ui.useColors {
-		ui.footer.SetTextColor(tcell.NewRGBColor(0, 0, 0))
-		ui.footer.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
-	} else {
-		ui.footer.SetTextColor(tcell.NewRGBColor(0, 0, 0))
-		ui.footer.SetBackgroundColor(tcell.NewRGBColor(255, 255, 255))
-	}
+	ui.footer.SetTextColor(textColor)
+	ui.footer.SetBackgroundColor(textBgColor)
 	ui.footer.SetText(" No items to display. ")
 
 	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
