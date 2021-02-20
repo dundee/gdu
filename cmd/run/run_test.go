@@ -16,7 +16,7 @@ func TestVersion(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 
 	Run(
-		&RunFlags{ShowVersion: true},
+		&Flags{ShowVersion: true},
 		[]string{},
 		false,
 		buff,
@@ -30,7 +30,7 @@ func TestVersion(t *testing.T) {
 func TestLogError(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 	err := Run(
-		&RunFlags{LogFile: "/xyzxyz"},
+		&Flags{LogFile: "/xyzxyz"},
 		[]string{},
 		false,
 		buff,
@@ -48,7 +48,7 @@ func TestAnalyzePath(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 
 	Run(
-		&RunFlags{LogFile: "/dev/null"},
+		&Flags{LogFile: "/dev/null"},
 		[]string{"test_dir"},
 		false,
 		buff,
@@ -66,7 +66,7 @@ func TestAnalyzePathWithGui(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 
 	Run(
-		&RunFlags{LogFile: "/dev/null"},
+		&Flags{LogFile: "/dev/null"},
 		[]string{"test_dir"},
 		true,
 		buff,
@@ -81,7 +81,7 @@ func TestNoCross(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 
 	Run(
-		&RunFlags{LogFile: "/dev/null", NoCross: true},
+		&Flags{LogFile: "/dev/null", NoCross: true},
 		[]string{"test_dir"},
 		false,
 		buff,
@@ -100,7 +100,7 @@ func TestNoCrossWithErr(t *testing.T) {
 
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"}
 	err := Run(
-		&RunFlags{LogFile: "/dev/null", NoCross: true},
+		&Flags{LogFile: "/dev/null", NoCross: true},
 		[]string{"test_dir"},
 		false,
 		buff,
@@ -118,7 +118,7 @@ func TestListDevices(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 
 	Run(
-		&RunFlags{LogFile: "/dev/null", ShowDisks: true},
+		&Flags{LogFile: "/dev/null", ShowDisks: true},
 		nil,
 		false,
 		buff,
@@ -136,7 +136,7 @@ func TestListDevicesWithErr(t *testing.T) {
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"}
 
 	err := Run(
-		&RunFlags{LogFile: "/dev/null", ShowDisks: true},
+		&Flags{LogFile: "/dev/null", ShowDisks: true},
 		nil,
 		false,
 		buff,
@@ -154,7 +154,7 @@ func TestListDevicesWithGui(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
 
 	Run(
-		&RunFlags{LogFile: "/dev/null", ShowDisks: true},
+		&Flags{LogFile: "/dev/null", ShowDisks: true},
 		nil,
 		true,
 		buff,

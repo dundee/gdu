@@ -15,8 +15,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-// RunFlags define flags accepted by Run
-type RunFlags struct {
+// Flags define flags accepted by Run
+type Flags struct {
 	LogFile          string
 	IgnoreDirs       []string
 	ShowDisks        bool
@@ -29,7 +29,7 @@ type RunFlags struct {
 }
 
 // Run starts gdu main logic
-func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app common.Application, getter device.DevicesInfoGetter) error {
+func Run(flags *Flags, args []string, istty bool, writer io.Writer, app common.Application, getter device.DevicesInfoGetter) error {
 	if flags.ShowVersion {
 		fmt.Fprintln(writer, "Version:\t", build.Version)
 		fmt.Fprintln(writer, "Built time:\t", build.Time)

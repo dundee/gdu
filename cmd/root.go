@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rf *run.RunFlags
+var rf *run.Flags
 
 var rootCmd = &cobra.Command{
 	Use:   "gdu [directory_to_scan]",
@@ -29,7 +29,7 @@ However HDDs work as well, but the performance gain is not so huge.
 }
 
 func init() {
-	rf = &run.RunFlags{}
+	rf = &run.Flags{}
 	flags := rootCmd.Flags()
 	flags.StringVarP(&rf.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringSliceVarP(&rf.IgnoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
