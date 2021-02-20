@@ -5,7 +5,6 @@ import (
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -54,7 +53,7 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.File) {
 	abspath, _ := filepath.Abs(path)
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
-	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2).SetBackgroundColor(tcell.ColorDefault)
+	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	ui.progress.SetTitle(" Scanning... ")
 	ui.progress.SetDynamicColors(true)
 
