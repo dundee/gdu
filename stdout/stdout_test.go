@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
 	"github.com/dundee/gdu/internal/testanalyze"
 	"github.com/dundee/gdu/internal/testdev"
@@ -21,7 +20,7 @@ func TestAnalyzePath(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, false, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 	ui.StartUILoop()
 
 	assert.Contains(t, output.String(), "nested")
@@ -36,7 +35,7 @@ func TestAnalyzePathWithColors(t *testing.T) {
 
 	ui := CreateStdoutUI(output, true, false, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir/nested", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir/nested", nil)
 
 	assert.Contains(t, output.String(), "subnested")
 }
@@ -45,7 +44,8 @@ func TestItemRows(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	ui := CreateStdoutUI(output, false, true, false)
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.analyzer = testanalyze.MockedProcessDir
+	ui.AnalyzePath("test_dir", nil)
 
 	assert.Contains(t, output.String(), "TiB")
 	assert.Contains(t, output.String(), "GiB")
@@ -61,7 +61,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, true, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	assert.Contains(t, output.String(), "nested")
 }

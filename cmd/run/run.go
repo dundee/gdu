@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/build"
 	"github.com/dundee/gdu/common"
 	"github.com/dundee/gdu/device"
@@ -85,7 +84,7 @@ func Run(flags *RunFlags, args []string, istty bool, writer io.Writer, app commo
 			return fmt.Errorf("Error loading mount points: %w", err)
 		}
 	} else {
-		ui.AnalyzePath(path, analyze.ProcessDir, nil)
+		ui.AnalyzePath(path, nil)
 	}
 
 	return ui.StartUILoop()

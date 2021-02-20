@@ -171,7 +171,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *analyze.File) {
+func (ui *UI) AnalyzePath(path string, parentDir *analyze.File) {
 	abspath, _ := filepath.Abs(path)
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
@@ -199,7 +199,7 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, parentDir *ana
 	go ui.updateProgress(progress)
 
 	go func() {
-		ui.currentDir = analyzer(abspath, progress, ui.ShouldDirBeIgnored)
+		ui.currentDir = ui.analyzer(abspath, progress, ui.ShouldDirBeIgnored)
 
 		if parentDir != nil {
 			ui.currentDir.Parent = parentDir
@@ -241,7 +241,7 @@ func (ui *UI) SetIgnoreDirPaths(paths []string) {
 }
 
 func (ui *UI) rescanDir() {
-	ui.AnalyzePath(ui.currentDirPath, ui.analyzer, ui.currentDir.Parent)
+	ui.AnalyzePath(ui.currentDirPath, ui.currentDir.Parent)
 }
 
 // ShouldDirBeIgnored returns true if given path should be ignored
@@ -349,7 +349,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 		ui.ignoreDirPaths[path] = struct{}{}
 	}
 
-	ui.AnalyzePath(selectedDevice.MountPoint, ui.analyzer, nil)
+	ui.AnalyzePath(selectedDevice.MountPoint, nil)
 }
 
 func (ui *UI) confirmDeletion() {

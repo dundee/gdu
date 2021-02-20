@@ -206,8 +206,9 @@ func TestAppRunWithErr(t *testing.T) {
 func TestAnalyzePath(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -225,8 +226,9 @@ func TestAnalyzePath(t *testing.T) {
 func TestAnalyzePathBW(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -250,9 +252,10 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.topDir = parentDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, parentDir)
+	ui.AnalyzePath("test_dir", parentDir)
 
 	<-ui.done
 
@@ -309,7 +312,7 @@ func TestDirSelected(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -329,8 +332,9 @@ func TestDirSelected(t *testing.T) {
 func TestFileSelected(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -372,8 +376,9 @@ func TestIgnorePaths(t *testing.T) {
 func TestConfirmDeletion(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -393,8 +398,9 @@ func TestConfirmDeletion(t *testing.T) {
 func TestConfirmDeletionBW(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -418,7 +424,7 @@ func TestDeleteSelected(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -451,7 +457,7 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
 	ui.remover = testanalyze.RemoveFileFromDirWithErr
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 

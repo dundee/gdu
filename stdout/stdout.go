@@ -16,6 +16,7 @@ import (
 
 // UI struct
 type UI struct {
+	analyzer         analyze.Analyzer
 	output           io.Writer
 	ignoreDirPaths   map[string]bool
 	useColors        bool
@@ -33,6 +34,7 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 		useColors:        useColors,
 		showProgress:     showProgress,
 		showApparentSize: showApparentSize,
+		analyzer:         analyze.ProcessDir,
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -110,7 +112,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, _ *analyze.File) {
+func (ui *UI) AnalyzePath(path string, _ *analyze.File) {
 	abspath, _ := filepath.Abs(path)
 	var dir *analyze.File
 
@@ -133,7 +135,7 @@ func (ui *UI) AnalyzePath(path string, analyzer analyze.Analyzer, _ *analyze.Fil
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = analyzer(abspath, progress, ui.ShouldDirBeIgnored)
+		dir = ui.analyzer(abspath, progress, ui.ShouldDirBeIgnored)
 	}()
 
 	wait.Wait()

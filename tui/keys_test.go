@@ -64,7 +64,7 @@ func TestMoveLeftRight(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, true, true)
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -131,8 +131,9 @@ func TestStop(t *testing.T) {
 func TestShowConfirm(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -166,7 +167,7 @@ func TestDelete(t *testing.T) {
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -199,7 +200,7 @@ func TestDeleteParent(t *testing.T) {
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.AnalyzePath("test_dir", analyze.ProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -222,8 +223,9 @@ func TestDeleteParent(t *testing.T) {
 func TestSortByApparentSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
@@ -276,8 +278,9 @@ func TestRescan(t *testing.T) {
 func TestSorting(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
+	ui.analyzer = testanalyze.MockedProcessDir
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", testanalyze.MockedProcessDir, nil)
+	ui.AnalyzePath("test_dir", nil)
 
 	<-ui.done
 
