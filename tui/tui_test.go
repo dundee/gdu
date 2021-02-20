@@ -3,7 +3,6 @@ package tui
 import (
 	"errors"
 	"runtime"
-	"sync"
 	"testing"
 
 	"github.com/dundee/gdu/analyze"
@@ -61,11 +60,11 @@ func TestUpdateProgress(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
 	defer simScreen.Fini()
 
-	progress := &analyze.CurrentProgress{Mutex: &sync.Mutex{}, Done: true}
-
 	ui := CreateUI(app, false, false)
+	progress := ui.analyzer.GetProgress()
+	progress.Done = true
 	progress.CurrentItemName = "xxx"
-	ui.updateProgress(progress)
+	ui.updateProgress()
 	assert.True(t, true)
 }
 
@@ -163,7 +162,7 @@ func TestShowDevicesWithError(t *testing.T) {
 func TestDeviceSelected(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	ui.ListDevices(getDevicesInfoMock())
@@ -172,7 +171,7 @@ func TestDeviceSelected(t *testing.T) {
 
 	ui.deviceItemSelected(1, 0)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -206,11 +205,11 @@ func TestAppRunWithErr(t *testing.T) {
 func TestAnalyzePath(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -226,11 +225,11 @@ func TestAnalyzePath(t *testing.T) {
 func TestAnalyzePathBW(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -252,12 +251,12 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.topDir = parentDir
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", parentDir)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 	assert.Equal(t, parentDir, ui.currentDir.Parent)
@@ -286,12 +285,12 @@ func TestRescanDir(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
 	ui.topDir = parentDir
 	ui.rescanDir()
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 	assert.Equal(t, parentDir, ui.currentDir.Parent)
@@ -314,7 +313,7 @@ func TestDirSelected(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -332,11 +331,11 @@ func TestDirSelected(t *testing.T) {
 func TestFileSelected(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -376,11 +375,11 @@ func TestIgnorePaths(t *testing.T) {
 func TestConfirmDeletion(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -398,11 +397,11 @@ func TestConfirmDeletion(t *testing.T) {
 func TestConfirmDeletionBW(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -426,7 +425,7 @@ func TestDeleteSelected(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -459,7 +458,7 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 	ui.remover = testanalyze.RemoveFileFromDirWithErr
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 

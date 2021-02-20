@@ -18,31 +18,68 @@ type CurrentProgress struct {
 	Done            bool
 }
 
+var concurrencyLimit chan struct{} = make(chan struct{}, 2*runtime.NumCPU())
+
 // ShouldDirBeIgnored whether path should be ignored
 type ShouldDirBeIgnored func(path string) bool
 
 // Analyzer is type for dir analyzing function
-type Analyzer func(path string, progress *CurrentProgress, ignore ShouldDirBeIgnored) *File
+type Analyzer interface {
+	AnalyzeDir(path string, ignore ShouldDirBeIgnored) *File
+	GetProgress() *CurrentProgress
+	ResetProgress()
+}
 
-// ProcessDir analyzes given path
-func ProcessDir(path string, progress *CurrentProgress, ignore ShouldDirBeIgnored) *File {
-	concurrencyLimitChannel := make(chan struct{}, 2*runtime.NumCPU())
-	var wait sync.WaitGroup
-	dir := processDir(path, progress, concurrencyLimitChannel, &wait, ignore)
+// ParallelAnalyzer implements Analyzer
+type ParallelAnalyzer struct {
+	progress  *CurrentProgress
+	wait      sync.WaitGroup
+	ignoreDir ShouldDirBeIgnored
+}
+
+// CreateAnalyzer returns Analyzer
+func CreateAnalyzer() Analyzer {
+	return &ParallelAnalyzer{
+		progress: &CurrentProgress{
+			Mutex:     &sync.Mutex{},
+			Done:      false,
+			ItemCount: 0,
+			TotalSize: int64(0),
+		},
+	}
+}
+
+// GetProgress returns progress
+func (a *ParallelAnalyzer) GetProgress() *CurrentProgress {
+	return a.progress
+}
+
+// ResetProgress returns progress
+func (a *ParallelAnalyzer) ResetProgress() {
+	a.progress.Done = false
+	a.progress.ItemCount = 0
+	a.progress.TotalSize = int64(0)
+	a.progress.Mutex = &sync.Mutex{}
+}
+
+// AnalyzeDir analyzes given path
+func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *File {
+	a.ignoreDir = ignore
+	dir := a.processDir(path)
 	dir.BasePath = filepath.Dir(path)
-	wait.Wait()
+	a.wait.Wait()
 
 	links := make(AlreadyCountedHardlinks, 10)
 	dir.UpdateStats(links)
 
-	progress.Mutex.Lock()
-	progress.Done = true
-	progress.Mutex.Unlock()
+	a.progress.Mutex.Lock()
+	a.progress.Done = true
+	a.progress.Mutex.Unlock()
 
 	return dir
 }
 
-func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel chan struct{}, wait *sync.WaitGroup, ignoreDir ShouldDirBeIgnored) *File {
+func (a *ParallelAnalyzer) processDir(path string) *File {
 	var file *File
 	var err error
 
@@ -51,19 +88,9 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 		log.Print(err.Error())
 	}
 
-	var flag rune
-	switch {
-	case err != nil:
-		flag = '!'
-	case len(files) == 0:
-		flag = 'e'
-	default:
-		flag = ' '
-	}
-
 	dir := File{
 		Name:      filepath.Base(path),
-		Flag:      flag,
+		Flag:      getDirFlag(err, len(files)),
 		IsDir:     true,
 		ItemCount: 1,
 		Files:     make([]*File, 0, len(files)),
@@ -76,36 +103,27 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 		entryPath := filepath.Join(path, f.Name())
 
 		if f.IsDir() {
-			if ignoreDir(entryPath) {
+			if a.ignoreDir(entryPath) {
 				continue
 			}
 
-			wait.Add(1)
+			a.wait.Add(1)
 			go func() {
-				concurrencyLimitChannel <- struct{}{}
-				subdir := processDir(entryPath, progress, concurrencyLimitChannel, wait, ignoreDir)
+				concurrencyLimit <- struct{}{}
+				subdir := a.processDir(entryPath)
 				subdir.Parent = &dir
 
 				mutex.Lock()
 				dir.Files = append(dir.Files, subdir)
 				mutex.Unlock()
 
-				<-concurrencyLimitChannel
-				wait.Done()
+				<-concurrencyLimit
+				a.wait.Done()
 			}()
 		} else {
-			switch {
-			case f.Mode()&os.ModeSymlink != 0:
-				fallthrough
-			case f.Mode()&os.ModeSocket != 0:
-				flag = '@'
-			default:
-				flag = ' '
-			}
-
 			file = &File{
 				Name:      f.Name(),
-				Flag:      flag,
+				Flag:      getFlag(f),
 				Size:      f.Size(),
 				ItemCount: 1,
 				Parent:    &dir,
@@ -121,11 +139,37 @@ func processDir(path string, progress *CurrentProgress, concurrencyLimitChannel 
 		}
 	}
 
-	progress.Mutex.Lock()
-	progress.CurrentItemName = path
-	progress.ItemCount += len(files)
-	progress.TotalSize += totalSize
-	progress.Mutex.Unlock()
+	a.updateProgress(path, len(files), totalSize)
 
 	return &dir
+}
+
+func (a *ParallelAnalyzer) updateProgress(path string, itemCount int, totalSize int64) {
+	a.progress.Mutex.Lock()
+	a.progress.CurrentItemName = path
+	a.progress.ItemCount += itemCount
+	a.progress.TotalSize += totalSize
+	a.progress.Mutex.Unlock()
+}
+
+func getDirFlag(err error, items int) rune {
+	switch {
+	case err != nil:
+		return '!'
+	case items == 0:
+		return 'e'
+	default:
+		return ' '
+	}
+}
+
+func getFlag(f os.FileInfo) rune {
+	switch {
+	case f.Mode()&os.ModeSymlink != 0:
+		fallthrough
+	case f.Mode()&os.ModeSocket != 0:
+		return '@'
+	default:
+		return ' '
+	}
 }

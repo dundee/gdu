@@ -66,7 +66,7 @@ func TestMoveLeftRight(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
@@ -100,13 +100,13 @@ func TestMoveLeftRight(t *testing.T) {
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 }
 
-func TestMovetRightOnDevice(t *testing.T) {
+func TestMoveRightOnDevice(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{})
 	ui.ListDevices(getDevicesInfoMock())
@@ -115,7 +115,7 @@ func TestMovetRightOnDevice(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 }
@@ -131,11 +131,11 @@ func TestStop(t *testing.T) {
 func TestShowConfirm(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -169,7 +169,7 @@ func TestDelete(t *testing.T) {
 	ui.askBeforeDelete = false
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -202,7 +202,7 @@ func TestDeleteParent(t *testing.T) {
 	ui.askBeforeDelete = false
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -223,11 +223,11 @@ func TestDeleteParent(t *testing.T) {
 func TestSortByApparentSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -255,13 +255,13 @@ func TestRescan(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
 	ui.topDir = parentDir
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'r', 0))
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 	assert.Equal(t, parentDir, ui.currentDir.Parent)
@@ -278,11 +278,11 @@ func TestRescan(t *testing.T) {
 func TestSorting(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 

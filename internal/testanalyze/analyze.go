@@ -2,12 +2,16 @@ package testanalyze
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/dundee/gdu/analyze"
 )
 
-// MockedProcessDir returns dir with files with diferent size exponents
-func MockedProcessDir(path string, progress *analyze.CurrentProgress, ignore analyze.ShouldDirBeIgnored) *analyze.File {
+// MockedAnalyzer returns dir with files with diferent size exponents
+type MockedAnalyzer struct{}
+
+// AnalyzeDir returns dir with files with diferent size exponents
+func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnored) *analyze.File {
 	dir := &analyze.File{
 		Name:      "test_dir",
 		BasePath:  ".",
@@ -45,12 +49,19 @@ func MockedProcessDir(path string, progress *analyze.CurrentProgress, ignore ana
 	}
 	dir.Files = analyze.Files{file, file2, file3, file4}
 
-	progress.Mutex.Lock()
-	progress.Done = true
-	progress.Mutex.Unlock()
-
 	return dir
 }
+
+// GetProgress returns always Done
+func (a *MockedAnalyzer) GetProgress() *analyze.CurrentProgress {
+	return &analyze.CurrentProgress{
+		Done:  true,
+		Mutex: &sync.Mutex{},
+	}
+}
+
+// ResetProgress does nothing
+func (a *MockedAnalyzer) ResetProgress() {}
 
 // RemoveFileFromDirWithErr returns error
 func RemoveFileFromDirWithErr(dir *analyze.File, file *analyze.File) error {

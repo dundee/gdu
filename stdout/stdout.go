@@ -34,7 +34,7 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 		useColors:        useColors,
 		showProgress:     showProgress,
 		showApparentSize: showApparentSize,
-		analyzer:         analyze.ProcessDir,
+		analyzer:         analyze.CreateAnalyzer(),
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -116,26 +116,20 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.File) {
 	abspath, _ := filepath.Abs(path)
 	var dir *analyze.File
 
-	progress := &analyze.CurrentProgress{
-		Mutex:     &sync.Mutex{},
-		Done:      false,
-		ItemCount: 0,
-		TotalSize: int64(0),
-	}
 	var wait sync.WaitGroup
 
 	if ui.showProgress {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			ui.updateProgress(progress)
+			ui.updateProgress()
 		}()
 	}
 
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.analyzer(abspath, progress, ui.ShouldDirBeIgnored)
+		dir = ui.analyzer.AnalyzeDir(abspath, ui.ShouldDirBeIgnored)
 	}()
 
 	wait.Wait()
@@ -187,13 +181,15 @@ func (ui *UI) ShouldDirBeIgnored(path string) bool {
 	return ui.ignoreDirPaths[path]
 }
 
-func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
+func (ui *UI) updateProgress() {
 	emptyRow := "\r"
 	for j := 0; j < 100; j++ {
 		emptyRow += " "
 	}
 
 	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
+
+	progress := ui.analyzer.GetProgress()
 
 	i := 0
 	for {

@@ -2,7 +2,6 @@ package tui
 
 import (
 	"path/filepath"
-	"sync"
 
 	"github.com/dundee/gdu/analyze"
 	"github.com/dundee/gdu/device"
@@ -70,16 +69,10 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.File) {
 	ui.pages.AddPage("progress", flex, true, true)
 	ui.table.SetSelectedFunc(ui.fileItemSelected)
 
-	progress := &analyze.CurrentProgress{
-		Mutex:     &sync.Mutex{},
-		Done:      false,
-		ItemCount: 0,
-		TotalSize: int64(0),
-	}
-	go ui.updateProgress(progress)
+	go ui.updateProgress()
 
 	go func() {
-		ui.currentDir = ui.analyzer(abspath, progress, ui.ShouldDirBeIgnored)
+		ui.currentDir = ui.analyzer.AnalyzeDir(abspath, ui.ShouldDirBeIgnored)
 
 		if parentDir != nil {
 			ui.currentDir.Parent = parentDir

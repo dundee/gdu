@@ -11,11 +11,11 @@ import (
 func TestAnalyzeByApparentSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -34,12 +34,12 @@ func TestAnalyzeByApparentSize(t *testing.T) {
 func TestSortByApparentSizeAsc(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortOrder = "asc"
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -58,11 +58,11 @@ func TestSortByApparentSizeAsc(t *testing.T) {
 func TestAnalyzeBySize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -81,12 +81,12 @@ func TestAnalyzeBySize(t *testing.T) {
 func TestSortBySizeAsc(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortOrder = "asc"
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -105,12 +105,12 @@ func TestSortBySizeAsc(t *testing.T) {
 func TestAnalyzeByName(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = "name"
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -129,13 +129,13 @@ func TestAnalyzeByName(t *testing.T) {
 func TestAnalyzeByNameAsc(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = "name"
 	ui.sortOrder = "asc"
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -154,12 +154,12 @@ func TestAnalyzeByNameAsc(t *testing.T) {
 func TestAnalyzeByItemCount(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = "itemCount"
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -178,13 +178,13 @@ func TestAnalyzeByItemCount(t *testing.T) {
 func TestAnalyzeByItemCountAsc(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = "itemCount"
 	ui.sortOrder = "asc"
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
@@ -203,13 +203,13 @@ func TestAnalyzeByItemCountAsc(t *testing.T) {
 func TestSetSorting(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = "itemCount"
 	ui.sortOrder = "asc"
 	ui.AnalyzePath("test_dir", nil)
 
-	<-ui.done
+	<-ui.done // wait for analyzer
 
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 

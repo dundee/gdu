@@ -71,7 +71,7 @@ func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI
 		sortOrder:        "desc",
 		useColors:        useColors,
 		showApparentSize: showApparentSize,
-		analyzer:         analyze.ProcessDir,
+		analyzer:         analyze.CreateAnalyzer(),
 		remover:          analyze.RemoveFileFromDir,
 	}
 
@@ -143,6 +143,7 @@ func (ui *UI) SetIgnoreDirPaths(paths []string) {
 }
 
 func (ui *UI) rescanDir() {
+	ui.analyzer.ResetProgress()
 	ui.AnalyzePath(ui.currentDirPath, ui.currentDir.Parent)
 }
 
@@ -307,11 +308,13 @@ func (ui *UI) setSorting(newOrder string) {
 	ui.showDir()
 }
 
-func (ui *UI) updateProgress(progress *analyze.CurrentProgress) {
+func (ui *UI) updateProgress() {
 	color := "[white:-:b]"
 	if ui.useColors {
 		color = "[red:-:b]"
 	}
+
+	progress := ui.analyzer.GetProgress()
 
 	for {
 		progress.Mutex.Lock()

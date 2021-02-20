@@ -44,7 +44,7 @@ func TestItemRows(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	ui := CreateStdoutUI(output, false, true, false)
-	ui.analyzer = testanalyze.MockedProcessDir
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
 	ui.AnalyzePath("test_dir", nil)
 
 	assert.Contains(t, output.String(), "TiB")
