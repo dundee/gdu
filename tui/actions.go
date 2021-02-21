@@ -34,10 +34,10 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 
 	for i, device := range ui.devices {
 		ui.table.SetCell(i+1, 0, tview.NewTableCell(textColor+device.Name).SetReference(ui.devices[i]))
-		ui.table.SetCell(i+1, 1, tview.NewTableCell(ui.formatSize(device.Size, false)))
-		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+ui.formatSize(device.Size-device.Free, false)))
+		ui.table.SetCell(i+1, 1, tview.NewTableCell(ui.formatSize(device.Size, false, true)))
+		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+ui.formatSize(device.Size-device.Free, false, true)))
 		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device)))
-		ui.table.SetCell(i+1, 4, tview.NewTableCell(ui.formatSize(device.Free, false)))
+		ui.table.SetCell(i+1, 4, tview.NewTableCell(ui.formatSize(device.Free, false, true)))
 		ui.table.SetCell(i+1, 5, tview.NewTableCell(textColor+device.MountPoint))
 	}
 

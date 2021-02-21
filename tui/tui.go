@@ -189,10 +189,10 @@ func (ui *UI) showDir() {
 	ui.footer.SetText(
 		" Total disk usage: " +
 			footerNumberColor +
-			ui.formatSize(ui.currentDir.Usage, true) +
+			ui.formatSize(ui.currentDir.Usage, true, false) +
 			" Apparent size: " +
 			footerNumberColor +
-			ui.formatSize(ui.currentDir.Size, true) +
+			ui.formatSize(ui.currentDir.Size, true, false) +
 			" Items: " + footerNumberColor + fmt.Sprint(ui.currentDir.ItemCount) +
 			footerTextColor +
 			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
@@ -309,9 +309,9 @@ func (ui *UI) setSorting(newOrder string) {
 }
 
 func (ui *UI) updateProgress() {
-	color := "[white:-:b]"
+	color := "[white:black:b]"
 	if ui.useColors {
-		color = "[red:-:b]"
+		color = "[red:black:b]"
 	}
 
 	progress := ui.analyzer.GetProgress()
@@ -327,10 +327,10 @@ func (ui *UI) updateProgress() {
 			ui.progress.SetText("Total items: " +
 				color +
 				fmt.Sprint(progress.ItemCount) +
-				"[white:-:-] size: " +
+				"[white:black:-] size: " +
 				color +
-				ui.formatSize(progress.TotalSize, false) +
-				"[white:-:-]\nCurrent item: [white:-:b]" +
+				ui.formatSize(progress.TotalSize, false, false) +
+				"[white:black:-]\nCurrent item: [white:black:b]" +
 				progress.CurrentItemName)
 		})
 		progress.Mutex.Unlock()

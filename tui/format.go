@@ -25,9 +25,9 @@ func (ui *UI) formatFileRow(item *analyze.File) string {
 	}
 
 	if ui.showApparentSize {
-		row += fmt.Sprintf("%21s", ui.formatSize(item.Size, false))
+		row += fmt.Sprintf("%21s", ui.formatSize(item.Size, false, true))
 	} else {
-		row += fmt.Sprintf("%21s", ui.formatSize(item.Usage, false))
+		row += fmt.Sprintf("%21s", ui.formatSize(item.Usage, false, true))
 	}
 
 	row += getUsageGraph(part)
@@ -43,7 +43,7 @@ func (ui *UI) formatFileRow(item *analyze.File) string {
 	return row
 }
 
-func (ui *UI) formatSize(size int64, reverseColor bool) string {
+func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) string {
 	var color string
 	if reverseColor {
 		if ui.useColors {
@@ -52,7 +52,11 @@ func (ui *UI) formatSize(size int64, reverseColor bool) string {
 			color = "[black:white:-]"
 		}
 	} else {
-		color = "[white:-:-]"
+		if transparentBg {
+			color = "[white:-:-]"
+		} else {
+			color = "[white:black:-]"
+		}
 	}
 
 	switch {
