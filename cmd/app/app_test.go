@@ -1,7 +1,8 @@
-package run
+package app
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/dundee/gdu/device"
@@ -12,32 +13,26 @@ import (
 )
 
 func TestVersion(t *testing.T) {
-
-	buff := bytes.NewBuffer(make([]byte, 10))
-
-	Run(
+	out, err := runApp(
 		&Flags{ShowVersion: true},
 		[]string{},
 		false,
-		buff,
-		testapp.CreateMockedApp(false),
 		testdev.DevicesInfoGetterMock{},
 	)
 
-	assert.Contains(t, buff.String(), "Version:\t development")
+	assert.Contains(t, out, "Version:\t development")
+	assert.Nil(t, err)
 }
 
 func TestLogError(t *testing.T) {
-	buff := bytes.NewBuffer(make([]byte, 10))
-	err := Run(
+	out, err := runApp(
 		&Flags{LogFile: "/xyzxyz"},
 		[]string{},
 		false,
-		buff,
-		testapp.CreateMockedApp(false),
 		testdev.DevicesInfoGetterMock{},
 	)
 
+	assert.Empty(t, out)
 	assert.Contains(t, err.Error(), "permission denied")
 }
 
@@ -45,103 +40,86 @@ func TestAnalyzePath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	buff := bytes.NewBuffer(make([]byte, 10))
-
-	Run(
+	out, err := runApp(
 		&Flags{LogFile: "/dev/null"},
 		[]string{"test_dir"},
 		false,
-		buff,
-		testapp.CreateMockedApp(false),
 		testdev.DevicesInfoGetterMock{},
 	)
 
-	assert.Contains(t, buff.String(), "nested")
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
 }
 
 func TestAnalyzePathWithGui(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	buff := bytes.NewBuffer(make([]byte, 10))
-
-	Run(
+	out, err := runApp(
 		&Flags{LogFile: "/dev/null"},
 		[]string{"test_dir"},
 		true,
-		buff,
-		testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{},
+		testdev.DevicesInfoGetterMock{},
 	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
 }
 
 func TestNoCross(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	buff := bytes.NewBuffer(make([]byte, 10))
-
-	Run(
+	out, err := runApp(
 		&Flags{LogFile: "/dev/null", NoCross: true},
 		[]string{"test_dir"},
 		false,
-		buff,
-		testapp.CreateMockedApp(false),
 		testdev.DevicesInfoGetterMock{},
 	)
 
-	assert.Contains(t, buff.String(), "nested")
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
 }
 
 func TestNoCrossWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	buff := bytes.NewBuffer(make([]byte, 10))
-
-	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"}
-	err := Run(
+	out, err := runApp(
 		&Flags{LogFile: "/dev/null", NoCross: true},
 		[]string{"test_dir"},
 		false,
-		buff,
-		testapp.CreateMockedApp(false),
-		getter,
+		device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"},
 	)
 
 	assert.Equal(t, "Error loading mount points: open /xxxyyy: no such file or directory", err.Error())
+	assert.Empty(t, out)
 }
 
 func TestListDevices(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	buff := bytes.NewBuffer(make([]byte, 10))
-
-	Run(
+	out, err := runApp(
 		&Flags{LogFile: "/dev/null", ShowDisks: true},
-		nil,
+		[]string{},
 		false,
-		buff,
-		testapp.CreateMockedApp(false), testdev.DevicesInfoGetterMock{},
+		testdev.DevicesInfoGetterMock{},
 	)
 
-	assert.Contains(t, buff.String(), "Device")
+	assert.Contains(t, out, "Device")
+	assert.Nil(t, err)
 }
 
 func TestListDevicesWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	buff := bytes.NewBuffer(make([]byte, 10))
-	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"}
-
-	err := Run(
+	_, err := runApp(
 		&Flags{LogFile: "/dev/null", ShowDisks: true},
-		nil,
+		[]string{},
 		false,
-		buff,
-		testapp.CreateMockedApp(false),
-		getter,
+		device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"},
 	)
 
 	assert.Equal(t, "Error loading mount points: open /xxxyyy: no such file or directory", err.Error())
@@ -151,14 +129,29 @@ func TestListDevicesWithGui(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	buff := bytes.NewBuffer(make([]byte, 10))
-
-	Run(
+	out, err := runApp(
 		&Flags{LogFile: "/dev/null", ShowDisks: true},
-		nil,
+		[]string{},
 		true,
-		buff,
-		testapp.CreateMockedApp(false),
 		testdev.DevicesInfoGetterMock{},
 	)
+
+	assert.Nil(t, err)
+	assert.Empty(t, out)
+}
+
+func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (string, error) {
+	buff := bytes.NewBufferString("")
+
+	app := App{
+		Flags:   flags,
+		Args:    args,
+		Istty:   istty,
+		Writer:  buff,
+		TermApp: testapp.CreateMockedApp(false),
+		Getter:  getter,
+	}
+	err := app.Run()
+
+	return strings.TrimSpace(buff.String()), err
 }

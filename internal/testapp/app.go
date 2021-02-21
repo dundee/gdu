@@ -28,7 +28,7 @@ type MockedApp struct {
 }
 
 // CreateMockedApp returns app with simulation screen for tests
-func CreateMockedApp(failRun bool) common.Application {
+func CreateMockedApp(failRun bool) common.TermApplication {
 	app := &MockedApp{
 		FailRun:     failRun,
 		UpdateDraws: make([]func(), 0, 1),

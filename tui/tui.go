@@ -39,7 +39,7 @@ const helpText = `
 
 // UI struct
 type UI struct {
-	app              common.Application
+	app              common.TermApplication
 	header           *tview.TextView
 	footer           *tview.TextView
 	currentDirLabel  *tview.TextView
@@ -64,7 +64,7 @@ type UI struct {
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(app common.Application, useColors bool, showApparentSize bool) *UI {
+func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool) *UI {
 	ui := &UI{
 		askBeforeDelete:  true,
 		sortBy:           "size",

@@ -5,8 +5,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-// Application is interface for the UI app
-type Application interface {
+// TermApplication is interface for the terminal UI app
+type TermApplication interface {
 	Run() error
 	Stop()
 	SetRoot(root tview.Primitive, fullscreen bool) *tview.Application
