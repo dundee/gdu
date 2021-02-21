@@ -203,19 +203,7 @@ func TestAppRunWithErr(t *testing.T) {
 }
 
 func TestAnalyzePath(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, true, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -223,19 +211,7 @@ func TestAnalyzePath(t *testing.T) {
 }
 
 func TestAnalyzePathBW(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -308,18 +284,8 @@ func TestDirSelected(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, true, true)
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
 
 	ui.fileItemSelected(0, 0)
 
@@ -329,19 +295,7 @@ func TestDirSelected(t *testing.T) {
 }
 
 func TestFileSelected(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, true, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	ui.fileItemSelected(1, 0)
 
@@ -373,44 +327,18 @@ func TestIgnorePaths(t *testing.T) {
 }
 
 func TestConfirmDeletion(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, true, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	ui.table.Select(1, 0)
-
 	ui.confirmDeletion()
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
 
 func TestConfirmDeletionBW(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
 	ui.table.Select(1, 0)
-
 	ui.confirmDeletion()
 
 	assert.True(t, ui.pages.HasPage("confirm"))
@@ -420,18 +348,8 @@ func TestDeleteSelected(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -452,19 +370,8 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.done = make(chan struct{})
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
 	ui.remover = testanalyze.RemoveFileFromDirWithErr
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -537,4 +444,25 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 	mock := testdev.DevicesInfoGetterMock{}
 	mock.Devices = []*device.Device{item, item2}
 	return mock
+}
+
+func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mockedAnalyzer bool) *UI {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+
+	if mockedAnalyzer {
+		ui.analyzer = &testanalyze.MockedAnalyzer{}
+	}
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	return ui
 }
