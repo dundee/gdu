@@ -79,8 +79,13 @@ func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *F
 }
 
 func (a *ParallelAnalyzer) processDir(path string) *File {
-	var file *File
-	var err error
+	var (
+		file      *File
+		err       error
+		mutex     sync.Mutex
+		totalSize int64
+		info      os.FileInfo
+	)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -95,13 +100,8 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 		Files:     make([]*File, 0, len(files)),
 	}
 
-	var mutex sync.Mutex
-	var totalSize int64
-	var info os.FileInfo
-
 	for _, f := range files {
 		entryPath := filepath.Join(path, f.Name())
-
 		if f.IsDir() {
 			if a.ignoreDir(entryPath) {
 				continue
@@ -122,7 +122,6 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 			}()
 		} else {
 			info, _ = f.Info()
-
 			file = &File{
 				Name:      f.Name(),
 				Flag:      getFlag(info),
@@ -130,7 +129,6 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 				ItemCount: 1,
 				Parent:    &dir,
 			}
-
 			setPlatformSpecificAttrs(file, info)
 
 			totalSize += info.Size()
@@ -142,7 +140,6 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 	}
 
 	a.updateProgress(path, len(files), totalSize)
-
 	return &dir
 }
 
