@@ -57,7 +57,7 @@ coverage-html: coverage
 	go tool cover -html=coverage.txt
 
 gobench:
-	go test -bench=. ./...
+	go test -bench=. github.com/dundee/gdu/analyze
 
 benchmark:
 	hyperfine --export-markdown=bench-cold.md \
