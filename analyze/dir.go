@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -83,7 +82,7 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 	var file *File
 	var err error
 
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
 	}
@@ -98,6 +97,7 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 
 	var mutex sync.Mutex
 	var totalSize int64
+	var info os.FileInfo
 
 	for _, f := range files {
 		entryPath := filepath.Join(path, f.Name())
@@ -121,17 +121,19 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 				a.wait.Done()
 			}()
 		} else {
+			info, _ = f.Info()
+
 			file = &File{
 				Name:      f.Name(),
-				Flag:      getFlag(f),
-				Size:      f.Size(),
+				Flag:      getFlag(info),
+				Size:      info.Size(),
 				ItemCount: 1,
 				Parent:    &dir,
 			}
 
-			setPlatformSpecificAttrs(file, f)
+			setPlatformSpecificAttrs(file, info)
 
-			totalSize += f.Size()
+			totalSize += info.Size()
 
 			mutex.Lock()
 			dir.Files = append(dir.Files, file)
