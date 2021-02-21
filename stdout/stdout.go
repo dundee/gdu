@@ -18,7 +18,7 @@ import (
 type UI struct {
 	analyzer         analyze.Analyzer
 	output           io.Writer
-	ignoreDirPaths   map[string]bool
+	ignoreDirPaths   map[string]struct{}
 	useColors        bool
 	showProgress     bool
 	showApparentSize bool
@@ -170,15 +170,16 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.File) {
 
 // SetIgnoreDirPaths sets paths to ignore
 func (ui *UI) SetIgnoreDirPaths(paths []string) {
-	ui.ignoreDirPaths = make(map[string]bool, len(paths))
+	ui.ignoreDirPaths = make(map[string]struct{}, len(paths))
 	for _, path := range paths {
-		ui.ignoreDirPaths[path] = true
+		ui.ignoreDirPaths[path] = struct{}{}
 	}
 }
 
 // ShouldDirBeIgnored returns true if given path should be ignored
 func (ui *UI) ShouldDirBeIgnored(path string) bool {
-	return ui.ignoreDirPaths[path]
+	_, ok := ui.ignoreDirPaths[path]
+	return ok
 }
 
 func (ui *UI) updateProgress() {
