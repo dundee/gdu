@@ -6,11 +6,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/dundee/gdu/build"
-	"github.com/dundee/gdu/common"
-	"github.com/dundee/gdu/device"
-	"github.com/dundee/gdu/stdout"
-	"github.com/dundee/gdu/tui"
+	"github.com/dundee/gdu/v4/build"
+	"github.com/dundee/gdu/v4/common"
+	"github.com/dundee/gdu/v4/device"
+	"github.com/dundee/gdu/v4/stdout"
+	"github.com/dundee/gdu/v4/tui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

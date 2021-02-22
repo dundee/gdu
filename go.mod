@@ -1,4 +1,4 @@
-module github.com/dundee/gdu
+module github.com/dundee/gdu/v4
 
 go 1.16
 

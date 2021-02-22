@@ -3,7 +3,7 @@ package testapp
 import (
 	"errors"
 
-	"github.com/dundee/gdu/common"
+	"github.com/dundee/gdu/v4/common"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

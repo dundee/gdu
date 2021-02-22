@@ -23,12 +23,12 @@ build-all:
 	-CGO_ENABLED=0 gox \
 		-os="darwin windows" \
 		-arch="amd64" \
-		-output="dist/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)"
 
 	-CGO_ENABLED=0 gox \
 		-os="linux freebsd netbsd openbsd" \
-		-output="dist/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)"
 
 	cd dist; GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -a -ldflags="$(LDFLAGS)" -o gdu_linux_amd64 ..

@@ -1,6 +1,6 @@
 package testdev
 
-import "github.com/dundee/gdu/device"
+import "github.com/dundee/gdu/v4/device"
 
 // DevicesInfoGetterMock is mock of DevicesInfoGetter
 type DevicesInfoGetterMock struct {

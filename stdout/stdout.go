@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dundee/gdu/analyze"
-	"github.com/dundee/gdu/device"
+	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/device"
 	"github.com/fatih/color"
 )
 

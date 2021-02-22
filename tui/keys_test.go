@@ -3,10 +3,10 @@ package tui
 import (
 	"testing"
 
-	"github.com/dundee/gdu/analyze"
-	"github.com/dundee/gdu/internal/testanalyze"
-	"github.com/dundee/gdu/internal/testapp"
-	"github.com/dundee/gdu/internal/testdir"
+	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/internal/testanalyze"
+	"github.com/dundee/gdu/v4/internal/testapp"
+	"github.com/dundee/gdu/v4/internal/testdir"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/dundee/gdu/analyze"
+	"github.com/dundee/gdu/v4/analyze"
 )
 
 func (ui *UI) formatFileRow(item *analyze.File) string {

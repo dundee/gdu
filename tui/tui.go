@@ -5,9 +5,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/dundee/gdu/analyze"
-	"github.com/dundee/gdu/common"
-	"github.com/dundee/gdu/device"
+	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/common"
+	"github.com/dundee/gdu/v4/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
