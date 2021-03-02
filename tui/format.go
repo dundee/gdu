@@ -7,16 +7,16 @@ import (
 	"github.com/dundee/gdu/v4/analyze"
 )
 
-func (ui *UI) formatFileRow(item *analyze.File) string {
+func (ui *UI) formatFileRow(item analyze.Item) string {
 	var part int
 
 	if ui.showApparentSize {
-		part = int(float64(item.Size) / float64(item.Parent.Size) * 10.0)
+		part = int(float64(item.GetSize()) / float64(item.GetParent().GetSize()) * 10.0)
 	} else {
-		part = int(float64(item.Usage) / float64(item.Parent.Usage) * 10.0)
+		part = int(float64(item.GetUsage()) / float64(item.GetParent().GetUsage()) * 10.0)
 	}
 
-	row := string(item.Flag)
+	row := string(item.GetFlag())
 
 	if ui.useColors {
 		row += "[#e67100:-:b]"
@@ -25,21 +25,21 @@ func (ui *UI) formatFileRow(item *analyze.File) string {
 	}
 
 	if ui.showApparentSize {
-		row += fmt.Sprintf("%21s", ui.formatSize(item.Size, false, true))
+		row += fmt.Sprintf("%21s", ui.formatSize(item.GetSize(), false, true))
 	} else {
-		row += fmt.Sprintf("%21s", ui.formatSize(item.Usage, false, true))
+		row += fmt.Sprintf("%21s", ui.formatSize(item.GetUsage(), false, true))
 	}
 
 	row += getUsageGraph(part)
 
-	if item.IsDir {
+	if item.IsDir() {
 		if ui.useColors {
 			row += "[#3498db::b]/"
 		} else {
 			row += "[::b]/"
 		}
 	}
-	row += item.Name
+	row += item.GetName()
 	return row
 }
 

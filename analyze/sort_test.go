@@ -22,9 +22,9 @@ func TestSortByUsage(t *testing.T) {
 
 	sort.Sort(files)
 
-	assert.Equal(t, int64(3), files[0].Usage)
-	assert.Equal(t, int64(2), files[1].Usage)
-	assert.Equal(t, int64(1), files[2].Usage)
+	assert.Equal(t, int64(3), files[0].GetUsage())
+	assert.Equal(t, int64(2), files[1].GetUsage())
+	assert.Equal(t, int64(1), files[2].GetUsage())
 }
 
 func TestSortByUsageAsc(t *testing.T) {
@@ -42,9 +42,9 @@ func TestSortByUsageAsc(t *testing.T) {
 
 	sort.Sort(sort.Reverse(files))
 
-	assert.Equal(t, int64(1), files[0].Size)
-	assert.Equal(t, int64(2), files[1].Size)
-	assert.Equal(t, int64(3), files[2].Size)
+	assert.Equal(t, int64(1), files[0].GetSize())
+	assert.Equal(t, int64(2), files[1].GetSize())
+	assert.Equal(t, int64(3), files[2].GetSize())
 }
 
 func TestSortBySize(t *testing.T) {
@@ -62,9 +62,9 @@ func TestSortBySize(t *testing.T) {
 
 	sort.Sort(ByApparentSize(files))
 
-	assert.Equal(t, int64(3), files[0].Size)
-	assert.Equal(t, int64(2), files[1].Size)
-	assert.Equal(t, int64(1), files[2].Size)
+	assert.Equal(t, int64(3), files[0].GetSize())
+	assert.Equal(t, int64(2), files[1].GetSize())
+	assert.Equal(t, int64(1), files[2].GetSize())
 }
 
 func TestSortBySizeAsc(t *testing.T) {
@@ -82,29 +82,29 @@ func TestSortBySizeAsc(t *testing.T) {
 
 	sort.Sort(sort.Reverse(ByApparentSize(files)))
 
-	assert.Equal(t, int64(1), files[0].Size)
-	assert.Equal(t, int64(2), files[1].Size)
-	assert.Equal(t, int64(3), files[2].Size)
+	assert.Equal(t, int64(1), files[0].GetSize())
+	assert.Equal(t, int64(2), files[1].GetSize())
+	assert.Equal(t, int64(3), files[2].GetSize())
 }
 
 func TestSortByItemCount(t *testing.T) {
 	files := Files{
-		&File{
+		&Dir{
 			ItemCount: 1,
 		},
-		&File{
+		&Dir{
 			ItemCount: 2,
 		},
-		&File{
+		&Dir{
 			ItemCount: 3,
 		},
 	}
 
 	sort.Sort(ByItemCount(files))
 
-	assert.Equal(t, 3, files[0].ItemCount)
-	assert.Equal(t, 2, files[1].ItemCount)
-	assert.Equal(t, 1, files[2].ItemCount)
+	assert.Equal(t, 3, files[0].GetItemCount())
+	assert.Equal(t, 2, files[1].GetItemCount())
+	assert.Equal(t, 1, files[2].GetItemCount())
 }
 
 func TestSortByName(t *testing.T) {
@@ -122,7 +122,7 @@ func TestSortByName(t *testing.T) {
 
 	sort.Sort(ByName(files))
 
-	assert.Equal(t, "cc", files[0].Name)
-	assert.Equal(t, "bb", files[1].Name)
-	assert.Equal(t, "aa", files[2].Name)
+	assert.Equal(t, "cc", files[0].GetName())
+	assert.Equal(t, "bb", files[1].GetName())
+	assert.Equal(t, "aa", files[2].GetName())
 }

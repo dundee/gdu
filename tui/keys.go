@@ -96,7 +96,7 @@ func (ui *UI) handleDelete() {
 
 	// do not allow deleting parent dir
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 	if selectedFile == ui.currentDir.Parent {
 		return
 	}

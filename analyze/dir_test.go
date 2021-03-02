@@ -24,21 +24,21 @@ func TestAnalyzeDir(t *testing.T) {
 	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, int64(7+4096*3), dir.Size)
 	assert.Equal(t, 5, dir.ItemCount)
-	assert.True(t, dir.IsDir)
+	assert.True(t, dir.IsDir())
 
 	// test dir tree
-	assert.Equal(t, "nested", dir.Files[0].Name)
-	assert.Equal(t, "subnested", dir.Files[0].Files[1].Name)
+	assert.Equal(t, "nested", dir.Files[0].GetName())
+	assert.Equal(t, "subnested", dir.Files[0].(*Dir).Files[1].GetName())
 
 	// test file
-	assert.Equal(t, "file2", dir.Files[0].Files[0].Name)
-	assert.Equal(t, int64(2), dir.Files[0].Files[0].Size)
+	assert.Equal(t, "file2", dir.Files[0].(*Dir).Files[0].GetName())
+	assert.Equal(t, int64(2), dir.Files[0].(*Dir).Files[0].GetSize())
 
-	assert.Equal(t, "file", dir.Files[0].Files[1].Files[0].Name)
-	assert.Equal(t, int64(5), dir.Files[0].Files[1].Files[0].Size)
+	assert.Equal(t, "file", dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetName())
+	assert.Equal(t, int64(5), dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetSize())
 
 	// test parent link
-	assert.Equal(t, "test_dir", dir.Files[0].Files[1].Files[0].Parent.Parent.Parent.Name)
+	assert.Equal(t, "test_dir", dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetParent().GetParent().GetParent().Name)
 }
 
 func TestIgnoreDir(t *testing.T) {
@@ -66,13 +66,13 @@ func TestFlags(t *testing.T) {
 	assert.Equal(t, 7, dir.ItemCount)
 
 	// test file3
-	assert.Equal(t, "nested", dir.Files[0].Name)
-	assert.Equal(t, "file3", dir.Files[0].Files[1].Name)
-	assert.Equal(t, int64(21), dir.Files[0].Files[1].Size)
-	assert.Equal(t, int64(0), dir.Files[0].Files[1].Usage)
-	assert.Equal(t, '@', dir.Files[0].Files[1].Flag)
+	assert.Equal(t, "nested", dir.Files[0].GetName())
+	assert.Equal(t, "file3", dir.Files[0].(*Dir).Files[1].GetName())
+	assert.Equal(t, int64(21), dir.Files[0].(*Dir).Files[1].GetSize())
+	assert.Equal(t, int64(0), dir.Files[0].(*Dir).Files[1].GetUsage())
+	assert.Equal(t, '@', dir.Files[0].(*Dir).Files[1].GetFlag())
 
-	assert.Equal(t, 'e', dir.Files[1].Flag)
+	assert.Equal(t, 'e', dir.Files[1].GetFlag())
 }
 
 func TestHardlink(t *testing.T) {
@@ -87,9 +87,9 @@ func TestHardlink(t *testing.T) {
 	assert.Equal(t, 6, dir.ItemCount)          // but twice for item count
 
 	// test file3
-	assert.Equal(t, "file3", dir.Files[0].Files[1].Name)
-	assert.Equal(t, int64(2), dir.Files[0].Files[1].Size)
-	assert.Equal(t, 'H', dir.Files[0].Files[1].Flag)
+	assert.Equal(t, "file3", dir.Files[0].(*Dir).Files[1].GetName())
+	assert.Equal(t, int64(2), dir.Files[0].(*Dir).Files[1].GetSize())
+	assert.Equal(t, 'H', dir.Files[0].(*Dir).Files[1].GetFlag())
 }
 
 func TestErr(t *testing.T) {
@@ -101,12 +101,12 @@ func TestErr(t *testing.T) {
 
 	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_ string) bool { return false })
 
-	assert.Equal(t, "test_dir", dir.Name)
+	assert.Equal(t, "test_dir", dir.GetName())
 	assert.Equal(t, 2, dir.ItemCount)
-	assert.Equal(t, '.', dir.Flag)
+	assert.Equal(t, '.', dir.GetFlag())
 
-	assert.Equal(t, "nested", dir.Files[0].Name)
-	assert.Equal(t, '!', dir.Files[0].Flag)
+	assert.Equal(t, "nested", dir.Files[0].GetName())
+	assert.Equal(t, '!', dir.Files[0].GetFlag())
 }
 
 func BenchmarkAnalyzeDir(b *testing.B) {

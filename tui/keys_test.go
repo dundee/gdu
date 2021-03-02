@@ -241,15 +241,17 @@ func TestSortByApparentSize(t *testing.T) {
 }
 
 func TestRescan(t *testing.T) {
-	parentDir := &analyze.File{
-		Name:  "parent",
-		IsDir: true,
-		Files: make([]*analyze.File, 0, 1),
+	parentDir := &analyze.Dir{
+		File: &analyze.File{
+			Name: "parent",
+		},
+		Files: make([]analyze.Item, 0, 1),
 	}
-	currentDir := &analyze.File{
-		Name:   "sub",
-		IsDir:  true,
-		Parent: parentDir,
+	currentDir := &analyze.Dir{
+		File: &analyze.File{
+			Name:   "sub",
+			Parent: parentDir,
+		},
 	}
 
 	app := testapp.CreateMockedApp(true)

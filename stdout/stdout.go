@@ -112,9 +112,9 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, _ *analyze.File) {
+func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) {
 	abspath, _ := filepath.Abs(path)
-	var dir *analyze.File
+	var dir *analyze.Dir
 
 	var wait sync.WaitGroup
 
@@ -147,23 +147,23 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.File) {
 
 	for _, file := range dir.Files {
 		if ui.showApparentSize {
-			size = file.Size
+			size = file.GetSize()
 		} else {
-			size = file.Usage
+			size = file.GetUsage()
 		}
 
-		if file.IsDir {
+		if file.IsDir() {
 			fmt.Fprintf(ui.output,
 				lineFormat,
-				string(file.Flag),
+				string(file.GetFlag()),
 				ui.formatSize(size),
-				ui.blue.Sprintf("/"+file.Name))
+				ui.blue.Sprintf("/"+file.GetName()))
 		} else {
 			fmt.Fprintf(ui.output,
 				lineFormat,
-				string(file.Flag),
+				string(file.GetFlag()),
 				ui.formatSize(size),
-				file.Name)
+				file.GetName())
 		}
 	}
 }

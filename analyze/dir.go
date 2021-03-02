@@ -24,7 +24,7 @@ type ShouldDirBeIgnored func(path string) bool
 
 // Analyzer is type for dir analyzing function
 type Analyzer interface {
-	AnalyzeDir(path string, ignore ShouldDirBeIgnored) *File
+	AnalyzeDir(path string, ignore ShouldDirBeIgnored) *Dir
 	GetProgress() *CurrentProgress
 	ResetProgress()
 }
@@ -62,7 +62,7 @@ func (a *ParallelAnalyzer) ResetProgress() {
 }
 
 // AnalyzeDir analyzes given path
-func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *File {
+func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *Dir {
 	a.ignoreDir = ignore
 	dir := a.processDir(path)
 	dir.BasePath = filepath.Dir(path)
@@ -78,7 +78,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *F
 	return dir
 }
 
-func (a *ParallelAnalyzer) processDir(path string) *File {
+func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
 		file      *File
 		err       error
@@ -92,12 +92,13 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 		log.Print(err.Error())
 	}
 
-	dir := File{
-		Name:      filepath.Base(path),
-		Flag:      getDirFlag(err, len(files)),
-		IsDir:     true,
+	dir := &Dir{
+		File: &File{
+			Name: filepath.Base(path),
+			Flag: getDirFlag(err, len(files)),
+		},
 		ItemCount: 1,
-		Files:     make([]*File, 0, len(files)),
+		Files:     make([]Item, 0, len(files)),
 	}
 
 	for _, f := range files {
@@ -111,7 +112,7 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 			go func() {
 				concurrencyLimit <- struct{}{}
 				subdir := a.processDir(entryPath)
-				subdir.Parent = &dir
+				subdir.Parent = dir
 
 				mutex.Lock()
 				dir.Files = append(dir.Files, subdir)
@@ -123,11 +124,10 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 		} else {
 			info, _ = f.Info()
 			file = &File{
-				Name:      f.Name(),
-				Flag:      getFlag(info),
-				Size:      info.Size(),
-				ItemCount: 1,
-				Parent:    &dir,
+				Name:   f.Name(),
+				Flag:   getFlag(info),
+				Size:   info.Size(),
+				Parent: dir,
 			}
 			setPlatformSpecificAttrs(file, info)
 
@@ -140,7 +140,7 @@ func (a *ParallelAnalyzer) processDir(path string) *File {
 	}
 
 	a.updateProgress(path, len(files), totalSize)
-	return &dir
+	return dir
 }
 
 func (a *ParallelAnalyzer) updateProgress(path string, itemCount int, totalSize int64) {

@@ -16,7 +16,7 @@ func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
 		file.Usage = stat.Blocks * devBSize
 
 		if stat.Nlink > 1 {
-			file.MutliLinkInode = stat.Ino
+			file.Mli = stat.Ino
 		}
 	}
 }

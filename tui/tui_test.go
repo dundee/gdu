@@ -21,24 +21,25 @@ func TestFooter(t *testing.T) {
 
 	ui := CreateUI(app, false, true)
 
-	dir := analyze.File{
-		Name:      "xxx",
+	dir := &analyze.Dir{
+		File: &analyze.File{
+			Name:  "xxx",
+			Size:  5,
+			Usage: 4096,
+		},
 		BasePath:  ".",
-		Size:      5,
-		Usage:     4096,
 		ItemCount: 2,
 	}
 
-	file := analyze.File{
-		Name:      "yyy",
-		Size:      2,
-		Usage:     4096,
-		ItemCount: 1,
-		Parent:    &dir,
+	file := &analyze.File{
+		Name:   "yyy",
+		Size:   2,
+		Usage:  4096,
+		Parent: dir,
 	}
-	dir.Files = []*analyze.File{&file}
+	dir.Files = analyze.Files{file}
 
-	ui.currentDir = &dir
+	ui.currentDir = dir
 	ui.showDir()
 	ui.pages.HidePage("progress")
 
@@ -219,10 +220,11 @@ func TestAnalyzePathBW(t *testing.T) {
 }
 
 func TestAnalyzePathWithParentDir(t *testing.T) {
-	parentDir := &analyze.File{
-		Name:  "parent",
-		IsDir: true,
-		Files: make([]*analyze.File, 0, 1),
+	parentDir := &analyze.Dir{
+		File: &analyze.File{
+			Name: "parent",
+		},
+		Files: make([]analyze.Item, 0, 1),
 	}
 
 	app := testapp.CreateMockedApp(true)
@@ -247,15 +249,17 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 }
 
 func TestRescanDir(t *testing.T) {
-	parentDir := &analyze.File{
-		Name:  "parent",
-		IsDir: true,
-		Files: make([]*analyze.File, 0, 1),
+	parentDir := &analyze.Dir{
+		File: &analyze.File{
+			Name: "parent",
+		},
+		Files: make([]analyze.Item, 0, 1),
 	}
-	currentDir := &analyze.File{
-		Name:   "sub",
-		IsDir:  true,
-		Parent: parentDir,
+	currentDir := &analyze.Dir{
+		File: &analyze.File{
+			Name:   "sub",
+			Parent: parentDir,
+		},
 	}
 
 	app := testapp.CreateMockedApp(true)
@@ -297,7 +301,7 @@ func TestDirSelected(t *testing.T) {
 func TestFileSelected(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
-	ui.fileItemSelected(1, 0)
+	ui.fileItemSelected(4, 0)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -371,7 +375,7 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.remover = testanalyze.RemoveFileFromDirWithErr
+	ui.remover = testanalyze.RemoveItemFromDirWithErr
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -420,9 +424,11 @@ func printScreen(simScreen tcell.SimulationScreen) {
 	}
 }
 
-func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.ShouldDirBeIgnored) *analyze.File {
-	return &analyze.File{
-		Name:     "xxx",
+func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.ShouldDirBeIgnored) *analyze.Dir {
+	return &analyze.Dir{
+		File: &analyze.File{
+			Name: "xxx",
+		},
 		BasePath: ".",
 	}
 }
@@ -448,7 +454,7 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 
 func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mockedAnalyzer bool) *UI {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, useColors, apparentSize)
 
 	if mockedAnalyzer {
 		ui.analyzer = &testanalyze.MockedAnalyzer{}

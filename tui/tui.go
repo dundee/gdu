@@ -47,10 +47,10 @@ type UI struct {
 	progress         *tview.TextView
 	help             *tview.Flex
 	table            *tview.Table
-	currentDir       *analyze.File
+	currentDir       *analyze.Dir
 	devices          []*device.Device
 	analyzer         analyze.Analyzer
-	topDir           *analyze.File
+	topDir           *analyze.Dir
 	topDirPath       string
 	currentDirPath   string
 	askBeforeDelete  bool
@@ -60,7 +60,7 @@ type UI struct {
 	useColors        bool
 	showApparentSize bool
 	done             chan struct{}
-	remover          func(*analyze.File, *analyze.File) error
+	remover          func(*analyze.Dir, analyze.Item) error
 }
 
 // CreateUI creates the whole UI app
@@ -72,7 +72,7 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 		useColors:        useColors,
 		showApparentSize: showApparentSize,
 		analyzer:         analyze.CreateAnalyzer(),
-		remover:          analyze.RemoveFileFromDir,
+		remover:          analyze.RemoveItemFromDir,
 	}
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
@@ -154,7 +154,7 @@ func (ui *UI) ShouldDirBeIgnored(path string) bool {
 }
 
 func (ui *UI) showDir() {
-	ui.currentDirPath = ui.currentDir.Path()
+	ui.currentDirPath = ui.currentDir.GetPath()
 	ui.currentDirLabel.SetText("[::b] --- " + ui.currentDirPath + " ---").SetDynamicColors(true)
 
 	ui.table.Clear()
@@ -235,12 +235,12 @@ func (ui *UI) sortItems() {
 }
 
 func (ui *UI) fileItemSelected(row, column int) {
-	selectedDir := ui.table.GetCell(row, column).GetReference().(*analyze.File)
-	if !selectedDir.IsDir {
+	selectedDir := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	if !selectedDir.IsDir() {
 		return
 	}
 
-	ui.currentDir = selectedDir
+	ui.currentDir = selectedDir.(*analyze.Dir)
 	ui.showDir()
 }
 
@@ -257,9 +257,9 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 func (ui *UI) confirmDeletion() {
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 	modal := tview.NewModal().
-		SetText("Are you sure you want to delete \"" + selectedFile.Name + "\"").
+		SetText("Are you sure you want to delete \"" + selectedFile.GetName() + "\"").
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {

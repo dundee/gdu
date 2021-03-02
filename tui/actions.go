@@ -49,7 +49,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, parentDir *analyze.File) {
+func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) {
 	abspath, _ := filepath.Abs(path)
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
@@ -98,16 +98,16 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.File) {
 
 func (ui *UI) deleteSelected() {
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(*analyze.File)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 
-	modal := tview.NewModal().SetText("Deleting " + selectedFile.Name + "...")
+	modal := tview.NewModal().SetText("Deleting " + selectedFile.GetName() + "...")
 	ui.pages.AddPage("deleting", modal, true, true)
 
 	currentDir := ui.currentDir
 
 	go func() {
 		if err := ui.remover(currentDir, selectedFile); err != nil {
-			msg := "Can't delete " + selectedFile.Name
+			msg := "Can't delete " + selectedFile.GetName()
 			ui.app.QueueUpdateDraw(func() {
 				ui.pages.RemovePage("deleting")
 				ui.showErr(msg, err)

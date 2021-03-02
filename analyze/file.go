@@ -5,86 +5,135 @@ import (
 	"path/filepath"
 )
 
-// File struct
-type File struct {
-	Name           string
-	BasePath       string
-	Flag           rune
-	Size           int64
-	Usage          int64
-	ItemCount      int
-	IsDir          bool
-	Files          Files
-	Parent         *File
-	MutliLinkInode uint64 // Inode number of file with multiple links (hard link)
-}
-
 // AlreadyCountedHardlinks holds all files with hardlinks that have already been counted
 type AlreadyCountedHardlinks map[uint64]bool
 
-// Path retruns absolute path of the file
-func (f *File) Path() string {
+// Item is fs item (file or dir)
+type Item interface {
+	GetPath() string
+	GetName() string
+	GetFlag() rune
+	IsDir() bool
+	GetMutliLinkInode() uint64
+	GetSize() int64
+	GetUsage() int64
+	GetItemCount() int
+	GetParent() *Dir
+}
+
+// File struct
+type File struct {
+	Flag   rune
+	Name   string
+	Size   int64
+	Usage  int64
+	Mli    uint64 // MutliLinkInode - Inode number of file with multiple links (hard link)
+	Parent *Dir
+}
+
+// IsDir returns false for file
+func (f *File) IsDir() bool {
+	return false
+}
+
+// GetParent retruns parent dir
+func (f *File) GetParent() *Dir {
+	return f.Parent
+}
+
+// GetPath retruns absolute Get of the file
+func (f *File) GetPath() string {
+	return filepath.Join(f.Parent.GetPath(), f.Name)
+}
+
+// GetFlag returns flag of the file
+func (f *File) GetFlag() rune {
+	return f.Flag
+}
+
+// GetSize returns size of the file
+func (f *File) GetSize() int64 {
+	return f.Size
+}
+
+// GetUsage returns usage of the file
+func (f *File) GetUsage() int64 {
+	return f.Usage
+}
+
+// GetItemCount returns 1 for file
+func (f *File) GetItemCount() int {
+	return 1
+}
+
+// GetMutliLinkInode returns inode number of file with multiple hard links
+func (f *File) GetMutliLinkInode() uint64 {
+	return f.Mli
+}
+
+// Dir struct
+type Dir struct {
+	*File
+	BasePath  string
+	ItemCount int
+	Files     Files
+}
+
+// GetName returns name of dir
+func (f *File) GetName() string {
+	return f.Name
+}
+
+// GetItemCount returns number of files in dir
+func (f *Dir) GetItemCount() int {
+	return f.ItemCount
+}
+
+// IsDir returns true for dir
+func (f *Dir) IsDir() bool {
+	return true
+}
+
+// GetPath retruns absolute path of the file
+func (f *Dir) GetPath() string {
 	if f.BasePath != "" {
 		return filepath.Join(f.BasePath, f.Name)
 	}
-	return filepath.Join(f.Parent.Path(), f.Name)
-}
-
-// RemoveFileFromDir removes file from dir
-func RemoveFileFromDir(dir *File, file *File) error {
-	error := os.RemoveAll(file.Path())
-	if error != nil {
-		return error
-	}
-
-	dir.Files = dir.Files.Remove(file)
-
-	cur := dir
-	for {
-		cur.ItemCount -= file.ItemCount
-		cur.Size -= file.Size
-		cur.Usage -= file.Usage
-
-		if cur.Parent == nil {
-			break
-		}
-		cur = cur.Parent
-	}
-	return nil
+	return filepath.Join(f.Parent.GetPath(), f.Name)
 }
 
 // UpdateStats recursively updates size and item count
-func (f *File) UpdateStats(links AlreadyCountedHardlinks) {
-	if !f.IsDir {
-		return
-	}
+func (f *Dir) UpdateStats(links AlreadyCountedHardlinks) {
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int
 	for _, entry := range f.Files {
-		if entry.IsDir {
-			entry.UpdateStats(links)
+		if entry.IsDir() {
+			entry.(*Dir).UpdateStats(links)
+			itemCount += entry.(*Dir).ItemCount
+		} else {
+			itemCount++
 		}
 
-		switch entry.Flag {
+		switch entry.GetFlag() {
 		case '!', '.':
 			if f.Flag != '!' {
 				f.Flag = '.'
 			}
 		}
 
-		itemCount += entry.ItemCount
+		mli := entry.GetMutliLinkInode()
+		if mli > 0 {
+			if !links[mli] {
+				links[mli] = true
 
-		if entry.MutliLinkInode > 0 {
-			if !links[entry.MutliLinkInode] {
-				links[entry.MutliLinkInode] = true
 			} else {
-				entry.Flag = 'H'
+				entry.(*File).Flag = 'H'
 				continue
 			}
 		}
-		totalSize += entry.Size
-		totalUsage += entry.Usage
+		totalSize += entry.GetSize()
+		totalUsage += entry.GetUsage()
 	}
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize
@@ -92,10 +141,10 @@ func (f *File) UpdateStats(links AlreadyCountedHardlinks) {
 }
 
 // Files - slice of pointers to File
-type Files []*File
+type Files []Item
 
 // IndexOf searches File in Files and returns its index
-func (f Files) IndexOf(file *File) (int, bool) {
+func (f Files) IndexOf(file Item) (int, bool) {
 	for i, item := range f {
 		if item == file {
 			return i, true
@@ -107,7 +156,7 @@ func (f Files) IndexOf(file *File) (int, bool) {
 // FindByName searches name in Files and returns its index
 func (f Files) FindByName(name string) (int, bool) {
 	for i, item := range f {
-		if item.Name == name {
+		if item.GetName() == name {
 			return i, true
 		}
 	}
@@ -115,7 +164,7 @@ func (f Files) FindByName(name string) (int, bool) {
 }
 
 // Remove removes File from Files
-func (f Files) Remove(file *File) Files {
+func (f Files) Remove(file Item) Files {
 	index, ok := f.IndexOf(file)
 	if !ok {
 		return f
@@ -134,25 +183,48 @@ func (f Files) RemoveByName(name string) Files {
 
 func (f Files) Len() int           { return len(f) }
 func (f Files) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
-func (f Files) Less(i, j int) bool { return f[i].Usage > f[j].Usage }
+func (f Files) Less(i, j int) bool { return f[i].GetUsage() > f[j].GetUsage() }
 
 // ByApparentSize sorts files by apparent size
 type ByApparentSize Files
 
 func (f ByApparentSize) Len() int           { return len(f) }
 func (f ByApparentSize) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
-func (f ByApparentSize) Less(i, j int) bool { return f[i].Size > f[j].Size }
+func (f ByApparentSize) Less(i, j int) bool { return f[i].GetSize() > f[j].GetSize() }
 
 // ByItemCount sorts files by item count
 type ByItemCount Files
 
 func (f ByItemCount) Len() int           { return len(f) }
 func (f ByItemCount) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
-func (f ByItemCount) Less(i, j int) bool { return f[i].ItemCount > f[j].ItemCount }
+func (f ByItemCount) Less(i, j int) bool { return f[i].GetItemCount() > f[j].GetItemCount() }
 
 // ByName sorts files by name
 type ByName Files
 
 func (f ByName) Len() int           { return len(f) }
 func (f ByName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
-func (f ByName) Less(i, j int) bool { return f[i].Name > f[j].Name }
+func (f ByName) Less(i, j int) bool { return f[i].GetName() > f[j].GetName() }
+
+// RemoveItemFromDir removes item from dir
+func RemoveItemFromDir(dir *Dir, item Item) error {
+	error := os.RemoveAll(item.GetPath())
+	if error != nil {
+		return error
+	}
+
+	dir.Files = dir.Files.Remove(item)
+
+	cur := dir
+	for {
+		cur.ItemCount -= item.GetItemCount()
+		cur.Size -= item.GetSize()
+		cur.Usage -= item.GetUsage()
+
+		if cur.Parent == nil {
+			break
+		}
+		cur = cur.Parent
+	}
+	return nil
+}
