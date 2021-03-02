@@ -2,6 +2,7 @@ package tui
 
 import (
 	"path/filepath"
+	"runtime"
 
 	"github.com/dundee/gdu/v4/analyze"
 	"github.com/dundee/gdu/v4/device"
@@ -72,6 +73,7 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) {
 
 	go func() {
 		ui.currentDir = ui.analyzer.AnalyzeDir(abspath, ui.ShouldDirBeIgnored)
+		runtime.GC()
 
 		if parentDir != nil {
 			ui.currentDir.Parent = parentDir
