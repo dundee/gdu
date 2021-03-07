@@ -49,7 +49,7 @@ func (a *App) Run() error {
 
 	var path string
 
-	f, err := os.OpenFile(a.Flags.LogFile, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(a.Flags.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("Error opening log file: %w", err)
 	}
