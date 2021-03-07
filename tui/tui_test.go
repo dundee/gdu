@@ -83,7 +83,7 @@ func TestHelp(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[356 : 356+9]
+	cells := b[256 : 256+9]
 
 	text := []byte("directory")
 	for i, r := range cells {
@@ -102,7 +102,7 @@ func TestHelpBw(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[356 : 356+9]
+	cells := b[256 : 256+9]
 
 	text := []byte("directory")
 	for i, r := range cells {

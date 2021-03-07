@@ -299,3 +299,27 @@ func TestSorting(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'n', 0))
 	assert.Equal(t, "name", ui.sortBy)
 }
+
+func TestShowFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.table.Select(0, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.table.Select(2, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'v', 0))
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+}

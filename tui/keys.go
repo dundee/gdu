@@ -6,10 +6,16 @@ import (
 )
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
-	if (key.Key() == tcell.KeyEsc || key.Rune() == 'q') && ui.pages.HasPage("help") {
-		ui.pages.RemovePage("help")
-		ui.app.SetFocus(ui.table)
-		return key
+	if key.Key() == tcell.KeyEsc || key.Rune() == 'q' {
+		if ui.pages.HasPage("help") {
+			ui.pages.RemovePage("help")
+			_, page := ui.pages.GetFrontPage()
+			ui.app.SetFocus(page)
+			return nil
+		}
+		if ui.pages.HasPage("file") {
+			return key // send event to primitive
+		}
 	}
 
 	if ui.pages.HasPage("deleting") && key.Rune() != 'q' {
@@ -34,6 +40,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.showHelp()
 	case 'd':
 		ui.handleDelete()
+	case 'v':
+		ui.showFile()
 	case 'a':
 		ui.showApparentSize = !ui.showApparentSize
 		if ui.currentDir != nil {

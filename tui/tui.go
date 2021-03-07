@@ -18,11 +18,13 @@ const helpTextColorized = `
  [red]enter, right, l    [white]Select directory/device
          [red]left, h    [white]Go to parent directory
 			   [red]d    [white]Delete selected file or directory
+			   [red]v    [white]Show content of selected file
 			   [red]r    [white]Rescan current directory
 			   [red]a    [white]Toggle between showing disk usage and apparent size
 			   [red]n    [white]Sort by name (asc/desc)
 			   [red]s    [white]Sort by size (asc/desc)
 			   [red]c    [white]Sort by items (asc/desc)
+			   [red]q    [white]Quit gdu
 `
 const helpText = `
   [::b]up, down, k, j    [white:black:-]Move cursor up/down
@@ -30,11 +32,13 @@ const helpText = `
  [::b]enter, right, l    [white:black:-]Select directory/device
          [::b]left, h    [white:black:-]Go to parent directory
 			   [::b]d    [white:black:-]Delete selected file or directory
+			   [::b]v    [white:black:-]Show content of selected file
 			   [::b]r    [white:black:-]Rescan current directory
 			   [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
 			   [::b]n    [white:black:-]Sort by name (asc/desc)
 			   [::b]s    [white:black:-]Sort by size (asc/desc)
 			   [::b]c    [white:black:-]Sort by items (asc/desc)
+			   [::b]q    [white:black:-]Quit gdu
 `
 
 // UI struct
@@ -354,7 +358,7 @@ func (ui *UI) showHelp() {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 15, 1, false).
+			AddItem(text, 20, 1, false).
 			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 

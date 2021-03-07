@@ -1,13 +1,19 @@
 package tui
 
 import (
+	"bufio"
+	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/dundee/gdu/v4/analyze"
 	"github.com/dundee/gdu/v4/device"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
+
+const defaultLinesCount = 500
+const linesTreshold = 20
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
@@ -130,4 +136,72 @@ func (ui *UI) deleteSelected() {
 			ui.done <- struct{}{}
 		}
 	}()
+}
+
+func (ui *UI) showFile() *tview.TextView {
+	row, column := ui.table.GetSelection()
+	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	if selectedFile.IsDir() {
+		return nil
+	}
+
+	f, err := os.Open(selectedFile.GetPath())
+	if err != nil {
+		ui.showErr("Error opening file", err)
+		return nil
+	}
+
+	totalLines := 0
+	scanner := bufio.NewScanner(f)
+
+	file := tview.NewTextView()
+	ui.currentDirLabel.SetText("[::b] --- " + selectedFile.GetPath() + " ---").SetDynamicColors(true)
+
+	readNextPart := func(linesCount int) int {
+		readLines := 0
+		for scanner.Scan() && readLines <= linesCount {
+			file.Write(scanner.Bytes())
+			file.Write([]byte("\n"))
+			readLines++
+		}
+		return readLines
+	}
+	totalLines += readNextPart(defaultLinesCount)
+
+	file.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Rune() == 'q' || event.Key() == tcell.KeyESC {
+			f.Close()
+			ui.currentDirLabel.SetText("[::b] --- " + ui.currentDirPath + " ---").SetDynamicColors(true)
+			ui.pages.RemovePage("file")
+			ui.app.SetFocus(ui.table)
+			return event
+		}
+
+		switch {
+		case event.Rune() == 'j':
+			fallthrough
+		case event.Rune() == 'G':
+			fallthrough
+		case event.Key() == tcell.KeyDown:
+			fallthrough
+		case event.Key() == tcell.KeyPgDn:
+			_, _, _, height := file.GetInnerRect()
+			row, _ := file.GetScrollOffset()
+			if height+row > totalLines-linesTreshold {
+				totalLines += readNextPart(defaultLinesCount)
+			}
+		}
+		return event
+	})
+
+	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
+	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
+		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
+		AddItem(file, 2, 0, 1, 1, 0, 0, true).
+		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+
+	ui.pages.HidePage("background")
+	ui.pages.AddPage("file", grid, true, true)
+
+	return file
 }
