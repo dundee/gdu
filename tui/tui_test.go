@@ -2,7 +2,6 @@ package tui
 
 import (
 	"errors"
-	"runtime"
 	"testing"
 
 	"github.com/dundee/gdu/v4/analyze"
@@ -110,81 +109,6 @@ func TestHelpBw(t *testing.T) {
 	}
 }
 
-func TestShowDevices(t *testing.T) {
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-	defer simScreen.Fini()
-
-	ui := CreateUI(app, true, true)
-	ui.ListDevices(getDevicesInfoMock())
-	ui.table.Draw(simScreen)
-	simScreen.Show()
-
-	b, _, _ := simScreen.GetContents()
-
-	text := []byte("Device name")
-	for i, r := range b[0:11] {
-		assert.Equal(t, text[i], r.Bytes[0])
-	}
-}
-
-func TestShowDevicesBW(t *testing.T) {
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-	defer simScreen.Fini()
-
-	ui := CreateUI(app, false, false)
-	ui.ListDevices(getDevicesInfoMock())
-	ui.table.Draw(simScreen)
-	simScreen.Show()
-
-	b, _, _ := simScreen.GetContents()
-
-	text := []byte("Device name")
-	for i, r := range b[0:11] {
-		assert.Equal(t, text[i], r.Bytes[0])
-	}
-}
-
-func TestShowDevicesWithError(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		return
-	}
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-	defer simScreen.Fini()
-
-	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
-
-	ui := CreateUI(app, false, false)
-	err := ui.ListDevices(getter)
-
-	assert.Contains(t, err.Error(), "no such file")
-}
-
-func TestDeviceSelected(t *testing.T) {
-	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.ListDevices(getDevicesInfoMock())
-
-	assert.Equal(t, 3, ui.table.GetRowCount())
-
-	ui.deviceItemSelected(1, 0)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
-
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
-}
-
 func TestAppRun(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, false, true)
@@ -201,51 +125,6 @@ func TestAppRunWithErr(t *testing.T) {
 	err := ui.StartUILoop()
 
 	assert.Equal(t, "Fail", err.Error())
-}
-
-func TestAnalyzePath(t *testing.T) {
-	ui := getAnalyzedPathMockedApp(t, true, true, true)
-
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
-}
-
-func TestAnalyzePathBW(t *testing.T) {
-	ui := getAnalyzedPathMockedApp(t, false, true, true)
-
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
-}
-
-func TestAnalyzePathWithParentDir(t *testing.T) {
-	parentDir := &analyze.Dir{
-		File: &analyze.File{
-			Name: "parent",
-		},
-		Files: make([]analyze.Item, 0, 1),
-	}
-
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.topDir = parentDir
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", parentDir)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-	assert.Equal(t, parentDir, ui.currentDir.Parent)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
-
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
 }
 
 func TestRescanDir(t *testing.T) {
