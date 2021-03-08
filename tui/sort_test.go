@@ -9,19 +9,7 @@ import (
 )
 
 func TestAnalyzeByApparentSize(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("size", "desc", true)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -32,20 +20,7 @@ func TestAnalyzeByApparentSize(t *testing.T) {
 }
 
 func TestSortByApparentSizeAsc(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.sortOrder = "asc"
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("size", "asc", true)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -56,19 +31,7 @@ func TestSortByApparentSizeAsc(t *testing.T) {
 }
 
 func TestAnalyzeBySize(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, false)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("size", "desc", false)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -79,20 +42,7 @@ func TestAnalyzeBySize(t *testing.T) {
 }
 
 func TestSortBySizeAsc(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, false)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.sortOrder = "asc"
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("size", "asc", false)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -103,20 +53,7 @@ func TestSortBySizeAsc(t *testing.T) {
 }
 
 func TestAnalyzeByName(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.sortBy = "name"
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("name", "desc", false)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -127,21 +64,7 @@ func TestAnalyzeByName(t *testing.T) {
 }
 
 func TestAnalyzeByNameAsc(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.sortBy = "name"
-	ui.sortOrder = "asc"
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("name", "asc", false)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -152,20 +75,7 @@ func TestAnalyzeByNameAsc(t *testing.T) {
 }
 
 func TestAnalyzeByItemCount(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.sortBy = "itemCount"
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("itemCount", "desc", false)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -176,21 +86,7 @@ func TestAnalyzeByItemCount(t *testing.T) {
 }
 
 func TestAnalyzeByItemCountAsc(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.sortBy = "itemCount"
-	ui.sortOrder = "asc"
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("itemCount", "asc", false)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -201,21 +97,7 @@ func TestAnalyzeByItemCountAsc(t *testing.T) {
 }
 
 func TestSetSorting(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.done = make(chan struct{})
-	ui.sortBy = "itemCount"
-	ui.sortOrder = "asc"
-	ui.AnalyzePath("test_dir", nil)
-
-	<-ui.done // wait for analyzer
-
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
-		f()
-	}
+	ui := getAnalyzedPathWithSorting("itemCount", "asc", false)
 
 	ui.setSorting("name")
 	assert.Equal(t, "name", ui.sortBy)
@@ -226,4 +108,22 @@ func TestSetSorting(t *testing.T) {
 	ui.setSorting("name")
 	assert.Equal(t, "name", ui.sortBy)
 	assert.Equal(t, "asc", ui.sortOrder)
+}
+
+func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bool) *UI {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, apparentSize)
+	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	ui.sortBy = sortBy
+	ui.sortOrder = sortOrder
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	return ui
 }
