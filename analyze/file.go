@@ -108,12 +108,10 @@ func (f *Dir) UpdateStats(links AlreadyCountedHardlinks) {
 	totalUsage := int64(4096)
 	var itemCount int
 	for _, entry := range f.Files {
-		if entry.IsDir() {
-			entry.(*Dir).UpdateStats(links)
-			itemCount += entry.(*Dir).ItemCount
-		} else {
-			itemCount++
-		}
+		count, size, usage := getItemStats(entry, links)
+		totalSize += size
+		totalUsage += usage
+		itemCount += count
 
 		switch entry.GetFlag() {
 		case '!', '.':
@@ -121,23 +119,31 @@ func (f *Dir) UpdateStats(links AlreadyCountedHardlinks) {
 				f.Flag = '.'
 			}
 		}
-
-		mli := entry.GetMutliLinkInode()
-		if mli > 0 {
-			if !links[mli] {
-				links[mli] = true
-
-			} else {
-				entry.(*File).Flag = 'H'
-				continue
-			}
-		}
-		totalSize += entry.GetSize()
-		totalUsage += entry.GetUsage()
 	}
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize
 	f.Usage = totalUsage
+}
+
+func getItemStats(entry Item, links AlreadyCountedHardlinks) (int, int64, int64) {
+	itemCount := 1
+
+	if entry.IsDir() {
+		entry.(*Dir).UpdateStats(links)
+		itemCount = entry.(*Dir).ItemCount
+	}
+
+	mli := entry.GetMutliLinkInode()
+	if mli > 0 {
+		if !links[mli] {
+			links[mli] = true
+
+		} else {
+			entry.(*File).Flag = 'H'
+			return 1, 0, 0
+		}
+	}
+	return itemCount, entry.GetSize(), entry.GetUsage()
 }
 
 // Files - slice of pointers to File
