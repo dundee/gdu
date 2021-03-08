@@ -81,7 +81,7 @@ func (ui *UI) handleLeft() {
 }
 
 func (ui *UI) handleRight() {
-	if ui.pages.HasPage("confirm") {
+	if ui.pages.HasPage("confirm") || ui.pages.HasPage("progress") {
 		return
 	}
 
