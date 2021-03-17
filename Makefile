@@ -16,7 +16,7 @@ run:
 build:
 	@echo "Version: " $(VERSION)
 	mkdir -p dist
-	GOFLAGS="$(GOFLAGS)" go build -a -ldflags="$(LDFLAGS)" -o dist/$(NAME) .
+	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o dist/$(NAME) .
 
 build-all:
 	@echo "Version: " $(VERSION)
@@ -32,7 +32,7 @@ build-all:
 		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)"
 
-	cd dist; GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -a -ldflags="$(LDFLAGS)" -o gdu_linux_amd64 ..
+	cd dist; GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o gdu_linux_amd64 ..
 
 	cd dist; CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o gdu_linux_armv5l ..
 	cd dist; CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o gdu_linux_armv6l ..
