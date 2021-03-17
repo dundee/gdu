@@ -34,6 +34,13 @@ Using curl:
 
     dpkg -i gdu_*_amd64.deb
 
+[Ubuntu](https://launchpad.net/~daniel-milde/+archive/ubuntu/gdu)
+
+    add-apt-repository ppa:daniel-milde/gdu
+    apt-get update
+    apt-get install gdu
+
+
 [NixOS](https://search.nixos.org/packages?channel=unstable&show=gdu&query=gdu):
 
     nix-env -iA nixos.gdu
