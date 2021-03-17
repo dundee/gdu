@@ -1,7 +1,7 @@
 NAME := gdu
 MAJOR_VER := v4
 PACKAGE := github.com/dundee/$(NAME)/$(MAJOR_VER)
-VERSION := $(shell git describe --tags)
+VERSION := $(shell git describe --tags 2>/dev/null)
 GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw
 LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.Version=$(VERSION)' \
