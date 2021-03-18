@@ -69,13 +69,7 @@ func (ui *UI) handleLeft() {
 		return
 	}
 	if ui.currentDir != nil {
-		subDir := ui.currentDir
 		ui.fileItemSelected(0, 0)
-		index, _ := ui.currentDir.Files.IndexOf(subDir)
-		if ui.currentDir != ui.topDir {
-			index++
-		}
-		ui.table.Select(index, 0)
 	}
 }
 

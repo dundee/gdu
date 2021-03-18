@@ -239,6 +239,7 @@ func (ui *UI) sortItems() {
 }
 
 func (ui *UI) fileItemSelected(row, column int) {
+	origDir := ui.currentDir
 	selectedDir := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 	if !selectedDir.IsDir() {
 		return
@@ -246,6 +247,14 @@ func (ui *UI) fileItemSelected(row, column int) {
 
 	ui.currentDir = selectedDir.(*analyze.Dir)
 	ui.showDir()
+
+	if selectedDir == origDir.Parent {
+		index, _ := ui.currentDir.Files.IndexOf(origDir)
+		if ui.currentDir != ui.topDir {
+			index++
+		}
+		ui.table.Select(index, 0)
+	}
 }
 
 func (ui *UI) deviceItemSelected(row, column int) {
