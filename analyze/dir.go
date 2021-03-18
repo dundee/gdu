@@ -122,7 +122,11 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				a.wait.Done()
 			}()
 		} else {
-			info, _ = f.Info()
+			info, err = f.Info()
+			if err != nil {
+				log.Print(err.Error())
+				continue
+			}
 			file = &File{
 				Name:   f.Name(),
 				Flag:   getFlag(info),
