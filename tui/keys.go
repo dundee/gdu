@@ -18,7 +18,15 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		}
 	}
 
-	if ui.pages.HasPage("deleting") && key.Rune() != 'q' {
+	switch key.Rune() {
+	case 'q':
+		ui.app.Stop()
+		return nil
+	case '?':
+		ui.showHelp()
+	}
+
+	if ui.pages.HasPage("confirm") || ui.pages.HasPage("progress") || ui.pages.HasPage("deleting") {
 		return key
 	}
 
@@ -33,11 +41,6 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	}
 
 	switch key.Rune() {
-	case 'q':
-		ui.app.Stop()
-		return nil
-	case '?':
-		ui.showHelp()
 	case 'd':
 		ui.handleDelete()
 	case 'v':
@@ -62,10 +65,6 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleLeft() {
-	if ui.pages.HasPage("confirm") {
-		return
-	}
-
 	if ui.currentDirPath == ui.topDirPath {
 		return
 	}
@@ -81,10 +80,6 @@ func (ui *UI) handleLeft() {
 }
 
 func (ui *UI) handleRight() {
-	if ui.pages.HasPage("confirm") || ui.pages.HasPage("progress") {
-		return
-	}
-
 	row, column := ui.table.GetSelection()
 	if ui.currentDirPath != ui.topDirPath && row == 0 { // do not select /..
 		return
