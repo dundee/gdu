@@ -8,7 +8,7 @@ LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
 	-X '$(PACKAGE)/build.Time=$(shell LC_ALL=en_US.UTF-8 date)'
 
-all: build-all gdu.1
+all: build-all gdu.1 clean-uncompressed-dist shasums
 
 run:
 	go run .
@@ -77,5 +77,9 @@ clean:
 
 clean-uncompressed-dist:
 	find dist -type f -not -name '*.tgz' -not -name '*.zip' -delete
+
+shasums:
+	cd dist; sha256sum * > sha256sums.txt
+	cd dist; gpg --sign --armor --detach-sign sha256sums.txt
 
 .PHONY: run build test coverage coverage-html clean
