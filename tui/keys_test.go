@@ -132,6 +132,7 @@ func TestShowConfirm(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
 	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.pathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
@@ -224,6 +225,7 @@ func TestSortByApparentSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
 	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.pathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
@@ -281,6 +283,7 @@ func TestSorting(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.pathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 

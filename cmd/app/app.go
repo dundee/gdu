@@ -51,7 +51,7 @@ func (a *App) Run() error {
 
 	f, err := os.OpenFile(a.Flags.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("Error opening log file: %w", err)
+		return fmt.Errorf("opening log file: %w", err)
 	}
 	defer f.Close()
 	log.SetOutput(f)
@@ -101,7 +101,7 @@ func (a *App) setNoCross(path string) error {
 	if a.Flags.NoCross {
 		mounts, err := a.Getter.GetMounts()
 		if err != nil {
-			return fmt.Errorf("Error loading mount points: %w", err)
+			return fmt.Errorf("loading mount points: %w", err)
 		}
 		paths := device.GetNestedMountpointsPaths(path, mounts)
 		a.Flags.IgnoreDirs = append(a.Flags.IgnoreDirs, paths...)
@@ -112,10 +112,12 @@ func (a *App) setNoCross(path string) error {
 func (a *App) runAction(ui common.UI, path string) error {
 	if a.Flags.ShowDisks {
 		if err := ui.ListDevices(a.Getter); err != nil {
-			return fmt.Errorf("Error loading mount points: %w", err)
+			return fmt.Errorf("loading mount points: %w", err)
 		}
 	} else {
-		ui.AnalyzePath(path, nil)
+		if err := ui.AnalyzePath(path, nil); err != nil {
+			return fmt.Errorf("scanning dir: %w", err)
+		}
 	}
 	return nil
 }

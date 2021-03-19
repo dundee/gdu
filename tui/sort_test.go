@@ -5,6 +5,7 @@ import (
 
 	"github.com/dundee/gdu/v4/internal/testanalyze"
 	"github.com/dundee/gdu/v4/internal/testapp"
+	"github.com/dundee/gdu/v4/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,6 +115,7 @@ func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bo
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, apparentSize)
 	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.pathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.sortBy = sortBy
 	ui.sortOrder = sortOrder

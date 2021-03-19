@@ -96,6 +96,14 @@ func TestAnalyzePath(t *testing.T) {
 	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
 }
 
+func TestAnalyzePathWithErr(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	err := ui.AnalyzePath("xxx", nil)
+
+	assert.Contains(t, err.Error(), "no such file or directory")
+}
+
 func TestAnalyzePathBW(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
@@ -115,6 +123,7 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.pathChecker = testdir.MockedPathChecker
 	ui.topDir = parentDir
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", parentDir)
@@ -137,6 +146,7 @@ func TestViewDirContents(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.pathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
@@ -156,6 +166,7 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.pathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 

@@ -56,8 +56,13 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) {
+func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	abspath, _ := filepath.Abs(path)
+
+	_, err := ui.pathChecker(abspath)
+	if err != nil {
+		return err
+	}
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
@@ -102,6 +107,8 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) {
 			ui.done <- struct{}{}
 		}
 	}()
+
+	return nil
 }
 
 func (ui *UI) deleteSelected() {

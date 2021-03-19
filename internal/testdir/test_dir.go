@@ -1,6 +1,7 @@
 package testdir
 
 import (
+	"io/fs"
 	"os"
 )
 
@@ -15,4 +16,8 @@ func CreateTestDir() func() {
 			panic(err)
 		}
 	}
+}
+
+func MockedPathChecker(path string) (fs.FileInfo, error) {
+	return nil, nil
 }

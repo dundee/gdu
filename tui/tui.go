@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
 	"sort"
 	"time"
 
@@ -65,6 +67,7 @@ type UI struct {
 	showApparentSize bool
 	done             chan struct{}
 	remover          func(*analyze.Dir, analyze.Item) error
+	pathChecker      func(string) (fs.FileInfo, error)
 }
 
 // CreateUI creates the whole UI app
@@ -77,6 +80,7 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 		showApparentSize: showApparentSize,
 		analyzer:         analyze.CreateAnalyzer(),
 		remover:          analyze.RemoveItemFromDir,
+		pathChecker:      os.Stat,
 	}
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {

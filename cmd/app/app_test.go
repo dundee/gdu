@@ -66,6 +66,21 @@ func TestAnalyzePathWithGui(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAnalyzePathWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null"},
+		[]string{"xxx"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Equal(t, "", out)
+	assert.Contains(t, err.Error(), "no such file or directory")
+}
+
 func TestNoCross(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -92,7 +107,7 @@ func TestNoCrossWithErr(t *testing.T) {
 		device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"},
 	)
 
-	assert.Equal(t, "Error loading mount points: open /xxxyyy: no such file or directory", err.Error())
+	assert.Equal(t, "loading mount points: open /xxxyyy: no such file or directory", err.Error())
 	assert.Empty(t, out)
 }
 
@@ -122,7 +137,7 @@ func TestListDevicesWithErr(t *testing.T) {
 		device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"},
 	)
 
-	assert.Equal(t, "Error loading mount points: open /xxxyyy: no such file or directory", err.Error())
+	assert.Equal(t, "loading mount points: open /xxxyyy: no such file or directory", err.Error())
 }
 
 func TestListDevicesWithGui(t *testing.T) {

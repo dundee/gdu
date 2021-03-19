@@ -3,7 +3,9 @@ package stdout
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
+	"os"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -25,6 +27,7 @@ type UI struct {
 	red              *color.Color
 	orange           *color.Color
 	blue             *color.Color
+	pathChecker      func(string) (fs.FileInfo, error)
 }
 
 // CreateStdoutUI creates UI for stdout
@@ -35,6 +38,7 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 		showProgress:     showProgress,
 		showApparentSize: showApparentSize,
 		analyzer:         analyze.CreateAnalyzer(),
+		pathChecker:      os.Stat,
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -112,11 +116,17 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) {
+func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
+	var (
+		dir  *analyze.Dir
+		wait sync.WaitGroup
+	)
 	abspath, _ := filepath.Abs(path)
-	var dir *analyze.Dir
 
-	var wait sync.WaitGroup
+	_, err := ui.pathChecker(abspath)
+	if err != nil {
+		return err
+	}
 
 	if ui.showProgress {
 		wait.Add(1)
@@ -166,6 +176,8 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) {
 				file.GetName())
 		}
 	}
+
+	return nil
 }
 
 // SetIgnoreDirPaths sets paths to ignore

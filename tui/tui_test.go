@@ -334,6 +334,7 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mockedAnalyzer bool) *UI {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, useColors, apparentSize)
+	ui.pathChecker = testdir.MockedPathChecker
 
 	if mockedAnalyzer {
 		ui.analyzer = &testanalyze.MockedAnalyzer{}
