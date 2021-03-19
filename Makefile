@@ -44,6 +44,8 @@ build-all:
 
 gdu.1: gdu.1.md
 	pandoc gdu.1.md -s -t man > gdu.1
+	cp gdu.1 dist
+	cd dist; tar czf gdu.1.tgz gdu.1
 
 show-man:
 	pandoc gdu.1.md -s -t man | man -l -
