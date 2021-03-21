@@ -344,26 +344,30 @@ func (ui *UI) updateProgress() {
 		color = "[red:black:b]"
 	}
 
-	progress := ui.analyzer.GetProgress()
+	progressChan := ui.analyzer.GetProgressChan()
+	doneChan := ui.analyzer.GetDoneChan()
+
+	var progress analyze.CurrentProgress
 
 	for {
-		progress.Mutex.Lock()
-
-		if progress.Done {
+		select {
+		case progress = <-progressChan:
+		case <-doneChan:
 			return
 		}
 
-		ui.app.QueueUpdateDraw(func() {
-			ui.progress.SetText("Total items: " +
-				color +
-				fmt.Sprint(progress.ItemCount) +
-				"[white:black:-] size: " +
-				color +
-				ui.formatSize(progress.TotalSize, false, false) +
-				"[white:black:-]\nCurrent item: [white:black:b]" +
-				progress.CurrentItemName)
-		})
-		progress.Mutex.Unlock()
+		func(itemCount int, totalSize int64, currentItem string) {
+			ui.app.QueueUpdateDraw(func() {
+				ui.progress.SetText("Total items: " +
+					color +
+					fmt.Sprint(itemCount) +
+					"[white:black:-] size: " +
+					color +
+					ui.formatSize(totalSize, false, false) +
+					"[white:black:-]\nCurrent item: [white:black:b]" +
+					currentItem)
+			})
+		}(progress.ItemCount, progress.TotalSize, progress.CurrentItemName)
 
 		time.Sleep(100 * time.Millisecond)
 	}

@@ -2,7 +2,6 @@ package testanalyze
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/dundee/gdu/v4/analyze"
 )
@@ -59,12 +58,16 @@ func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnor
 	return dir
 }
 
-// GetProgress returns always Done
-func (a *MockedAnalyzer) GetProgress() *analyze.CurrentProgress {
-	return &analyze.CurrentProgress{
-		Done:  true,
-		Mutex: &sync.Mutex{},
-	}
+// GetProgressChan returns always Done
+func (a *MockedAnalyzer) GetProgressChan() chan analyze.CurrentProgress {
+	return make(chan analyze.CurrentProgress)
+}
+
+// GetDoneChan returns always Done
+func (a *MockedAnalyzer) GetDoneChan() chan struct{} {
+	c := make(chan struct{}, 1)
+	defer func() { c <- struct{}{} }()
+	return c
 }
 
 // ResetProgress does nothing

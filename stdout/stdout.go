@@ -202,15 +202,18 @@ func (ui *UI) updateProgress() {
 
 	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
-	progress := ui.analyzer.GetProgress()
+	progressChan := ui.analyzer.GetProgressChan()
+	doneChan := ui.analyzer.GetDoneChan()
+
+	var progress analyze.CurrentProgress
 
 	i := 0
 	for {
-		progress.Mutex.Lock()
-
 		fmt.Fprint(ui.output, emptyRow)
 
-		if progress.Done {
+		select {
+		case progress = <-progressChan:
+		case <-doneChan:
 			fmt.Fprint(ui.output, "\r")
 			return
 		}
@@ -221,7 +224,6 @@ func (ui *UI) updateProgress() {
 			ui.red.Sprint(progress.ItemCount)+
 			" size: "+
 			ui.formatSize(progress.TotalSize))
-		progress.Mutex.Unlock()
 
 		time.Sleep(100 * time.Millisecond)
 		i++

@@ -10,11 +10,10 @@ import (
 
 // CurrentProgress struct
 type CurrentProgress struct {
-	Mutex           *sync.Mutex
+	mutex           *sync.Mutex
 	CurrentItemName string
 	ItemCount       int
 	TotalSize       int64
-	Done            bool
 }
 
 var concurrencyLimit chan struct{} = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
@@ -25,40 +24,49 @@ type ShouldDirBeIgnored func(path string) bool
 // Analyzer is type for dir analyzing function
 type Analyzer interface {
 	AnalyzeDir(path string, ignore ShouldDirBeIgnored) *Dir
-	GetProgress() *CurrentProgress
+	GetProgressChan() chan CurrentProgress
+	GetDoneChan() chan struct{}
 	ResetProgress()
 }
 
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
-	progress  *CurrentProgress
-	wait      sync.WaitGroup
-	ignoreDir ShouldDirBeIgnored
+	progress     *CurrentProgress
+	progressChan chan CurrentProgress
+	doneChan     chan struct{}
+	wait         sync.WaitGroup
+	ignoreDir    ShouldDirBeIgnored
 }
 
 // CreateAnalyzer returns Analyzer
 func CreateAnalyzer() Analyzer {
 	return &ParallelAnalyzer{
 		progress: &CurrentProgress{
-			Mutex:     &sync.Mutex{},
-			Done:      false,
+			mutex:     &sync.Mutex{},
 			ItemCount: 0,
 			TotalSize: int64(0),
 		},
+		progressChan: make(chan CurrentProgress, 10),
+		doneChan:     make(chan struct{}, 1),
 	}
 }
 
-// GetProgress returns progress
-func (a *ParallelAnalyzer) GetProgress() *CurrentProgress {
-	return a.progress
+// GetProgressChan returns channel for getting progress
+func (a *ParallelAnalyzer) GetProgressChan() chan CurrentProgress {
+	return a.progressChan
+}
+
+// GetDoneChan returns channel for checking when analysis is done
+func (a *ParallelAnalyzer) GetDoneChan() chan struct{} {
+	return a.doneChan
 }
 
 // ResetProgress returns progress
 func (a *ParallelAnalyzer) ResetProgress() {
-	a.progress.Done = false
 	a.progress.ItemCount = 0
 	a.progress.TotalSize = int64(0)
-	a.progress.Mutex = &sync.Mutex{}
+	a.progress.CurrentItemName = ""
+	a.progress.mutex = &sync.Mutex{}
 }
 
 // AnalyzeDir analyzes given path
@@ -71,20 +79,19 @@ func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *D
 	links := make(AlreadyCountedHardlinks, 10)
 	dir.UpdateStats(links)
 
-	a.progress.Mutex.Lock()
-	a.progress.Done = true
-	a.progress.Mutex.Unlock()
+	a.doneChan <- struct{}{}
 
 	return dir
 }
 
 func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
-		file      *File
-		err       error
-		mutex     sync.Mutex
-		totalSize int64
-		info      os.FileInfo
+		file       *File
+		err        error
+		totalSize  int64
+		info       os.FileInfo
+		subDirChan chan *Dir = make(chan *Dir)
+		dirCount   int       = 0
 	)
 
 	files, err := os.ReadDir(path)
@@ -107,19 +114,15 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			if a.ignoreDir(entryPath) {
 				continue
 			}
+			dirCount += 1
 
-			a.wait.Add(1)
 			go func() {
 				concurrencyLimit <- struct{}{}
 				subdir := a.processDir(entryPath)
 				subdir.Parent = dir
 
-				mutex.Lock()
-				dir.Files.Append(subdir)
-				mutex.Unlock()
-
+				subDirChan <- subdir
 				<-concurrencyLimit
-				a.wait.Done()
 			}()
 		} else {
 			info, err = f.Info()
@@ -137,22 +140,36 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 
 			totalSize += info.Size()
 
-			mutex.Lock()
 			dir.Files.Append(file)
-			mutex.Unlock()
 		}
 	}
+
+	a.wait.Add(1)
+	go func() {
+		var sub *Dir
+
+		for i := 0; i < dirCount; i++ {
+			sub = <-subDirChan
+			dir.Files.Append(sub)
+		}
+
+		a.wait.Done()
+	}()
 
 	a.updateProgress(path, len(files), totalSize)
 	return dir
 }
 
 func (a *ParallelAnalyzer) updateProgress(path string, itemCount int, totalSize int64) {
-	a.progress.Mutex.Lock()
+	a.progress.mutex.Lock()
 	a.progress.CurrentItemName = path
 	a.progress.ItemCount += itemCount
 	a.progress.TotalSize += totalSize
-	a.progress.Mutex.Unlock()
+	select {
+	case a.progressChan <- *a.progress:
+	default:
+	}
+	a.progress.mutex.Unlock()
 }
 
 func getDirFlag(err error, items int) rune {

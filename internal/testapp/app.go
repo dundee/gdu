@@ -2,6 +2,7 @@ package testapp
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/dundee/gdu/v4/common"
 	"github.com/gdamore/tcell/v2"
@@ -25,6 +26,7 @@ type MockedApp struct {
 	FailRun     bool
 	UpdateDraws []func()
 	BeforeDraws []func(screen tcell.Screen) bool
+	mutex       *sync.Mutex
 }
 
 // CreateMockedApp returns app with simulation screen for tests
@@ -33,6 +35,7 @@ func CreateMockedApp(failRun bool) common.TermApplication {
 		FailRun:     failRun,
 		UpdateDraws: make([]func(), 0, 1),
 		BeforeDraws: make([]func(screen tcell.Screen) bool, 0, 1),
+		mutex:       &sync.Mutex{},
 	}
 	return app
 }
@@ -66,7 +69,9 @@ func (app *MockedApp) SetInputCapture(capture func(event *tcell.EventKey) *tcell
 
 // QueueUpdateDraw does nothing
 func (app *MockedApp) QueueUpdateDraw(f func()) *tview.Application {
+	app.mutex.Lock()
 	app.UpdateDraws = append(app.UpdateDraws, f)
+	app.mutex.Unlock()
 	return nil
 }
 
