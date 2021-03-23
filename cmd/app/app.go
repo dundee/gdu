@@ -93,6 +93,7 @@ func (a *App) createUI() common.UI {
 		if !a.Flags.NoColor {
 			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
 		}
+		tview.Styles.BorderColor = tcell.ColorDefault
 	}
 	return ui
 }

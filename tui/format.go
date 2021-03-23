@@ -19,15 +19,15 @@ func (ui *UI) formatFileRow(item analyze.Item) string {
 	row := string(item.GetFlag())
 
 	if ui.useColors {
-		row += "[#e67100:-:b]"
+		row += "[#e67100::b]"
 	} else {
-		row += "[white:-:b]"
+		row += "[::b]"
 	}
 
 	if ui.showApparentSize {
-		row += fmt.Sprintf("%21s", ui.formatSize(item.GetSize(), false, true))
+		row += fmt.Sprintf("%15s", ui.formatSize(item.GetSize(), false, true))
 	} else {
-		row += fmt.Sprintf("%21s", ui.formatSize(item.GetUsage(), false, true))
+		row += fmt.Sprintf("%15s", ui.formatSize(item.GetUsage(), false, true))
 	}
 
 	row += getUsageGraph(part)
@@ -53,7 +53,7 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 		}
 	} else {
 		if transparentBg {
-			color = "[white:-:-]"
+			color = "[-::]"
 		} else {
 			color = "[white:black:-]"
 		}

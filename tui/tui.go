@@ -106,13 +106,21 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 	ui.header.SetBackgroundColor(textBgColor)
 
 	ui.currentDirLabel = tview.NewTextView()
+	ui.currentDirLabel.SetTextColor(tcell.ColorDefault)
 	ui.currentDirLabel.SetBackgroundColor(tcell.ColorDefault)
 
 	ui.table = tview.NewTable().SetSelectable(true, false)
 	ui.table.SetBackgroundColor(tcell.ColorDefault)
-	ui.table.SetSelectedStyle(tcell.Style{}.
-		Foreground(tcell.ColorBlack).
-		Background(tcell.ColorWhite).Bold(true))
+
+	if ui.useColors {
+		ui.table.SetSelectedStyle(tcell.Style{}.
+			Foreground(tview.Styles.TitleColor).
+			Background(tview.Styles.MoreContrastBackgroundColor).Bold(true))
+	} else {
+		ui.table.SetSelectedStyle(tcell.Style{}.
+			Foreground(tcell.ColorWhite).
+			Background(tcell.ColorGray).Bold(true))
+	}
 
 	ui.footer = tview.NewTextView().SetDynamicColors(true)
 	ui.footer.SetTextColor(textColor)
@@ -171,6 +179,7 @@ func (ui *UI) showDir() {
 	if ui.currentDirPath != ui.topDirPath {
 		cell := tview.NewTableCell("                         [::b]/..")
 		cell.SetReference(ui.currentDir.Parent)
+		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		ui.table.SetCell(0, 0, cell)
 		rowIndex++
 	}
@@ -179,6 +188,7 @@ func (ui *UI) showDir() {
 
 	for i, item := range ui.currentDir.Files {
 		cell := tview.NewTableCell(ui.formatFileRow(item))
+		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		cell.SetReference(ui.currentDir.Files[i])
 
 		ui.table.SetCell(rowIndex, 0, cell)
@@ -187,7 +197,7 @@ func (ui *UI) showDir() {
 
 	var footerNumberColor, footerTextColor string
 	if ui.useColors {
-		footerNumberColor = "[#e67100:#2479d0:b]"
+		footerNumberColor = "[#ffffff:#2479d0:b]"
 		footerTextColor = "[black:#2479d0:-]"
 	} else {
 		footerNumberColor = "[black:white:b]"
@@ -291,7 +301,10 @@ func (ui *UI) confirmDeletion() {
 
 	if !ui.useColors {
 		modal.SetBackgroundColor(tcell.ColorGray)
+	} else {
+		modal.SetBackgroundColor(tcell.ColorBlack)
 	}
+	modal.SetBorderColor(tcell.ColorDefault)
 
 	ui.pages.AddPage("confirm", modal, true, true)
 }
@@ -359,6 +372,7 @@ func (ui *UI) updateProgress() {
 func (ui *UI) showHelp() {
 	text := tview.NewTextView().SetDynamicColors(true)
 	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
+	text.SetBorderColor(tcell.ColorDefault)
 	text.SetTitle(" gdu help ")
 
 	if ui.useColors {
