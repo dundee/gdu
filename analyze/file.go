@@ -214,9 +214,9 @@ func (f ByName) Less(i, j int) bool { return f[i].GetName() > f[j].GetName() }
 
 // RemoveItemFromDir removes item from dir
 func RemoveItemFromDir(dir *Dir, item Item) error {
-	error := os.RemoveAll(item.GetPath())
-	if error != nil {
-		return error
+	err := os.RemoveAll(item.GetPath())
+	if err != nil {
+		return err
 	}
 
 	dir.Files = dir.Files.Remove(item)
