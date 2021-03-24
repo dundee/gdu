@@ -8,6 +8,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIsDir(t *testing.T) {
+	dir := Dir{
+		File: &File{
+			Name: "xxx",
+			Size: 5,
+		},
+		ItemCount: 2,
+	}
+	file := &File{
+		Name:   "yyy",
+		Size:   2,
+		Parent: &dir,
+	}
+	dir.Files = Files{file}
+
+	assert.True(t, dir.IsDir())
+	assert.False(t, file.IsDir())
+}
+
 func TestFind(t *testing.T) {
 	dir := Dir{
 		File: &File{

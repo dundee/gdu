@@ -14,11 +14,11 @@ type Item interface {
 	GetName() string
 	GetFlag() rune
 	IsDir() bool
-	GetMutliLinkInode() uint64
 	GetSize() int64
 	GetUsage() int64
 	GetItemCount() int
 	GetParent() *Dir
+	getItemStats(links AlreadyCountedHardlinks) (int, int64, int64)
 }
 
 // File struct
@@ -66,9 +66,25 @@ func (f *File) GetItemCount() int {
 	return 1
 }
 
-// GetMutliLinkInode returns inode number of file with multiple hard links
-func (f *File) GetMutliLinkInode() uint64 {
-	return f.Mli
+func (f *File) alreadyCounted(links AlreadyCountedHardlinks) bool {
+	mli := f.Mli
+	if mli > 0 {
+		if !links[mli] {
+			links[mli] = true
+			return false
+		} else {
+			f.Flag = 'H'
+			return true
+		}
+	}
+	return false
+}
+
+func (f *File) getItemStats(links AlreadyCountedHardlinks) (int, int64, int64) {
+	if f.alreadyCounted(links) {
+		return 1, 0, 0
+	}
+	return 1, f.GetSize(), f.GetUsage()
 }
 
 // Dir struct
@@ -102,13 +118,18 @@ func (f *Dir) GetPath() string {
 	return filepath.Join(f.Parent.GetPath(), f.Name)
 }
 
+func (f *Dir) getItemStats(links AlreadyCountedHardlinks) (int, int64, int64) {
+	f.UpdateStats(links)
+	return f.ItemCount, f.GetSize(), f.GetUsage()
+}
+
 // UpdateStats recursively updates size and item count
 func (f *Dir) UpdateStats(links AlreadyCountedHardlinks) {
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int
 	for _, entry := range f.Files {
-		count, size, usage := getItemStats(entry, links)
+		count, size, usage := entry.getItemStats(links)
 		totalSize += size
 		totalUsage += usage
 		itemCount += count
@@ -123,27 +144,6 @@ func (f *Dir) UpdateStats(links AlreadyCountedHardlinks) {
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize
 	f.Usage = totalUsage
-}
-
-func getItemStats(entry Item, links AlreadyCountedHardlinks) (int, int64, int64) {
-	itemCount := 1
-
-	if entry.IsDir() {
-		entry.(*Dir).UpdateStats(links)
-		itemCount = entry.(*Dir).ItemCount
-	}
-
-	mli := entry.GetMutliLinkInode()
-	if mli > 0 {
-		if !links[mli] {
-			links[mli] = true
-
-		} else {
-			entry.(*File).Flag = 'H'
-			return 1, 0, 0
-		}
-	}
-	return itemCount, entry.GetSize(), entry.GetUsage()
 }
 
 // Files - slice of pointers to File

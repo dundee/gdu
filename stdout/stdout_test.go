@@ -26,6 +26,21 @@ func TestAnalyzePath(t *testing.T) {
 	assert.Contains(t, output.String(), "nested")
 }
 
+func TestAnalyzeSubdir(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui.AnalyzePath("test_dir/nested", nil)
+	ui.StartUILoop()
+
+	assert.Contains(t, output.String(), "file2")
+}
+
 func TestAnalyzePathWithErr(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
