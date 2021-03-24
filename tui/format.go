@@ -2,9 +2,18 @@ package tui
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/dundee/gdu/v4/analyze"
+)
+
+const (
+	_          = iota
+	KB float64 = 1 << (10 * iota)
+	MB
+	GB
+	TB
+	PB
+	EB
 )
 
 func (ui *UI) formatFileRow(item analyze.Item) string {
@@ -59,15 +68,21 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 		}
 	}
 
+	fsize := float64(size)
+
 	switch {
-	case size > 1e12:
-		return fmt.Sprintf("%.1f%s TiB", float64(size)/math.Pow(2, 40), color)
-	case size > 1e9:
-		return fmt.Sprintf("%.1f%s GiB", float64(size)/math.Pow(2, 30), color)
-	case size > 1e6:
-		return fmt.Sprintf("%.1f%s MiB", float64(size)/math.Pow(2, 20), color)
-	case size > 1e3:
-		return fmt.Sprintf("%.1f%s KiB", float64(size)/math.Pow(2, 10), color)
+	case fsize >= EB:
+		return fmt.Sprintf("%.1f%s EiB", fsize/EB, color)
+	case fsize >= PB:
+		return fmt.Sprintf("%.1f%s PiB", fsize/PB, color)
+	case fsize >= TB:
+		return fmt.Sprintf("%.1f%s TiB", fsize/TB, color)
+	case fsize >= GB:
+		return fmt.Sprintf("%.1f%s GiB", fsize/GB, color)
+	case fsize >= MB:
+		return fmt.Sprintf("%.1f%s MiB", fsize/MB, color)
+	case fsize >= KB:
+		return fmt.Sprintf("%.1f%s KiB", fsize/KB, color)
 	default:
 		return fmt.Sprintf("%d%s B", size, color)
 	}
