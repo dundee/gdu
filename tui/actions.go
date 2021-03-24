@@ -89,7 +89,7 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 		if parentDir != nil {
 			ui.currentDir.Parent = parentDir
 			parentDir.Files = parentDir.Files.RemoveByName(ui.currentDir.Name)
-			parentDir.Files = append(parentDir.Files, ui.currentDir)
+			parentDir.Files.Append(ui.currentDir)
 
 			links := make(analyze.AlreadyCountedHardlinks, 10)
 			ui.topDir.UpdateStats(links)

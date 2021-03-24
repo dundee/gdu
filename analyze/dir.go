@@ -115,7 +115,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				subdir.Parent = dir
 
 				mutex.Lock()
-				dir.Files = append(dir.Files, subdir)
+				dir.Files.Append(subdir)
 				mutex.Unlock()
 
 				<-concurrencyLimit
@@ -138,7 +138,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			totalSize += info.Size()
 
 			mutex.Lock()
-			dir.Files = append(dir.Files, file)
+			dir.Files.Append(file)
 			mutex.Unlock()
 		}
 	}

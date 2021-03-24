@@ -149,6 +149,13 @@ func getItemStats(entry Item, links AlreadyCountedHardlinks) (int, int64, int64)
 // Files - slice of pointers to File
 type Files []Item
 
+// Append addes one item to Files
+func (f *Files) Append(file Item) {
+	slice := *f
+	slice = append(slice, file)
+	*f = slice
+}
+
 // IndexOf searches File in Files and returns its index
 func (f Files) IndexOf(file Item) (int, bool) {
 	for i, item := range f {
