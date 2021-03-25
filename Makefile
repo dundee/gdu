@@ -8,7 +8,7 @@ LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
 	-X '$(PACKAGE)/build.Time=$(shell LC_ALL=en_US.UTF-8 date)'
 
-all: build-all gdu.1 clean-uncompressed-dist shasums
+all: build-all man clean-uncompressed-dist shasums
 
 run:
 	go run .
@@ -44,6 +44,8 @@ build-all:
 
 gdu.1: gdu.1.md
 	pandoc gdu.1.md -s -t man > gdu.1
+
+man: gdu.1
 	cp gdu.1 dist
 	cd dist; tar czf gdu.1.tgz gdu.1
 
@@ -84,4 +86,4 @@ shasums:
 	cd dist; sha256sum * > sha256sums.txt
 	cd dist; gpg --sign --armor --detach-sign sha256sums.txt
 
-.PHONY: run build test coverage coverage-html clean
+.PHONY: run build test coverage coverage-html clean man
