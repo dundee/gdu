@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 )
 
 // CurrentProgress struct
@@ -34,7 +33,7 @@ type ParallelAnalyzer struct {
 	progressInChan  chan CurrentProgress
 	progressOutChan chan CurrentProgress
 	doneChan        chan struct{}
-	wait            sync.WaitGroup
+	wait            *WaitGroup
 	ignoreDir       ShouldDirBeIgnored
 }
 
@@ -45,9 +44,10 @@ func CreateAnalyzer() Analyzer {
 			ItemCount: 0,
 			TotalSize: int64(0),
 		},
-		progressInChan:  make(chan CurrentProgress, 10),
-		progressOutChan: make(chan CurrentProgress, 10),
+		progressInChan:  make(chan CurrentProgress, 1),
+		progressOutChan: make(chan CurrentProgress, 1),
 		doneChan:        make(chan struct{}, 1),
+		wait:            (&WaitGroup{}).Init(),
 	}
 }
 
@@ -96,6 +96,8 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		subDirChan chan *Dir = make(chan *Dir)
 		dirCount   int       = 0
 	)
+
+	a.wait.Add(1)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -147,7 +149,6 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		}
 	}
 
-	a.wait.Add(1)
 	go func() {
 		var sub *Dir
 
