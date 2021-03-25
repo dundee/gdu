@@ -17,7 +17,7 @@ type CurrentProgress struct {
 	Done            bool
 }
 
-var concurrencyLimit chan struct{} = make(chan struct{}, 3*runtime.NumCPU())
+var concurrencyLimit chan struct{} = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ShouldDirBeIgnored whether path should be ignored
 type ShouldDirBeIgnored func(path string) bool
