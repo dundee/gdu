@@ -121,14 +121,14 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			}
 			dirCount += 1
 
-			go func() {
+			go func(entryPath string) {
 				concurrencyLimit <- struct{}{}
 				subdir := a.processDir(entryPath)
 				subdir.Parent = dir
 
 				subDirChan <- subdir
 				<-concurrencyLimit
-			}()
+			}(entryPath)
 		} else {
 			info, err = f.Info()
 			if err != nil {
