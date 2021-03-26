@@ -48,7 +48,9 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	case 'a':
 		ui.showApparentSize = !ui.showApparentSize
 		if ui.currentDir != nil {
+			row, column := ui.table.GetSelection()
 			ui.showDir()
+			ui.table.Select(row, column)
 		}
 	case 'r':
 		if ui.currentDir != nil {
