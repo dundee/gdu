@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"strconv"
+
 	"github.com/dundee/gdu/v4/cmd/app"
 	"github.com/dundee/gdu/v4/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
-	"os"
-	"runtime"
-	"strconv"
 )
 
 var af *app.Flags
