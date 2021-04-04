@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 
 	"github.com/dundee/gdu/v4/build"
 	"github.com/dundee/gdu/v4/common"
@@ -19,6 +20,7 @@ import (
 type Flags struct {
 	LogFile          string
 	IgnoreDirs       []string
+	MaxCores		 int
 	ShowDisks        bool
 	ShowApparentSize bool
 	ShowVersion      bool
@@ -40,6 +42,8 @@ type App struct {
 
 // Run starts gdu main logic
 func (a *App) Run() error {
+	setMaxProcs(a.Flags.MaxCores)
+
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
 		fmt.Fprintln(a.Writer, "Built time:\t", build.Time)
@@ -75,6 +79,18 @@ func (a *App) Run() error {
 	}
 
 	return ui.StartUILoop()
+}
+
+func setMaxProcs(cores int) {
+	maxProcs := cores
+	if cores > runtime.NumCPU() {
+		maxProcs = runtime.NumCPU()
+	}
+	if cores <= 0 {
+		maxProcs = 1
+	}
+
+	runtime.GOMAXPROCS(maxProcs)
 }
 
 func (a *App) createUI() common.UI {
