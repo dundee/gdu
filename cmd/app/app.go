@@ -20,7 +20,7 @@ import (
 type Flags struct {
 	LogFile          string
 	IgnoreDirs       []string
-	MaxCores		 int
+	MaxCores         int
 	ShowDisks        bool
 	ShowApparentSize bool
 	ShowVersion      bool
