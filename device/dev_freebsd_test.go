@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetDevicesInfo(t *testing.T) {
-	getter := FreeBSDDevicesInfoGetter{}
+	getter := FreeBSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 	devices, _ := getter.GetDevicesInfo()
 	assert.IsType(t, Devices{}, devices)
 }
