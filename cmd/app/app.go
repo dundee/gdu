@@ -2,6 +2,12 @@ package app
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"runtime"
+	"strconv"
+
 	"github.com/dundee/gdu/v4/build"
 	"github.com/dundee/gdu/v4/common"
 	"github.com/dundee/gdu/v4/device"
@@ -9,11 +15,6 @@ import (
 	"github.com/dundee/gdu/v4/tui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"io"
-	"log"
-	"os"
-	"runtime"
-	"strconv"
 )
 
 // Flags define flags accepted by Run
@@ -82,18 +83,20 @@ func (a *App) Run() error {
 }
 
 func (a *App) setMaxProcs() {
-	maxProcs := a.Flags.MaxCores
+	if a.Flags.MaxCores >= 1 {
+		maxProcs := a.Flags.MaxCores
 
-	// if 'maxcores' value is zero or below zero, we repeat the logic of GOMAXPROCS(n) when n < 1
-	if maxProcs > runtime.NumCPU() || maxProcs <= 0 {
-		maxProcs = runtime.NumCPU()
-		return
+		// Limit GOMAXPROCS(n) to number of CPU's
+		if maxProcs > runtime.NumCPU() {
+			maxProcs = runtime.NumCPU()
+			return
+		}
+
+		runtime.GOMAXPROCS(maxProcs)
+
+		// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
+		fmt.Fprintln(a.Writer, "Max cores set to "+strconv.Itoa(runtime.GOMAXPROCS(0)))
 	}
-
-	runtime.GOMAXPROCS(maxProcs)
-
-	// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
-	fmt.Fprintln(a.Writer, "Max cores set to "+strconv.Itoa(runtime.GOMAXPROCS(0)))
 }
 
 func (a *App) createUI() common.UI {
