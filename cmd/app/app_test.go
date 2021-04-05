@@ -164,6 +164,7 @@ func TestMaxCores(t *testing.T) {
 		testdev.DevicesInfoGetterMock{},
 	)
 
+	assert.Equal(t, 1, runtime.GOMAXPROCS(0))
 	assert.Contains(t, out, "set to 1")
 	assert.Nil(t, err)
 }
@@ -176,6 +177,7 @@ func TestMaxCoresHighEdge(t *testing.T) {
 		testdev.DevicesInfoGetterMock{},
 	)
 
+	assert.NotEqual(t, runtime.NumCPU(), runtime.GOMAXPROCS(0))
 	assert.Empty(t, out)
 	assert.Nil(t, err)
 }
@@ -188,6 +190,7 @@ func TestMaxCoresLowEdge(t *testing.T) {
 		testdev.DevicesInfoGetterMock{},
 	)
 
+	assert.NotEqual(t, runtime.NumCPU(), runtime.GOMAXPROCS(0))
 	assert.Empty(t, out)
 	assert.Nil(t, err)
 }
