@@ -5,7 +5,6 @@ package device
 import (
 	"strings"
 	"testing"
-	"fmt"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +18,6 @@ func TestGetDevicesInfo(t *testing.T) {
 func TestGetDevicesInfoFail(t *testing.T) {
 	getter := FreeBSDDevicesInfoGetter{MountCmd: "/nonexistent"}
 	_, err := getter.GetDevicesInfo()
-	fmt.Println(err)
 	assert.Equal(t, "fork/exec /nonexistent: no such file or directory", err.Error())
 }
 
