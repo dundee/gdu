@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -153,6 +154,42 @@ func TestListDevicesWithGui(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Empty(t, out)
+}
+
+func TestMaxCores(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", MaxCores: 1},
+		[]string{},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Contains(t, out, "set to 1")
+	assert.Nil(t, err)
+}
+
+func TestMaxCoresHighEdge(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", MaxCores: runtime.NumCPU() + 1},
+		[]string{},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
+func TestMaxCoresLowEdge(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", MaxCores: -100},
+		[]string{},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
 }
 
 func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (string, error) {
