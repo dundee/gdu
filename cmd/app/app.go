@@ -2,11 +2,6 @@ package app
 
 import (
 	"fmt"
-	"io"
-	"log"
-	"os"
-	"runtime"
-
 	"github.com/dundee/gdu/v4/build"
 	"github.com/dundee/gdu/v4/common"
 	"github.com/dundee/gdu/v4/device"
@@ -14,6 +9,11 @@ import (
 	"github.com/dundee/gdu/v4/tui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"io"
+	"log"
+	"os"
+	"runtime"
+	"strconv"
 )
 
 // Flags define flags accepted by Run
@@ -42,7 +42,7 @@ type App struct {
 
 // Run starts gdu main logic
 func (a *App) Run() error {
-	setMaxProcs(a.Flags.MaxCores)
+	a.setMaxProcs()
 
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
@@ -81,16 +81,19 @@ func (a *App) Run() error {
 	return ui.StartUILoop()
 }
 
-func setMaxProcs(cores int) {
-	maxProcs := cores
-	if cores > runtime.NumCPU() {
+func (a *App) setMaxProcs() {
+	maxProcs := a.Flags.MaxCores
+
+	// if 'maxcores' value is zero or below zero, we repeat the logic of GOMAXPROCS(n) when n < 1
+	if maxProcs > runtime.NumCPU() || maxProcs <= 0 {
 		maxProcs = runtime.NumCPU()
-	}
-	if cores <= 0 {
-		maxProcs = 1
+		return
 	}
 
 	runtime.GOMAXPROCS(maxProcs)
+
+	// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
+	fmt.Fprintln(a.Writer, "Max cores set to "+strconv.Itoa(runtime.GOMAXPROCS(0)))
 }
 
 func (a *App) createUI() common.UI {
