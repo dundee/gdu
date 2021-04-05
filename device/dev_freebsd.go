@@ -3,23 +3,24 @@ package device
 import (
 	"bufio"
 	"bytes"
-	"os/exec"
+	"errors"
 	"io"
+	"os/exec"
 	"strings"
 	"syscall"
 )
 
 // FreeBSDDevicesInfoGetter returns info for FreeBSD devices
 type FreeBSDDevicesInfoGetter struct {
-	MountsPath string
+	MountCmd string
 }
 
 // Getter is current instance of DevicesInfoGetter
-var Getter DevicesInfoGetter = FreeBSDDevicesInfoGetter{}
+var Getter DevicesInfoGetter = FreeBSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 
 // GetMounts returns all mounted filesystems from /proc/mounts
 func (t FreeBSDDevicesInfoGetter) GetMounts() (Devices, error) {
-	out, err := exec.Command("/sbin/mount").Output()
+	out, err := exec.Command(t.MountCmd).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +48,14 @@ func readMountOutput(rdr io.Reader) (Devices, error) {
 		line := scanner.Text()
 
 		parts := strings.Fields(line)
+
+		if len(parts) < 4 {
+			return nil, errors.New("Cannot parse mount output")
+		}
+
+		if len(parts[3]) < 3 {
+			return nil, errors.New("Cannot parse mount output")
+		}
 
 		fstype := parts[3][1:len(parts[3])-1]
 
