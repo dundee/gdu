@@ -83,20 +83,14 @@ func (a *App) Run() error {
 }
 
 func (a *App) setMaxProcs() {
-	if a.Flags.MaxCores >= 1 {
-		maxProcs := a.Flags.MaxCores
-
-		// Limit GOMAXPROCS(n) to number of CPU's
-		if maxProcs > runtime.NumCPU() {
-			maxProcs = runtime.NumCPU()
-			return
-		}
-
-		runtime.GOMAXPROCS(maxProcs)
-
-		// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
-		fmt.Fprintln(a.Writer, "Max cores set to "+strconv.Itoa(runtime.GOMAXPROCS(0)))
+	if a.Flags.MaxCores < 1 || a.Flags.MaxCores > runtime.NumCPU() {
+		return
 	}
+
+	runtime.GOMAXPROCS(a.Flags.MaxCores)
+
+	// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
+	fmt.Fprintln(a.Writer, "Max cores set to "+strconv.Itoa(runtime.GOMAXPROCS(0)))
 }
 
 func (a *App) createUI() common.UI {
