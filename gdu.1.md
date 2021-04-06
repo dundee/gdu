@@ -29,6 +29,8 @@ ignore (separated by comma)
 
 **-l**, **\--log-file**=\"/dev/null\" Path to a logfile
 
+**-m**, **\--max-cores** Set max cores that GDU will use.
+
 **-c**, **\--no-color**\[=false\] Do not use colorized output
 
 **-x**, **\--no-cross**\[=false\] Do not cross filesystem boundaries

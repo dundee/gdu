@@ -34,7 +34,7 @@ func init() {
 	flags := rootCmd.Flags()
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringSliceVarP(&af.IgnoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
-	flags.IntVarP(&af.MaxCores, "maxcores", "m", runtime.NumCPU(), "Set max cores that GDU will use. " + strconv.Itoa(runtime.NumCPU()) + " cores available")
+	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), "Set max cores that GDU will use. " + strconv.Itoa(runtime.NumCPU()) + " cores available")
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")

@@ -75,6 +75,7 @@ Flags:
   -h, --help                  help for gdu
   -i, --ignore-dirs strings   Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -l, --log-file string       Path to a logfile (default "/dev/null")
+  -m, --max-cores int         Set max cores that GDU will use. 8 cores available (default 8)
   -c, --no-color              Do not use colorized output
   -x, --no-cross              Do not cross filesystem boundaries
   -p, --no-progress           Do not show progress in non-interactive mode
