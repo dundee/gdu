@@ -157,6 +157,11 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 | `du -hs ~` | 1027.7 ± 9.7 | 1009.0 | 1037.5 | 3.18 ± 0.19 |
 | `dust -d0 ~` | 8864.4 ± 35.9 | 8798.8 | 8906.6 | 27.41 ± 1.60 |
 
+## Alternatives
 
-
-Gdu is inspired by [ncdu](https://dev.yorhel.nl/ncdu), [godu](https://github.com/viktomas/godu), [dua](https://github.com/Byron/dua-cli) and [df](https://www.gnu.org/software/coreutils/manual/html_node/df-invocation.html).
+* [ncdu](https://dev.yorhel.nl/ncdu) - NCurses based tool written in pure C
+* [godu](https://github.com/viktomas/godu) - Analyzer with carousel like user interface
+* [dua](https://github.com/Byron/dua-cli) - Tool written in Rust with interface similar to gdu (and ncdu)
+* [diskus](https://github.com/sharkdp/diskus) - Very simple but very fast tool written in Rust
+* [duc](https://duc.zevv.nl/) - Collection of tools with many possibilities for inspecting and visualising disk usage
+* [dust](https://github.com/bootandy/dust) - Tool written in Rust showing tree like structures of disk usage
