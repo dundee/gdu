@@ -128,11 +128,11 @@ func TestMaxInt(t *testing.T) {
 	assert.Equal(t, 4, maxInt(4, 2))
 }
 
-func printBuffer(buff *bytes.Buffer) {
-	for i, x := range buff.String() {
-		println(i, string(x))
-	}
-}
+// func printBuffer(buff *bytes.Buffer) {
+// 	for i, x := range buff.String() {
+// 		println(i, string(x))
+// 	}
+// }
 
 func getDevicesInfoMock() device.DevicesInfoGetter {
 	item := &device.Device{

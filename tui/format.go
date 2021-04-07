@@ -6,6 +6,7 @@ import (
 	"github.com/dundee/gdu/v4/analyze"
 )
 
+// file size constants
 const (
 	_          = iota
 	KB float64 = 1 << (10 * iota)

@@ -119,7 +119,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			if a.ignoreDir(entryPath) {
 				continue
 			}
-			dirCount += 1
+			dirCount++
 
 			go func(entryPath string) {
 				concurrencyLimit <- struct{}{}

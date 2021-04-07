@@ -10,17 +10,20 @@ type WaitGroup struct {
 	access sync.Mutex
 }
 
+// Init prepares the WaitGroup for usage, locks
 func (s *WaitGroup) Init() *WaitGroup {
 	s.wait.Lock()
 	return s
 }
 
+// Add increments value
 func (s *WaitGroup) Add(value int) {
 	s.access.Lock()
 	s.value = s.value + value
 	s.access.Unlock()
 }
 
+// Done decrements the value by one, if value is 0, lock is released
 func (s *WaitGroup) Done() {
 	s.access.Lock()
 	s.value--
@@ -28,6 +31,7 @@ func (s *WaitGroup) Done() {
 	s.access.Unlock()
 }
 
+// Wait blocks until value is 0
 func (s *WaitGroup) Wait() {
 	s.wait.Lock()
 }

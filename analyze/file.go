@@ -72,10 +72,9 @@ func (f *File) alreadyCounted(links AlreadyCountedHardlinks) bool {
 		if !links[mli] {
 			links[mli] = true
 			return false
-		} else {
-			f.Flag = 'H'
-			return true
 		}
+		f.Flag = 'H'
+		return true
 	}
 	return false
 }
