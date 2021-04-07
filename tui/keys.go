@@ -32,12 +32,12 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 	if key.Rune() == 'h' || key.Key() == tcell.KeyLeft {
 		ui.handleLeft()
-		return key
+		return nil
 	}
 
 	if key.Rune() == 'l' || key.Key() == tcell.KeyRight {
 		ui.handleRight()
-		return key
+		return nil
 	}
 
 	switch key.Rune() {
@@ -62,8 +62,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.setSorting("itemCount")
 	case 'n':
 		ui.setSorting("name")
+	default:
+		return key
 	}
-	return key
+	return nil
 }
 
 func (ui *UI) handleLeft() {

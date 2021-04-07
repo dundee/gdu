@@ -157,7 +157,7 @@ func TestDeleteEmpty(t *testing.T) {
 	ui.done = make(chan struct{})
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
-	assert.Equal(t, 'd', key.Rune())
+	assert.Nil(t, key)
 }
 
 func TestDelete(t *testing.T) {
