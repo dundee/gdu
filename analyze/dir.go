@@ -30,7 +30,7 @@ type Analyzer interface {
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
 	progress        *CurrentProgress
-	progressInChan  chan CurrentProgress
+	progressChan    chan CurrentProgress
 	progressOutChan chan CurrentProgress
 	doneChan        chan struct{}
 	wait            *WaitGroup
@@ -44,7 +44,7 @@ func CreateAnalyzer() Analyzer {
 			ItemCount: 0,
 			TotalSize: int64(0),
 		},
-		progressInChan:  make(chan CurrentProgress, 1),
+		progressChan:    make(chan CurrentProgress, 1),
 		progressOutChan: make(chan CurrentProgress, 1),
 		doneChan:        make(chan struct{}, 1),
 		wait:            (&WaitGroup{}).Init(),
@@ -81,8 +81,8 @@ func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *D
 	links := make(AlreadyCountedHardlinks, 10)
 	dir.UpdateStats(links)
 
-	a.doneChan <- struct{}{}
-	a.doneChan <- struct{}{}
+	a.doneChan <- struct{}{} // finish updateProgress here
+	a.doneChan <- struct{}{} // and there
 
 	return dir
 }
@@ -160,7 +160,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		a.wait.Done()
 	}()
 
-	a.progressInChan <- CurrentProgress{path, len(files), totalSize}
+	a.progressChan <- CurrentProgress{path, len(files), totalSize}
 	return dir
 }
 
@@ -169,7 +169,7 @@ func (a *ParallelAnalyzer) updateProgress() {
 		select {
 		case <-a.doneChan:
 			return
-		case progress := <-a.progressInChan:
+		case progress := <-a.progressChan:
 			a.progress.CurrentItemName = progress.CurrentItemName
 			a.progress.ItemCount += progress.ItemCount
 			a.progress.TotalSize += progress.TotalSize
