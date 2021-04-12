@@ -157,7 +157,7 @@ func TestListDevicesWithGui(t *testing.T) {
 }
 
 func TestMaxCores(t *testing.T) {
-	out, err := runApp(
+	_, err := runApp(
 		&Flags{LogFile: "/dev/null", MaxCores: 1},
 		[]string{},
 		true,
@@ -165,7 +165,6 @@ func TestMaxCores(t *testing.T) {
 	)
 
 	assert.Equal(t, 1, runtime.GOMAXPROCS(0))
-	assert.Contains(t, out, "set to 1")
 	assert.Nil(t, err)
 }
 

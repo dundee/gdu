@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"strconv"
 
 	"github.com/dundee/gdu/v4/build"
 	"github.com/dundee/gdu/v4/common"
@@ -43,8 +42,6 @@ type App struct {
 
 // Run starts gdu main logic
 func (a *App) Run() error {
-	a.setMaxProcs()
-
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
 		fmt.Fprintln(a.Writer, "Built time:\t", build.Time)
@@ -74,6 +71,7 @@ func (a *App) Run() error {
 	}
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
+	a.setMaxProcs()
 
 	if err := a.runAction(ui, path); err != nil {
 		return err
@@ -90,7 +88,7 @@ func (a *App) setMaxProcs() {
 	runtime.GOMAXPROCS(a.Flags.MaxCores)
 
 	// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
-	fmt.Fprintln(a.Writer, "Max cores set to "+strconv.Itoa(runtime.GOMAXPROCS(0)))
+	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
 func (a *App) createUI() common.UI {

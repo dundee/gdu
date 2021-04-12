@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 
 	"github.com/dundee/gdu/v4/cmd/app"
 	"github.com/dundee/gdu/v4/device"
@@ -34,7 +33,7 @@ func init() {
 	flags := rootCmd.Flags()
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringSliceVarP(&af.IgnoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
-	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), "Set max cores that GDU will use. " + strconv.Itoa(runtime.NumCPU()) + " cores available")
+	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that GDU will use. %d cores available", runtime.NumCPU()))
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
