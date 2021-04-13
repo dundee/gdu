@@ -169,6 +169,9 @@ func TestMaxCores(t *testing.T) {
 }
 
 func TestMaxCoresHighEdge(t *testing.T) {
+	if runtime.NumCPU() < 2 {
+		t.Skip("Skipping on a single core CPU")
+	}
 	out, err := runApp(
 		&Flags{LogFile: "/dev/null", MaxCores: runtime.NumCPU() + 1},
 		[]string{},
@@ -182,6 +185,9 @@ func TestMaxCoresHighEdge(t *testing.T) {
 }
 
 func TestMaxCoresLowEdge(t *testing.T) {
+	if runtime.NumCPU() < 2 {
+		t.Skip("Skipping on a single core CPU")
+	}
 	out, err := runApp(
 		&Flags{LogFile: "/dev/null", MaxCores: -100},
 		[]string{},
