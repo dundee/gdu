@@ -8,7 +8,7 @@ LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
 	-X '$(PACKAGE)/build.Time=$(shell LC_ALL=en_US.UTF-8 date)'
 
-all: build-all man clean-uncompressed-dist shasums
+all: clean build-all man clean-uncompressed-dist shasums
 
 run:
 	go run .
