@@ -70,8 +70,8 @@ func TestItemRows(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	ui := CreateStdoutUI(output, false, true, false)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.AnalyzePath("test_dir", nil)
 
 	assert.Contains(t, output.String(), "TiB")

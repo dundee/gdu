@@ -106,7 +106,7 @@ func TestMoveRightOnDevice(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{})
 	ui.ListDevices(getDevicesInfoMock())
@@ -131,8 +131,8 @@ func TestStop(t *testing.T) {
 func TestShowConfirm(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
@@ -224,8 +224,8 @@ func TestDeleteParent(t *testing.T) {
 func TestSortByApparentSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
@@ -239,7 +239,7 @@ func TestSortByApparentSize(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'a', 0))
 
-	assert.True(t, ui.showApparentSize)
+	assert.True(t, ui.ShowApparentSize)
 }
 
 func TestRescan(t *testing.T) {
@@ -259,7 +259,7 @@ func TestRescan(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
 	ui.topDir = parentDir
 
@@ -282,8 +282,8 @@ func TestRescan(t *testing.T) {
 func TestSorting(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 

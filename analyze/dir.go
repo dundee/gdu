@@ -17,7 +17,7 @@ type CurrentProgress struct {
 var concurrencyLimit chan struct{} = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ShouldDirBeIgnored whether path should be ignored
-type ShouldDirBeIgnored func(path string) bool
+type ShouldDirBeIgnored func(name, path string) bool
 
 // Analyzer is type for dir analyzing function
 type Analyzer interface {
@@ -114,9 +114,10 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	}
 
 	for _, f := range files {
-		entryPath := filepath.Join(path, f.Name())
+		name := f.Name()
+		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.ignoreDir(entryPath) {
+			if a.ignoreDir(name, entryPath) {
 				continue
 			}
 			dirCount++
@@ -136,7 +137,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				continue
 			}
 			file = &File{
-				Name:   f.Name(),
+				Name:   name,
 				Flag:   getFlag(info),
 				Size:   info.Size(),
 				Parent: dir,

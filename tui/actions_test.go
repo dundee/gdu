@@ -66,7 +66,7 @@ func TestShowDevicesWithError(t *testing.T) {
 func TestDeviceSelected(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, true, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	ui.ListDevices(getDevicesInfoMock())
@@ -122,8 +122,8 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.topDir = parentDir
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", parentDir)
@@ -145,8 +145,8 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 func TestViewDirContents(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 
@@ -165,8 +165,8 @@ func TestViewDirContents(t *testing.T) {
 func TestViewContentsOfNotExistingFile(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)
 

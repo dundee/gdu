@@ -61,7 +61,7 @@ func TestUpdateProgress(t *testing.T) {
 	defer simScreen.Fini()
 
 	ui := CreateUI(app, false, false)
-	done := ui.analyzer.GetDoneChan()
+	done := ui.Analyzer.GetDoneChan()
 	done <- struct{}{}
 	ui.updateProgress()
 	assert.True(t, true)
@@ -143,7 +143,7 @@ func TestRescanDir(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
 	ui.topDir = parentDir
 	ui.rescanDir()
@@ -203,9 +203,9 @@ func TestIgnorePaths(t *testing.T) {
 
 	ui.SetIgnoreDirPaths([]string{"/aaa", "/bbb"})
 
-	assert.True(t, ui.ShouldDirBeIgnored("/aaa"))
-	assert.True(t, ui.ShouldDirBeIgnored("/bbb"))
-	assert.False(t, ui.ShouldDirBeIgnored("/ccc"))
+	assert.True(t, ui.ShouldDirBeIgnored("aaa", "/aaa"))
+	assert.True(t, ui.ShouldDirBeIgnored("bbb", "/bbb"))
+	assert.False(t, ui.ShouldDirBeIgnored("ccc", "/ccc"))
 }
 
 func TestConfirmDeletion(t *testing.T) {
@@ -333,10 +333,10 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mockedAnalyzer bool) *UI {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, useColors, apparentSize)
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.PathChecker = testdir.MockedPathChecker
 
 	if mockedAnalyzer {
-		ui.analyzer = &testanalyze.MockedAnalyzer{}
+		ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	}
 	ui.done = make(chan struct{})
 	ui.AnalyzePath("test_dir", nil)

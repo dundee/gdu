@@ -22,6 +22,9 @@ However HDDs work as well, but the performance gain is not so huge.
 \f[B]-i\f[R], \f[B]--ignore-dirs\f[R]=[/proc,/dev,/sys,/run] Absolute
 paths to ignore (separated by comma)
 .PP
+\f[B]-I\f[R], \f[B]--ignore-dirs-pattern\f[R] Absolute path patterns to
+ignore (separated by comma)
+.PP
 \f[B]-l\f[R], \f[B]--log-file\f[R]=\[dq]/dev/null\[dq] Path to a logfile
 .PP
 \f[B]-m\f[R], \f[B]--max-cores\f[R] Set max cores that GDU will use.
@@ -30,6 +33,9 @@ paths to ignore (separated by comma)
 .PP
 \f[B]-x\f[R], \f[B]--no-cross\f[R][=false] Do not cross filesystem
 boundaries
+.PP
+\f[B]-H\f[R], \f[B]--no-hidden\f[R][=false] Ignore hidden directories
+(beggining with dot)
 .PP
 \f[B]-p\f[R], \f[B]--no-progress\f[R][=false] Do not show progress in
 non-interactive mode

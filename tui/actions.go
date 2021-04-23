@@ -31,7 +31,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	ui.table.SetCell(0, 5, tview.NewTableCell("Mount point").SetSelectable(false))
 
 	var textColor, sizeColor string
-	if ui.useColors {
+	if ui.UseColors {
 		textColor = "[#3498db:-:b]"
 		sizeColor = "[#edb20a:-:b]"
 	} else {
@@ -59,7 +59,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	abspath, _ := filepath.Abs(path)
 
-	_, err := ui.pathChecker(abspath)
+	_, err := ui.PathChecker(abspath)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	go ui.updateProgress()
 
 	go func() {
-		ui.currentDir = ui.analyzer.AnalyzeDir(abspath, ui.ShouldDirBeIgnored)
+		ui.currentDir = ui.Analyzer.AnalyzeDir(abspath, ui.CreateIgnoreFunc())
 		runtime.GC()
 
 		if parentDir != nil {

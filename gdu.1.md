@@ -27,6 +27,9 @@ is not so huge.
 **-i**, **\--ignore-dirs**=\[/proc,/dev,/sys,/run\] Absolute paths to
 ignore (separated by comma)
 
+**-I**, **\--ignore-dirs-pattern** Absolute path patterns to
+ignore (separated by comma)
+
 **-l**, **\--log-file**=\"/dev/null\" Path to a logfile
 
 **-m**, **\--max-cores** Set max cores that GDU will use.
@@ -34,6 +37,8 @@ ignore (separated by comma)
 **-c**, **\--no-color**\[=false\] Do not use colorized output
 
 **-x**, **\--no-cross**\[=false\] Do not cross filesystem boundaries
+
+**-H**, **\--no-hidden**\[=false\] Ignore hidden directories (beggining with dot)
 
 **-p**, **\--no-progress**\[=false\] Do not show progress in
 non-interactive mode

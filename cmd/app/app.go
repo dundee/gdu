@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/dundee/gdu/v4/analyze"
 	"github.com/dundee/gdu/v4/build"
 	"github.com/dundee/gdu/v4/common"
 	"github.com/dundee/gdu/v4/device"
@@ -16,18 +17,30 @@ import (
 	"github.com/rivo/tview"
 )
 
+// UI is common interface for both terminal UI and text output
+type UI interface {
+	ListDevices(getter device.DevicesInfoGetter) error
+	AnalyzePath(path string, parentDir *analyze.Dir) error
+	SetIgnoreDirPaths(paths []string)
+	SetIgnoreDirPatterns(paths []string) error
+	SetIgnoreHidden(value bool)
+	StartUILoop() error
+}
+
 // Flags define flags accepted by Run
 type Flags struct {
-	LogFile          string
-	IgnoreDirs       []string
-	MaxCores         int
-	ShowDisks        bool
-	ShowApparentSize bool
-	ShowVersion      bool
-	NoColor          bool
-	NonInteractive   bool
-	NoProgress       bool
-	NoCross          bool
+	LogFile           string
+	IgnoreDirs        []string
+	IgnoreDirPatterns []string
+	MaxCores          int
+	ShowDisks         bool
+	ShowApparentSize  bool
+	ShowVersion       bool
+	NoColor           bool
+	NonInteractive    bool
+	NoProgress        bool
+	NoCross           bool
+	NoHidden          bool
 }
 
 // App defines the main application
@@ -71,6 +84,17 @@ func (a *App) Run() error {
 	}
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
+
+	if len(a.Flags.IgnoreDirPatterns) > 0 {
+		if err := ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
+			return err
+		}
+	}
+
+	if a.Flags.NoHidden {
+		ui.SetIgnoreHidden(true)
+	}
+
 	a.setMaxProcs()
 
 	if err := a.runAction(ui, path); err != nil {
@@ -91,8 +115,8 @@ func (a *App) setMaxProcs() {
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
-func (a *App) createUI() common.UI {
-	var ui common.UI
+func (a *App) createUI() UI {
+	var ui UI
 
 	if a.Flags.NonInteractive || !a.Istty {
 		ui = stdout.CreateStdoutUI(
@@ -124,7 +148,7 @@ func (a *App) setNoCross(path string) error {
 	return nil
 }
 
-func (a *App) runAction(ui common.UI, path string) error {
+func (a *App) runAction(ui UI, path string) error {
 	if a.Flags.ShowDisks {
 		if err := ui.ListDevices(a.Getter); err != nil {
 			return fmt.Errorf("loading mount points: %w", err)

@@ -3,7 +3,6 @@ package stdout
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
@@ -12,33 +11,31 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/common"
 	"github.com/dundee/gdu/v4/device"
 	"github.com/fatih/color"
 )
 
 // UI struct
 type UI struct {
-	analyzer         analyze.Analyzer
-	output           io.Writer
-	ignoreDirPaths   map[string]struct{}
-	useColors        bool
-	showProgress     bool
-	showApparentSize bool
-	red              *color.Color
-	orange           *color.Color
-	blue             *color.Color
-	pathChecker      func(string) (fs.FileInfo, error)
+	*common.UI
+	output io.Writer
+	red    *color.Color
+	orange *color.Color
+	blue   *color.Color
 }
 
 // CreateStdoutUI creates UI for stdout
 func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApparentSize bool) *UI {
 	ui := &UI{
-		output:           output,
-		useColors:        useColors,
-		showProgress:     showProgress,
-		showApparentSize: showApparentSize,
-		analyzer:         analyze.CreateAnalyzer(),
-		pathChecker:      os.Stat,
+		UI: &common.UI{
+			UseColors:        useColors,
+			ShowProgress:     showProgress,
+			ShowApparentSize: showApparentSize,
+			Analyzer:         analyze.CreateAnalyzer(),
+			PathChecker:      os.Stat,
+		},
+		output: output,
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -70,7 +67,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	), len("Devices"))
 
 	var sizeLength, percentLength int
-	if ui.useColors {
+	if ui.UseColors {
 		sizeLength = 20
 		percentLength = 16
 	} else {
@@ -123,12 +120,12 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	)
 	abspath, _ := filepath.Abs(path)
 
-	_, err := ui.pathChecker(abspath)
+	_, err := ui.PathChecker(abspath)
 	if err != nil {
 		return err
 	}
 
-	if ui.showProgress {
+	if ui.ShowProgress {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
@@ -139,7 +136,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.analyzer.AnalyzeDir(abspath, ui.ShouldDirBeIgnored)
+		dir = ui.Analyzer.AnalyzeDir(abspath, ui.CreateIgnoreFunc())
 	}()
 
 	wait.Wait()
@@ -147,7 +144,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	sort.Sort(dir.Files)
 
 	var lineFormat string
-	if ui.useColors {
+	if ui.UseColors {
 		lineFormat = "%s %20s %s\n"
 	} else {
 		lineFormat = "%s %9s %s\n"
@@ -156,7 +153,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	var size int64
 
 	for _, file := range dir.Files {
-		if ui.showApparentSize {
+		if ui.ShowApparentSize {
 			size = file.GetSize()
 		} else {
 			size = file.GetUsage()
@@ -180,20 +177,6 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	return nil
 }
 
-// SetIgnoreDirPaths sets paths to ignore
-func (ui *UI) SetIgnoreDirPaths(paths []string) {
-	ui.ignoreDirPaths = make(map[string]struct{}, len(paths))
-	for _, path := range paths {
-		ui.ignoreDirPaths[path] = struct{}{}
-	}
-}
-
-// ShouldDirBeIgnored returns true if given path should be ignored
-func (ui *UI) ShouldDirBeIgnored(path string) bool {
-	_, ok := ui.ignoreDirPaths[path]
-	return ok
-}
-
 func (ui *UI) updateProgress() {
 	emptyRow := "\r"
 	for j := 0; j < 100; j++ {
@@ -202,8 +185,8 @@ func (ui *UI) updateProgress() {
 
 	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
-	progressChan := ui.analyzer.GetProgressChan()
-	doneChan := ui.analyzer.GetDoneChan()
+	progressChan := ui.Analyzer.GetProgressChan()
+	doneChan := ui.Analyzer.GetDoneChan()
 
 	var progress analyze.CurrentProgress
 

@@ -73,17 +73,19 @@ Using curl:
   gdu [flags] [directory_to_scan]
 
 Flags:
-  -h, --help                  help for gdu
-  -i, --ignore-dirs strings   Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
-  -l, --log-file string       Path to a logfile (default "/dev/null")
-  -m, --max-cores int         Set max cores that GDU will use. 8 cores available (default 8)
-  -c, --no-color              Do not use colorized output
-  -x, --no-cross              Do not cross filesystem boundaries
-  -p, --no-progress           Do not show progress in non-interactive mode
-  -n, --non-interactive       Do not run in interactive mode
-  -a, --show-apparent-size    Show apparent size
-  -d, --show-disks            Show all mounted disks
-  -v, --version               Print version
+  -h, --help                          help for gdu
+  -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
+  -I, --ignore-dirs-pattern strings   Absolute path patterns to ignore (separated by comma)
+  -l, --log-file string               Path to a logfile (default "/dev/null")
+  -m, --max-cores int                 Set max cores that GDU will use. 8 cores available (default 8)
+  -c, --no-color                      Do not use colorized output
+  -x, --no-cross                      Do not cross filesystem boundaries
+  -H, --no-hidden                     Ignore hidden directories (beggining with dot)
+  -p, --no-progress                   Do not show progress in non-interactive mode
+  -n, --non-interactive               Do not run in interactive mode
+  -a, --show-apparent-size            Show apparent size
+  -d, --show-disks                    Show all mounted disks
+  -v, --version                       Print version
 ```
 
 ## Examples
@@ -94,6 +96,7 @@ Flags:
     gdu -d                                # show all mounted disks
     gdu -l ./gdu.log <some_dir>           # write errors to log file
     gdu -i /sys,/proc /                   # ignore some paths
+    gdu -I '.*[abc]+'                     # ignore paths by regular pattern
     gdu -c /                              # use only white/gray/black colors
 
     gdu -n /                              # only print stats, do not start interactive mode

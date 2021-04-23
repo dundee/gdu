@@ -14,7 +14,7 @@ func TestAnalyzeDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir("test_dir", func(_ string) bool { return false })
+	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 
 	c := analyzer.GetProgressChan()
 	progress := <-c
@@ -49,7 +49,7 @@ func TestIgnoreDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_ string) bool { return true })
+	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return true })
 
 	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, 1, dir.ItemCount)
@@ -63,7 +63,7 @@ func TestFlags(t *testing.T) {
 
 	os.Symlink("test_dir/nested/file2", "test_dir/nested/file3")
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_ string) bool { return false })
+	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 	sort.Sort(dir.Files)
 
 	assert.Equal(t, int64(28+4096*4), dir.Size)
@@ -85,7 +85,7 @@ func TestHardlink(t *testing.T) {
 
 	os.Link("test_dir/nested/file2", "test_dir/nested/file3")
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_ string) bool { return false })
+	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 
 	assert.Equal(t, int64(7+4096*3), dir.Size) // file2 and file3 are counted just once for size
 	assert.Equal(t, 6, dir.ItemCount)          // but twice for item count
@@ -103,7 +103,7 @@ func TestErr(t *testing.T) {
 	os.Chmod("test_dir/nested", 0)
 	defer os.Chmod("test_dir/nested", 0755)
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_ string) bool { return false })
+	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 
 	assert.Equal(t, "test_dir", dir.GetName())
 	assert.Equal(t, 2, dir.ItemCount)
@@ -119,5 +119,5 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 
 	b.ResetTimer()
 
-	CreateAnalyzer().AnalyzeDir("test_dir", func(_ string) bool { return false })
+	CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 }

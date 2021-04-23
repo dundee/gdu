@@ -114,8 +114,8 @@ func TestSetSorting(t *testing.T) {
 func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bool) *UI {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, apparentSize)
-	ui.analyzer = &testanalyze.MockedAnalyzer{}
-	ui.pathChecker = testdir.MockedPathChecker
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	ui.sortBy = sortBy
 	ui.sortOrder = sortOrder

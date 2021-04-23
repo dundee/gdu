@@ -2,7 +2,7 @@ package tui
 
 import (
 	"fmt"
-	"io/fs"
+	"log"
 	"os"
 	"sort"
 	"time"
@@ -45,42 +45,40 @@ const helpText = `
 
 // UI struct
 type UI struct {
-	app              common.TermApplication
-	header           *tview.TextView
-	footer           *tview.TextView
-	currentDirLabel  *tview.TextView
-	pages            *tview.Pages
-	progress         *tview.TextView
-	help             *tview.Flex
-	table            *tview.Table
-	currentDir       *analyze.Dir
-	devices          []*device.Device
-	analyzer         analyze.Analyzer
-	topDir           *analyze.Dir
-	topDirPath       string
-	currentDirPath   string
-	askBeforeDelete  bool
-	ignoreDirPaths   map[string]struct{}
-	sortBy           string
-	sortOrder        string
-	useColors        bool
-	showApparentSize bool
-	done             chan struct{}
-	remover          func(*analyze.Dir, analyze.Item) error
-	pathChecker      func(string) (fs.FileInfo, error)
+	*common.UI
+	app             common.TermApplication
+	header          *tview.TextView
+	footer          *tview.TextView
+	currentDirLabel *tview.TextView
+	pages           *tview.Pages
+	progress        *tview.TextView
+	help            *tview.Flex
+	table           *tview.Table
+	currentDir      *analyze.Dir
+	devices         []*device.Device
+	topDir          *analyze.Dir
+	topDirPath      string
+	currentDirPath  string
+	askBeforeDelete bool
+	sortBy          string
+	sortOrder       string
+	done            chan struct{}
+	remover         func(*analyze.Dir, analyze.Item) error
 }
 
 // CreateUI creates the whole UI app
 func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool) *UI {
 	ui := &UI{
-		askBeforeDelete:  true,
-		sortBy:           "size",
-		sortOrder:        "desc",
-		useColors:        useColors,
-		showApparentSize: showApparentSize,
-		analyzer:         analyze.CreateAnalyzer(),
-		remover:          analyze.RemoveItemFromDir,
-		pathChecker:      os.Stat,
+		UI: &common.UI{
+			UseColors:        useColors,
+			ShowApparentSize: showApparentSize,
+			Analyzer:         analyze.CreateAnalyzer(),
+			PathChecker:      os.Stat,
+		},
+		askBeforeDelete: true,
+		sortBy:          "size",
+		sortOrder:       "desc",
+		remover:         analyze.RemoveItemFromDir,
 	}
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
@@ -92,7 +90,7 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 	ui.app.SetInputCapture(ui.keyPressed)
 
 	var textColor, textBgColor tcell.Color
-	if ui.useColors {
+	if ui.UseColors {
 		textColor = tcell.NewRGBColor(0, 0, 0)
 		textBgColor = tcell.NewRGBColor(36, 121, 208)
 	} else {
@@ -112,7 +110,7 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 	ui.table = tview.NewTable().SetSelectable(true, false)
 	ui.table.SetBackgroundColor(tcell.ColorDefault)
 
-	if ui.useColors {
+	if ui.UseColors {
 		ui.table.SetSelectedStyle(tcell.Style{}.
 			Foreground(tview.Styles.TitleColor).
 			Background(tview.Styles.MoreContrastBackgroundColor).Bold(true))
@@ -150,23 +148,9 @@ func (ui *UI) StartUILoop() error {
 	return nil
 }
 
-// SetIgnoreDirPaths sets paths to ignore
-func (ui *UI) SetIgnoreDirPaths(paths []string) {
-	ui.ignoreDirPaths = make(map[string]struct{}, len(paths))
-	for _, path := range paths {
-		ui.ignoreDirPaths[path] = struct{}{}
-	}
-}
-
 func (ui *UI) rescanDir() {
-	ui.analyzer.ResetProgress()
+	ui.Analyzer.ResetProgress()
 	ui.AnalyzePath(ui.currentDirPath, ui.currentDir.Parent)
-}
-
-// ShouldDirBeIgnored returns true if given path should be ignored
-func (ui *UI) ShouldDirBeIgnored(path string) bool {
-	_, ok := ui.ignoreDirPaths[path]
-	return ok
 }
 
 func (ui *UI) showDir() {
@@ -196,7 +180,7 @@ func (ui *UI) showDir() {
 	}
 
 	var footerNumberColor, footerTextColor string
-	if ui.useColors {
+	if ui.UseColors {
 		footerNumberColor = "[#ffffff:#2479d0:b]"
 		footerTextColor = "[black:#2479d0:-]"
 	} else {
@@ -222,7 +206,7 @@ func (ui *UI) showDir() {
 
 func (ui *UI) sortItems() {
 	if ui.sortBy == "size" {
-		if ui.showApparentSize {
+		if ui.ShowApparentSize {
 			if ui.sortOrder == "desc" {
 				sort.Sort(analyze.ByApparentSize(ui.currentDir.Files))
 			} else {
@@ -272,11 +256,14 @@ func (ui *UI) fileItemSelected(row, column int) {
 }
 
 func (ui *UI) deviceItemSelected(row, column int) {
+	var err error
 	selectedDevice := ui.table.GetCell(row, column).GetReference().(*device.Device)
 
 	paths := device.GetNestedMountpointsPaths(selectedDevice.MountPoint, ui.devices)
-	for _, path := range paths {
-		ui.ignoreDirPaths[path] = struct{}{}
+	ui.IgnoreDirPathPatterns, err = common.CreateIgnorePattern(paths)
+
+	if err != nil {
+		log.Printf("Creating path patterns for other devices failed: %s", paths)
 	}
 
 	ui.AnalyzePath(selectedDevice.MountPoint, nil)
@@ -299,7 +286,7 @@ func (ui *UI) confirmDeletion() {
 			ui.pages.RemovePage("confirm")
 		})
 
-	if !ui.useColors {
+	if !ui.UseColors {
 		modal.SetBackgroundColor(tcell.ColorGray)
 	} else {
 		modal.SetBackgroundColor(tcell.ColorBlack)
@@ -317,7 +304,7 @@ func (ui *UI) showErr(msg string, err error) {
 			ui.pages.RemovePage("error")
 		})
 
-	if !ui.useColors {
+	if !ui.UseColors {
 		modal.SetBackgroundColor(tcell.ColorGray)
 	}
 
@@ -340,12 +327,12 @@ func (ui *UI) setSorting(newOrder string) {
 
 func (ui *UI) updateProgress() {
 	color := "[white:black:b]"
-	if ui.useColors {
+	if ui.UseColors {
 		color = "[red:black:b]"
 	}
 
-	progressChan := ui.analyzer.GetProgressChan()
-	doneChan := ui.analyzer.GetDoneChan()
+	progressChan := ui.Analyzer.GetProgressChan()
+	doneChan := ui.Analyzer.GetDoneChan()
 
 	var progress analyze.CurrentProgress
 
@@ -379,7 +366,7 @@ func (ui *UI) showHelp() {
 	text.SetBorderColor(tcell.ColorDefault)
 	text.SetTitle(" gdu help ")
 
-	if ui.useColors {
+	if ui.UseColors {
 		text.SetText(helpTextColorized)
 	} else {
 		text.SetText(helpText)
