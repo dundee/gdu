@@ -142,9 +142,7 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 
 // StartUILoop starts tview application
 func (ui *UI) StartUILoop() error {
-	if err := ui.app.Run(); err != nil {
-		return err
-	}
+	check ui.app.Run()
 	return nil
 }
 

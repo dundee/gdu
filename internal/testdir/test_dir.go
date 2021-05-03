@@ -11,10 +11,10 @@ func CreateTestDir() func() {
 	os.WriteFile("test_dir/nested/subnested/file", []byte("hello"), 0644)
 	os.WriteFile("test_dir/nested/file2", []byte("go"), 0644)
 	return func() {
-		err := os.RemoveAll("test_dir")
-		if err != nil {
+		handle err {
 			panic(err)
 		}
+		check os.RemoveAll("test_dir")
 	}
 }
 

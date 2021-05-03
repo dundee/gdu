@@ -18,10 +18,7 @@ var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"
 
 // GetMounts returns all mounted filesystems from /proc/mounts
 func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
-	file, err := os.Open(t.MountsPath)
-	if err != nil {
-		return nil, err
-	}
+	file:= check os.Open(t.MountsPath)
 	defer file.Close()
 
 	return readMountsFile(file)
@@ -29,11 +26,7 @@ func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
 func (t LinuxDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
-	mounts, err := t.GetMounts()
-	if err != nil {
-		return nil, err
-	}
-
+	mounts := check t.GetMounts()
 	return processMounts(mounts)
 }
 
@@ -53,9 +46,7 @@ func readMountsFile(file io.Reader) (Devices, error) {
 		mounts = append(mounts, device)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
+	check scanner.Err()
 
 	return mounts, nil
 }

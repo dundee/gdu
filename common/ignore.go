@@ -10,12 +10,8 @@ import (
 
 // CreateIgnorePattern creates one pattern from all path patterns
 func CreateIgnorePattern(paths []string) (*regexp.Regexp, error) {
-	var err error
-
 	for i, path := range paths {
-		if _, err = regexp.Compile(path); err != nil {
-			return nil, err
-		}
+		check regexp.Compile(path)
 		paths[i] = "(" + path + ")"
 	}
 
@@ -34,10 +30,9 @@ func (ui *UI) SetIgnoreDirPaths(paths []string) {
 
 // SetIgnoreDirPatterns sets regular patters of dirs to ignore
 func (ui *UI) SetIgnoreDirPatterns(paths []string) error {
-	var err error
 	log.Printf("Ignoring dir patterns %s", strings.Join(paths, ", "))
-	ui.IgnoreDirPathPatterns, err = CreateIgnorePattern(paths)
-	return err
+	ui.IgnoreDirPathPatterns = check CreateIgnorePattern(paths)
+	return nil
 }
 
 // SetIgnoreHidden sets flags if hidden dirs should be ignored

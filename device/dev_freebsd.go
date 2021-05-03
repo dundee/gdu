@@ -20,10 +20,7 @@ var Getter DevicesInfoGetter = FreeBSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 
 // GetMounts returns all mounted filesystems from /proc/mounts
 func (t FreeBSDDevicesInfoGetter) GetMounts() (Devices, error) {
-	out, err := exec.Command(t.MountCmd).Output()
-	if err != nil {
-		return nil, err
-	}
+	out := check exec.Command(t.MountCmd).Output()
 
 	rdr := bytes.NewReader(out)
 
@@ -32,10 +29,7 @@ func (t FreeBSDDevicesInfoGetter) GetMounts() (Devices, error) {
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
 func (t FreeBSDDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
-	mounts, err := t.GetMounts()
-	if err != nil {
-		return nil, err
-	}
+	mounts := check t.GetMounts()
 
 	return processMounts(mounts)
 }
@@ -67,9 +61,7 @@ func readMountOutput(rdr io.Reader) (Devices, error) {
 		mounts = append(mounts, device)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
+	check scanner.Err()
 
 	return mounts, nil
 }

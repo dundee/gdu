@@ -17,11 +17,7 @@ const linesTreshold = 20
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
-	var err error
-	ui.devices, err = getter.GetDevicesInfo()
-	if err != nil {
-		return err
-	}
+	ui.devices = check getter.GetDevicesInfo()
 
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
 	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
@@ -59,10 +55,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	abspath, _ := filepath.Abs(path)
 
-	_, err := ui.PathChecker(abspath)
-	if err != nil {
-		return err
-	}
+	check ui.PathChecker(abspath)
 
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
@@ -121,7 +114,7 @@ func (ui *UI) deleteSelected() {
 	currentDir := ui.currentDir
 
 	go func() {
-		if err := ui.remover(currentDir, selectedFile); err != nil {
+		handle err {
 			msg := "Can't delete " + selectedFile.GetName()
 			ui.app.QueueUpdateDraw(func() {
 				ui.pages.RemovePage("deleting")
@@ -132,6 +125,7 @@ func (ui *UI) deleteSelected() {
 			}
 			return
 		}
+		check ui.remover(currentDir, selectedFile)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.pages.RemovePage("deleting")
@@ -152,11 +146,11 @@ func (ui *UI) showFile() *tview.TextView {
 		return nil
 	}
 
-	f, err := os.Open(selectedFile.GetPath())
-	if err != nil {
+	handle err {
 		ui.showErr("Error opening file", err)
 		return nil
 	}
+	f := check os.Open(selectedFile.GetPath())
 
 	totalLines := 0
 	scanner := bufio.NewScanner(f)

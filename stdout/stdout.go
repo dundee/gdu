@@ -56,10 +56,7 @@ func (ui *UI) StartUILoop() error {
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
-	devices, err := getter.GetDevicesInfo()
-	if err != nil {
-		return err
-	}
+	devices := check getter.GetDevicesInfo()
 
 	maxDeviceNameLenght := maxInt(maxLength(
 		devices,
@@ -120,10 +117,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	)
 	abspath, _ := filepath.Abs(path)
 
-	_, err := ui.PathChecker(abspath)
-	if err != nil {
-		return err
-	}
+	check ui.PathChecker(abspath)
 
 	if ui.ShowProgress {
 		wait.Add(1)

@@ -64,10 +64,10 @@ func (a *App) Run() error {
 
 	var path string
 
-	f, err := os.OpenFile(a.Flags.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
+	handle err {
 		return fmt.Errorf("opening log file: %w", err)
 	}
+	f := check os.OpenFile(a.Flags.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	defer f.Close()
 	log.SetOutput(f)
 
@@ -77,18 +77,18 @@ func (a *App) Run() error {
 		path = "."
 	}
 
-	ui := a.createUI()
-
-	if err := a.setNoCross(path); err != nil {
+	handle err {
 		return err
 	}
+
+	ui := a.createUI()
+
+	check a.setNoCross(path)
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
 
 	if len(a.Flags.IgnoreDirPatterns) > 0 {
-		if err := ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
-			return err
-		}
+		check ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns)
 	}
 
 	if a.Flags.NoHidden {
@@ -97,9 +97,7 @@ func (a *App) Run() error {
 
 	a.setMaxProcs()
 
-	if err := a.runAction(ui, path); err != nil {
-		return err
-	}
+	check a.runAction(ui, path)
 
 	return ui.StartUILoop()
 }
@@ -138,10 +136,10 @@ func (a *App) createUI() UI {
 
 func (a *App) setNoCross(path string) error {
 	if a.Flags.NoCross {
-		mounts, err := a.Getter.GetMounts()
-		if err != nil {
+		handle err {
 			return fmt.Errorf("loading mount points: %w", err)
 		}
+		mounts := check a.Getter.GetMounts()
 		paths := device.GetNestedMountpointsPaths(path, mounts)
 		a.Flags.IgnoreDirs = append(a.Flags.IgnoreDirs, paths...)
 	}
@@ -150,13 +148,15 @@ func (a *App) setNoCross(path string) error {
 
 func (a *App) runAction(ui UI, path string) error {
 	if a.Flags.ShowDisks {
-		if err := ui.ListDevices(a.Getter); err != nil {
+		handle err {
 			return fmt.Errorf("loading mount points: %w", err)
 		}
+		check ui.ListDevices(a.Getter)
 	} else {
-		if err := ui.AnalyzePath(path, nil); err != nil {
+		handle err {
 			return fmt.Errorf("scanning dir: %w", err)
 		}
+		check ui.AnalyzePath(path, nil)
 	}
 	return nil
 }

@@ -62,10 +62,10 @@ func runE(command *cobra.Command, args []string) error {
 	var termApp *tview.Application = nil
 
 	if !af.ShowVersion && !af.NonInteractive && istty {
-		screen, err := tcell.NewScreen()
-		if err != nil {
+		handle err {
 			return fmt.Errorf("Error creating screen: %w", err)
 		}
+		screen := check tcell.NewScreen()
 		screen.Init()
 		defer screen.Clear()
 		defer screen.Fini()
@@ -88,7 +88,8 @@ func runE(command *cobra.Command, args []string) error {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	handle err {
 		os.Exit(1)
 	}
+	check rootCmd.Execute()
 }
