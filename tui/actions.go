@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/dundee/gdu/v4/analyze"
-	"github.com/dundee/gdu/v4/device"
+	"github.com/dundee/gdu/v4/pkg/analyze"
+	"github.com/dundee/gdu/v4/pkg/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

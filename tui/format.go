@@ -3,7 +3,7 @@ package tui
 import (
 	"fmt"
 
-	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/pkg/analyze"
 )
 
 // file size constants

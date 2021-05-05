@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/pkg/analyze"
 )
 
 // CreateIgnorePattern creates one pattern from all path patterns

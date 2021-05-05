@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/dundee/gdu/v4/device"
 	"github.com/dundee/gdu/v4/internal/testanalyze"
 	"github.com/dundee/gdu/v4/internal/testdev"
 	"github.com/dundee/gdu/v4/internal/testdir"
+	"github.com/dundee/gdu/v4/pkg/device"
 	"github.com/stretchr/testify/assert"
 )
 

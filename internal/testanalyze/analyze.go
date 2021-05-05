@@ -3,7 +3,7 @@ package testanalyze
 import (
 	"errors"
 
-	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/pkg/analyze"
 )
 
 // MockedAnalyzer returns dir with files with diferent size exponents

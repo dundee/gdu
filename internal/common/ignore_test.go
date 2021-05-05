@@ -3,7 +3,7 @@ package common_test
 import (
 	"testing"
 
-	"github.com/dundee/gdu/v4/common"
+	"github.com/dundee/gdu/v4/internal/common"
 	"github.com/stretchr/testify/assert"
 )
 

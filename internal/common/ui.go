@@ -4,7 +4,7 @@ import (
 	"io/fs"
 	"regexp"
 
-	"github.com/dundee/gdu/v4/analyze"
+	"github.com/dundee/gdu/v4/pkg/analyze"
 )
 
 // UI struct

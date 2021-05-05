@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/dundee/gdu/v4/cmd/app"
-	"github.com/dundee/gdu/v4/device"
+	"github.com/dundee/gdu/v4/pkg/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
 	"github.com/rivo/tview"
