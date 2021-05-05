@@ -62,8 +62,6 @@ func (a *App) Run() error {
 		return nil
 	}
 
-	var path string
-
 	f, err := os.OpenFile(a.Flags.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("opening log file: %w", err)
@@ -71,12 +69,7 @@ func (a *App) Run() error {
 	defer f.Close()
 	log.SetOutput(f)
 
-	if len(a.Args) == 1 {
-		path = a.Args[0]
-	} else {
-		path = "."
-	}
-
+	path := a.getPath()
 	ui := a.createUI()
 
 	if err := a.setNoCross(path); err != nil {
@@ -102,6 +95,14 @@ func (a *App) Run() error {
 	}
 
 	return ui.StartUILoop()
+}
+
+func (a *App) getPath() string {
+	if len(a.Args) == 1 {
+		return a.Args[0]
+	} else {
+		return "."
+	}
 }
 
 func (a *App) setMaxProcs() {
