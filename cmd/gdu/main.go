@@ -1,11 +1,11 @@
-package cmd
+package main
 
 import (
 	"fmt"
 	"os"
 	"runtime"
 
-	"github.com/dundee/gdu/v4/cmd/app"
+	"github.com/dundee/gdu/v4/cmd/gdu/app"
 	"github.com/dundee/gdu/v4/pkg/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
@@ -85,9 +85,7 @@ func runE(command *cobra.Command, args []string) error {
 	return a.Run()
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
