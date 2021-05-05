@@ -100,9 +100,8 @@ func (a *App) Run() error {
 func (a *App) getPath() string {
 	if len(a.Args) == 1 {
 		return a.Args[0]
-	} else {
-		return "."
 	}
+	return "."
 }
 
 func (a *App) setMaxProcs() {
