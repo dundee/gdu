@@ -6,15 +6,16 @@ import (
 )
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
+	if ui.pages.HasPage("file") {
+		return key // send event to primitive
+	}
+
 	if key.Key() == tcell.KeyEsc || key.Rune() == 'q' {
 		if ui.pages.HasPage("help") {
 			ui.pages.RemovePage("help")
 			_, page := ui.pages.GetFrontPage()
 			ui.app.SetFocus(page)
 			return nil
-		}
-		if ui.pages.HasPage("file") {
-			return key // send event to primitive
 		}
 	}
 
