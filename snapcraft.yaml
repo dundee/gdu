@@ -17,7 +17,8 @@ parts:
               -X 'github.com/dundee/gdu/build.Version=$(git describe)' \
               -X 'github.com/dundee/gdu/build.User=$(id -u -n)' \
               -X 'github.com/dundee/gdu/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
-            -o $SNAPCRAFT_PART_INSTALL/gdu
+            -o $SNAPCRAFT_PART_INSTALL/gdu \
+            github.com/dundee/gdu/v4/cmd/gdu
           $SNAPCRAFT_PART_INSTALL/gdu -v
 apps:
   gdu:
