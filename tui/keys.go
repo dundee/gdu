@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/dundee/gdu/v4/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -53,13 +53,20 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.showDir()
 			ui.table.Select(row, column)
 		}
+	case 'c':
+		ui.showItemCount = !ui.showItemCount
+		if ui.currentDir != nil {
+			row, column := ui.table.GetSelection()
+			ui.showDir()
+			ui.table.Select(row, column)
+		}
 	case 'r':
 		if ui.currentDir != nil {
 			ui.rescanDir()
 		}
 	case 's':
 		ui.setSorting("size")
-	case 'c':
+	case 'C':
 		ui.setSorting("itemCount")
 	case 'n':
 		ui.setSorting("name")

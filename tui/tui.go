@@ -7,9 +7,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/dundee/gdu/v4/internal/common"
-	"github.com/dundee/gdu/v4/pkg/analyze"
-	"github.com/dundee/gdu/v4/pkg/device"
+	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -23,9 +23,10 @@ const helpTextColorized = `
 			   [red]v    [white]Show content of selected file
 			   [red]r    [white]Rescan current directory
 			   [red]a    [white]Toggle between showing disk usage and apparent size
+			   [red]c    [white]Show/hide file count
 			   [red]n    [white]Sort by name (asc/desc)
 			   [red]s    [white]Sort by size (asc/desc)
-			   [red]c    [white]Sort by items (asc/desc)
+			   [red]C    [white]Sort by file count (asc/desc)
 			   [red]q    [white]Quit gdu
 `
 const helpText = `
@@ -37,9 +38,10 @@ const helpText = `
 			   [::b]v    [white:black:-]Show content of selected file
 			   [::b]r    [white:black:-]Rescan current directory
 			   [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
+			   [::b]c    [white:black:-]Show/hide file count
 			   [::b]n    [white:black:-]Sort by name (asc/desc)
 			   [::b]s    [white:black:-]Sort by size (asc/desc)
-			   [::b]c    [white:black:-]Sort by items (asc/desc)
+			   [::b]C    [white:black:-]Sort by file count (asc/desc)
 			   [::b]q    [white:black:-]Quit gdu
 `
 
@@ -60,6 +62,7 @@ type UI struct {
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
+	showItemCount   bool
 	sortBy          string
 	sortOrder       string
 	done            chan struct{}
@@ -76,6 +79,7 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 			PathChecker:      os.Stat,
 		},
 		askBeforeDelete: true,
+		showItemCount:   false,
 		sortBy:          "size",
 		sortOrder:       "desc",
 		remover:         analyze.RemoveItemFromDir,

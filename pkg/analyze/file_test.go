@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dundee/gdu/v4/internal/testdir"
+	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
 

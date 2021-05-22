@@ -7,12 +7,12 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/dundee/gdu/v4/build"
-	"github.com/dundee/gdu/v4/internal/common"
-	"github.com/dundee/gdu/v4/pkg/analyze"
-	"github.com/dundee/gdu/v4/pkg/device"
-	"github.com/dundee/gdu/v4/stdout"
-	"github.com/dundee/gdu/v4/tui"
+	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/stdout"
+	"github.com/dundee/gdu/v5/tui"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

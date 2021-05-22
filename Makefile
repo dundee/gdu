@@ -1,5 +1,5 @@
 NAME := gdu
-MAJOR_VER := v4
+MAJOR_VER := v5
 PACKAGE := github.com/dundee/$(NAME)/$(MAJOR_VER)
 CMD_GDU := cmd/gdu
 VERSION := $(shell git describe --tags 2>/dev/null)

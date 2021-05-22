@@ -3,10 +3,10 @@ package tui
 import (
 	"testing"
 
-	"github.com/dundee/gdu/v4/internal/testanalyze"
-	"github.com/dundee/gdu/v4/internal/testapp"
-	"github.com/dundee/gdu/v4/internal/testdir"
-	"github.com/dundee/gdu/v4/pkg/analyze"
+	"github.com/dundee/gdu/v5/internal/testanalyze"
+	"github.com/dundee/gdu/v5/internal/testapp"
+	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
@@ -242,6 +242,48 @@ func TestSortByApparentSize(t *testing.T) {
 	assert.True(t, ui.ShowApparentSize)
 }
 
+func TestShowFileCount(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'c', 0))
+
+	assert.True(t, ui.showItemCount)
+}
+
+func TestShowFileCountBW(t *testing.T) {
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.PathChecker = testdir.MockedPathChecker
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'c', 0))
+
+	assert.True(t, ui.showItemCount)
+}
+
 func TestRescan(t *testing.T) {
 	parentDir := &analyze.Dir{
 		File: &analyze.File{
@@ -297,7 +339,7 @@ func TestSorting(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 's', 0))
 	assert.Equal(t, "size", ui.sortBy)
-	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'c', 0))
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'C', 0))
 	assert.Equal(t, "itemCount", ui.sortBy)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'n', 0))
 	assert.Equal(t, "name", ui.sortBy)

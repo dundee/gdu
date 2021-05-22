@@ -3,7 +3,7 @@ package tui
 import (
 	"fmt"
 
-	"github.com/dundee/gdu/v4/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
 // file size constants
@@ -15,6 +15,16 @@ const (
 	TB
 	PB
 	EB
+)
+
+// file count constants
+const (
+	K int = 1e3
+	M int = 1e6
+	G int = 1e9
+	T int = 1e12
+	P int = 1e15
+	E int = 1e18
 )
 
 func (ui *UI) formatFileRow(item analyze.Item) string {
@@ -41,6 +51,15 @@ func (ui *UI) formatFileRow(item analyze.Item) string {
 	}
 
 	row += getUsageGraph(part)
+
+	if ui.showItemCount {
+		if ui.UseColors {
+			row += "[#e67100::b]"
+		} else {
+			row += "[::b]"
+		}
+		row += fmt.Sprintf("%11s ", ui.formatCount(item.GetItemCount()))
+	}
 
 	if item.IsDir() {
 		if ui.UseColors {
@@ -87,4 +106,27 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 	default:
 		return fmt.Sprintf("%d%s B", size, color)
 	}
+}
+
+func (ui *UI) formatCount(count int) string {
+	row := ""
+	color := "[-::]"
+
+	switch {
+	case count >= E:
+		row += fmt.Sprintf("%.1f%sE", float64(count)/float64(E), color)
+	case count >= P:
+		row += fmt.Sprintf("%.1f%sP", float64(count)/float64(P), color)
+	case count >= T:
+		row += fmt.Sprintf("%.1f%sT", float64(count)/float64(T), color)
+	case count >= G:
+		row += fmt.Sprintf("%.1f%sG", float64(count)/float64(G), color)
+	case count >= M:
+		row += fmt.Sprintf("%.1f%sM", float64(count)/float64(M), color)
+	case count >= K:
+		row += fmt.Sprintf("%.1f%sk", float64(count)/float64(K), color)
+	default:
+		row += fmt.Sprintf("%d%s", count, color)
+	}
+	return row
 }
