@@ -22,9 +22,6 @@ const (
 	K int = 1e3
 	M int = 1e6
 	G int = 1e9
-	T int = 1e12
-	P int = 1e15
-	E int = 1e18
 )
 
 func (ui *UI) formatFileRow(item analyze.Item) string {
@@ -113,12 +110,6 @@ func (ui *UI) formatCount(count int) string {
 	color := "[-::]"
 
 	switch {
-	case count >= E:
-		row += fmt.Sprintf("%.1f%sE", float64(count)/float64(E), color)
-	case count >= P:
-		row += fmt.Sprintf("%.1f%sP", float64(count)/float64(P), color)
-	case count >= T:
-		row += fmt.Sprintf("%.1f%sT", float64(count)/float64(T), color)
 	case count >= G:
 		row += fmt.Sprintf("%.1f%sG", float64(count)/float64(G), color)
 	case count >= M:

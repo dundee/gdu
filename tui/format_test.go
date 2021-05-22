@@ -28,7 +28,4 @@ func TestFormatCount(t *testing.T) {
 	assert.Equal(t, "1.0[-::]k", ui.formatCount(1<<10))
 	assert.Equal(t, "1.0[-::]M", ui.formatCount(1<<20))
 	assert.Equal(t, "1.1[-::]G", ui.formatCount(1<<30))
-	assert.Equal(t, "1.1[-::]T", ui.formatCount(1<<40))
-	assert.Equal(t, "1.1[-::]P", ui.formatCount(1<<50))
-	assert.Equal(t, "1.2[-::]E", ui.formatCount(1<<60))
 }
