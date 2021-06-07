@@ -65,7 +65,7 @@ func (ui *UI) ShouldDirBeIgnoredUsingPattern(name, path string) bool {
 	return shouldIgnore
 }
 
-// IsHiddenDir returns if the dir name beggins with dot
+// IsHiddenDir returns if the dir name begins with dot
 func (ui *UI) IsHiddenDir(name, path string) bool {
 	shouldIgnore := name[0] == '.'
 	if shouldIgnore {

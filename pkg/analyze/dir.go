@@ -15,7 +15,7 @@ type CurrentProgress struct {
 	TotalSize       int64
 }
 
-var concurrencyLimit chan struct{} = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
+var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ShouldDirBeIgnored whether path should be ignored
 type ShouldDirBeIgnored func(name, path string) bool
@@ -94,8 +94,8 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		err        error
 		totalSize  int64
 		info       os.FileInfo
-		subDirChan chan *Dir = make(chan *Dir)
-		dirCount   int       = 0
+		subDirChan = make(chan *Dir)
+		dirCount   int
 	)
 
 	a.wait.Add(1)

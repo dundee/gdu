@@ -57,7 +57,7 @@ func readMountOutput(rdr io.Reader) (Devices, error) {
 			return nil, errors.New("Cannot parse mount output")
 		}
 
-		fstype := parts[3][1:len(parts[3])-1]
+		fstype := parts[3][1 : len(parts[3])-1]
 
 		device := &Device{
 			Name:       parts[0],

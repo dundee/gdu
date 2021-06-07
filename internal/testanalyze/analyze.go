@@ -6,10 +6,10 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
-// MockedAnalyzer returns dir with files with diferent size exponents
+// MockedAnalyzer returns dir with files with different size exponents
 type MockedAnalyzer struct{}
 
-// AnalyzeDir returns dir with files with diferent size exponents
+// AnalyzeDir returns dir with files with different size exponents
 func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnored) *analyze.Dir {
 	dir := &analyze.Dir{
 		File: &analyze.File{
