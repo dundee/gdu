@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -211,4 +212,48 @@ func (ui *UI) showFile() *tview.TextView {
 	ui.pages.AddPage("file", grid, true, true)
 
 	return file
+}
+
+func (ui *UI) showInfo() {
+	var content, numberColor string
+	row, column := ui.table.GetSelection()
+	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+
+	if selectedFile == ui.currentDir.Parent {
+		return
+	}
+
+	if ui.UseColors {
+		numberColor = "[#e67100::b]"
+	} else {
+		numberColor = "[::b]"
+	}
+
+	text := tview.NewTextView().SetDynamicColors(true)
+	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
+	text.SetBorderColor(tcell.ColorDefault)
+	text.SetTitle(" Item info ")
+
+	content += "[::b]Name:[::-] " + selectedFile.GetName() + "\n"
+	content += "[::b]Path:[::-] " + selectedFile.GetPath() + "\n"
+	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n\n"
+
+	content += "   [::b]Disk usage:[::-] "
+	content += numberColor + ui.formatSize(selectedFile.GetUsage(), false, true)
+	content += fmt.Sprintf(" (%s%d[-::] B)", numberColor, selectedFile.GetUsage()) + "\n"
+	content += "[::b]Apparent size:[::-] "
+	content += numberColor + ui.formatSize(selectedFile.GetSize(), false, true)
+	content += fmt.Sprintf(" (%s%d[-::] B)", numberColor, selectedFile.GetSize()) + "\n"
+
+	text.SetText(content)
+
+	flex := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(text, 13, 1, false).
+			AddItem(nil, 0, 1, false), 80, 1, false).
+		AddItem(nil, 0, 1, false)
+
+	ui.pages.AddPage("info", flex, true, true)
 }

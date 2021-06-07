@@ -17,6 +17,12 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.app.SetFocus(page)
 			return nil
 		}
+		if ui.pages.HasPage("info") {
+			ui.pages.RemovePage("info")
+			_, page := ui.pages.GetFrontPage()
+			ui.app.SetFocus(page)
+			return nil
+		}
 	}
 
 	switch key.Rune() {
@@ -27,7 +33,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.showHelp()
 	}
 
-	if ui.pages.HasPage("confirm") || ui.pages.HasPage("progress") || ui.pages.HasPage("deleting") {
+	if ui.pages.HasPage("confirm") ||
+		ui.pages.HasPage("progress") ||
+		ui.pages.HasPage("deleting") ||
+		ui.pages.HasPage("info") {
 		return key
 	}
 
@@ -46,6 +55,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.handleDelete()
 	case 'v':
 		ui.showFile()
+	case 'i':
+		ui.showInfo()
 	case 'a':
 		ui.ShowApparentSize = !ui.ShowApparentSize
 		if ui.currentDir != nil {

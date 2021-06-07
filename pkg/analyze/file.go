@@ -15,6 +15,7 @@ type Item interface {
 	GetFlag() rune
 	IsDir() bool
 	GetSize() int64
+	GetType() string
 	GetUsage() int64
 	GetItemCount() int
 	GetParent() *Dir
@@ -29,6 +30,11 @@ type File struct {
 	Usage  int64
 	Mli    uint64 // MutliLinkInode - Inode number of file with multiple links (hard link)
 	Parent *Dir
+}
+
+// GetName returns name of dir
+func (f *File) GetName() string {
+	return f.Name
 }
 
 // IsDir returns false for file
@@ -59,6 +65,15 @@ func (f *File) GetSize() int64 {
 // GetUsage returns usage of the file
 func (f *File) GetUsage() int64 {
 	return f.Usage
+}
+
+// GetType returns name type of item
+func (f *File) GetType() string {
+	switch f.Flag {
+	case '@':
+		return "Other"
+	}
+	return "File"
 }
 
 // GetItemCount returns 1 for file
@@ -94,9 +109,9 @@ type Dir struct {
 	Files     Files
 }
 
-// GetName returns name of dir
-func (f *File) GetName() string {
-	return f.Name
+// GetType returns name type of item
+func (f *Dir) GetType() string {
+	return "Directory"
 }
 
 // GetItemCount returns number of files in dir

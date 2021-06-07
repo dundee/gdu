@@ -22,6 +22,7 @@ const helpTextColorized = `
          [red]left, h    [white]Go to parent directory
 			   [red]d    [white]Delete selected file or directory
 			   [red]v    [white]Show content of selected file
+			   [red]i    [white]Show info about selected item
 			   [red]r    [white]Rescan current directory
 			   [red]a    [white]Toggle between showing disk usage and apparent size
 			   [red]c    [white]Show/hide file count
@@ -37,6 +38,7 @@ const helpText = `
          [::b]left, h    [white:black:-]Go to parent directory
 			   [::b]d    [white:black:-]Delete selected file or directory
 			   [::b]v    [white:black:-]Show content of selected file
+			   [::b]i    [white:black:-]Show info about selected item
 			   [::b]r    [white:black:-]Rescan current directory
 			   [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
 			   [::b]c    [white:black:-]Show/hide file count
@@ -378,7 +380,7 @@ func (ui *UI) showHelp() {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 20, 1, false).
+			AddItem(text, 21, 1, false).
 			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 

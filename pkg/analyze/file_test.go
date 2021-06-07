@@ -27,6 +27,33 @@ func TestIsDir(t *testing.T) {
 	assert.False(t, file.IsDir())
 }
 
+func TestGetType(t *testing.T) {
+	dir := Dir{
+		File: &File{
+			Name: "xxx",
+			Size: 5,
+		},
+		ItemCount: 2,
+	}
+	file := &File{
+		Name:   "yyy",
+		Size:   2,
+		Parent: &dir,
+		Flag:   ' ',
+	}
+	file2 := &File{
+		Name:   "yyy",
+		Size:   2,
+		Parent: &dir,
+		Flag:   '@',
+	}
+	dir.Files = Files{file, file2}
+
+	assert.Equal(t, "Directory", dir.GetType())
+	assert.Equal(t, "File", file.GetType())
+	assert.Equal(t, "Other", file2.GetType())
+}
+
 func TestFind(t *testing.T) {
 	dir := Dir{
 		File: &File{

@@ -218,6 +218,60 @@ func TestViewFile(t *testing.T) {
 	assert.Equal(t, 'j', event.Rune())
 }
 
+func TestShowInfo(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
+	ui.table.Select(2, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
+
+	assert.True(t, ui.pages.HasPage("info"))
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+
+	assert.False(t, ui.pages.HasPage("info"))
+}
+
+func TestShowInfoBW(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, false)
+	ui.done = make(chan struct{})
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
+	ui.table.Select(2, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
+
+	assert.True(t, ui.pages.HasPage("info"))
+}
+
 func TestExitViewFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
