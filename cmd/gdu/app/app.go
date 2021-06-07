@@ -3,9 +3,10 @@ package app
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"runtime"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"

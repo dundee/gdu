@@ -1,10 +1,11 @@
 package analyze
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // CurrentProgress struct

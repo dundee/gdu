@@ -5,9 +5,15 @@ import (
 	"sort"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	log.SetLevel(log.WarnLevel)
+}
 
 func TestAnalyzeDir(t *testing.T) {
 	fin := testdir.CreateTestDir()

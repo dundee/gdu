@@ -2,10 +2,11 @@ package tui
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
