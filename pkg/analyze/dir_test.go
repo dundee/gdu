@@ -79,7 +79,6 @@ func TestFlags(t *testing.T) {
 	assert.Equal(t, "nested", dir.Files[0].GetName())
 	assert.Equal(t, "file3", dir.Files[0].(*Dir).Files[1].GetName())
 	assert.Equal(t, int64(21), dir.Files[0].(*Dir).Files[1].GetSize())
-	assert.Equal(t, int64(0), dir.Files[0].(*Dir).Files[1].GetUsage())
 	assert.Equal(t, '@', dir.Files[0].(*Dir).Files[1].GetFlag())
 
 	assert.Equal(t, 'e', dir.Files[1].GetFlag())
