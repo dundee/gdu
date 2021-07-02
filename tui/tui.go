@@ -277,11 +277,11 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	ui.AnalyzePath(selectedDevice.MountPoint, nil)
 }
 
-func (ui *UI) confirmDeletion(isEmpty bool) {
+func (ui *UI) confirmDeletion(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 	var action string
-	if isEmpty {
+	if shouldEmpty {
 		action = "empty"
 	} else {
 		action = "delete"
@@ -295,7 +295,7 @@ func (ui *UI) confirmDeletion(isEmpty bool) {
 				ui.askBeforeDelete = false
 				fallthrough
 			case 0:
-				ui.deleteSelected(isEmpty)
+				ui.deleteSelected(shouldEmpty)
 			}
 			ui.pages.RemovePage("confirm")
 		})
