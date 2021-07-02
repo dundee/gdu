@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -112,30 +113,56 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	return nil
 }
 
-func (ui *UI) deleteSelected() {
+func (ui *UI) deleteSelected(isEmpty bool) {
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	selectedItem := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 
-	modal := tview.NewModal().SetText("Deleting " + selectedFile.GetName() + "...")
-	ui.pages.AddPage("deleting", modal, true, true)
+	var action, acting string
+	if isEmpty {
+		action = "empty "
+		acting = "emptying"
+	} else {
+		action = "delete "
+		acting = "deleting"
+	}
+	modal := tview.NewModal().SetText(strings.Title(acting) + " " + selectedItem.GetName() + "...")
+	ui.pages.AddPage(acting, modal, true, true)
 
-	currentDir := ui.currentDir
+	var currentDir *analyze.Dir
+	var currentItems []analyze.Item
+	if isEmpty && selectedItem.IsDir() {
+		currentDir = selectedItem.(*analyze.Dir)
+		for _, file := range currentDir.Files {
+			currentItems = append(currentItems, file)
+		}
+	} else {
+		currentDir = ui.currentDir
+		currentItems = append(currentItems, selectedItem)
+	}
 
 	go func() {
-		if err := ui.remover(currentDir, selectedFile); err != nil {
-			msg := "Can't delete " + selectedFile.GetName()
-			ui.app.QueueUpdateDraw(func() {
-				ui.pages.RemovePage("deleting")
-				ui.showErr(msg, err)
-			})
-			if ui.done != nil {
-				ui.done <- struct{}{}
+		for _, item := range currentItems {
+			var err error
+			if isEmpty && !selectedItem.IsDir() {
+				err = ui.emptier(currentDir, item)
+			} else {
+				err = ui.remover(currentDir, item)
 			}
-			return
+			if err != nil {
+				msg := "Can't " + action + selectedItem.GetName()
+				ui.app.QueueUpdateDraw(func() {
+					ui.pages.RemovePage(acting)
+					ui.showErr(msg, err)
+				})
+				if ui.done != nil {
+					ui.done <- struct{}{}
+				}
+				return
+			}
 		}
 
 		ui.app.QueueUpdateDraw(func() {
-			ui.pages.RemovePage("deleting")
+			ui.pages.RemovePage(acting)
 			ui.showDir()
 			ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
 		})

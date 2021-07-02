@@ -218,7 +218,7 @@ func TestConfirmDeletion(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	ui.table.Select(1, 0)
-	ui.confirmDeletion()
+	ui.confirmDeletion(false)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -227,7 +227,7 @@ func TestConfirmDeletionBW(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
 	ui.table.Select(1, 0)
-	ui.confirmDeletion()
+	ui.confirmDeletion(false)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -243,7 +243,7 @@ func TestDeleteSelected(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected()
+	ui.deleteSelected(false)
 
 	<-ui.done
 
@@ -265,7 +265,7 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected()
+	ui.deleteSelected(false)
 
 	<-ui.done
 
