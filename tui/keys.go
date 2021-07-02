@@ -112,7 +112,7 @@ func (ui *UI) handleRight() {
 	}
 }
 
-func (ui *UI) handleDelete(isEmpty bool) {
+func (ui *UI) handleDelete(shouldEmpty bool) {
 	if ui.currentDir == nil {
 		return
 	}
@@ -124,8 +124,8 @@ func (ui *UI) handleDelete(isEmpty bool) {
 	}
 
 	if ui.askBeforeDelete {
-		ui.confirmDeletion(isEmpty)
+		ui.confirmDeletion(shouldEmpty)
 	} else {
-		ui.deleteSelected(isEmpty)
+		ui.deleteSelected(shouldEmpty)
 	}
 }

@@ -113,12 +113,12 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	return nil
 }
 
-func (ui *UI) deleteSelected(isEmpty bool) {
+func (ui *UI) deleteSelected(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
 	selectedItem := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 
 	var action, acting string
-	if isEmpty {
+	if shouldEmpty {
 		action = "empty "
 		acting = "emptying"
 	} else {
@@ -129,26 +129,26 @@ func (ui *UI) deleteSelected(isEmpty bool) {
 	ui.pages.AddPage(acting, modal, true, true)
 
 	var currentDir *analyze.Dir
-	var currentItems []analyze.Item
-	if isEmpty && selectedItem.IsDir() {
+	var deleteItems []analyze.Item
+	if shouldEmpty && selectedItem.IsDir() {
 		currentDir = selectedItem.(*analyze.Dir)
 		for _, file := range currentDir.Files {
-			currentItems = append(currentItems, file)
+			deleteItems = append(deleteItems, file)
 		}
 	} else {
 		currentDir = ui.currentDir
-		currentItems = append(currentItems, selectedItem)
+		deleteItems = append(deleteItems, selectedItem)
 	}
 
+	var deleteFun func(*analyze.Dir, analyze.Item) error
+	if shouldEmpty && !selectedItem.IsDir() {
+		deleteFun = ui.emptier
+	} else {
+		deleteFun = ui.remover
+	}
 	go func() {
-		for _, item := range currentItems {
-			var err error
-			if isEmpty && !selectedItem.IsDir() {
-				err = ui.emptier(currentDir, item)
-			} else {
-				err = ui.remover(currentDir, item)
-			}
-			if err != nil {
+		for _, item := range deleteItems {
+			if err := deleteFun(currentDir, item); err != nil {
 				msg := "Can't " + action + selectedItem.GetName()
 				ui.app.QueueUpdateDraw(func() {
 					ui.pages.RemovePage(acting)
