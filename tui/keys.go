@@ -36,6 +36,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if ui.pages.HasPage("confirm") ||
 		ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
+		ui.pages.HasPage("emptying") ||
 		ui.pages.HasPage("info") {
 		return key
 	}
@@ -52,7 +53,9 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 	switch key.Rune() {
 	case 'd':
-		ui.handleDelete()
+		ui.handleDelete(false)
+	case 'e':
+		ui.handleDelete(true)
 	case 'v':
 		ui.showFile()
 	case 'i':
@@ -109,11 +112,10 @@ func (ui *UI) handleRight() {
 	}
 }
 
-func (ui *UI) handleDelete() {
+func (ui *UI) handleDelete(isEmpty bool) {
 	if ui.currentDir == nil {
 		return
 	}
-
 	// do not allow deleting parent dir
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
@@ -122,8 +124,8 @@ func (ui *UI) handleDelete() {
 	}
 
 	if ui.askBeforeDelete {
-		ui.confirmDeletion()
+		ui.confirmDeletion(isEmpty)
 	} else {
-		ui.deleteSelected()
+		ui.deleteSelected(isEmpty)
 	}
 }

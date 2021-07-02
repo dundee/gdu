@@ -21,6 +21,7 @@ const helpTextColorized = `
  [red]enter, right, l    [white]Select directory/device
          [red]left, h    [white]Go to parent directory
 			   [red]d    [white]Delete selected file or directory
+			   [red]e    [white]Empty selected file or directory
 			   [red]v    [white]Show content of selected file
 			   [red]i    [white]Show info about selected item
 			   [red]r    [white]Rescan current directory
@@ -37,6 +38,7 @@ const helpText = `
  [::b]enter, right, l    [white:black:-]Select directory/device
          [::b]left, h    [white:black:-]Go to parent directory
 			   [::b]d    [white:black:-]Delete selected file or directory
+			   [::b]e    [white:black:-]Empty selected file or directory
 			   [::b]v    [white:black:-]Show content of selected file
 			   [::b]i    [white:black:-]Show info about selected item
 			   [::b]r    [white:black:-]Rescan current directory
@@ -70,6 +72,7 @@ type UI struct {
 	sortOrder       string
 	done            chan struct{}
 	remover         func(*analyze.Dir, analyze.Item) error
+	emptier         func(*analyze.Dir, analyze.Item) error
 }
 
 // CreateUI creates the whole UI app
@@ -86,6 +89,7 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 		sortBy:          "size",
 		sortOrder:       "desc",
 		remover:         analyze.RemoveItemFromDir,
+		emptier:         analyze.EmptyFileFromDir,
 	}
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
@@ -273,11 +277,17 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	ui.AnalyzePath(selectedDevice.MountPoint, nil)
 }
 
-func (ui *UI) confirmDeletion() {
+func (ui *UI) confirmDeletion(isEmpty bool) {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	var action string
+	if isEmpty {
+		action = "empty"
+	} else {
+		action = "delete"
+	}
 	modal := tview.NewModal().
-		SetText("Are you sure you want to delete \"" + selectedFile.GetName() + "\"?").
+		SetText("Are you sure you want to " + action + " \"" + selectedFile.GetName() + "\"?").
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {
@@ -285,7 +295,7 @@ func (ui *UI) confirmDeletion() {
 				ui.askBeforeDelete = false
 				fallthrough
 			case 0:
-				ui.deleteSelected()
+				ui.deleteSelected(isEmpty)
 			}
 			ui.pages.RemovePage("confirm")
 		})

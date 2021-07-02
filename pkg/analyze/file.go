@@ -255,3 +255,25 @@ func RemoveItemFromDir(dir *Dir, item Item) error {
 	}
 	return nil
 }
+
+// EmptyFileFromDir empty file from dir
+func EmptyFileFromDir(dir *Dir, file Item) error {
+	err := os.Truncate(file.GetPath(), 0)
+	if err != nil {
+		return err
+	}
+
+	dir.Size -= file.GetSize()
+	dir.Usage -= file.GetUsage()
+
+	dir.Files = dir.Files.Remove(file)
+	file = &File{
+		Name:   file.GetName(),
+		Flag:   file.GetFlag(),
+		Size:   0,
+		Parent: dir,
+	}
+	dir.Files.Append(file)
+
+	return nil
+}
