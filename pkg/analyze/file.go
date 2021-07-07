@@ -263,17 +263,25 @@ func EmptyFileFromDir(dir *Dir, file Item) error {
 		return err
 	}
 
-	dir.Size -= file.GetSize()
-	dir.Usage -= file.GetUsage()
+	cur := dir
+	for {
+		cur.Size -= file.GetSize()
+		cur.Usage -= file.GetUsage()
+
+		if cur.Parent == nil {
+			break
+		}
+		cur = cur.Parent
+	}
 
 	dir.Files = dir.Files.Remove(file)
-	file = &File{
+	newFile := &File{
 		Name:   file.GetName(),
 		Flag:   file.GetFlag(),
 		Size:   0,
 		Parent: dir,
 	}
-	dir.Files.Append(file)
+	dir.Files.Append(newFile)
 
 	return nil
 }
