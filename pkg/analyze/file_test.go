@@ -265,6 +265,84 @@ func TestRemoveFileWithErr(t *testing.T) {
 	assert.Contains(t, err.Error(), "permission denied")
 }
 
+func TestTruncateFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	dir := &Dir{
+		File: &File{
+			Name:  "test_dir",
+			Size:  5,
+			Usage: 12,
+		},
+		ItemCount: 3,
+		BasePath:  ".",
+	}
+
+	subdir := &Dir{
+		File: &File{
+			Name:   "nested",
+			Size:   4,
+			Usage:  8,
+			Parent: dir,
+		},
+		ItemCount: 2,
+	}
+	file := &File{
+		Name:   "file2",
+		Size:   3,
+		Usage:  4,
+		Parent: subdir,
+	}
+	dir.Files = Files{subdir}
+	subdir.Files = Files{file}
+
+	err := EmptyFileFromDir(subdir, file)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(subdir.Files))
+	assert.Equal(t, 2, subdir.ItemCount)
+	assert.Equal(t, int64(1), subdir.Size)
+	assert.Equal(t, int64(4), subdir.Usage)
+	assert.Equal(t, 1, len(dir.Files))
+	assert.Equal(t, 3, dir.ItemCount)
+	assert.Equal(t, int64(2), dir.Size)
+}
+
+func TestTruncateFileWithErr(t *testing.T) {
+	dir := &Dir{
+		File: &File{
+			Name:  "xxx",
+			Size:  5,
+			Usage: 12,
+		},
+		ItemCount: 3,
+		BasePath:  ".",
+	}
+
+	subdir := &Dir{
+		File: &File{
+			Name:   "yyy",
+			Size:   4,
+			Usage:  8,
+			Parent: dir,
+		},
+		ItemCount: 2,
+	}
+	file := &File{
+		Name:   "zzz",
+		Size:   3,
+		Usage:  4,
+		Parent: subdir,
+	}
+	dir.Files = Files{subdir}
+	subdir.Files = Files{file}
+
+	err := EmptyFileFromDir(subdir, file)
+
+	assert.Contains(t, err.Error(), "no such file or directory")
+}
+
 func TestUpdateStats(t *testing.T) {
 	dir := Dir{
 		File: &File{

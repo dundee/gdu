@@ -87,7 +87,7 @@ func TestHelp(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[306 : 306+9]
+	cells := b[356 : 356+9]
 
 	text := []byte("directory")
 	for i, r := range cells {
@@ -106,7 +106,7 @@ func TestHelpBw(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[306 : 306+9]
+	cells := b[356 : 356+9]
 
 	text := []byte("directory")
 	for i, r := range cells {
@@ -228,6 +228,15 @@ func TestConfirmDeletionBW(t *testing.T) {
 
 	ui.table.Select(1, 0)
 	ui.confirmDeletion(false)
+
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmEmpty(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, false, true, true)
+
+	ui.table.Select(1, 0)
+	ui.confirmDeletion(true)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }

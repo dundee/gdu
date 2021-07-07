@@ -221,6 +221,78 @@ func TestDeleteParent(t *testing.T) {
 	assert.DirExists(t, "test_dir/nested")
 }
 
+func TestEmptyDir(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.askBeforeDelete = false
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'e', 0))
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.NoDirExists(t, "test_dir/nested/subnested")
+}
+
+func TestEmptyFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, false, true)
+	ui.done = make(chan struct{})
+	ui.askBeforeDelete = false
+	ui.AnalyzePath("test_dir", nil)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0)) // into nested
+
+	ui.table.Select(2, 0) // file2
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'e', 0))
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.DirExists(t, "test_dir/nested/subnested")
+}
+
 func TestSortByApparentSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, false)
