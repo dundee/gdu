@@ -12,7 +12,7 @@ LDFLAGS := -s -w -extldflags '-static' \
 all: clean build-all man clean-uncompressed-dist shasums
 
 run:
-	go run .
+	go run $(PACKAGE)/$(CMD_GDU)
 
 build:
 	@echo "Version: " $(VERSION)
