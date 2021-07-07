@@ -1,14 +1,12 @@
 package tui
 
 import (
-	"runtime"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,22 +43,6 @@ func TestShowDevicesBW(t *testing.T) {
 	for i, r := range b[0:11] {
 		assert.Equal(t, text[i], r.Bytes[0])
 	}
-}
-
-func TestShowDevicesWithError(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		return
-	}
-
-	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
-	defer simScreen.Fini()
-
-	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
-
-	ui := CreateUI(app, false, false)
-	err := ui.ListDevices(getter)
-
-	assert.Contains(t, err.Error(), "no such file")
 }
 
 func TestDeviceSelected(t *testing.T) {
