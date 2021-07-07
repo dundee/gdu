@@ -64,7 +64,8 @@ func TestMoveLeftRight(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, true, true)
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -109,7 +110,8 @@ func TestMoveRightOnDevice(t *testing.T) {
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{})
-	ui.ListDevices(getDevicesInfoMock())
+	err := ui.ListDevices(getDevicesInfoMock())
+	assert.Nil(t, err)
 
 	ui.table.Select(1, 0)
 
@@ -134,7 +136,8 @@ func TestShowConfirm(t *testing.T) {
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -168,7 +171,8 @@ func TestDelete(t *testing.T) {
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -201,7 +205,8 @@ func TestDeleteParent(t *testing.T) {
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -229,7 +234,8 @@ func TestEmptyDir(t *testing.T) {
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -263,7 +269,8 @@ func TestEmptyFile(t *testing.T) {
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -299,7 +306,8 @@ func TestSortByApparentSize(t *testing.T) {
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -320,7 +328,8 @@ func TestShowFileCount(t *testing.T) {
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -341,7 +350,8 @@ func TestShowFileCountBW(t *testing.T) {
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -399,7 +409,8 @@ func TestSorting(t *testing.T) {
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
@@ -424,7 +435,8 @@ func TestShowFile(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 

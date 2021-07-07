@@ -193,10 +193,19 @@ func (ui *UI) showFile() *tview.TextView {
 	ui.currentDirLabel.SetText("[::b] --- " + selectedFile.GetPath() + " ---").SetDynamicColors(true)
 
 	readNextPart := func(linesCount int) int {
+		var err error
 		readLines := 0
 		for scanner.Scan() && readLines <= linesCount {
-			file.Write(scanner.Bytes())
-			file.Write([]byte("\n"))
+			_, err = file.Write(scanner.Bytes())
+			if err != nil {
+				ui.showErr("Error reading file", err)
+				return 0
+			}
+			_, err = file.Write([]byte("\n"))
+			if err != nil {
+				ui.showErr("Error reading file", err)
+				return 0
+			}
 			readLines++
 		}
 		return readLines

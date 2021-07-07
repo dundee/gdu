@@ -37,7 +37,7 @@ func (t FreeBSDDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 		return nil, err
 	}
 
-	return processMounts(mounts)
+	return processMounts(mounts, false)
 }
 
 func readMountOutput(rdr io.Reader) (Devices, error) {
@@ -74,13 +74,16 @@ func readMountOutput(rdr io.Reader) (Devices, error) {
 	return mounts, nil
 }
 
-func processMounts(mounts Devices) (Devices, error) {
+func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 	devices := Devices{}
 
 	for _, mount := range mounts {
 		if strings.HasPrefix(mount.Name, "/dev") || mount.Fstype == "zfs" {
 			info := &syscall.Statfs_t{}
-			syscall.Statfs(mount.MountPoint, info)
+			err := syscall.Statfs(mount.MountPoint, info)
+			if err != nil && !ignoreErrors {
+				return nil, err
+			}
 
 			mount.Size = int64(info.Bsize) * int64(info.Blocks)
 			mount.Free = int64(info.Bsize) * int64(info.Bavail)

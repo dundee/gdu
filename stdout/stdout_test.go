@@ -26,9 +26,11 @@ func TestAnalyzePath(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, false, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir", nil)
-	ui.StartUILoop()
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
 
+	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "nested")
 }
 
@@ -41,9 +43,11 @@ func TestAnalyzeSubdir(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, false, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir/nested", nil)
-	ui.StartUILoop()
+	err := ui.AnalyzePath("test_dir/nested", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
 
+	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "file2")
 }
 
@@ -67,8 +71,9 @@ func TestAnalyzePathWithColors(t *testing.T) {
 
 	ui := CreateStdoutUI(output, true, false, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir/nested", nil)
+	err := ui.AnalyzePath("test_dir/nested", nil)
 
+	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "subnested")
 }
 
@@ -78,8 +83,9 @@ func TestItemRows(t *testing.T) {
 	ui := CreateStdoutUI(output, false, true, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.PathChecker = testdir.MockedPathChecker
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
 
+	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "TiB")
 	assert.Contains(t, output.String(), "GiB")
 	assert.Contains(t, output.String(), "MiB")
@@ -94,8 +100,9 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, true, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
 
+	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "nested")
 }
 
@@ -103,8 +110,9 @@ func TestShowDevices(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	ui := CreateStdoutUI(output, false, true, false)
-	ui.ListDevices(getDevicesInfoMock())
+	err := ui.ListDevices(getDevicesInfoMock())
 
+	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "Device")
 	assert.Contains(t, output.String(), "xxx")
 }
@@ -113,8 +121,9 @@ func TestShowDevicesWithColor(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	ui := CreateStdoutUI(output, true, true, true)
-	ui.ListDevices(getDevicesInfoMock())
+	err := ui.ListDevices(getDevicesInfoMock())
 
+	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "Device")
 	assert.Contains(t, output.String(), "xxx")
 }

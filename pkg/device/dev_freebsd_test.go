@@ -39,7 +39,7 @@ map -hosts on /net (autofs)
 argon:/usr/src on /usr/src (nfs)
 argon:/usr/obj on /usr/obj (nfs)`))
 
-	devices, err := processMounts(mounts)
+	devices, err := processMounts(mounts, true)
 	assert.Len(t, devices, 6)
 	assert.Nil(t, err)
 }

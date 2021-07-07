@@ -194,7 +194,10 @@ func TestFileSelected(t *testing.T) {
 
 func TestBeforeDraw(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
-	screen.Init()
+	err := screen.Init()
+
+	assert.Nil(t, err)
+
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 

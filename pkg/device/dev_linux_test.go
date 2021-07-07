@@ -26,7 +26,7 @@ func TestSnapMountsNotShown(t *testing.T) {
 /dev/loop3 /var/lib/snapd/snap/core20/904 squashfs ro,nodev,relatime 0 0
 /dev/nvme0n1p1 /boot vfat rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro 0 0`))
 
-	devices, err := processMounts(mounts)
+	devices, err := processMounts(mounts, true)
 	assert.Len(t, devices, 1)
 	assert.Nil(t, err)
 }
@@ -41,7 +41,7 @@ rootpool/home /home zfs rw,nodev,relatime,xattr,posixacl 0 0
 /dev/loop3 /var/lib/snapd/snap/core20/904 squashfs ro,nodev,relatime 0 0
 /dev/nvme0n1p1 /boot vfat rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro 0 0`))
 
-	devices, err := processMounts(mounts)
+	devices, err := processMounts(mounts, true)
 	assert.Len(t, devices, 6)
 	assert.Nil(t, err)
 }

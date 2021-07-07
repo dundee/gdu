@@ -12,7 +12,10 @@ import (
 // CreateTestAppWithSimScreen returns app with simulation screen for tests
 func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.SimulationScreen) {
 	screen := tcell.NewSimulationScreen("UTF-8")
-	screen.Init()
+	err := screen.Init()
+	if err != nil {
+		panic(err)
+	}
 	screen.SetSize(width, height)
 
 	app := tview.NewApplication()

@@ -59,14 +59,17 @@ func runE(command *cobra.Command, args []string) error {
 		af.LogFile = "nul"
 	}
 
-	var termApp *tview.Application = nil
+	var termApp *tview.Application
 
 	if !af.ShowVersion && !af.NonInteractive && istty {
 		screen, err := tcell.NewScreen()
 		if err != nil {
 			return fmt.Errorf("Error creating screen: %w", err)
 		}
-		screen.Init()
+		err = screen.Init()
+		if err != nil {
+			return fmt.Errorf("Error initializing screen: %w", err)
+		}
 		defer screen.Clear()
 		defer screen.Fini()
 
