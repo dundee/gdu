@@ -9,7 +9,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/rivo/tview v0.0.0-20210217110421-8a8f78a6dd01
-	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
