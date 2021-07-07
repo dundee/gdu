@@ -37,7 +37,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Run tests
-      run: go test -v -covermode=count
+      run: go test -v -covermode=count ./...
 
   coverage:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
       uses: actions/checkout@v2
     - name: Calc coverage
       run: |
-        go test -v -covermode=count -coverprofile=coverage.out
+        go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
     - name: Convert coverage.out to coverage.lcov
       uses: jandelgado/gcov2lcov-action@v1.0.6
     - name: Coveralls
