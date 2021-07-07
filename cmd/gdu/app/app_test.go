@@ -141,21 +141,6 @@ func TestNoCross(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestNoCrossWithErr(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	out, err := runApp(
-		&Flags{LogFile: "/dev/null", NoCross: true},
-		[]string{"test_dir"},
-		false,
-		device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"},
-	)
-
-	assert.Equal(t, "loading mount points: open /xxxyyy: no such file or directory", err.Error())
-	assert.Empty(t, out)
-}
-
 func TestListDevices(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -169,20 +154,6 @@ func TestListDevices(t *testing.T) {
 
 	assert.Contains(t, out, "Device")
 	assert.Nil(t, err)
-}
-
-func TestListDevicesWithErr(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	_, err := runApp(
-		&Flags{LogFile: "/dev/null", ShowDisks: true},
-		[]string{},
-		false,
-		device.LinuxDevicesInfoGetter{MountsPath: "/xxxyyy"},
-	)
-
-	assert.Equal(t, "loading mount points: open /xxxyyy: no such file or directory", err.Error())
 }
 
 func TestListDevicesWithGui(t *testing.T) {
