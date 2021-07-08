@@ -7,9 +7,15 @@ import (
 
 // CreateTestDir creates test dir structure
 func CreateTestDir() func() {
-	os.MkdirAll("test_dir/nested/subnested", os.ModePerm)
-	os.WriteFile("test_dir/nested/subnested/file", []byte("hello"), 0644)
-	os.WriteFile("test_dir/nested/file2", []byte("go"), 0644)
+	if err := os.MkdirAll("test_dir/nested/subnested", os.ModePerm); err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile("test_dir/nested/subnested/file", []byte("hello"), 0644); err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile("test_dir/nested/file2", []byte("go"), 0644); err != nil {
+		panic(err)
+	}
 	return func() {
 		err := os.RemoveAll("test_dir")
 		if err != nil {

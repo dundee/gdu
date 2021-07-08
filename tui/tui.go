@@ -158,7 +158,10 @@ func (ui *UI) StartUILoop() error {
 
 func (ui *UI) rescanDir() {
 	ui.Analyzer.ResetProgress()
-	ui.AnalyzePath(ui.currentDirPath, ui.currentDir.Parent)
+	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.Parent)
+	if err != nil {
+		ui.showErr("Error rescanning path", err)
+	}
 }
 
 func (ui *UI) showDir() {
@@ -274,7 +277,10 @@ func (ui *UI) deviceItemSelected(row, column int) {
 		log.Printf("Creating path patterns for other devices failed: %s", paths)
 	}
 
-	ui.AnalyzePath(selectedDevice.MountPoint, nil)
+	err = ui.AnalyzePath(selectedDevice.MountPoint, nil)
+	if err != nil {
+		ui.showErr("Error analyzing device", err)
+	}
 }
 
 func (ui *UI) confirmDeletion(shouldEmpty bool) {

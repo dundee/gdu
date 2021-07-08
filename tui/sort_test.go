@@ -119,7 +119,9 @@ func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bo
 	ui.done = make(chan struct{})
 	ui.sortBy = sortBy
 	ui.sortOrder = sortOrder
-	ui.AnalyzePath("test_dir", nil)
+	if err := ui.AnalyzePath("test_dir", nil); err != nil {
+		panic(err)
+	}
 
 	<-ui.done // wait for analyzer
 

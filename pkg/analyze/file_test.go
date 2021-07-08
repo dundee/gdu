@@ -229,7 +229,8 @@ func TestRemoveFile(t *testing.T) {
 	dir.Files = Files{subdir}
 	subdir.Files = Files{file}
 
-	RemoveItemFromDir(subdir, file)
+	err := RemoveItemFromDir(subdir, file)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 0, len(subdir.Files))
 	assert.Equal(t, 1, subdir.ItemCount)
@@ -244,8 +245,12 @@ func TestRemoveFileWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	os.Chmod("test_dir/nested", 0)
-	defer os.Chmod("test_dir/nested", 0755)
+	err := os.Chmod("test_dir/nested", 0)
+	assert.Nil(t, err)
+	defer func() {
+		err = os.Chmod("test_dir/nested", 0755)
+		assert.Nil(t, err)
+	}()
 
 	dir := &Dir{
 		File: &File{
@@ -261,7 +266,7 @@ func TestRemoveFileWithErr(t *testing.T) {
 		},
 	}
 
-	err := RemoveItemFromDir(dir, subdir)
+	err = RemoveItemFromDir(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }
 

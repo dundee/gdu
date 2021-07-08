@@ -65,9 +65,11 @@ func TestFlags(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	os.Mkdir("test_dir/empty", 0644)
+	err := os.Mkdir("test_dir/empty", 0644)
+	assert.Nil(t, err)
 
-	os.Symlink("test_dir/nested/file2", "test_dir/nested/file3")
+	err = os.Symlink("test_dir/nested/file2", "test_dir/nested/file3")
+	assert.Nil(t, err)
 
 	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 	sort.Sort(dir.Files)
@@ -88,7 +90,8 @@ func TestHardlink(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	os.Link("test_dir/nested/file2", "test_dir/nested/file3")
+	err := os.Link("test_dir/nested/file2", "test_dir/nested/file3")
+	assert.Nil(t, err)
 
 	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 
@@ -105,8 +108,12 @@ func TestErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	os.Chmod("test_dir/nested", 0)
-	defer os.Chmod("test_dir/nested", 0755)
+	err := os.Chmod("test_dir/nested", 0)
+	assert.Nil(t, err)
+	defer func() {
+		err = os.Chmod("test_dir/nested", 0755)
+		assert.Nil(t, err)
+	}()
 
 	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 

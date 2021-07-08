@@ -46,7 +46,8 @@ func TestIgnoreByAbsPath(t *testing.T) {
 
 func TestIgnoreByPattern(t *testing.T) {
 	ui := &common.UI{}
-	ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
 	assert.True(t, shouldBeIgnored("aaa", "/aaa"))
@@ -79,7 +80,8 @@ func TestIgnoreByAbsPathAndHidden(t *testing.T) {
 func TestIgnoreByAbsPathAndPattern(t *testing.T) {
 	ui := &common.UI{}
 	ui.SetIgnoreDirPaths([]string{"/abc"})
-	ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
 	assert.True(t, shouldBeIgnored("abc", "/abc"))
@@ -90,7 +92,8 @@ func TestIgnoreByAbsPathAndPattern(t *testing.T) {
 
 func TestIgnoreByPatternAndHidden(t *testing.T) {
 	ui := &common.UI{}
-	ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	assert.Nil(t, err)
 	ui.SetIgnoreHidden(true)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
@@ -103,7 +106,8 @@ func TestIgnoreByPatternAndHidden(t *testing.T) {
 func TestIgnoreByAll(t *testing.T) {
 	ui := &common.UI{}
 	ui.SetIgnoreDirPaths([]string{"/abc"})
-	ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
+	assert.Nil(t, err)
 	ui.SetIgnoreHidden(true)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 

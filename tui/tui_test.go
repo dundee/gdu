@@ -312,22 +312,22 @@ func TestMin(t *testing.T) {
 	assert.Equal(t, 3, min(4, 3))
 }
 
-func printScreen(simScreen tcell.SimulationScreen) {
-	b, _, _ := simScreen.GetContents()
+// func printScreen(simScreen tcell.SimulationScreen) {
+// 	b, _, _ := simScreen.GetContents()
 
-	for i, r := range b {
-		println(i, string(r.Bytes))
-	}
-}
+// 	for i, r := range b {
+// 		println(i, string(r.Bytes))
+// 	}
+// }
 
-func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.ShouldDirBeIgnored) *analyze.Dir {
-	return &analyze.Dir{
-		File: &analyze.File{
-			Name: "xxx",
-		},
-		BasePath: ".",
-	}
-}
+// func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.ShouldDirBeIgnored) *analyze.Dir {
+// 	return &analyze.Dir{
+// 		File: &analyze.File{
+// 			Name: "xxx",
+// 		},
+// 		BasePath: ".",
+// 	}
+// }
 
 func getDevicesInfoMock() device.DevicesInfoGetter {
 	item := &device.Device{
@@ -357,7 +357,8 @@ func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mocked
 		ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	}
 	ui.done = make(chan struct{})
-	ui.AnalyzePath("test_dir", nil)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
 
