@@ -5,8 +5,10 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
+	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -75,6 +77,32 @@ func TestDeviceSelected(t *testing.T) {
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
 	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+}
+func TestDeviceSelectedWithAnalyzeErr(t *testing.T) {
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, true, true)
+	ui.done = make(chan struct{})
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+
+	devicesInfoMock := getDevicesInfoMock().(testdev.DevicesInfoGetterMock)
+
+	item3 := &device.Device{
+		Name:       "xxx",
+		MountPoint: "/xxx",
+		Size:       1e12,
+		Free:       1e6,
+	}
+
+	devicesInfoMock.Devices = append(devicesInfoMock.Devices, item3)
+
+	err := ui.ListDevices(devicesInfoMock)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 4, ui.table.GetRowCount())
+
+	ui.deviceItemSelected(3, 0) // select /xxx which does not exist
+
+	assert.True(t, ui.pages.HasPage("error"))
 }
 
 func TestAnalyzePath(t *testing.T) {
