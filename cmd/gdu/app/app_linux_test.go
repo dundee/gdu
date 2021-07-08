@@ -5,6 +5,7 @@ package app
 import (
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/stretchr/testify/assert"
@@ -37,4 +38,16 @@ func TestListDevicesWithErr(t *testing.T) {
 	)
 
 	assert.Equal(t, "loading mount points: open /xxxyyy: no such file or directory", err.Error())
+}
+
+func TestLogError(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/xyzxyz"},
+		[]string{},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Contains(t, err.Error(), "permission denied")
 }

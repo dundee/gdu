@@ -31,18 +31,6 @@ func TestVersion(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestLogError(t *testing.T) {
-	out, err := runApp(
-		&Flags{LogFile: "/xyzxyz"},
-		[]string{},
-		false,
-		testdev.DevicesInfoGetterMock{},
-	)
-
-	assert.Empty(t, out)
-	assert.Contains(t, err.Error(), "permission denied")
-}
-
 func TestAnalyzePath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
