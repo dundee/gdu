@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -99,6 +100,24 @@ func TestAnalyzePathWithGui(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAnalyzePathWithExport(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer func() {
+		os.Remove("output.json")
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputFile: "output.json"},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.NotEmpty(t, out)
+	assert.Nil(t, err)
+}
+
 func TestAnalyzePathWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -142,6 +161,24 @@ func TestListDevices(t *testing.T) {
 
 	assert.Contains(t, out, "Device")
 	assert.Nil(t, err)
+}
+
+func TestListDevicesToFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer func() {
+		os.Remove("output.json")
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", ShowDisks: true, OutputFile: "output.json"},
+		[]string{},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Equal(t, "", out)
+	assert.Contains(t, err.Error(), "not supported")
 }
 
 func TestListDevicesWithGui(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -31,6 +32,7 @@ type UI interface {
 // Flags define flags accepted by Run
 type Flags struct {
 	LogFile           string
+	OutputFile        string
 	IgnoreDirs        []string
 	IgnoreDirPatterns []string
 	MaxCores          int
@@ -71,7 +73,10 @@ func (a *App) Run() error {
 	log.SetOutput(f)
 
 	path := a.getPath()
-	ui := a.createUI()
+	ui, err := a.createUI()
+	if err != nil {
+		return err
+	}
 
 	if err := a.setNoCross(path); err != nil {
 		return err
@@ -116,8 +121,27 @@ func (a *App) setMaxProcs() {
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
-func (a *App) createUI() UI {
+func (a *App) createUI() (UI, error) {
 	var ui UI
+
+	if a.Flags.OutputFile != "" {
+		var output io.Writer
+		var err error
+		if a.Flags.OutputFile == "-" {
+			output = os.Stdout
+		} else {
+			output, err = os.OpenFile(a.Flags.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
+				return nil, fmt.Errorf("opening output file: %w", err)
+			}
+		}
+		ui = report.CreateExportUI(
+			a.Writer,
+			output,
+			!a.Flags.NoProgress && a.Istty,
+		)
+		return ui, nil
+	}
 
 	if a.Flags.NonInteractive || !a.Istty {
 		ui = stdout.CreateStdoutUI(
@@ -134,7 +158,7 @@ func (a *App) createUI() UI {
 		}
 		tview.Styles.BorderColor = tcell.ColorDefault
 	}
-	return ui
+	return ui, nil
 }
 
 func (a *App) setNoCross(path string) error {
