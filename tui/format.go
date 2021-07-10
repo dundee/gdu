@@ -3,25 +3,8 @@ package tui
 import (
 	"fmt"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
-)
-
-// file size constants
-const (
-	_          = iota
-	KB float64 = 1 << (10 * iota)
-	MB
-	GB
-	TB
-	PB
-	EB
-)
-
-// file count constants
-const (
-	K int = 1e3
-	M int = 1e6
-	G int = 1e9
 )
 
 func (ui *UI) formatFileRow(item analyze.Item) string {
@@ -88,18 +71,18 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 	fsize := float64(size)
 
 	switch {
-	case fsize >= EB:
-		return fmt.Sprintf("%.1f%s EiB", fsize/EB, color)
-	case fsize >= PB:
-		return fmt.Sprintf("%.1f%s PiB", fsize/PB, color)
-	case fsize >= TB:
-		return fmt.Sprintf("%.1f%s TiB", fsize/TB, color)
-	case fsize >= GB:
-		return fmt.Sprintf("%.1f%s GiB", fsize/GB, color)
-	case fsize >= MB:
-		return fmt.Sprintf("%.1f%s MiB", fsize/MB, color)
-	case fsize >= KB:
-		return fmt.Sprintf("%.1f%s KiB", fsize/KB, color)
+	case fsize >= common.EB:
+		return fmt.Sprintf("%.1f%s EiB", fsize/common.EB, color)
+	case fsize >= common.PB:
+		return fmt.Sprintf("%.1f%s PiB", fsize/common.PB, color)
+	case fsize >= common.TB:
+		return fmt.Sprintf("%.1f%s TiB", fsize/common.TB, color)
+	case fsize >= common.GB:
+		return fmt.Sprintf("%.1f%s GiB", fsize/common.GB, color)
+	case fsize >= common.MB:
+		return fmt.Sprintf("%.1f%s MiB", fsize/common.MB, color)
+	case fsize >= common.KB:
+		return fmt.Sprintf("%.1f%s KiB", fsize/common.KB, color)
 	default:
 		return fmt.Sprintf("%d%s B", size, color)
 	}
@@ -110,12 +93,12 @@ func (ui *UI) formatCount(count int) string {
 	color := "[-::]"
 
 	switch {
-	case count >= G:
-		row += fmt.Sprintf("%.1f%sG", float64(count)/float64(G), color)
-	case count >= M:
-		row += fmt.Sprintf("%.1f%sM", float64(count)/float64(M), color)
-	case count >= K:
-		row += fmt.Sprintf("%.1f%sk", float64(count)/float64(K), color)
+	case count >= common.G:
+		row += fmt.Sprintf("%.1f%sG", float64(count)/float64(common.G), color)
+	case count >= common.M:
+		row += fmt.Sprintf("%.1f%sM", float64(count)/float64(common.M), color)
+	case count >= common.K:
+		row += fmt.Sprintf("%.1f%sk", float64(count)/float64(common.K), color)
 	default:
 		row += fmt.Sprintf("%d%s", count, color)
 	}

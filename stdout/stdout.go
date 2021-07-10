@@ -215,15 +215,21 @@ func (ui *UI) updateProgress() {
 }
 
 func (ui *UI) formatSize(size int64) string {
+	fsize := float64(size)
+
 	switch {
-	case size > 1e12:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 40)) + " TiB"
-	case size > 1e9:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 30)) + " GiB"
-	case size > 1e6:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 20)) + " MiB"
-	case size > 1e3:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 10)) + " KiB"
+	case fsize >= common.EB:
+		return ui.orange.Sprintf("%.1f", fsize/common.EB) + " EiB"
+	case fsize >= common.PB:
+		return ui.orange.Sprintf("%.1f", fsize/common.PB) + " PiB"
+	case fsize >= common.TB:
+		return ui.orange.Sprintf("%.1f", fsize/common.TB) + " TiB"
+	case fsize >= common.GB:
+		return ui.orange.Sprintf("%.1f", fsize/common.GB) + " GiB"
+	case fsize >= common.MB:
+		return ui.orange.Sprintf("%.1f", fsize/common.MB) + " MiB"
+	case fsize >= common.KB:
+		return ui.orange.Sprintf("%.1f", fsize/common.KB) + " KiB"
 	default:
 		return ui.orange.Sprintf("%d", size) + " B"
 	}
