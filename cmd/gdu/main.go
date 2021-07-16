@@ -33,6 +33,7 @@ func init() {
 	flags := rootCmd.Flags()
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export analysis into file as JSON")
+	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
 	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that GDU will use. %d cores available", runtime.NumCPU()))
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
 

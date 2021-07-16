@@ -118,6 +118,43 @@ func TestAnalyzePathWithExport(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestReadAnalysisFromFile(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", InputFile: "../../../internal/testdata/test.json"},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, "main.go")
+	assert.Nil(t, err)
+}
+
+func TestReadWrongAnalysisFromFile(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", InputFile: "../../../internal/testdata/wrong.json"},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Contains(t, err.Error(), "Array of maps not found")
+}
+
+func TestReadWrongAnalysisFromNotExistingFile(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", InputFile: "xxx.json"},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Contains(t, err.Error(), "no such file or directory")
+}
+
 func TestAnalyzePathWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

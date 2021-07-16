@@ -3,6 +3,7 @@ package tui
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/report"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -99,6 +101,57 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 			ui.topDirPath = abspath
 			ui.topDir = ui.currentDir
 		}
+
+		ui.app.QueueUpdateDraw(func() {
+			ui.showDir()
+			ui.pages.RemovePage("progress")
+		})
+
+		if ui.done != nil {
+			ui.done <- struct{}{}
+		}
+	}()
+
+	return nil
+}
+
+// ReadAnalysis reads analysis report from JSON file
+func (ui *UI) ReadAnalysis(input io.Reader) error {
+	ui.progress = tview.NewTextView().SetText("Reading analysis from file...")
+	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
+	ui.progress.SetTitle(" Reading... ")
+	ui.progress.SetDynamicColors(true)
+
+	flex := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 10, 1, false).
+			AddItem(ui.progress, 8, 1, false).
+			AddItem(nil, 10, 1, false), 0, 50, false).
+		AddItem(nil, 0, 1, false)
+
+	ui.pages.AddPage("progress", flex, true, true)
+
+	go func() {
+		var err error
+		ui.currentDir, err = report.ReadAnalysis(input)
+		if err != nil {
+			ui.app.QueueUpdateDraw(func() {
+				ui.pages.RemovePage("progress")
+				ui.showErr("Error reading file", err)
+			})
+			if ui.done != nil {
+				ui.done <- struct{}{}
+			}
+			return
+		}
+		runtime.GC()
+
+		ui.topDirPath = ui.currentDir.GetPath()
+		ui.topDir = ui.currentDir
+
+		links := make(analyze.AlreadyCountedHardlinks, 10)
+		ui.topDir.UpdateStats(links)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.showDir()

@@ -60,6 +60,16 @@ func TestShowDevices(t *testing.T) {
 	assert.Contains(t, err.Error(), "not supported")
 }
 
+func TestReadAnalysisWhileExporting(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	reportOutput := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateExportUI(output, reportOutput, true)
+	err := ui.ReadAnalysis(output)
+
+	assert.Contains(t, err.Error(), "not possible while exporting")
+}
+
 func TestExportToFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

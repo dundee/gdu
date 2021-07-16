@@ -9,10 +9,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
-	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
 	"github.com/gdamore/tcell/v2"
@@ -23,6 +23,7 @@ import (
 type UI interface {
 	ListDevices(getter device.DevicesInfoGetter) error
 	AnalyzePath(path string, parentDir *analyze.Dir) error
+	ReadAnalysis(input io.Reader) error
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreHidden(value bool)
@@ -32,6 +33,7 @@ type UI interface {
 // Flags define flags accepted by Run
 type Flags struct {
 	LogFile           string
+	InputFile         string
 	OutputFile        string
 	IgnoreDirs        []string
 	IgnoreDirPatterns []string
@@ -177,6 +179,21 @@ func (a *App) runAction(ui UI, path string) error {
 	if a.Flags.ShowDisks {
 		if err := ui.ListDevices(a.Getter); err != nil {
 			return fmt.Errorf("loading mount points: %w", err)
+		}
+	} else if a.Flags.InputFile != "" {
+		var input io.Reader
+		var err error
+		if a.Flags.InputFile == "-" {
+			input = os.Stdin
+		} else {
+			input, err = os.OpenFile(a.Flags.InputFile, os.O_RDONLY, 0644)
+			if err != nil {
+				return fmt.Errorf("opening input file: %w", err)
+			}
+		}
+
+		if err := ui.ReadAnalysis(input); err != nil {
+			return fmt.Errorf("reading analysis: %w", err)
 		}
 	} else {
 		if err := ui.AnalyzePath(path, nil); err != nil {

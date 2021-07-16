@@ -56,6 +56,11 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	return errors.New("Exporting devices list is not supported")
 }
 
+// ReadAnalysis reads analysis report from JSON file
+func (ui *UI) ReadAnalysis(input io.Reader) error {
+	return errors.New("Reading analysis is not possible while exporting")
+}
+
 // AnalyzePath analyzes recursively disk usage in given path
 func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	var (

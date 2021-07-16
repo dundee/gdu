@@ -2,6 +2,7 @@ package stdout
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -125,6 +126,44 @@ func TestShowDevicesWithColor(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "Device")
 	assert.Contains(t, output.String(), "xxx")
+}
+
+func TestReadAnalysisWithColor(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "main.go")
+}
+
+func TestReadAnalysisBw(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "main.go")
+}
+
+func TestReadAnalysisWithWrongFile(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true)
+	err = ui.ReadAnalysis(input)
+
+	assert.NotNil(t, err)
 }
 
 func TestMaxInt(t *testing.T) {
