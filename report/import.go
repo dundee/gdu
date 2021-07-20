@@ -15,8 +15,12 @@ func ReadAnalysis(input io.Reader) (*analyze.Dir, error) {
 	var data interface{}
 
 	var buff bytes.Buffer
-	buff.ReadFrom(input)
-	json.Unmarshal(buff.Bytes(), &data)
+	if _, err := buff.ReadFrom(input); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(buff.Bytes(), &data); err != nil {
+		return nil, err
+	}
 
 	dataArray, ok := data.([]interface{})
 	if !ok {

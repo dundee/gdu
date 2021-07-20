@@ -2,6 +2,7 @@ package report
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -37,7 +38,21 @@ func TestReadAnalysisWithEmptyInput(t *testing.T) {
 
 	_, err := ReadAnalysis(buff)
 
+	assert.Equal(t, "unexpected end of JSON input", err.Error())
+}
+
+func TestReadAnalysisWithEmptyDict(t *testing.T) {
+	buff := bytes.NewBuffer([]byte(`{}`))
+
+	_, err := ReadAnalysis(buff)
+
 	assert.Equal(t, "JSON file does not contain top level array", err.Error())
+}
+
+func TestReadFromBrokenInput(t *testing.T) {
+	_, err := ReadAnalysis(&BrokenInput{})
+
+	assert.Equal(t, "IO error", err.Error())
 }
 
 func TestReadAnalysisWithEmptyArray(t *testing.T) {
@@ -78,4 +93,10 @@ func TestReadAnalysisWithWrongSubdirItem(t *testing.T) {
 	_, err := ReadAnalysis(buff)
 
 	assert.Equal(t, "Directory item is not a map", err.Error())
+}
+
+type BrokenInput struct{}
+
+func (i *BrokenInput) Read(p []byte) (n int, err error) {
+	return 0, errors.New("IO error")
 }
