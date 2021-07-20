@@ -76,13 +76,15 @@ Flags:
   -h, --help                          help for gdu
   -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -I, --ignore-dirs-pattern strings   Absolute path patterns to ignore (separated by comma)
+  -f, --input-file string             Import analysis from JSON file
   -l, --log-file string               Path to a logfile (default "/dev/null")
   -m, --max-cores int                 Set max cores that GDU will use. 8 cores available (default 8)
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
-  -H, --no-hidden                     Ignore hidden directories (beggining with dot)
+  -H, --no-hidden                     Ignore hidden directories (beginning with dot)
   -p, --no-progress                   Do not show progress in non-interactive mode
   -n, --non-interactive               Do not run in interactive mode
+  -o, --output-file string            Export all info into file as JSON
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
   -v, --version                       Print version
@@ -103,9 +105,14 @@ Flags:
     gdu -np /                             # do not show progress, useful when using its output in a script
     gdu / > file                          # write stats to file, do not start interactive mode
 
-Gdu has two modes: interactive (default) and non-interactive.
+    gdu -o- / | gzip >report.json.gz      # write all info to JSON file for later analysis
+    zcat report.json.gz | gdu -f-         # read analysis from file
+
+Gdu has three modes: interactive (default), non-interactive and export.
 
 Non-interactive mode is started automtically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
+
+Export mode (flag `-o`) outputs all usage data as JSON, which can then be later opened using the `-f` flag.
 
 Hard links are counted only once.
 
