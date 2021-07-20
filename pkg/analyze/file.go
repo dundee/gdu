@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -19,6 +20,7 @@ type Item interface {
 	GetUsage() int64
 	GetItemCount() int
 	GetParent() *Dir
+	EncodeJSON(writer io.Writer, topLevel bool) error
 	getItemStats(links AlreadyCountedHardlinks) (int, int64, int64)
 }
 

@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/report"
 	"github.com/fatih/color"
 )
 
@@ -24,6 +26,8 @@ type UI struct {
 	orange *color.Color
 	blue   *color.Color
 }
+
+var progressRunes = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
 // CreateStdoutUI creates UI for stdout
 func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApparentSize bool) *UI {
@@ -141,6 +145,12 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 
 	wait.Wait()
 
+	ui.showDir(dir)
+
+	return nil
+}
+
+func (ui *UI) showDir(dir *analyze.Dir) {
 	sort.Sort(dir.Files)
 
 	var lineFormat string
@@ -173,8 +183,81 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 				file.GetName())
 		}
 	}
+}
+
+// ReadAnalysis reads analysis report from JSON file
+func (ui *UI) ReadAnalysis(input io.Reader) error {
+	var (
+		dir      *analyze.Dir
+		wait     sync.WaitGroup
+		err      error
+		doneChan chan struct{}
+	)
+
+	if ui.ShowProgress {
+		wait.Add(1)
+		doneChan = make(chan struct{})
+		go func() {
+			defer wait.Done()
+			ui.showReadingProgress(doneChan)
+		}()
+	}
+
+	wait.Add(1)
+	go func() {
+		defer wait.Done()
+		dir, err = report.ReadAnalysis(input)
+		if err != nil {
+			if ui.ShowProgress {
+				doneChan <- struct{}{}
+			}
+			return
+		}
+		runtime.GC()
+
+		links := make(analyze.AlreadyCountedHardlinks, 10)
+		dir.UpdateStats(links)
+
+		if ui.ShowProgress {
+			doneChan <- struct{}{}
+		}
+	}()
+
+	wait.Wait()
+
+	if err != nil {
+		return err
+	}
+
+	ui.showDir(dir)
 
 	return nil
+}
+
+func (ui *UI) showReadingProgress(doneChan chan struct{}) {
+	emptyRow := "\r"
+	for j := 0; j < 40; j++ {
+		emptyRow += " "
+	}
+
+	i := 0
+	for {
+		fmt.Fprint(ui.output, emptyRow)
+
+		select {
+		case <-doneChan:
+			fmt.Fprint(ui.output, "\r")
+			return
+		default:
+		}
+
+		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+		fmt.Fprint(ui.output, "Reading analysis from file...")
+
+		time.Sleep(100 * time.Millisecond)
+		i++
+		i %= 10
+	}
 }
 
 func (ui *UI) updateProgress() {
@@ -182,8 +265,6 @@ func (ui *UI) updateProgress() {
 	for j := 0; j < 100; j++ {
 		emptyRow += " "
 	}
-
-	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
 	progressChan := ui.Analyzer.GetProgressChan()
 	doneChan := ui.Analyzer.GetDoneChan()
@@ -215,15 +296,21 @@ func (ui *UI) updateProgress() {
 }
 
 func (ui *UI) formatSize(size int64) string {
+	fsize := float64(size)
+
 	switch {
-	case size > 1e12:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 40)) + " TiB"
-	case size > 1e9:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 30)) + " GiB"
-	case size > 1e6:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 20)) + " MiB"
-	case size > 1e3:
-		return ui.orange.Sprintf("%.1f", float64(size)/math.Pow(2, 10)) + " KiB"
+	case fsize >= common.EB:
+		return ui.orange.Sprintf("%.1f", fsize/common.EB) + " EiB"
+	case fsize >= common.PB:
+		return ui.orange.Sprintf("%.1f", fsize/common.PB) + " PiB"
+	case fsize >= common.TB:
+		return ui.orange.Sprintf("%.1f", fsize/common.TB) + " TiB"
+	case fsize >= common.GB:
+		return ui.orange.Sprintf("%.1f", fsize/common.GB) + " GiB"
+	case fsize >= common.MB:
+		return ui.orange.Sprintf("%.1f", fsize/common.MB) + " MiB"
+	case fsize >= common.KB:
+		return ui.orange.Sprintf("%.1f", fsize/common.KB) + " KiB"
 	default:
 		return ui.orange.Sprintf("%d", size) + " B"
 	}

@@ -51,3 +51,15 @@ func TestLogError(t *testing.T) {
 	assert.Empty(t, out)
 	assert.Contains(t, err.Error(), "permission denied")
 }
+
+func TestOutputFileError(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputFile: "/xyzxyz"},
+		[]string{},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Contains(t, err.Error(), "permission denied")
+}

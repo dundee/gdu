@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -99,6 +100,61 @@ func TestAnalyzePathWithGui(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAnalyzePathWithExport(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer func() {
+		os.Remove("output.json")
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputFile: "output.json"},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.NotEmpty(t, out)
+	assert.Nil(t, err)
+}
+
+func TestReadAnalysisFromFile(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", InputFile: "../../../internal/testdata/test.json"},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, "main.go")
+	assert.Nil(t, err)
+}
+
+func TestReadWrongAnalysisFromFile(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", InputFile: "../../../internal/testdata/wrong.json"},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Contains(t, err.Error(), "Array of maps not found")
+}
+
+func TestReadWrongAnalysisFromNotExistingFile(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", InputFile: "xxx.json"},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Contains(t, err.Error(), "no such file or directory")
+}
+
 func TestAnalyzePathWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -142,6 +198,24 @@ func TestListDevices(t *testing.T) {
 
 	assert.Contains(t, out, "Device")
 	assert.Nil(t, err)
+}
+
+func TestListDevicesToFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer func() {
+		os.Remove("output.json")
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", ShowDisks: true, OutputFile: "output.json"},
+		[]string{},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Equal(t, "", out)
+	assert.Contains(t, err.Error(), "not supported")
 }
 
 func TestListDevicesWithGui(t *testing.T) {

@@ -18,3 +18,21 @@ type UI struct {
 	ShowApparentSize      bool
 	PathChecker           func(string) (fs.FileInfo, error)
 }
+
+// file size constants
+const (
+	_          = iota
+	KB float64 = 1 << (10 * iota)
+	MB
+	GB
+	TB
+	PB
+	EB
+)
+
+// file count constants
+const (
+	K int = 1e3
+	M int = 1e6
+	G int = 1e9
+)

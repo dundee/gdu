@@ -1,0 +1,7 @@
+[1,2,{"progname":"gdu","progver":"development","timestamp":1626807263},
+[{"name":"/home/gdu"},
+[{"name":"app"},
+{"name":"app.go","asize":4638,"dsize":8192},
+{"name":"app_linux_test.go","asize":1410,"dsize":4096},
+{"name":"app_test.go","asize":4974,"dsize":8192}],
+{"name":"main.go","asize":3205,"dsize":4096}]]

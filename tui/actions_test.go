@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -158,6 +159,46 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
 	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+}
+
+func TestReadAnalysis(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	assert.Nil(t, err)
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+	ui.done = make(chan struct{})
+
+	err = ui.ReadAnalysis(input)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for reading
+
+	assert.Equal(t, "gdu", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+}
+
+func TestReadAnalysisWithWrongFile(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0644)
+	assert.Nil(t, err)
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, true, true)
+	ui.done = make(chan struct{})
+
+	err = ui.ReadAnalysis(input)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for reading
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.True(t, ui.pages.HasPage("error"))
 }
 
 func TestViewDirContents(t *testing.T) {
