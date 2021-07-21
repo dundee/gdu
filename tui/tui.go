@@ -18,7 +18,7 @@ import (
 const helpTextColorized = `
   [red]up, down, k, j    [white]Move cursor up/down
 [red]pgup, pgdn, g, G    [white]Move cursor top/bottom
- [red]enter, right, l    [white]Select directory/device
+ [red]enter, right, l    [white]Go to directory/device
          [red]left, h    [white]Go to parent directory
 			   [red]d    [white]Delete selected file or directory
 			   [red]e    [white]Empty selected file or directory
@@ -35,7 +35,7 @@ const helpTextColorized = `
 const helpText = `
   [::b]up, down, k, j    [white:black:-]Move cursor up/down
 [::b]pgup, pgdn, g, G    [white:black:-]Move cursor top/bottom
- [::b]enter, right, l    [white:black:-]Select directory/device
+ [::b]enter, right, l    [white:black:-]Go to directory/device
          [::b]left, h    [white:black:-]Go to parent directory
 			   [::b]d    [white:black:-]Delete selected file or directory
 			   [::b]e    [white:black:-]Empty selected file or directory
