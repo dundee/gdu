@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -15,23 +16,6 @@ import (
 	"github.com/rivo/tview"
 )
 
-const helpTextColorized = `
-    [red]up/down, k/j    [white]Move cursor up/down
-  [red]pgup/pgdn, g/G    [white]Move cursor top/bottom
- [red]enter, right, l    [white]Go to directory/device
-         [red]left, h    [white]Go to parent directory
-			   [red]d    [white]Delete selected file or directory
-			   [red]e    [white]Empty selected file or directory
-			   [red]v    [white]Show content of selected file
-			   [red]i    [white]Show info about selected item
-			   [red]r    [white]Rescan current directory
-			   [red]a    [white]Toggle between showing disk usage and apparent size
-			   [red]c    [white]Show/hide file count
-			   [red]n    [white]Sort by name (asc/desc)
-			   [red]s    [white]Sort by size (asc/desc)
-			   [red]C    [white]Sort by file count (asc/desc)
-			   [red]q    [white]Quit gdu
-`
 const helpText = `
     [::b]up/down, k/j    [white:black:-]Move cursor up/down
   [::b]pgup/pgdn, g/G    [white:black:-]Move cursor top/bottom
@@ -387,7 +371,13 @@ func (ui *UI) showHelp() {
 	text.SetTitle(" gdu help ")
 
 	if ui.UseColors {
-		text.SetText(helpTextColorized)
+		text.SetText(
+			strings.ReplaceAll(
+				strings.ReplaceAll(helpText, "[::b]", "[red]"),
+				"[white:black:-]",
+				"[white]",
+			),
+		)
 	} else {
 		text.SetText(helpText)
 	}
