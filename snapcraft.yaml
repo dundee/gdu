@@ -12,6 +12,7 @@ parts:
     source: .
     override-build: |
           GO111MODULE=on CGO_ENABLED=0 go build \
+            -buildmode=pie -trimpath -mod=readonly -modcacherw \
             -ldflags \
               "-s -w \
               -X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
