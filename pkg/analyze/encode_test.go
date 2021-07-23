@@ -43,6 +43,7 @@ func TestEncode(t *testing.T) {
 		Size:   5,
 		Usage:  6,
 		Parent: subdir,
+		Flag:   '@',
 	}
 	dir.Files = Files{subdir}
 	subdir.Files = Files{file, file2}

@@ -19,6 +19,7 @@ func TestReadAnalysis(t *testing.T) {
 		[1,2,{"progname":"gdu","progver":"development","timestamp":1626806293},
 		[{"name":"/home/xxx"},
 		{"name":"gdu.json","asize":33805233,"dsize":33808384},
+		{"name":"sock","notreg":true},
 		[{"name":"app"},
 		{"name":"app.go","asize":4638,"dsize":8192},
 		{"name":"app_linux_test.go","asize":1410,"dsize":4096},

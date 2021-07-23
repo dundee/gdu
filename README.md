@@ -105,7 +105,7 @@ Flags:
     gdu -np /                             # do not show progress, useful when using its output in a script
     gdu / > file                          # write stats to file, do not start interactive mode
 
-    gdu -o- / | gzip >report.json.gz      # write all info to JSON file for later analysis
+    gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
     zcat report.json.gz | gdu -f-         # read analysis from file
 
 Gdu has three modes: interactive (default), non-interactive and export.

@@ -58,10 +58,19 @@ func (f *File) EncodeJSON(writer io.Writer, topLevel bool) error {
 	if err := addString(&buff, f.GetName()); err != nil {
 		return err
 	}
-	buff = append(buff, []byte(`,"asize":`)...)
-	buff = append(buff, []byte(fmt.Sprint(f.GetSize()))...)
-	buff = append(buff, []byte(`,"dsize":`)...)
-	buff = append(buff, []byte(fmt.Sprint(f.GetUsage()))...)
+	if f.GetSize() > 0 {
+		buff = append(buff, []byte(`,"asize":`)...)
+		buff = append(buff, []byte(fmt.Sprint(f.GetSize()))...)
+	}
+	if f.GetUsage() > 0 {
+		buff = append(buff, []byte(`,"dsize":`)...)
+		buff = append(buff, []byte(fmt.Sprint(f.GetUsage()))...)
+	}
+
+	if f.Flag == '@' {
+		buff = append(buff, []byte(`,"notreg":true`)...)
+	}
+
 	buff = append(buff, '}')
 
 	if _, err := writer.Write(buff); err != nil {

@@ -66,10 +66,23 @@ func processDir(items []interface{}) (*analyze.Dir, error) {
 		case map[string]interface{}:
 			file := &analyze.File{}
 			file.Name = item["name"].(string)
-			file.Size = int64(item["asize"].(float64))
-			file.Usage = int64(item["dsize"].(float64))
+
+			switch asize := item["asize"].(type) {
+			case float64:
+				file.Size = int64(asize)
+			}
+			switch dsize := item["dsize"].(type) {
+			case float64:
+				file.Usage = int64(dsize)
+			}
+			switch item["notreg"].(type) {
+			case bool:
+				file.Flag = '@'
+			default:
+				file.Flag = ' '
+			}
+
 			file.Parent = dir
-			file.Flag = ' '
 
 			dir.Files.Append(file)
 		case []interface{}:
