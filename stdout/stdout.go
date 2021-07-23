@@ -285,7 +285,7 @@ func (ui *UI) updateProgress() {
 		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
 
 		fmt.Fprint(ui.output, "Scanning... Total items: "+
-			ui.red.Sprint(progress.ItemCount)+
+			ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
 			" size: "+
 			ui.formatSize(progress.TotalSize))
 

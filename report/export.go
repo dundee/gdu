@@ -164,7 +164,7 @@ func (ui *UI) updateProgress() {
 			fmt.Fprint(ui.output, "Writing output file...")
 		} else {
 			fmt.Fprint(ui.output, "Scanning... Total items: "+
-				ui.red.Sprint(progress.ItemCount)+
+				ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
 				" size: "+
 				ui.formatSize(progress.TotalSize))
 		}

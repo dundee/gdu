@@ -355,7 +355,7 @@ func (ui *UI) updateProgress() {
 			ui.app.QueueUpdateDraw(func() {
 				ui.progress.SetText("Total items: " +
 					color +
-					fmt.Sprint(itemCount) +
+					common.FormatNumber(int64(itemCount)) +
 					"[white:black:-] size: " +
 					color +
 					ui.formatSize(totalSize, false, false) +
