@@ -23,7 +23,7 @@ func TestAnalyzePath(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false)
+	ui := CreateExportUI(output, reportOutput, false, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -40,7 +40,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, true)
+	ui := CreateExportUI(output, reportOutput, true, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -54,7 +54,7 @@ func TestShowDevices(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, true)
+	ui := CreateExportUI(output, reportOutput, false, true)
 	err := ui.ListDevices(device.Getter)
 
 	assert.Contains(t, err.Error(), "not supported")
@@ -64,7 +64,7 @@ func TestReadAnalysisWhileExporting(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, true)
+	ui := CreateExportUI(output, reportOutput, false, true)
 	err := ui.ReadAnalysis(output)
 
 	assert.Contains(t, err.Error(), "not possible while exporting")
@@ -82,7 +82,7 @@ func TestExportToFile(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, true)
+	ui := CreateExportUI(output, reportOutput, false, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err = ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -104,7 +104,7 @@ func TestFormatSize(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, true)
+	ui := CreateExportUI(output, reportOutput, false, true)
 
 	assert.Contains(t, ui.formatSize(1), "B")
 	assert.Contains(t, ui.formatSize(1<<10+1), "KiB")

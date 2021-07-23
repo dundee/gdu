@@ -29,7 +29,7 @@ type UI struct {
 }
 
 // CreateExportUI creates UI for stdout
-func CreateExportUI(output io.Writer, exportOutput io.Writer, showProgress bool) *UI {
+func CreateExportUI(output io.Writer, exportOutput io.Writer, useColors bool, showProgress bool) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			ShowProgress: showProgress,
@@ -42,6 +42,10 @@ func CreateExportUI(output io.Writer, exportOutput io.Writer, showProgress bool)
 	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
+
+	if !useColors {
+		color.NoColor = true
+	}
 
 	return ui
 }

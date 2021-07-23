@@ -140,6 +140,7 @@ func (a *App) createUI() (UI, error) {
 		ui = report.CreateExportUI(
 			a.Writer,
 			output,
+			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
 		)
 		return ui, nil
