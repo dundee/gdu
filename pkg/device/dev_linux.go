@@ -68,7 +68,10 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 			continue
 		}
 
-		if strings.HasPrefix(mount.Name, "/dev") || mount.Fstype == "zfs" {
+		if strings.HasPrefix(mount.Name, "/dev") ||
+			mount.Fstype == "zfs" ||
+			mount.Fstype == "nfs" ||
+			mount.Fstype == "nfs4" {
 			info := &syscall.Statfs_t{}
 			err := syscall.Statfs(mount.MountPoint, info)
 			if err != nil && !ignoreErrors {
