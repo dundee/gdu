@@ -80,12 +80,13 @@ func runE(command *cobra.Command, args []string) error {
 	}
 
 	a := app.App{
-		Flags:   af,
-		Args:    args,
-		Istty:   istty,
-		Writer:  os.Stdout,
-		TermApp: termApp,
-		Getter:  device.Getter,
+		Flags:       af,
+		Args:        args,
+		Istty:       istty,
+		Writer:      os.Stdout,
+		TermApp:     termApp,
+		Getter:      device.Getter,
+		PathChecker: os.Stat,
 	}
 	return a.Run()
 }

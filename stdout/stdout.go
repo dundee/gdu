@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
@@ -37,7 +35,6 @@ func CreateStdoutUI(output io.Writer, useColors bool, showProgress bool, showApp
 			ShowProgress:     showProgress,
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			PathChecker:      os.Stat,
 		},
 		output: output,
 	}
@@ -122,12 +119,6 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 		dir  *analyze.Dir
 		wait sync.WaitGroup
 	)
-	abspath, _ := filepath.Abs(path)
-
-	_, err := ui.PathChecker(abspath)
-	if err != nil {
-		return err
-	}
 
 	if ui.ShowProgress {
 		wait.Add(1)
@@ -140,7 +131,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(abspath, ui.CreateIgnoreFunc())
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
 	}()
 
 	wait.Wait()

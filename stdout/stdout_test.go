@@ -52,17 +52,6 @@ func TestAnalyzeSubdir(t *testing.T) {
 	assert.Contains(t, output.String(), "file2")
 }
 
-func TestAnalyzePathWithErr(t *testing.T) {
-	buff := make([]byte, 10)
-	output := bytes.NewBuffer(buff)
-
-	ui := CreateStdoutUI(output, false, false, false)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	err := ui.AnalyzePath("aaa", nil)
-
-	assert.Contains(t, err.Error(), "no such file or directory")
-}
-
 func TestAnalyzePathWithColors(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -83,7 +72,6 @@ func TestItemRows(t *testing.T) {
 
 	ui := CreateStdoutUI(output, false, true, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
-	ui.PathChecker = testdir.MockedPathChecker
 	err := ui.AnalyzePath("test_dir", nil)
 
 	assert.Nil(t, err)

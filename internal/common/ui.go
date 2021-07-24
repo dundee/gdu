@@ -1,7 +1,6 @@
 package common
 
 import (
-	"io/fs"
 	"regexp"
 	"strconv"
 
@@ -17,7 +16,6 @@ type UI struct {
 	UseColors             bool
 	ShowProgress          bool
 	ShowApparentSize      bool
-	PathChecker           func(string) (fs.FileInfo, error)
 }
 
 // file size constants

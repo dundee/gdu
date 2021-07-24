@@ -3,7 +3,9 @@ package app
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	log "github.com/sirupsen/logrus"
@@ -50,12 +52,13 @@ type Flags struct {
 
 // App defines the main application
 type App struct {
-	Args    []string
-	Flags   *Flags
-	Istty   bool
-	Writer  io.Writer
-	TermApp common.TermApplication
-	Getter  device.DevicesInfoGetter
+	Args        []string
+	Flags       *Flags
+	Istty       bool
+	Writer      io.Writer
+	TermApp     common.TermApplication
+	Getter      device.DevicesInfoGetter
+	PathChecker func(string) (fs.FileInfo, error)
 }
 
 // Run starts gdu main logic
@@ -197,7 +200,14 @@ func (a *App) runAction(ui UI, path string) error {
 			return fmt.Errorf("reading analysis: %w", err)
 		}
 	} else {
-		if err := ui.AnalyzePath(path, nil); err != nil {
+		abspath, _ := filepath.Abs(path)
+
+		_, err := a.PathChecker(abspath)
+		if err != nil {
+			return err
+		}
+
+		if err := ui.AnalyzePath(abspath, nil); err != nil {
 			return fmt.Errorf("scanning dir: %w", err)
 		}
 	}

@@ -6,10 +6,8 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
-	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -79,55 +77,19 @@ func TestDeviceSelected(t *testing.T) {
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
 	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
 }
-func TestDeviceSelectedWithAnalyzeErr(t *testing.T) {
-	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
-	ui.done = make(chan struct{})
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
-
-	devicesInfoMock := getDevicesInfoMock().(testdev.DevicesInfoGetterMock)
-
-	item3 := &device.Device{
-		Name:       "xxx",
-		MountPoint: "/xxx",
-		Size:       1e12,
-		Free:       1e6,
-	}
-
-	devicesInfoMock.Devices = append(devicesInfoMock.Devices, item3)
-
-	err := ui.ListDevices(devicesInfoMock)
-
-	assert.Nil(t, err)
-	assert.Equal(t, 4, ui.table.GetRowCount())
-
-	ui.deviceItemSelected(3, 0) // select /xxx which does not exist
-
-	assert.True(t, ui.pages.HasPage("error"))
-}
 
 func TestAnalyzePath(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
-}
-
-func TestAnalyzePathWithErr(t *testing.T) {
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
-	err := ui.AnalyzePath("xxx", nil)
-
-	assert.Contains(t, err.Error(), "no such file or directory")
+	assert.Equal(t, 4, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
 }
 
 func TestAnalyzePathBW(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+	assert.Equal(t, 4, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
 }
 
 func TestAnalyzePathWithParentDir(t *testing.T) {
@@ -141,7 +103,6 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
-	ui.PathChecker = testdir.MockedPathChecker
 	ui.topDir = parentDir
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", parentDir)
@@ -205,7 +166,6 @@ func TestViewDirContents(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
-	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -226,7 +186,6 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, false, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
-	ui.PathChecker = testdir.MockedPathChecker
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -239,12 +198,9 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 		f()
 	}
 
-	ui.table.Select(0, 0)
-	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.table.Select(3, 0)
 
-	ui.table.Select(4, 0)
-
-	selectedFile := ui.table.GetCell(4, 0).GetReference().(analyze.Item)
+	selectedFile := ui.table.GetCell(3, 0).GetReference().(analyze.Item)
 	assert.Equal(t, "ddd", selectedFile.GetName())
 
 	res := ui.showFile()

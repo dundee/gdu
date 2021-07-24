@@ -159,14 +159,20 @@ func TestAnalyzePathWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	out, err := runApp(
-		&Flags{LogFile: "/dev/null"},
-		[]string{"xxx"},
-		false,
-		testdev.DevicesInfoGetterMock{},
-	)
+	buff := bytes.NewBufferString("")
 
-	assert.Equal(t, "", out)
+	app := App{
+		Flags:       &Flags{LogFile: "/dev/null"},
+		Args:        []string{"xxx"},
+		Istty:       false,
+		Writer:      buff,
+		TermApp:     testapp.CreateMockedApp(false),
+		Getter:      testdev.DevicesInfoGetterMock{},
+		PathChecker: os.Stat,
+	}
+	err := app.Run()
+
+	assert.Equal(t, "", strings.TrimSpace(buff.String()))
 	assert.Contains(t, err.Error(), "no such file or directory")
 }
 
@@ -281,12 +287,13 @@ func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGe
 	buff := bytes.NewBufferString("")
 
 	app := App{
-		Flags:   flags,
-		Args:    args,
-		Istty:   istty,
-		Writer:  buff,
-		TermApp: testapp.CreateMockedApp(false),
-		Getter:  getter,
+		Flags:       flags,
+		Args:        args,
+		Istty:       istty,
+		Writer:      buff,
+		TermApp:     testapp.CreateMockedApp(false),
+		Getter:      getter,
+		PathChecker: testdir.MockedPathChecker,
 	}
 	err := app.Run()
 

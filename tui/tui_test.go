@@ -185,11 +185,10 @@ func TestDirSelected(t *testing.T) {
 func TestFileSelected(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
-	ui.fileItemSelected(4, 0)
+	ui.fileItemSelected(3, 0)
 
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+	assert.Equal(t, 4, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
 }
 
 func TestBeforeDraw(t *testing.T) {
@@ -351,7 +350,6 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mockedAnalyzer bool) *UI {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, useColors, apparentSize)
-	ui.PathChecker = testdir.MockedPathChecker
 
 	if mockedAnalyzer {
 		ui.Analyzer = &testanalyze.MockedAnalyzer{}

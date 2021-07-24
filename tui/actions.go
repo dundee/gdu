@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -61,13 +60,6 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 
 // AnalyzePath analyzes recursively disk usage in given path
 func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
-	abspath, _ := filepath.Abs(path)
-
-	_, err := ui.PathChecker(abspath)
-	if err != nil {
-		return err
-	}
-
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	ui.progress.SetTitle(" Scanning... ")
@@ -87,7 +79,7 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	go ui.updateProgress()
 
 	go func() {
-		ui.currentDir = ui.Analyzer.AnalyzeDir(abspath, ui.CreateIgnoreFunc())
+		ui.currentDir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
 		runtime.GC()
 
 		if parentDir != nil {
@@ -98,7 +90,7 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 			links := make(analyze.AlreadyCountedHardlinks, 10)
 			ui.topDir.UpdateStats(links)
 		} else {
-			ui.topDirPath = abspath
+			ui.topDirPath = path
 			ui.topDir = ui.currentDir
 		}
 

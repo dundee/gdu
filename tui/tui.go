@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -70,7 +69,6 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 			UseColors:        useColors,
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			PathChecker:      os.Stat,
 		},
 		askBeforeDelete: true,
 		showItemCount:   false,
