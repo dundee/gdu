@@ -8,3 +8,7 @@ var Time string
 
 // User who built it
 var User string
+
+// RootPathPrefix stores path to be prepended to given absolute path
+// e.g. /var/lib/snapd/hostfs for snap
+var RootPathPrefix = ""

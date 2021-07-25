@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/report"
@@ -235,7 +236,9 @@ func (ui *UI) showFile() *tview.TextView {
 	scanner := bufio.NewScanner(f)
 
 	file := tview.NewTextView()
-	ui.currentDirLabel.SetText("[::b] --- " + selectedFile.GetPath() + " ---").SetDynamicColors(true)
+	ui.currentDirLabel.SetText("[::b] --- " +
+		strings.TrimPrefix(selectedFile.GetPath(), build.RootPathPrefix) +
+		" ---").SetDynamicColors(true)
 
 	readNextPart := func(linesCount int) int {
 		var err error
@@ -260,7 +263,9 @@ func (ui *UI) showFile() *tview.TextView {
 	file.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 'q' || event.Key() == tcell.KeyESC {
 			f.Close()
-			ui.currentDirLabel.SetText("[::b] --- " + ui.currentDirPath + " ---").SetDynamicColors(true)
+			ui.currentDirLabel.SetText("[::b] --- " +
+				strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix) +
+				" ---").SetDynamicColors(true)
 			ui.pages.RemovePage("file")
 			ui.app.SetFocus(ui.table)
 			return event
@@ -316,7 +321,8 @@ func (ui *UI) showInfo() {
 	text.SetTitle(" Item info ")
 
 	content += "[::b]Name:[::-] " + selectedFile.GetName() + "\n"
-	content += "[::b]Path:[::-] " + selectedFile.GetPath() + "\n"
+	content += "[::b]Path:[::-] " +
+		strings.TrimPrefix(selectedFile.GetPath(), build.RootPathPrefix) + "\n"
 	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n\n"
 
 	content += "   [::b]Disk usage:[::-] "

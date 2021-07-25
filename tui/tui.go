@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -152,7 +153,9 @@ func (ui *UI) rescanDir() {
 
 func (ui *UI) showDir() {
 	ui.currentDirPath = ui.currentDir.GetPath()
-	ui.currentDirLabel.SetText("[::b] --- " + ui.currentDirPath + " ---").SetDynamicColors(true)
+	ui.currentDirLabel.SetText("[::b] --- " +
+		strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix) +
+		" ---").SetDynamicColors(true)
 
 	ui.table.Clear()
 

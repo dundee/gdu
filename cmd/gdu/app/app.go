@@ -202,6 +202,10 @@ func (a *App) runAction(ui UI, path string) error {
 	} else {
 		abspath, _ := filepath.Abs(path)
 
+		if build.RootPathPrefix != "" {
+			abspath = build.RootPathPrefix + abspath
+		}
+
 		_, err := a.PathChecker(abspath)
 		if err != nil {
 			return err
