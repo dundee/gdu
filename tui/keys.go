@@ -9,6 +9,9 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if ui.pages.HasPage("file") {
 		return key // send event to primitive
 	}
+	if ui.filtering {
+		return key
+	}
 
 	if key.Key() == tcell.KeyEsc || key.Rune() == 'q' {
 		if ui.pages.HasPage("help") {
@@ -37,6 +40,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
 		ui.pages.HasPage("emptying") ||
+		ui.pages.HasPage("help") ||
 		ui.pages.HasPage("info") {
 		return key
 	}
@@ -48,6 +52,12 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 	if key.Rune() == 'l' || key.Key() == tcell.KeyRight {
 		ui.handleRight()
+		return nil
+	}
+
+	if key.Key() == tcell.KeyTab && ui.filteringInput != nil {
+		ui.filtering = true
+		ui.app.SetFocus(ui.filteringInput)
 		return nil
 	}
 
@@ -84,6 +94,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.setSorting("itemCount")
 	case 'n':
 		ui.setSorting("name")
+	case '/':
+		ui.showFilterInput()
 	default:
 		return key
 	}

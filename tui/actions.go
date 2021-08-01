@@ -53,7 +53,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	}
 
 	ui.table.Select(1, 0)
-	ui.footer.SetText("")
+	ui.footerLabel.SetText("")
 	ui.table.SetSelectedFunc(ui.deviceItemSelected)
 
 	return nil
@@ -292,7 +292,7 @@ func (ui *UI) showFile() *tview.TextView {
 	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
 		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
 		AddItem(file, 2, 0, 1, 1, 0, 0, true).
-		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+		AddItem(ui.footerLabel, 3, 0, 1, 1, 0, 0, false)
 
 	ui.pages.HidePage("background")
 	ui.pages.AddPage("file", grid, true, true)

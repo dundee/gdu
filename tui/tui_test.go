@@ -48,12 +48,12 @@ func TestFooter(t *testing.T) {
 	ui.showDir()
 	ui.pages.HidePage("progress")
 
-	ui.footer.Draw(simScreen)
+	ui.footerLabel.Draw(simScreen)
 	simScreen.Show()
 
 	b, _, _ := simScreen.GetContents()
 
-	text := []byte(" Total disk usage: 4.0 KiB Apparent size: 5 B Items: 2")
+	text := []byte(" Total disk usage: 4.0 KiB Apparent size: 2 B Items: 1")
 	for i, r := range b {
 		if i >= len(text) {
 			break
@@ -85,9 +85,11 @@ func TestHelp(t *testing.T) {
 	ui.help.Draw(simScreen)
 	simScreen.Show()
 
+	// printScreen(simScreen)
+
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[306 : 306+9]
+	cells := b[356 : 356+9]
 
 	text := []byte("directory")
 	for i, r := range cells {
@@ -104,9 +106,11 @@ func TestHelpBw(t *testing.T) {
 	ui.help.Draw(simScreen)
 	simScreen.Show()
 
+	// printScreen(simScreen)
+
 	b, _, _ := simScreen.GetContents()
 
-	cells := b[306 : 306+9]
+	cells := b[356 : 356+9]
 
 	text := []byte("directory")
 	for i, r := range cells {
@@ -316,15 +320,6 @@ func TestMin(t *testing.T) {
 
 // 	for i, r := range b {
 // 		println(i, string(r.Bytes))
-// 	}
-// }
-
-// func analyzeMock(path string, progress *analyze.CurrentProgress, ignore analyze.ShouldDirBeIgnored) *analyze.Dir {
-// 	return &analyze.Dir{
-// 		File: &analyze.File{
-// 			Name: "xxx",
-// 		},
-// 		BasePath: ".",
 // 	}
 // }
 

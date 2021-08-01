@@ -22,6 +22,7 @@ const helpText = `    [::b]up/down, k/j    [white:black:-]Move cursor up/down
          [::b]left, h    [white:black:-]Go to parent directory
 
                [::b]r    [white:black:-]Rescan current directory
+               [::b]/    [white:black:-]Search items by name
                [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
                [::b]c    [white:black:-]Show/hide file count
                [::b]q    [white:black:-]Quit gdu
@@ -43,12 +44,14 @@ type UI struct {
 	*common.UI
 	app             common.TermApplication
 	header          *tview.TextView
-	footer          *tview.TextView
+	footer          *tview.Flex
+	footerLabel     *tview.TextView
 	currentDirLabel *tview.TextView
 	pages           *tview.Pages
 	progress        *tview.TextView
 	help            *tview.Flex
 	table           *tview.Table
+	filteringInput  *tview.InputField
 	currentDir      *analyze.Dir
 	devices         []*device.Device
 	topDir          *analyze.Dir
@@ -56,6 +59,8 @@ type UI struct {
 	currentDirPath  string
 	askBeforeDelete bool
 	showItemCount   bool
+	filtering       bool
+	filterValue     string
 	sortBy          string
 	sortOrder       string
 	done            chan struct{}
@@ -118,10 +123,13 @@ func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool)
 			Background(tcell.ColorGray).Bold(true))
 	}
 
-	ui.footer = tview.NewTextView().SetDynamicColors(true)
-	ui.footer.SetTextColor(textColor)
-	ui.footer.SetBackgroundColor(textBgColor)
-	ui.footer.SetText(" No items to display. ")
+	ui.footerLabel = tview.NewTextView().SetDynamicColors(true)
+	ui.footerLabel.SetTextColor(textColor)
+	ui.footerLabel.SetBackgroundColor(textBgColor)
+	ui.footerLabel.SetText(" No items to display. ")
+
+	ui.footer = tview.NewFlex()
+	ui.footer.AddItem(ui.footerLabel, 0, 1, false)
 
 	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
 	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
@@ -152,6 +160,12 @@ func (ui *UI) rescanDir() {
 }
 
 func (ui *UI) showDir() {
+	var (
+		totalUsage int64
+		totalSize  int64
+		itemCount  int
+	)
+
 	ui.currentDirPath = ui.currentDir.GetPath()
 	ui.currentDirLabel.SetText("[::b] --- " +
 		strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix) +
@@ -171,6 +185,17 @@ func (ui *UI) showDir() {
 	ui.sortItems()
 
 	for i, item := range ui.currentDir.Files {
+		if ui.filterValue != "" && !strings.Contains(
+			strings.ToLower(item.GetName()),
+			strings.ToLower(ui.filterValue),
+		) {
+			continue
+		}
+
+		totalUsage += item.GetUsage()
+		totalSize += item.GetSize()
+		itemCount += item.GetItemCount()
+
 		cell := tview.NewTableCell(ui.formatFileRow(item))
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		cell.SetReference(ui.currentDir.Files[i])
@@ -188,20 +213,23 @@ func (ui *UI) showDir() {
 		footerTextColor = "[black:white:-]"
 	}
 
-	ui.footer.SetText(
+	ui.footerLabel.SetText(
 		" Total disk usage: " +
 			footerNumberColor +
-			ui.formatSize(ui.currentDir.Usage, true, false) +
+			ui.formatSize(totalUsage, true, false) +
 			" Apparent size: " +
 			footerNumberColor +
-			ui.formatSize(ui.currentDir.Size, true, false) +
-			" Items: " + footerNumberColor + fmt.Sprint(ui.currentDir.ItemCount) +
+			ui.formatSize(totalSize, true, false) +
+			" Items: " + footerNumberColor + fmt.Sprint(itemCount) +
 			footerTextColor +
 			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
 
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
-	ui.app.SetFocus(ui.table)
+
+	if !ui.filtering {
+		ui.app.SetFocus(ui.table)
+	}
 }
 
 func (ui *UI) sortItems() {
@@ -244,6 +272,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 	}
 
 	ui.currentDir = selectedDir.(*analyze.Dir)
+	ui.hideFilterInput()
 	ui.showDir()
 
 	if selectedDir == origDir.Parent {
@@ -391,7 +420,7 @@ func (ui *UI) showHelp() {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 26, 1, false).
+			AddItem(text, 27, 1, false).
 			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 
