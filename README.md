@@ -66,7 +66,6 @@ Using curl:
 
     go get -u github.com/dundee/gdu/v5/cmd/gdu
 
-
 ## Usage
 
 ```
@@ -135,7 +134,6 @@ flag with following meaning:
 
     make test
 
-
 ## Benchmarks
 
 Benchmarks performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
@@ -154,7 +152,6 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 | `diskus ~` | 3.747 ± 0.027 | 3.707 | 3.779 | 1.01 ± 0.01 |
 | `du -hs ~` | 20.096 ± 0.128 | 19.916 | 20.313 | 5.41 ± 0.06 |
 | `dust -d0 ~` | 16.281 ± 0.118 | 16.148 | 16.490 | 4.38 ± 0.05 |
-
 
 ### Warm cache
 
