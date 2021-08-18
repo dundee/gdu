@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -104,7 +105,7 @@ func TestSetSorting(t *testing.T) {
 
 func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bool) *UI {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, apparentSize)
+	ui := CreateUI(app, &bytes.Buffer{}, false, apparentSize)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = sortBy

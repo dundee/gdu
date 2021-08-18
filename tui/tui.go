@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ const helpText = `    [::b]up/down, k/j    [white:black:-]Move cursor up/down
                [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
                [::b]c    [white:black:-]Show/hide file count
                [::b]q    [white:black:-]Quit gdu
+               [::b]Q    [white:black:-]Quit gdu and print current directory path
 
 Item under cursor:
                [::b]d    [white:black:-]Delete file or directory
@@ -43,6 +45,7 @@ Sort by (twice toggles asc/desc):
 type UI struct {
 	*common.UI
 	app             common.TermApplication
+	output          io.Writer
 	header          *tview.TextView
 	footer          *tview.Flex
 	footerLabel     *tview.TextView
@@ -69,13 +72,14 @@ type UI struct {
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(app common.TermApplication, useColors bool, showApparentSize bool) *UI {
+func CreateUI(app common.TermApplication, output io.Writer, useColors bool, showApparentSize bool) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			UseColors:        useColors,
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
 		},
+		output:          output,
 		askBeforeDelete: true,
 		showItemCount:   false,
 		sortBy:          "size",
@@ -420,7 +424,7 @@ func (ui *UI) showHelp() {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 27, 1, false).
+			AddItem(text, 28, 1, false).
 			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 

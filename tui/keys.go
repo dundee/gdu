@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/gdamore/tcell/v2"
 )
@@ -29,6 +31,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	}
 
 	switch key.Rune() {
+	case 'Q':
+		ui.app.Stop()
+		fmt.Fprintf(ui.output, "%s\n", ui.currentDirPath)
+		return nil
 	case 'q':
 		ui.app.Stop()
 		return nil

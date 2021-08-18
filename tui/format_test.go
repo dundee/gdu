@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testapp"
@@ -9,7 +10,7 @@ import (
 
 func TestFormatSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, false)
+	ui := CreateUI(app, &bytes.Buffer{}, false, false)
 
 	assert.Equal(t, "1[white:black:-] B", ui.formatSize(1, false, false))
 	assert.Equal(t, "1.0[white:black:-] KiB", ui.formatSize(1<<10, false, false))
@@ -22,7 +23,7 @@ func TestFormatSize(t *testing.T) {
 
 func TestFormatCount(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, false)
+	ui := CreateUI(app, &bytes.Buffer{}, false, false)
 
 	assert.Equal(t, "1[-::]", ui.formatCount(1))
 	assert.Equal(t, "1.0[-::]k", ui.formatCount(1<<10))

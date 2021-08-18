@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -14,7 +15,7 @@ import (
 
 func TestShowHelp(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, '?', 0))
 
@@ -23,7 +24,7 @@ func TestShowHelp(t *testing.T) {
 
 func TestCloseHelp(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -35,7 +36,7 @@ func TestCloseHelp(t *testing.T) {
 
 func TestKeyWhileDeleting(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 
 	modal := tview.NewModal().SetText("Deleting...")
 	ui.pages.AddPage("deleting", modal, true, true)
@@ -46,7 +47,7 @@ func TestKeyWhileDeleting(t *testing.T) {
 
 func TestLeftRightKeyWhileConfirm(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 
 	modal := tview.NewModal().SetText("Really?")
 	ui.pages.AddPage("confirm", modal, true, true)
@@ -62,7 +63,7 @@ func TestMoveLeftRight(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -106,7 +107,7 @@ func TestMoveRightOnDevice(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{})
@@ -124,15 +125,39 @@ func TestMoveRightOnDevice(t *testing.T) {
 
 func TestStop(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
 	assert.Nil(t, key)
 }
 
+func TestStopWithPrintingPath(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	app := testapp.CreateMockedApp(false)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, buff, true, true)
+
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'Q', 0))
+	assert.Nil(t, key)
+
+	assert.Equal(t, "test_dir\n", buff.String())
+}
+
 func TestShowConfirm(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -155,7 +180,7 @@ func TestShowConfirm(t *testing.T) {
 
 func TestDeleteEmpty(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
@@ -167,7 +192,7 @@ func TestDelete(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -201,7 +226,7 @@ func TestDeleteParent(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -230,7 +255,7 @@ func TestEmptyDir(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -265,7 +290,7 @@ func TestEmptyFile(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -301,7 +326,7 @@ func TestEmptyFile(t *testing.T) {
 
 func TestSortByApparentSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, false)
+	ui := CreateUI(app, &bytes.Buffer{}, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -322,7 +347,7 @@ func TestSortByApparentSize(t *testing.T) {
 
 func TestShowFileCount(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, true, false)
+	ui := CreateUI(app, &bytes.Buffer{}, true, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -343,7 +368,7 @@ func TestShowFileCount(t *testing.T) {
 
 func TestShowFileCountBW(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, false)
+	ui := CreateUI(app, &bytes.Buffer{}, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -377,7 +402,7 @@ func TestRescan(t *testing.T) {
 	}
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -401,7 +426,7 @@ func TestRescan(t *testing.T) {
 
 func TestSorting(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -428,7 +453,7 @@ func TestShowFile(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -13,7 +14,7 @@ import (
 
 func TestFiltering(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -47,7 +48,7 @@ func TestSwitchToTable(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, false, true)
+	ui := CreateUI(app, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -88,7 +89,7 @@ func TestExitFiltering(t *testing.T) {
 	defer fin()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, true, true)
+	ui := CreateUI(app, &bytes.Buffer{}, true, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
