@@ -3,6 +3,7 @@ package analyze
 import (
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -125,4 +126,24 @@ func TestSortByName(t *testing.T) {
 	assert.Equal(t, "cc", files[0].GetName())
 	assert.Equal(t, "bb", files[1].GetName())
 	assert.Equal(t, "aa", files[2].GetName())
+}
+
+func TestSortByMtime(t *testing.T) {
+	files := Files{
+		&File{
+			Mtime: time.Date(2021, 8, 19, 0, 40, 0, 0, time.UTC),
+		},
+		&File{
+			Mtime: time.Date(2021, 8, 19, 0, 41, 0, 0, time.UTC),
+		},
+		&File{
+			Mtime: time.Date(2021, 8, 19, 0, 42, 0, 0, time.UTC),
+		},
+	}
+
+	sort.Sort(ByMtime(files))
+
+	assert.Equal(t, 42, files[0].GetMtime().Minute())
+	assert.Equal(t, 41, files[1].GetMtime().Minute())
+	assert.Equal(t, 40, files[2].GetMtime().Minute())
 }

@@ -26,6 +26,7 @@ const helpText = `    [::b]up/down, k/j    [white:black:-]Move cursor up/down
                [::b]/    [white:black:-]Search items by name
                [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
                [::b]c    [white:black:-]Show/hide file count
+               [::b]m    [white:black:-]Show/hide latest mtime
                [::b]b    [white:black:-]Spawn shell in current directory
                [::b]q    [white:black:-]Quit gdu
                [::b]Q    [white:black:-]Quit gdu and print current directory path
@@ -40,7 +41,7 @@ Sort by (twice toggles asc/desc):
                [::b]n    [white:black:-]Sort by name (asc/desc)
                [::b]s    [white:black:-]Sort by size (asc/desc)
                [::b]C    [white:black:-]Sort by file count (asc/desc)
-`
+               [::b]M    [white:black:-]Sort by mtime (asc/desc)`
 
 // UI struct
 type UI struct {
@@ -64,6 +65,7 @@ type UI struct {
 	currentDirPath  string
 	askBeforeDelete bool
 	showItemCount   bool
+	showMtime       bool
 	filtering       bool
 	filterValue     string
 	sortBy          string
@@ -267,6 +269,13 @@ func (ui *UI) sortItems() {
 			sort.Sort(analyze.ByName(ui.currentDir.Files))
 		} else {
 			sort.Sort(sort.Reverse(analyze.ByName(ui.currentDir.Files)))
+		}
+	}
+	if ui.sortBy == "mtime" {
+		if ui.sortOrder == "desc" {
+			sort.Sort(analyze.ByMtime(ui.currentDir.Files))
+		} else {
+			sort.Sort(sort.Reverse(analyze.ByMtime(ui.currentDir.Files)))
 		}
 	}
 }

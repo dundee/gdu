@@ -431,6 +431,54 @@ func TestShowFileCountBW(t *testing.T) {
 	assert.True(t, ui.showItemCount)
 }
 
+func TestShowMtime(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'm', 0))
+
+	assert.True(t, ui.showMtime)
+}
+
+func TestShowMtimeBW(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'm', 0))
+
+	assert.True(t, ui.showMtime)
+}
+
 func TestRescan(t *testing.T) {
 	parentDir := &analyze.Dir{
 		File: &analyze.File{
@@ -496,6 +544,8 @@ func TestSorting(t *testing.T) {
 	assert.Equal(t, "itemCount", ui.sortBy)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'n', 0))
 	assert.Equal(t, "name", ui.sortBy)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'M', 0))
+	assert.Equal(t, "mtime", ui.sortBy)
 }
 
 func TestShowFile(t *testing.T) {

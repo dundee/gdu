@@ -113,6 +113,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		ItemCount: 1,
 		Files:     make([]Item, 0, len(files)),
 	}
+	setDirPlatformSpecificAttrs(dir, path)
 
 	for _, f := range files {
 		name := f.Name()

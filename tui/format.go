@@ -41,6 +41,18 @@ func (ui *UI) formatFileRow(item analyze.Item) string {
 		row += fmt.Sprintf("%11s ", ui.formatCount(item.GetItemCount()))
 	}
 
+	if ui.showMtime {
+		if ui.UseColors {
+			row += "[#e67100::b]"
+		} else {
+			row += "[::b]"
+		}
+		row += fmt.Sprintf(
+			"%s [-::]",
+			item.GetMtime().Format("2006-01-02 15:04:05"),
+		)
+	}
+
 	if item.IsDir() {
 		if ui.UseColors {
 			row += "[#3498db::b]/"

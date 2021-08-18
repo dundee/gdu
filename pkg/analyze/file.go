@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // AlreadyCountedHardlinks holds all files with hardlinks that have already been counted
@@ -18,6 +19,7 @@ type Item interface {
 	GetSize() int64
 	GetType() string
 	GetUsage() int64
+	GetMtime() time.Time
 	GetItemCount() int
 	GetParent() *Dir
 	EncodeJSON(writer io.Writer, topLevel bool) error
@@ -30,6 +32,7 @@ type File struct {
 	Name   string
 	Size   int64
 	Usage  int64
+	Mtime  time.Time
 	Mli    uint64 // MutliLinkInode - Inode number of file with multiple links (hard link)
 	Parent *Dir
 }
@@ -67,6 +70,11 @@ func (f *File) GetSize() int64 {
 // GetUsage returns usage of the file
 func (f *File) GetUsage() int64 {
 	return f.Usage
+}
+
+// GetMtime returns mtime of the file
+func (f *File) GetMtime() time.Time {
+	return f.Mtime
 }
 
 // GetType returns name type of item
@@ -149,6 +157,10 @@ func (f *Dir) UpdateStats(links AlreadyCountedHardlinks) {
 		totalSize += size
 		totalUsage += usage
 		itemCount += count
+
+		if entry.GetMtime().After(f.Mtime) {
+			f.Mtime = entry.GetMtime()
+		}
 
 		switch entry.GetFlag() {
 		case '!', '.':
@@ -234,6 +246,13 @@ type ByName Files
 func (f ByName) Len() int           { return len(f) }
 func (f ByName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 func (f ByName) Less(i, j int) bool { return f[i].GetName() > f[j].GetName() }
+
+// ByMtime sorts files by name
+type ByMtime Files
+
+func (f ByMtime) Len() int           { return len(f) }
+func (f ByMtime) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+func (f ByMtime) Less(i, j int) bool { return f[i].GetMtime().After(f[j].GetMtime()) }
 
 // RemoveItemFromDir removes item from dir
 func RemoveItemFromDir(dir *Dir, item Item) error {

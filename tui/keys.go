@@ -103,6 +103,13 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.showDir()
 			ui.table.Select(row, column)
 		}
+	case 'm':
+		ui.showMtime = !ui.showMtime
+		if ui.currentDir != nil {
+			row, column := ui.table.GetSelection()
+			ui.showDir()
+			ui.table.Select(row, column)
+		}
 	case 'r':
 		if ui.currentDir != nil {
 			ui.rescanDir()
@@ -113,6 +120,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.setSorting("itemCount")
 	case 'n':
 		ui.setSorting("name")
+	case 'M':
+		ui.setSorting("mtime")
 	case '/':
 		ui.showFilterInput()
 	default:
