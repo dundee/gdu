@@ -1,5 +1,3 @@
-// +build darwin netbsd freebsd
-
 package analyze
 
 import (
@@ -14,7 +12,7 @@ func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
 	switch stat := f.Sys().(type) {
 	case *syscall.Stat_t:
 		file.Usage = stat.Blocks * devBSize
-		file.Mtime = time.Unix(stat.Mtimespec.Sec, stat.Mtimespec.Nsec)
+		file.Mtime = time.Unix(stat.Mtim.Sec, stat.Mtim.Nsec)
 
 		if stat.Nlink > 1 {
 			file.Mli = stat.Ino
@@ -28,5 +26,5 @@ func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 		return
 	}
 
-	dir.Mtime = time.Unix(stat.Mtimespec.Sec, stat.Mtimespec.Nsec)
+	dir.Mtime = time.Unix(stat.Mtim.Sec, stat.Mtim.Nsec)
 }

@@ -7,3 +7,5 @@ import (
 )
 
 func setPlatformSpecificAttrs(file *File, f os.FileInfo) {}
+
+func setDirPlatformSpecificAttrs(dir *Dir, path string) {}
