@@ -26,6 +26,7 @@ const helpText = `    [::b]up/down, k/j    [white:black:-]Move cursor up/down
                [::b]/    [white:black:-]Search items by name
                [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
                [::b]c    [white:black:-]Show/hide file count
+               [::b]b    [white:black:-]Spawn shell in current directory
                [::b]q    [white:black:-]Quit gdu
                [::b]Q    [white:black:-]Quit gdu and print current directory path
 
@@ -424,7 +425,7 @@ func (ui *UI) showHelp() {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 28, 1, false).
+			AddItem(text, 29, 1, false).
 			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 

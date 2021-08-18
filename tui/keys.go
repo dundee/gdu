@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"syscall"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/gdamore/tcell/v2"
@@ -37,6 +39,17 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case 'q':
 		ui.app.Stop()
+		return nil
+	case 'b':
+		ui.app.Stop()
+		os.Chdir(ui.currentDirPath)
+		shell, ok := os.LookupEnv("SHELL")
+		if !ok {
+			shell = "/bin/bash"
+		}
+		if err := syscall.Exec(shell, nil, os.Environ()); err != nil {
+			panic(err)
+		}
 		return nil
 	case '?':
 		ui.showHelp()
