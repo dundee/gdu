@@ -42,7 +42,9 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case 'b':
 		ui.app.Stop()
-		os.Chdir(ui.currentDirPath)
+		if err := os.Chdir(ui.currentDirPath); err != nil {
+			panic(err)
+		}
 		shell, ok := os.LookupEnv("SHELL")
 		if !ok {
 			shell = "/bin/bash"
