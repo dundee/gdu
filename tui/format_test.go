@@ -9,8 +9,11 @@ import (
 )
 
 func TestFormatSize(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false)
 
 	assert.Equal(t, "1[white:black:-] B", ui.formatSize(1, false, false))
 	assert.Equal(t, "1.0[white:black:-] KiB", ui.formatSize(1<<10, false, false))
@@ -22,8 +25,11 @@ func TestFormatSize(t *testing.T) {
 }
 
 func TestFormatCount(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false)
 
 	assert.Equal(t, "1[-::]", ui.formatCount(1))
 	assert.Equal(t, "1.0[-::]k", ui.formatCount(1<<10))

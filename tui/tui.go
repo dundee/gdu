@@ -46,6 +46,7 @@ Sort by (twice toggles asc/desc):
 type UI struct {
 	*common.UI
 	app             common.TermApplication
+	screen          tcell.Screen
 	output          io.Writer
 	header          *tview.TextView
 	footer          *tview.Flex
@@ -73,13 +74,15 @@ type UI struct {
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(app common.TermApplication, output io.Writer, useColors bool, showApparentSize bool) *UI {
+func CreateUI(app common.TermApplication, screen tcell.Screen, output io.Writer, useColors bool, showApparentSize bool) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			UseColors:        useColors,
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
 		},
+		app:             app,
+		screen:          screen,
 		output:          output,
 		askBeforeDelete: true,
 		showItemCount:   false,
@@ -94,7 +97,6 @@ func CreateUI(app common.TermApplication, output io.Writer, useColors bool, show
 		return false
 	})
 
-	ui.app = app
 	ui.app.SetInputCapture(ui.keyPressed)
 
 	var textColor, textBgColor tcell.Color
@@ -408,6 +410,7 @@ func (ui *UI) showHelp() {
 	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	text.SetBorderColor(tcell.ColorDefault)
 	text.SetTitle(" gdu help ")
+	text.SetScrollable(true)
 
 	if ui.UseColors {
 		text.SetText(
@@ -421,14 +424,21 @@ func (ui *UI) showHelp() {
 		text.SetText(helpText)
 	}
 
+	maxHeight := strings.Count(helpText, "\n") + 7
+	_, height := ui.screen.Size()
+	if height > maxHeight {
+		height = maxHeight
+	}
+
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 29, 1, false).
+			AddItem(text, height, 1, false).
 			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	ui.help = flex
 	ui.pages.AddPage("help", flex, true, true)
+	ui.app.SetFocus(text)
 }

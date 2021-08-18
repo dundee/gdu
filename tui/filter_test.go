@@ -13,8 +13,11 @@ import (
 )
 
 func TestFiltering(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -46,9 +49,11 @@ func TestFiltering(t *testing.T) {
 func TestSwitchToTable(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -87,9 +92,11 @@ func TestSwitchToTable(t *testing.T) {
 func TestExitFiltering(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)

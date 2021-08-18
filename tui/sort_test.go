@@ -104,8 +104,11 @@ func TestSetSorting(t *testing.T) {
 }
 
 func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bool) *UI {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, apparentSize)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, apparentSize)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = sortBy

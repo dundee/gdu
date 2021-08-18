@@ -51,6 +51,12 @@ func init() {
 }
 
 func runE(command *cobra.Command, args []string) error {
+	var (
+		termApp *tview.Application
+		screen  tcell.Screen
+		err     error
+	)
+
 	istty := isatty.IsTerminal(os.Stdout.Fd())
 
 	// we are not able to analyze disk usage on Windows and Plan9
@@ -61,10 +67,8 @@ func runE(command *cobra.Command, args []string) error {
 		af.LogFile = "nul"
 	}
 
-	var termApp *tview.Application
-
 	if !af.ShowVersion && !af.NonInteractive && istty && af.OutputFile == "" {
-		screen, err := tcell.NewScreen()
+		screen, err = tcell.NewScreen()
 		if err != nil {
 			return fmt.Errorf("Error creating screen: %w", err)
 		}
@@ -85,6 +89,7 @@ func runE(command *cobra.Command, args []string) error {
 		Istty:       istty,
 		Writer:      os.Stdout,
 		TermApp:     termApp,
+		Screen:      screen,
 		Getter:      device.Getter,
 		PathChecker: os.Stat,
 	}

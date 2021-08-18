@@ -17,7 +17,7 @@ func TestShowDevices(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -37,7 +37,7 @@ func TestShowDevicesBW(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, &bytes.Buffer{}, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -54,8 +54,11 @@ func TestShowDevicesBW(t *testing.T) {
 }
 
 func TestDeviceSelected(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
@@ -101,8 +104,11 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 		Files: make([]analyze.Item, 0, 1),
 	}
 
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.topDir = parentDir
 	ui.done = make(chan struct{})
@@ -124,11 +130,14 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 }
 
 func TestReadAnalysis(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
 	ui.done = make(chan struct{})
 
 	err = ui.ReadAnalysis(input)
@@ -144,11 +153,14 @@ func TestReadAnalysis(t *testing.T) {
 }
 
 func TestReadAnalysisWithWrongFile(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0644)
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
 	ui.done = make(chan struct{})
 
 	err = ui.ReadAnalysis(input)
@@ -164,8 +176,11 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 }
 
 func TestViewDirContents(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -184,8 +199,11 @@ func TestViewDirContents(t *testing.T) {
 }
 
 func TestViewContentsOfNotExistingFile(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -211,9 +229,11 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 func TestViewFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -240,9 +260,11 @@ func TestViewFile(t *testing.T) {
 func TestShowInfo(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -270,9 +292,11 @@ func TestShowInfo(t *testing.T) {
 func TestShowInfoBW(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -296,9 +320,11 @@ func TestShowInfoBW(t *testing.T) {
 func TestExitViewFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)

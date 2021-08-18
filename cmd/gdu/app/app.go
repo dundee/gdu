@@ -57,6 +57,7 @@ type App struct {
 	Istty       bool
 	Writer      io.Writer
 	TermApp     common.TermApplication
+	Screen      tcell.Screen
 	Getter      device.DevicesInfoGetter
 	PathChecker func(string) (fs.FileInfo, error)
 }
@@ -157,7 +158,13 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ShowApparentSize,
 		)
 	} else {
-		ui = tui.CreateUI(a.TermApp, os.Stdout, !a.Flags.NoColor, a.Flags.ShowApparentSize)
+		ui = tui.CreateUI(
+			a.TermApp,
+			a.Screen,
+			os.Stdout,
+			!a.Flags.NoColor,
+			a.Flags.ShowApparentSize,
+		)
 
 		if !a.Flags.NoColor {
 			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)

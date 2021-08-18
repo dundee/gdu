@@ -9,8 +9,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-// CreateTestAppWithSimScreen returns app with simulation screen for tests
-func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.SimulationScreen) {
+// CreateSimScreen returns tcell.SimulationScreen
+func CreateSimScreen(width, height int) tcell.SimulationScreen {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	err := screen.Init()
 	if err != nil {
@@ -18,9 +18,14 @@ func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.Si
 	}
 	screen.SetSize(width, height)
 
-	app := tview.NewApplication()
-	app.SetScreen(screen)
+	return screen
+}
 
+// CreateTestAppWithSimScreen returns app with simulation screen for tests
+func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.SimulationScreen) {
+	app := tview.NewApplication()
+	screen := CreateSimScreen(width, height)
+	app.SetScreen(screen)
 	return app, screen
 }
 
