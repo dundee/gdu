@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -73,6 +74,7 @@ type UI struct {
 	done            chan struct{}
 	remover         func(*analyze.Dir, analyze.Item) error
 	emptier         func(*analyze.Dir, analyze.Item) error
+	exec            func(argv0 string, argv []string, envv []string) error
 }
 
 // CreateUI creates the whole UI app
@@ -92,6 +94,7 @@ func CreateUI(app common.TermApplication, screen tcell.Screen, output io.Writer,
 		sortOrder:       "desc",
 		remover:         analyze.RemoveItemFromDir,
 		emptier:         analyze.EmptyFileFromDir,
+		exec:            syscall.Exec,
 	}
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {

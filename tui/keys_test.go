@@ -176,6 +176,36 @@ func TestStopWithPrintingPath(t *testing.T) {
 	assert.Equal(t, "test_dir\n", buff.String())
 }
 
+func TestSpawnShell(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, simScreen, buff, true, true)
+	var called = false
+	ui.exec = func(argv0 string, argv, envv []string) error {
+		called = true
+		return nil
+	}
+
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'b', 0))
+	assert.Nil(t, key)
+	assert.True(t, called)
+}
+
 func TestShowConfirm(t *testing.T) {
 	simScreen := testapp.CreateSimScreen(50, 50)
 	defer simScreen.Fini()
