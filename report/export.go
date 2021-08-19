@@ -110,7 +110,10 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 
 	switch f := ui.exportOutput.(type) {
 	case *os.File:
-		f.Close()
+		err = f.Close()
+		if err != nil {
+			return err
+		}
 	}
 
 	if ui.ShowProgress {

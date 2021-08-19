@@ -262,7 +262,11 @@ func (ui *UI) showFile() *tview.TextView {
 
 	file.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 'q' || event.Key() == tcell.KeyESC {
-			f.Close()
+			err = f.Close()
+			if err != nil {
+				ui.showErr("Error closing file", err)
+				return event
+			}
 			ui.currentDirLabel.SetText("[::b] --- " +
 				strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix) +
 				" ---").SetDynamicColors(true)
