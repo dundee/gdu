@@ -10,10 +10,10 @@ func CreateTestDir() func() {
 	if err := os.MkdirAll("test_dir/nested/subnested", os.ModePerm); err != nil {
 		panic(err)
 	}
-	if err := os.WriteFile("test_dir/nested/subnested/file", []byte("hello"), 0644); err != nil {
+	if err := os.WriteFile("test_dir/nested/subnested/file", []byte("hello"), 0600); err != nil {
 		panic(err)
 	}
-	if err := os.WriteFile("test_dir/nested/file2", []byte("go"), 0644); err != nil {
+	if err := os.WriteFile("test_dir/nested/file2", []byte("go"), 0600); err != nil {
 		panic(err)
 	}
 	return func() {
