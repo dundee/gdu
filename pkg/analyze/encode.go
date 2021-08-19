@@ -22,6 +22,11 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool) error {
 		}
 	}
 
+	if !f.GetMtime().IsZero() {
+		buff = append(buff, []byte(`,"mtime":`)...)
+		buff = append(buff, []byte(fmt.Sprint(f.GetMtime().Unix()))...)
+	}
+
 	buff = append(buff, '}')
 	if f.Files.Len() > 0 {
 		buff = append(buff, ',')
@@ -65,6 +70,10 @@ func (f *File) EncodeJSON(writer io.Writer, topLevel bool) error {
 	if f.GetUsage() > 0 {
 		buff = append(buff, []byte(`,"dsize":`)...)
 		buff = append(buff, []byte(fmt.Sprint(f.GetUsage()))...)
+	}
+	if !f.GetMtime().IsZero() {
+		buff = append(buff, []byte(`,"mtime":`)...)
+		buff = append(buff, []byte(fmt.Sprint(f.GetMtime().Unix()))...)
 	}
 
 	if f.Flag == '@' {

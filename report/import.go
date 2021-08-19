@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
@@ -52,6 +53,9 @@ func processDir(items []interface{}) (*analyze.Dir, error) {
 	if !ok {
 		return nil, errors.New("Directory name is not a string")
 	}
+	if mtime, ok := dirMap["mtime"].(float64); ok {
+		dir.Mtime = time.Unix(int64(mtime), 0)
+	}
 
 	slashPos := strings.LastIndex(name, "/")
 	if slashPos > -1 {
@@ -67,18 +71,18 @@ func processDir(items []interface{}) (*analyze.Dir, error) {
 			file := &analyze.File{}
 			file.Name = item["name"].(string)
 
-			switch asize := item["asize"].(type) {
-			case float64:
+			if asize, ok := item["asize"].(float64); ok {
 				file.Size = int64(asize)
 			}
-			switch dsize := item["dsize"].(type) {
-			case float64:
+			if dsize, ok := item["dsize"].(float64); ok {
 				file.Usage = int64(dsize)
 			}
-			switch item["notreg"].(type) {
-			case bool:
+			if mtime, ok := item["mtime"].(float64); ok {
+				file.Mtime = time.Unix(int64(mtime), 0)
+			}
+			if _, ok := item["notreg"].(bool); ok {
 				file.Flag = '@'
-			default:
+			} else {
 				file.Flag = ' '
 			}
 
