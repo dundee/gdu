@@ -3,6 +3,9 @@ package tui
 import (
 	"fmt"
 	"io"
+	"os"
+	"os/exec"
+	"runtime"
 	"sort"
 	"strings"
 	"syscall"
@@ -77,6 +80,25 @@ type UI struct {
 	exec            func(argv0 string, argv []string, envv []string) error
 }
 
+func Execute(argv0 string, argv []string, envv []string) error {
+	// Windows does not support exec syscall.
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command(argv0, argv...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		cmd.Env = envv
+		err := cmd.Run()
+		if err == nil {
+			os.Exit(0)
+		}
+		return err
+	}
+
+	// append argv0 to argv, as execve will make first argument the "binary name".
+	return syscall.Exec(argv0, append([]string{argv0}, argv...), envv)
+}
+
 // CreateUI creates the whole UI app
 func CreateUI(app common.TermApplication, screen tcell.Screen, output io.Writer, useColors bool, showApparentSize bool) *UI {
 	ui := &UI{
@@ -94,7 +116,7 @@ func CreateUI(app common.TermApplication, screen tcell.Screen, output io.Writer,
 		sortOrder:       "desc",
 		remover:         analyze.RemoveItemFromDir,
 		emptier:         analyze.EmptyFileFromDir,
-		exec:            syscall.Exec,
+		exec:            Execute,
 	}
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
