@@ -31,9 +31,9 @@ Using curl:
 
     yay -S gdu
 
-[Debian](https://packages.debian.org/sid/gdu):
+[Debian](https://packages.debian.org/bullseye/gdu):
 
-    dpkg -i gdu_*_amd64.deb
+    apt install gdu
 
 [Ubuntu](https://launchpad.net/~daniel-milde/+archive/ubuntu/gdu)
 
