@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/gdamore/tcell/v2"
@@ -45,21 +44,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		if err := os.Chdir(ui.currentDirPath); err != nil {
 			panic(err)
 		}
-		var shell string
-		if runtime.GOOS == "windows" {
-			shellbin, ok := os.LookupEnv("COMSPEC")
-			if !ok {
-				shellbin = "C:\\WINDOWS\\System32\\cmd.exe"
-			}
-			shell = shellbin
-		} else {
-			shellbin, ok := os.LookupEnv("SHELL")
-			if !ok {
-				shellbin = "/bin/bash"
-			}
-			shell = shellbin
-		}
-		if err := ui.exec(shell, nil, os.Environ()); err != nil {
+		if err := ui.exec(getShellBin(), nil, os.Environ()); err != nil {
 			panic(err)
 		}
 		return nil

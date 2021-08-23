@@ -3,12 +3,8 @@ package tui
 import (
 	"fmt"
 	"io"
-	"os"
-	"os/exec"
-	"runtime"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -78,25 +74,6 @@ type UI struct {
 	remover         func(*analyze.Dir, analyze.Item) error
 	emptier         func(*analyze.Dir, analyze.Item) error
 	exec            func(argv0 string, argv []string, envv []string) error
-}
-
-func Execute(argv0 string, argv []string, envv []string) error {
-	// Windows does not support exec syscall.
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command(argv0, argv...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-		cmd.Env = envv
-		err := cmd.Run()
-		if err == nil {
-			os.Exit(0)
-		}
-		return err
-	}
-
-	// append argv0 to argv, as execve will make first argument the "binary name".
-	return syscall.Exec(argv0, append([]string{argv0}, argv...), envv)
 }
 
 // CreateUI creates the whole UI app
