@@ -1,5 +1,5 @@
 ---
-date: Jan 2021
+date: {{date}}
 section: 1
 title: gdu
 ---

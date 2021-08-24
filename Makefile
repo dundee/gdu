@@ -3,6 +3,7 @@ MAJOR_VER := v5
 PACKAGE := github.com/dundee/$(NAME)/$(MAJOR_VER)
 CMD_GDU := cmd/gdu
 VERSION := $(shell git describe --tags 2>/dev/null)
+DATE := $(shell date +'%Y-%m-%d')
 GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw
 LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.Version=$(VERSION)' \
@@ -46,7 +47,9 @@ build-all:
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
 
 gdu.1: gdu.1.md
-	pandoc gdu.1.md -s -t man > gdu.1
+	sed 's/{{date}}/$(DATE)/g' gdu.1.md > gdu.1.date.md
+	pandoc gdu.1.date.md -s -t man > gdu.1
+	rm -f gdu.1.date.md
 
 man: gdu.1
 	cp gdu.1 dist
