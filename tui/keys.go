@@ -40,13 +40,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.app.Stop()
 		return nil
 	case 'b':
-		ui.app.Stop()
-		if err := os.Chdir(ui.currentDirPath); err != nil {
-			panic(err)
-		}
-		if err := ui.exec(getShellBin(), nil, os.Environ()); err != nil {
-			panic(err)
-		}
+		ui.spawnShell()
 		return nil
 	case '?':
 		ui.showHelp()
@@ -121,10 +115,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.setSorting("mtime")
 	case '/':
 		ui.showFilterInput()
-	default:
-		return key
 	}
-	return nil
+	return key
 }
 
 func (ui *UI) handleLeft() {
@@ -164,5 +156,20 @@ func (ui *UI) handleDelete(shouldEmpty bool) {
 		ui.confirmDeletion(shouldEmpty)
 	} else {
 		ui.deleteSelected(shouldEmpty)
+	}
+}
+
+func (ui *UI) spawnShell() {
+	if ui.currentDir == nil {
+		return
+	}
+
+	ui.app.Stop()
+	if err := os.Chdir(ui.currentDirPath); err != nil {
+		ui.showErr("Error changing directory", err)
+		return
+	}
+	if err := ui.exec(getShellBin(), nil, os.Environ()); err != nil {
+		ui.showErr("Error executing shell", err)
 	}
 }

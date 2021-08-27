@@ -15,6 +15,10 @@ func (ui *UI) hideFilterInput() {
 }
 
 func (ui *UI) showFilterInput() {
+	if ui.currentDir == nil {
+		return
+	}
+
 	if ui.filteringInput == nil {
 		ui.filteringInput = tview.NewInputField()
 

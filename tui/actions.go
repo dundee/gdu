@@ -220,6 +220,10 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 }
 
 func (ui *UI) showFile() *tview.TextView {
+	if ui.currentDir == nil {
+		return nil
+	}
+
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 	if selectedFile.IsDir() {
@@ -305,6 +309,10 @@ func (ui *UI) showFile() *tview.TextView {
 }
 
 func (ui *UI) showInfo() {
+	if ui.currentDir == nil {
+		return
+	}
+
 	var content, numberColor string
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)

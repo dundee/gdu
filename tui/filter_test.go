@@ -46,6 +46,20 @@ func TestFiltering(t *testing.T) {
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa") // filtering reset
 }
 
+func TestFilteringWithoutCurrentDir(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+
+	ui.showFilterInput()
+
+	assert.False(t, ui.filtering)
+}
+
 func TestSwitchToTable(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

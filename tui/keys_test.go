@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -206,6 +207,78 @@ func TestSpawnShell(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestSpawnShellWithoutDir(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, simScreen, buff, true, true)
+	var called = false
+	ui.exec = func(argv0 string, argv, envv []string) error {
+		called = true
+		return nil
+	}
+
+	ui.done = make(chan struct{})
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'b', 0))
+	assert.Nil(t, key)
+	assert.False(t, called)
+}
+
+func TestSpawnShellWithWrongDir(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, simScreen, buff, true, true)
+	var called = false
+	ui.exec = func(argv0 string, argv, envv []string) error {
+		called = true
+		return nil
+	}
+
+	ui.done = make(chan struct{})
+	ui.currentDir = &analyze.Dir{}
+	ui.currentDirPath = "/xxxxx"
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'b', 0))
+	assert.Nil(t, key)
+	assert.False(t, called)
+	assert.True(t, ui.pages.HasPage("error"))
+}
+
+func TestSpawnShellWithError(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, simScreen, buff, true, true)
+	var called = false
+	ui.exec = func(argv0 string, argv, envv []string) error {
+		called = true
+		return errors.New("wrong shell")
+	}
+
+	ui.done = make(chan struct{})
+	ui.currentDir = &analyze.Dir{}
+	ui.currentDirPath = "."
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'b', 0))
+	assert.Nil(t, key)
+	assert.True(t, called)
+	assert.True(t, ui.pages.HasPage("error"))
+}
+
 func TestShowConfirm(t *testing.T) {
 	simScreen := testapp.CreateSimScreen(50, 50)
 	defer simScreen.Fini()
@@ -241,7 +314,7 @@ func TestDeleteEmpty(t *testing.T) {
 	ui.done = make(chan struct{})
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
-	assert.Nil(t, key)
+	assert.NotNil(t, key)
 }
 
 func TestDelete(t *testing.T) {

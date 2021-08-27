@@ -103,6 +103,18 @@ func TestSetSorting(t *testing.T) {
 	assert.Equal(t, "asc", ui.sortOrder)
 }
 
+func TestSetSortingWithoutCurrentDir(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+
+	// calling setSorting does nothing if we have not current dir
+	ui.setSorting("itemCount")
+	assert.Equal(t, "size", ui.sortBy)
+}
+
 func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bool) *UI {
 	simScreen := testapp.CreateSimScreen(50, 50)
 	defer simScreen.Fini()

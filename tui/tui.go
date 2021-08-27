@@ -368,6 +368,10 @@ func (ui *UI) showErr(msg string, err error) {
 }
 
 func (ui *UI) setSorting(newOrder string) {
+	if ui.currentDir == nil {
+		return
+	}
+
 	if newOrder == ui.sortBy {
 		if ui.sortOrder == "asc" {
 			ui.sortOrder = "desc"

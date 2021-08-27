@@ -198,6 +198,19 @@ func TestViewDirContents(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+func TestViewFileWithoutCurrentDir(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+
+	res := ui.showFile() // no current directory
+	assert.Nil(t, res)
+}
+
 func TestViewContentsOfNotExistingFile(t *testing.T) {
 	simScreen := testapp.CreateSimScreen(50, 50)
 	defer simScreen.Fini()
@@ -315,6 +328,21 @@ func TestShowInfoBW(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
 
 	assert.True(t, ui.pages.HasPage("info"))
+}
+
+func TestShowInfoWithoutCurrentDir(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui.done = make(chan struct{})
+
+	// pressing `i` will do nothing
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
+	assert.False(t, ui.pages.HasPage("info"))
 }
 
 func TestExitViewFile(t *testing.T) {
