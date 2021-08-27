@@ -283,6 +283,10 @@ func (ui *UI) sortItems() {
 }
 
 func (ui *UI) fileItemSelected(row, column int) {
+	if ui.currentDir == nil {
+		return
+	}
+
 	origDir := ui.currentDir
 	selectedDir := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 	if !selectedDir.IsDir() {

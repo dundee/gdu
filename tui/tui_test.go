@@ -204,6 +204,18 @@ func TestFileSelected(t *testing.T) {
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
 }
 
+func TestSelectedWithoutCurrentDir(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
+
+	ui.fileItemSelected(1, 0)
+
+	assert.Nil(t, ui.currentDir)
+}
+
 func TestBeforeDraw(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	err := screen.Init()
