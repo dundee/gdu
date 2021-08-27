@@ -71,11 +71,11 @@ func TestDeviceSelected(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -117,12 +117,12 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-	assert.Equal(t, parentDir, ui.currentDir.Parent)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, parentDir, ui.currentDir.Parent)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -145,11 +145,11 @@ func TestReadAnalysis(t *testing.T) {
 
 	<-ui.done // wait for reading
 
-	assert.Equal(t, "gdu", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "gdu", ui.currentDir.Name)
 }
 
 func TestReadAnalysisWithWrongFile(t *testing.T) {
@@ -188,11 +188,11 @@ func TestViewDirContents(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	res := ui.showFile() // selected item is dir, do nothing
 	assert.Nil(t, res)
@@ -224,11 +224,11 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	ui.table.Select(3, 0)
 
@@ -253,11 +253,11 @@ func TestViewFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	ui.table.Select(0, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
@@ -284,11 +284,11 @@ func TestShowInfo(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
@@ -316,11 +316,11 @@ func TestShowInfoBW(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
@@ -359,11 +359,11 @@ func TestExitViewFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	ui.table.Select(0, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))

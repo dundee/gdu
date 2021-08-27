@@ -169,12 +169,12 @@ func TestRescanDir(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-	assert.Equal(t, parentDir, ui.currentDir.Parent)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, parentDir, ui.currentDir.Parent)
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -388,11 +388,11 @@ func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mocked
 
 	<-ui.done // wait for analyzer
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-
 	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
 		f()
 	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	return ui
 }

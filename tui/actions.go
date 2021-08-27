@@ -80,22 +80,23 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	go ui.updateProgress()
 
 	go func() {
-		ui.currentDir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
+		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
 		runtime.GC()
 
 		if parentDir != nil {
-			ui.currentDir.Parent = parentDir
-			parentDir.Files = parentDir.Files.RemoveByName(ui.currentDir.Name)
-			parentDir.Files.Append(ui.currentDir)
+			currentDir.Parent = parentDir
+			parentDir.Files = parentDir.Files.RemoveByName(currentDir.Name)
+			parentDir.Files.Append(currentDir)
 
 			links := make(analyze.AlreadyCountedHardlinks, 10)
 			ui.topDir.UpdateStats(links)
 		} else {
 			ui.topDirPath = path
-			ui.topDir = ui.currentDir
+			ui.topDir = currentDir
 		}
 
 		ui.app.QueueUpdateDraw(func() {
+			ui.currentDir = currentDir
 			ui.showDir()
 			ui.pages.RemovePage("progress")
 		})
