@@ -2,6 +2,7 @@ package testanalyze
 
 import (
 	"errors"
+	"time"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
@@ -16,6 +17,7 @@ func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnor
 			Name:  "test_dir",
 			Usage: 1e12 + 1,
 			Size:  1e12 + 2,
+			Mtime: time.Date(2021, 8, 27, 22, 23, 24, 0, time.UTC),
 		},
 		BasePath:  ".",
 		ItemCount: 12,
@@ -25,6 +27,7 @@ func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnor
 			Name:   "aaa",
 			Usage:  1e12 + 1,
 			Size:   1e12 + 2,
+			Mtime:  time.Date(2021, 8, 27, 22, 23, 27, 0, time.UTC),
 			Parent: dir,
 		},
 		ItemCount: 5,
@@ -34,6 +37,7 @@ func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnor
 			Name:   "bbb",
 			Usage:  1e9 + 1,
 			Size:   1e9 + 2,
+			Mtime:  time.Date(2021, 8, 27, 22, 23, 26, 0, time.UTC),
 			Parent: dir,
 		},
 		ItemCount: 3,
@@ -43,6 +47,7 @@ func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnor
 			Name:   "ccc",
 			Usage:  1e6 + 1,
 			Size:   1e6 + 2,
+			Mtime:  time.Date(2021, 8, 27, 22, 23, 25, 0, time.UTC),
 			Parent: dir,
 		},
 		ItemCount: 2,
@@ -51,6 +56,7 @@ func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnor
 		Name:   "ddd",
 		Usage:  1e3 + 1,
 		Size:   1e3 + 2,
+		Mtime:  time.Date(2021, 8, 27, 22, 23, 24, 0, time.UTC),
 		Parent: dir,
 	}
 	dir.Files = analyze.Files{file, file2, file3, file4}

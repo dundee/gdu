@@ -89,6 +89,26 @@ func TestAnalyzeByItemCountAsc(t *testing.T) {
 	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
 }
 
+func TestAnalyzeByMtime(t *testing.T) {
+	ui := getAnalyzedPathWithSorting("mtime", "desc", false)
+
+	assert.Equal(t, 4, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
+}
+
+func TestAnalyzeByMtimeAsc(t *testing.T) {
+	ui := getAnalyzedPathWithSorting("mtime", "asc", false)
+
+	assert.Equal(t, 4, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
+}
+
 func TestSetSorting(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("itemCount", "asc", false)
 
