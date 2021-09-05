@@ -60,6 +60,12 @@ func (app *MockedApp) Run() error {
 // Stop does nothing
 func (app *MockedApp) Stop() {}
 
+// Suspend runs given function
+func (app *MockedApp) Suspend(f func()) bool {
+	f()
+	return true
+}
+
 // SetRoot does nothing
 func (app *MockedApp) SetRoot(root tview.Primitive, fullscreen bool) *tview.Application {
 	return nil
