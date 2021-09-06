@@ -2,7 +2,6 @@ package tui
 
 import (
 	"os"
-	"os/exec"
 )
 
 func getShellBin() string {
