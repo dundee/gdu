@@ -123,16 +123,36 @@ func TestSetSorting(t *testing.T) {
 	assert.Equal(t, "asc", ui.sortOrder)
 }
 
-func TestSetSortingWithoutCurrentDir(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+func TestSortDevicesByName(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
+	err := ui.ListDevices(getDevicesInfoMock())
 
-	// calling setSorting does nothing if we have not current dir
-	ui.setSorting("itemCount")
-	assert.Equal(t, "size", ui.sortBy)
+	assert.Nil(t, err)
+
+	ui.setSorting("name") // sort by name asc
+	assert.Equal(t, "/dev/boot", ui.devices[0].Name)
+
+	ui.setSorting("name") // sort by name desc
+	assert.Equal(t, "/dev/root", ui.devices[0].Name)
+}
+
+func TestSortDevicesByUsedSize(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
+	err := ui.ListDevices(getDevicesInfoMock())
+
+	assert.Nil(t, err)
+
+	ui.setSorting("size") // sort by used size asc
+	assert.Equal(t, "/dev/boot", ui.devices[0].Name)
+
+	ui.setSorting("size") // sort by used size desc
+	assert.Equal(t, "/dev/root", ui.devices[0].Name)
 }
 
 func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bool) *UI {

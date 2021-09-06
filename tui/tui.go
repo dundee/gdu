@@ -306,6 +306,56 @@ func (ui *UI) fileItemSelected(row, column int) {
 	}
 }
 
+func (ui *UI) showDevices() {
+	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
+	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
+	ui.table.SetCell(0, 2, tview.NewTableCell("Used").SetSelectable(false))
+	ui.table.SetCell(0, 3, tview.NewTableCell("Used part").SetSelectable(false))
+	ui.table.SetCell(0, 4, tview.NewTableCell("Free").SetSelectable(false))
+	ui.table.SetCell(0, 5, tview.NewTableCell("Mount point").SetSelectable(false))
+
+	var textColor, sizeColor string
+	if ui.UseColors {
+		textColor = "[#3498db:-:b]"
+		sizeColor = "[#edb20a:-:b]"
+	} else {
+		textColor = "[white:-:b]"
+		sizeColor = "[white:-:b]"
+	}
+
+	ui.sortDevices()
+
+	for i, device := range ui.devices {
+		ui.table.SetCell(i+1, 0, tview.NewTableCell(textColor+device.Name).SetReference(ui.devices[i]))
+		ui.table.SetCell(i+1, 1, tview.NewTableCell(ui.formatSize(device.Size, false, true)))
+		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+ui.formatSize(device.Size-device.Free, false, true)))
+		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device)))
+		ui.table.SetCell(i+1, 4, tview.NewTableCell(ui.formatSize(device.Free, false, true)))
+		ui.table.SetCell(i+1, 5, tview.NewTableCell(textColor+device.MountPoint))
+	}
+
+	ui.table.Select(1, 0)
+	ui.footerLabel.SetText("")
+	ui.table.SetSelectedFunc(ui.deviceItemSelected)
+}
+
+func (ui *UI) sortDevices() {
+	if ui.sortBy == "size" {
+		if ui.sortOrder == "desc" {
+			sort.Sort(device.ByUsedSize(ui.devices))
+		} else {
+			sort.Sort(sort.Reverse(device.ByUsedSize(ui.devices)))
+		}
+	}
+	if ui.sortBy == "name" {
+		if ui.sortOrder == "desc" {
+			sort.Sort(device.ByName(ui.devices))
+		} else {
+			sort.Sort(sort.Reverse(device.ByName(ui.devices)))
+		}
+	}
+}
+
 func (ui *UI) deviceItemSelected(row, column int) {
 	var err error
 	selectedDevice := ui.table.GetCell(row, column).GetReference().(*device.Device)
@@ -372,10 +422,6 @@ func (ui *UI) showErr(msg string, err error) {
 }
 
 func (ui *UI) setSorting(newOrder string) {
-	if ui.currentDir == nil {
-		return
-	}
-
 	if newOrder == ui.sortBy {
 		if ui.sortOrder == "asc" {
 			ui.sortOrder = "desc"
@@ -386,7 +432,12 @@ func (ui *UI) setSorting(newOrder string) {
 		ui.sortBy = newOrder
 		ui.sortOrder = "asc"
 	}
-	ui.showDir()
+
+	if ui.currentDir != nil {
+		ui.showDir()
+	} else if ui.devices != nil {
+		ui.showDevices()
+	}
 }
 
 func (ui *UI) updateProgress() {

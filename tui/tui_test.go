@@ -357,14 +357,14 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 	item := &device.Device{
 		Name:       "/dev/root",
 		MountPoint: "/",
-		Size:       1e9,
-		Free:       1e3,
+		Size:       1e12,
+		Free:       1e6,
 	}
 	item2 := &device.Device{
 		Name:       "/dev/boot",
 		MountPoint: "/boot",
-		Size:       1e12,
-		Free:       1e6,
+		Size:       1e6,
+		Free:       1e3,
 	}
 
 	mock := testdev.DevicesInfoGetterMock{}
