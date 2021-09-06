@@ -11,6 +11,11 @@ type Device struct {
 	Free       int64
 }
 
+// GetUsage returns used size of device
+func (d Device) GetUsage() int64 {
+	return d.Size - d.Free
+}
+
 // DevicesInfoGetter is type for GetDevicesInfo function
 type DevicesInfoGetter interface {
 	GetMounts() (Devices, error)
@@ -26,7 +31,7 @@ type ByUsedSize Devices
 func (f ByUsedSize) Len() int      { return len(f) }
 func (f ByUsedSize) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 func (f ByUsedSize) Less(i, j int) bool {
-	return (f[i].Size - f[i].Free) > (f[j].Size - f[j].Free)
+	return f[i].GetUsage() > f[j].GetUsage()
 }
 
 // ByName sorts devices by device name

@@ -84,12 +84,11 @@ func CreateUI(app common.TermApplication, screen tcell.Screen, output io.Writer,
 		output:          output,
 		askBeforeDelete: true,
 		showItemCount:   false,
-		sortBy:          "size",
-		sortOrder:       "desc",
 		remover:         analyze.RemoveItemFromDir,
 		emptier:         analyze.EmptyFileFromDir,
 		exec:            Execute,
 	}
+	ui.resetSorting()
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
 		screen.Clear()
@@ -157,6 +156,11 @@ func (ui *UI) StartUILoop() error {
 	return ui.app.Run()
 }
 
+func (ui *UI) resetSorting() {
+	ui.sortBy = "size"
+	ui.sortOrder = "desc"
+}
+
 func (ui *UI) rescanDir() {
 	ui.Analyzer.ResetProgress()
 	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.Parent)
@@ -199,6 +203,8 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	if err != nil {
 		log.Printf("Creating path patterns for other devices failed: %s", paths)
 	}
+
+	ui.resetSorting()
 
 	err = ui.AnalyzePath(selectedDevice.MountPoint, nil)
 	if err != nil {

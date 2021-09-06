@@ -83,6 +83,8 @@ func (ui *UI) showDir() {
 }
 
 func (ui *UI) showDevices() {
+	var totalUsage int64
+
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
 	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
 	ui.table.SetCell(0, 2, tview.NewTableCell("Used").SetSelectable(false))
@@ -102,6 +104,7 @@ func (ui *UI) showDevices() {
 	ui.sortDevices()
 
 	for i, device := range ui.devices {
+		totalUsage += device.GetUsage()
 		ui.table.SetCell(i+1, 0, tview.NewTableCell(textColor+device.Name).SetReference(ui.devices[i]))
 		ui.table.SetCell(i+1, 1, tview.NewTableCell(ui.formatSize(device.Size, false, true)))
 		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+ui.formatSize(device.Size-device.Free, false, true)))
@@ -110,8 +113,23 @@ func (ui *UI) showDevices() {
 		ui.table.SetCell(i+1, 5, tview.NewTableCell(textColor+device.MountPoint))
 	}
 
+	var footerNumberColor, footerTextColor string
+	if ui.UseColors {
+		footerNumberColor = "[#ffffff:#2479d0:b]"
+		footerTextColor = "[black:#2479d0:-]"
+	} else {
+		footerNumberColor = "[black:white:b]"
+		footerTextColor = "[black:white:-]"
+	}
+
+	ui.footerLabel.SetText(
+		" Total usage: " +
+			footerNumberColor +
+			ui.formatSize(totalUsage, true, false) +
+			footerTextColor +
+			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
+
 	ui.table.Select(1, 0)
-	ui.footerLabel.SetText("")
 	ui.table.SetSelectedFunc(ui.deviceItemSelected)
 }
 

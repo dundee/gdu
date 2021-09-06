@@ -21,7 +21,7 @@ func (ui *UI) setSorting(newOrder string) {
 
 	if ui.currentDir != nil {
 		ui.showDir()
-	} else if ui.devices != nil {
+	} else if ui.devices != nil && (newOrder == "size" || newOrder == "name") {
 		ui.showDevices()
 	}
 }
