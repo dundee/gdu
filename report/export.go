@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"sort"
 	"sync"
 	"time"
@@ -83,6 +84,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
+		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
 	}()
 

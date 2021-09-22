@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"github.com/dundee/gdu/v5/build"
@@ -53,8 +54,9 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	go ui.updateProgress()
 
 	go func() {
+		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
-		runtime.GC()
+		debug.FreeOSMemory()
 
 		if parentDir != nil {
 			currentDir.Parent = parentDir
