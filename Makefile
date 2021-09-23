@@ -81,6 +81,7 @@ benchmark:
 		'diskus ~' 'du -hs ~' 'dust -d0 ~'
 
 clean:
+	go mod tidy
 	-rm coverage.txt
 	-rm -r test_dir
 	-rm -r dist
@@ -91,5 +92,8 @@ clean-uncompressed-dist:
 shasums:
 	cd dist; sha256sum * > sha256sums.txt
 	cd dist; gpg --sign --armor --detach-sign sha256sums.txt
+
+release:
+	gh release create -t "gdu $(VERSION)" $(VERSION) ./dist/*
 
 .PHONY: run build test coverage coverage-html clean man
