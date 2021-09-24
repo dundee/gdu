@@ -33,7 +33,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	return nil
 }
 
-// AnalyzePath analyzes recursively disk usage in given path
+// AnalyzePath analyzes recursively disk usage for given path
 func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
