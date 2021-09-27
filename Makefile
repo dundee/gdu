@@ -56,7 +56,8 @@ man: gdu.1
 	cd dist; tar czf gdu.1.tgz gdu.1
 
 show-man:
-	pandoc gdu.1.md -s -t man | man -l -
+	sed 's/{{date}}/$(DATE)/g' gdu.1.md > gdu.1.date.md
+	pandoc gdu.1.date.md -s -t man | man -l -
 
 test:
 	go test -v ./...
