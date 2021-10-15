@@ -38,7 +38,7 @@ ignore (separated by comma)
 
 **-x**, **\--no-cross**\[=false\] Do not cross filesystem boundaries
 
-**-H**, **\--no-hidden**\[=false\] Ignore hidden directories (beggining with dot)
+**-H**, **\--no-hidden**\[=false\] Ignore hidden directories (beginning with dot)
 
 **-p**, **\--no-progress**\[=false\] Do not show progress in
 non-interactive mode
