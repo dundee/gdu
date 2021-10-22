@@ -30,6 +30,8 @@ ignore (separated by comma)
 **-I**, **\--ignore-dirs-pattern** Absolute path patterns to
 ignore (separated by comma)
 
+**-X**, **\--ignore-from** Read absolute path patterns to ignore from file
+
 **-l**, **\--log-file**=\"/dev/null\" Path to a logfile
 
 **-m**, **\--max-cores** Set max cores that GDU will use.

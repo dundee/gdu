@@ -75,6 +75,7 @@ Flags:
   -h, --help                          help for gdu
   -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -I, --ignore-dirs-pattern strings   Absolute path patterns to ignore (separated by comma)
+  -X, --ignore-from string            Read absolute path patterns to ignore from file
   -f, --input-file string             Import analysis from JSON file
   -l, --log-file string               Path to a logfile (default "/dev/null")
   -m, --max-cores int                 Set max cores that GDU will use. 8 cores available (default 8)
@@ -99,6 +100,7 @@ Flags:
     gdu -l ./gdu.log <some_dir>           # write errors to log file
     gdu -i /sys,/proc /                   # ignore some paths
     gdu -I '.*[abc]+'                     # ignore paths by regular pattern
+    gdu -X ignore_file /                  # ignore paths by regular patterns from file
     gdu -c /                              # use only white/gray/black colors
 
     gdu -n /                              # only print stats, do not start interactive mode

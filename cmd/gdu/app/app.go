@@ -28,6 +28,7 @@ type UI interface {
 	ReadAnalysis(input io.Reader) error
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
+	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreHidden(value bool)
 	StartUILoop() error
 }
@@ -39,6 +40,7 @@ type Flags struct {
 	OutputFile        string
 	IgnoreDirs        []string
 	IgnoreDirPatterns []string
+	IgnoreFromFile    string
 	MaxCores          int
 	ShowDisks         bool
 	ShowApparentSize  bool
@@ -104,6 +106,12 @@ func (a *App) Run() (err error) {
 
 	if len(a.Flags.IgnoreDirPatterns) > 0 {
 		if err = ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
+			return
+		}
+	}
+
+	if a.Flags.IgnoreFromFile != "" {
+		if err = ui.SetIgnoreFromFile(a.Flags.IgnoreFromFile); err != nil {
 			return
 		}
 	}

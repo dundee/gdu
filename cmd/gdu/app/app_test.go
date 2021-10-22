@@ -85,6 +85,25 @@ func TestAnalyzePathWithIgnoringPatternError(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestAnalyzePathWithIgnoringFromNotExistingFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile:        "/dev/null",
+			IgnoreFromFile: "file",
+			NoHidden:       true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Equal(t, out, "")
+	assert.NotNil(t, err)
+}
+
 func TestAnalyzePathWithGui(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

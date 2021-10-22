@@ -39,6 +39,7 @@ func init() {
 
 	flags.StringSliceVarP(&af.IgnoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
 	flags.StringSliceVarP(&af.IgnoreDirPatterns, "ignore-dirs-pattern", "I", []string{}, "Absolute path patterns to ignore (separated by comma)")
+	flags.StringVarP(&af.IgnoreFromFile, "ignore-from", "X", "", "Read absolute path patterns to ignore from file")
 	flags.BoolVarP(&af.NoHidden, "no-hidden", "H", false, "Ignore hidden directories (beginning with dot)")
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 

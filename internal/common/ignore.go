@@ -1,6 +1,8 @@
 package common
 
 import (
+	"bufio"
+	"os"
 	"regexp"
 	"strings"
 
@@ -37,6 +39,32 @@ func (ui *UI) SetIgnoreDirPaths(paths []string) {
 func (ui *UI) SetIgnoreDirPatterns(paths []string) error {
 	var err error
 	log.Printf("Ignoring dir patterns %s", strings.Join(paths, ", "))
+	ui.IgnoreDirPathPatterns, err = CreateIgnorePattern(paths)
+	return err
+}
+
+// SetIgnoreFromFile sets regular patters of dirs to ignore
+func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
+	var err error
+	var paths []string
+	log.Printf("Reading ignoring dir patterns from file '%s'", ignoreFile)
+
+	file, err := os.Open(ignoreFile)
+
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		paths = append(paths, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
 	ui.IgnoreDirPathPatterns, err = CreateIgnorePattern(paths)
 	return err
 }
