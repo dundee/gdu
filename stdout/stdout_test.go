@@ -42,6 +42,23 @@ func TestShowSummary(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
+	ui := CreateStdoutUI(output, true, false, true, true)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+}
+
+func TestShowSummaryBw(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
 	ui := CreateStdoutUI(output, false, false, false, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)

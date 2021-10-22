@@ -147,7 +147,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	wait.Wait()
 
 	if ui.summarize {
-		ui.printItem(dir)
+		ui.printTotalItem(dir)
 	} else {
 		ui.showDir(dir)
 	}
@@ -161,6 +161,29 @@ func (ui *UI) showDir(dir *analyze.Dir) {
 	for _, file := range dir.Files {
 		ui.printItem(file)
 	}
+}
+
+func (ui *UI) printTotalItem(file analyze.Item) {
+	var lineFormat string
+	if ui.UseColors {
+		lineFormat = "%20s %s\n"
+	} else {
+		lineFormat = "%9s %s\n"
+	}
+
+	var size int64
+	if ui.ShowApparentSize {
+		size = file.GetSize()
+	} else {
+		size = file.GetUsage()
+	}
+
+	fmt.Fprintf(
+		ui.output,
+		lineFormat,
+		ui.formatSize(size),
+		file.GetName(),
+	)
 }
 
 func (ui *UI) printItem(file analyze.Item) {
