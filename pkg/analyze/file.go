@@ -28,13 +28,13 @@ type Item interface {
 
 // File struct
 type File struct {
-	Flag   rune
+	Mtime  time.Time
+	Parent *Dir
 	Name   string
 	Size   int64
 	Usage  int64
-	Mtime  time.Time
-	Mli    uint64 // MutliLinkInode - Inode number of file with multiple links (hard link)
-	Parent *Dir
+	Mli    uint64
+	Flag   rune
 }
 
 // GetName returns name of dir
@@ -115,8 +115,8 @@ func (f *File) getItemStats(links AlreadyCountedHardlinks) (int, int64, int64) {
 type Dir struct {
 	*File
 	BasePath  string
-	ItemCount int
 	Files     Files
+	ItemCount int
 }
 
 // GetType returns name type of item
