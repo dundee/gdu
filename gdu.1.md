@@ -40,10 +40,12 @@ ignore (separated by comma)
 
 **-H**, **\--no-hidden**\[=false\] Ignore hidden directories (beginning with dot)
 
+**-n**, **\--non-interactive**\[=false\] Do not run in interactive mode
+
 **-p**, **\--no-progress**\[=false\] Do not show progress in
 non-interactive mode
 
-**-n**, **\--non-interactive**\[=false\] Do not run in interactive mode
+**-s**, **\--summarize**\[=false\] Show only a total in non-interactive mode
 
 **-d**, **\--show-disks**\[=false\] Show all mounted disks
 

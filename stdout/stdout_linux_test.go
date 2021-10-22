@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package stdout
@@ -20,7 +21,7 @@ func TestShowDevicesWithErr(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
-	ui := CreateStdoutUI(output, false, true, false)
+	ui := CreateStdoutUI(output, false, true, false, false)
 	err := ui.ListDevices(getter)
 
 	assert.Contains(t, err.Error(), "no such file")

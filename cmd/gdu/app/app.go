@@ -48,6 +48,7 @@ type Flags struct {
 	NoProgress        bool
 	NoCross           bool
 	NoHidden          bool
+	Summarize         bool
 }
 
 // App defines the main application
@@ -168,6 +169,7 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
 			a.Flags.ShowApparentSize,
+			a.Flags.Summarize,
 		)
 	} else {
 		ui = tui.CreateUI(

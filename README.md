@@ -86,6 +86,7 @@ Flags:
   -o, --output-file string            Export all info into file as JSON
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
+  -s, --summarize                     Show only a total in non-interactive mode
   -v, --version                       Print version
 ```
 
@@ -102,6 +103,7 @@ Flags:
 
     gdu -n /                              # only print stats, do not start interactive mode
     gdu -np /                             # do not show progress, useful when using its output in a script
+    gdu -nps /some/dir                    # show only total usage for given dir
     gdu / > file                          # write stats to file, do not start interactive mode
 
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
