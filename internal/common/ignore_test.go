@@ -63,9 +63,15 @@ func TestIgnoreFromFile(t *testing.T) {
 	}
 	defer file.Close()
 
-	file.Write([]byte("/aaa\n"))
-	file.Write([]byte("/aaabc\n"))
-	file.Write([]byte("/[abd]+\n"))
+	if _, err := file.Write([]byte("/aaa\n")); err != nil {
+		panic(err)
+	}
+	if _, err := file.Write([]byte("/aaabc\n")); err != nil {
+		panic(err)
+	}
+	if _, err := file.Write([]byte("/[abd]+\n")); err != nil {
+		panic(err)
+	}
 
 	ui := &common.UI{}
 	err = ui.SetIgnoreFromFile("ignore")
