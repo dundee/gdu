@@ -64,7 +64,7 @@ Using curl:
 
 [Go](https://pkg.go.dev/github.com/dundee/gdu):
 
-    go get -u github.com/dundee/gdu/v5/cmd/gdu
+    go install github.com/dundee/gdu/v5/cmd/gdu@latest
 
 ## Usage
 
