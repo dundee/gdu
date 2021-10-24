@@ -85,6 +85,12 @@ func processDir(items []interface{}) (*analyze.Dir, error) {
 			} else {
 				file.Flag = ' '
 			}
+			if mli, ok := item["ino"].(float64); ok {
+				file.Mli = uint64(mli)
+			}
+			if _, ok := item["hlnkc"].(bool); ok {
+				file.Flag = 'H'
+			}
 
 			file.Parent = dir
 
