@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 )
 
 // EncodeJSON writes JSON representation of dir
@@ -78,6 +79,9 @@ func (f *File) EncodeJSON(writer io.Writer, topLevel bool) error {
 
 	if f.Flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
+	}
+	if f.Flag == 'H' {
+		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(f.Mli, 10)+`,"hlnkc":true`)...)
 	}
 
 	buff = append(buff, '}')
