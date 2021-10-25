@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/dundee/gdu/v5/build"
@@ -70,7 +70,7 @@ func (ui *UI) showDir() {
 			" Apparent size: " +
 			footerNumberColor +
 			ui.formatSize(totalSize, true, false) +
-			" Items: " + footerNumberColor + fmt.Sprint(itemCount) +
+			" Items: " + footerNumberColor + strconv.Itoa(itemCount) +
 			footerTextColor +
 			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -97,7 +98,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	buff.Write([]byte(`[1,2,{"progname":"gdu","progver":"`))
 	buff.Write([]byte(build.Version))
 	buff.Write([]byte(`","timestamp":`))
-	buff.Write([]byte(fmt.Sprint(time.Now().Unix())))
+	buff.Write([]byte(strconv.FormatInt(time.Now().Unix(), 10)))
 	buff.Write([]byte("},\n"))
 
 	if err = dir.EncodeJSON(&buff, true); err != nil {
