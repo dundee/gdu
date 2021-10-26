@@ -48,8 +48,13 @@ func TestEncode(t *testing.T) {
 		Flag:   '@',
 		Mtime:  time.Date(2021, 8, 19, 0, 40, 0, 0, time.UTC),
 	}
+	file3 := &File{
+		Name: "file3",
+		Mli:  1234,
+		Flag: 'H',
+	}
 	dir.Files = Files{subdir}
-	subdir.Files = Files{file, file2}
+	subdir.Files = Files{file, file2, file3}
 
 	var buff bytes.Buffer
 	err := dir.EncodeJSON(&buff, true)
@@ -57,4 +62,6 @@ func TestEncode(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Contains(t, buff.String(), `"name":"nested"`)
 	assert.Contains(t, buff.String(), `"mtime":1629333600`)
+	assert.Contains(t, buff.String(), `"ino":1234`)
+	assert.Contains(t, buff.String(), `"hlnkc":true`)
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
@@ -23,6 +24,7 @@ func TestReadAnalysis(t *testing.T) {
 		[{"name":"app"},
 		{"name":"app.go","asize":4638,"dsize":8192},
 		{"name":"app_linux_test.go","asize":1410,"dsize":4096},
+		{"name":"app_linux_test2.go","ino":1234,"hlnkc":true,"asize":1410,"dsize":4096},
 		{"name":"app_test.go","asize":4974,"dsize":8192}],
 		{"name":"main.go","asize":3205,"dsize":4096,"mtime":1629333600}]]
 	`))
@@ -34,6 +36,10 @@ func TestReadAnalysis(t *testing.T) {
 	assert.Equal(t, "/home/xxx", dir.GetPath())
 	assert.Equal(t, 2021, dir.GetMtime().Year())
 	assert.Equal(t, 2021, dir.Files[3].GetMtime().Year())
+	alt2 := dir.Files[2].(*analyze.Dir).Files[2].(*analyze.File)
+	assert.Equal(t, "app_linux_test2.go", alt2.Name)
+	assert.Equal(t, uint64(1234), alt2.Mli)
+	assert.Equal(t, 'H', alt2.Flag)
 }
 
 func TestReadAnalysisWithEmptyInput(t *testing.T) {
