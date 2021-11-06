@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/gdamore/tcell/v2"
@@ -157,21 +156,4 @@ func (ui *UI) handleDelete(shouldEmpty bool) {
 	} else {
 		ui.deleteSelected(shouldEmpty)
 	}
-}
-
-func (ui *UI) spawnShell() {
-	if ui.currentDir == nil {
-		return
-	}
-
-	ui.app.Suspend(func() {
-		if err := os.Chdir(ui.currentDirPath); err != nil {
-			ui.showErr("Error changing directory", err)
-			return
-		}
-
-		if err := ui.exec(getShellBin(), nil, os.Environ()); err != nil {
-			ui.showErr("Error executing shell", err)
-		}
-	})
 }
