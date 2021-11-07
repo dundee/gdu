@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// AlreadyCountedHardlinks holds all files with hardlinks that have already been counted
-type AlreadyCountedHardlinks map[uint64]bool
+// HardLinkedItems maps inode number to array of all hard linked items
+type HardLinkedItems map[uint64]Files
 
 // Item is fs item (file or dir)
 type Item interface {
@@ -22,8 +22,9 @@ type Item interface {
 	GetMtime() time.Time
 	GetItemCount() int
 	GetParent() *Dir
+	GetMultiLinkedInode() uint64
 	EncodeJSON(writer io.Writer, topLevel bool) error
-	getItemStats(links AlreadyCountedHardlinks) (int, int64, int64)
+	getItemStats(linkedItems HardLinkedItems) (int, int64, int64)
 }
 
 // File struct
@@ -91,21 +92,26 @@ func (f *File) GetItemCount() int {
 	return 1
 }
 
-func (f *File) alreadyCounted(links AlreadyCountedHardlinks) bool {
-	mli := f.Mli
-	if mli > 0 {
-		if !links[mli] {
-			links[mli] = true
-			return false
-		}
-		f.Flag = 'H'
-		return true
-	}
-	return false
+// GetMultiLinkedInode returns inode number of multilinked file
+func (f *File) GetMultiLinkedInode() uint64 {
+	return f.Mli
 }
 
-func (f *File) getItemStats(links AlreadyCountedHardlinks) (int, int64, int64) {
-	if f.alreadyCounted(links) {
+func (f *File) alreadyCounted(linkedItems HardLinkedItems) bool {
+	mli := f.Mli
+	counted := false
+	if mli > 0 {
+		if _, ok := linkedItems[mli]; ok {
+			f.Flag = 'H'
+			counted = true
+		}
+		linkedItems[mli] = append(linkedItems[mli], f)
+	}
+	return counted
+}
+
+func (f *File) getItemStats(linkedItems HardLinkedItems) (int, int64, int64) {
+	if f.alreadyCounted(linkedItems) {
 		return 1, 0, 0
 	}
 	return 1, f.GetSize(), f.GetUsage()
@@ -142,18 +148,18 @@ func (f *Dir) GetPath() string {
 	return filepath.Join(f.Parent.GetPath(), f.Name)
 }
 
-func (f *Dir) getItemStats(links AlreadyCountedHardlinks) (int, int64, int64) {
-	f.UpdateStats(links)
+func (f *Dir) getItemStats(linkedItems HardLinkedItems) (int, int64, int64) {
+	f.UpdateStats(linkedItems)
 	return f.ItemCount, f.GetSize(), f.GetUsage()
 }
 
 // UpdateStats recursively updates size and item count
-func (f *Dir) UpdateStats(links AlreadyCountedHardlinks) {
+func (f *Dir) UpdateStats(linkedItems HardLinkedItems) {
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int
 	for _, entry := range f.Files {
-		count, size, usage := entry.getItemStats(links)
+		count, size, usage := entry.getItemStats(linkedItems)
 		totalSize += size
 		totalUsage += usage
 		itemCount += count

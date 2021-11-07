@@ -79,9 +79,6 @@ func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *D
 	dir.BasePath = filepath.Dir(path)
 	a.wait.Wait()
 
-	links := make(AlreadyCountedHardlinks, 10)
-	dir.UpdateStats(links)
-
 	a.doneChan <- struct{}{} // finish updateProgress here
 	a.doneChan <- struct{}{} // and there
 

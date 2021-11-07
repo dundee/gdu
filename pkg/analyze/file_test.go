@@ -378,3 +378,13 @@ func TestUpdateStats(t *testing.T) {
 	assert.Equal(t, int64(4096+5), dir.Size)
 	assert.Equal(t, 42, dir.GetMtime().Minute())
 }
+
+func TestGetMultiLinkedInode(t *testing.T) {
+	file := &File{
+		Name: "xxx",
+		Mli:  5,
+	}
+
+	assert.Equal(t, uint64(5), file.GetMultiLinkedInode())
+
+}

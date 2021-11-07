@@ -24,9 +24,9 @@ func TestSortByApparentSizeAsc(t *testing.T) {
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
 	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
 }
 
 func TestAnalyzeBySize(t *testing.T) {
@@ -44,9 +44,9 @@ func TestSortBySizeAsc(t *testing.T) {
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
 	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
 }
 
 func TestAnalyzeByName(t *testing.T) {
@@ -83,10 +83,10 @@ func TestAnalyzeByItemCountAsc(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("itemCount", "asc", false)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
 }
 
 func TestAnalyzeByMtime(t *testing.T) {

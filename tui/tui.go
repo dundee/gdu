@@ -69,6 +69,7 @@ type UI struct {
 	remover         func(*analyze.Dir, analyze.Item) error
 	emptier         func(*analyze.Dir, analyze.Item) error
 	exec            func(argv0 string, argv []string, envv []string) error
+	linkedItems     analyze.HardLinkedItems
 }
 
 // CreateUI creates the whole UI app
@@ -87,6 +88,7 @@ func CreateUI(app common.TermApplication, screen tcell.Screen, output io.Writer,
 		remover:         analyze.RemoveItemFromDir,
 		emptier:         analyze.EmptyFileFromDir,
 		exec:            Execute,
+		linkedItems:     make(analyze.HardLinkedItems, 10),
 	}
 	ui.resetSorting()
 

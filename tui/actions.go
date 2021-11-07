@@ -62,13 +62,12 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 			currentDir.Parent = parentDir
 			parentDir.Files = parentDir.Files.RemoveByName(currentDir.Name)
 			parentDir.Files.Append(currentDir)
-
-			links := make(analyze.AlreadyCountedHardlinks, 10)
-			ui.topDir.UpdateStats(links)
 		} else {
 			ui.topDirPath = path
 			ui.topDir = currentDir
 		}
+
+		ui.topDir.UpdateStats(ui.linkedItems)
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.currentDir = currentDir
@@ -119,7 +118,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		ui.topDirPath = ui.currentDir.GetPath()
 		ui.topDir = ui.currentDir
 
-		links := make(analyze.AlreadyCountedHardlinks, 10)
+		links := make(analyze.HardLinkedItems, 10)
 		ui.topDir.UpdateStats(links)
 
 		ui.app.QueueUpdateDraw(func() {
@@ -303,6 +302,8 @@ func (ui *UI) showInfo() {
 		numberColor = "[::b]"
 	}
 
+	linesCount := 12
+
 	text := tview.NewTextView().SetDynamicColors(true)
 	text.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	text.SetBorderColor(tcell.ColorDefault)
@@ -320,13 +321,22 @@ func (ui *UI) showInfo() {
 	content += numberColor + ui.formatSize(selectedFile.GetSize(), false, true)
 	content += fmt.Sprintf(" (%s%d[-::] B)", numberColor, selectedFile.GetSize()) + "\n"
 
+	if selectedFile.GetMultiLinkedInode() > 0 {
+		linkedItems := ui.linkedItems[selectedFile.GetMultiLinkedInode()]
+		linesCount += 2 + len(linkedItems)
+		content += "\nHard-linked files:\n"
+		for _, linkedItem := range linkedItems {
+			content += "\t" + linkedItem.GetPath() + "\n"
+		}
+	}
+
 	text.SetText(content)
 
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
-			AddItem(text, 13, 1, false).
+			AddItem(text, linesCount, 1, false).
 			AddItem(nil, 0, 1, false), 80, 1, false).
 		AddItem(nil, 0, 1, false)
 

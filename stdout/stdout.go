@@ -142,6 +142,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 		defer wait.Done()
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
+		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
 	}()
 
 	wait.Wait()
@@ -246,8 +247,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		}
 		runtime.GC()
 
-		links := make(analyze.AlreadyCountedHardlinks, 10)
-		dir.UpdateStats(links)
+		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
 
 		if ui.ShowProgress {
 			doneChan <- struct{}{}

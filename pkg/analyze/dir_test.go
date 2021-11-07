@@ -22,13 +22,12 @@ func TestAnalyzeDir(t *testing.T) {
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false })
 
-	c := analyzer.GetProgressChan()
-	progress := <-c
+	progress := <-analyzer.GetProgressChan()
 	assert.GreaterOrEqual(t, progress.TotalSize, int64(0))
 	analyzer.ResetProgress()
 
-	done := analyzer.GetDoneChan()
-	<-done
+	<-analyzer.GetDoneChan()
+	dir.UpdateStats(make(HardLinkedItems))
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
@@ -71,7 +70,11 @@ func TestFlags(t *testing.T) {
 	err = os.Symlink("test_dir/nested/file2", "test_dir/nested/file3")
 	assert.Nil(t, err)
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	analyzer := CreateAnalyzer()
+	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	<-analyzer.GetDoneChan()
+	dir.UpdateStats(make(HardLinkedItems))
+
 	sort.Sort(dir.Files)
 
 	assert.Equal(t, int64(28+4096*4), dir.Size)
@@ -93,7 +96,10 @@ func TestHardlink(t *testing.T) {
 	err := os.Link("test_dir/nested/file2", "test_dir/nested/file3")
 	assert.Nil(t, err)
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	analyzer := CreateAnalyzer()
+	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	<-analyzer.GetDoneChan()
+	dir.UpdateStats(make(HardLinkedItems))
 
 	assert.Equal(t, int64(7+4096*3), dir.Size) // file2 and file3 are counted just once for size
 	assert.Equal(t, 6, dir.ItemCount)          // but twice for item count
@@ -115,7 +121,10 @@ func TestErr(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	analyzer := CreateAnalyzer()
+	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	<-analyzer.GetDoneChan()
+	dir.UpdateStats(make(HardLinkedItems))
 
 	assert.Equal(t, "test_dir", dir.GetName())
 	assert.Equal(t, 2, dir.ItemCount)
@@ -131,5 +140,8 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 
 	b.ResetTimer()
 
-	CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	analyzer := CreateAnalyzer()
+	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	<-analyzer.GetDoneChan()
+	dir.UpdateStats(make(HardLinkedItems))
 }

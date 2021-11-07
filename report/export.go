@@ -87,6 +87,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 		defer wait.Done()
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
+		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
 	}()
 
 	wait.Wait()
