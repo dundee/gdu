@@ -45,12 +45,28 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.showHelp()
 	}
 
+	if ui.pages.HasPage("info") {
+		if key.Key() == tcell.KeyUp ||
+			key.Key() == tcell.KeyDown ||
+			key.Rune() == 'j' ||
+			key.Rune() == 'k' {
+			row, column := ui.table.GetSelection()
+			if (key.Key() == tcell.KeyUp || key.Rune() == 'k') && row > 0 {
+				row--
+			} else if (key.Key() == tcell.KeyDown || key.Rune() == 'j') &&
+				row+1 < ui.table.GetRowCount() {
+				row++
+			}
+			ui.table.Select(row, column)
+		}
+		defer ui.showInfo() // refresh file info after any change
+	}
+
 	if ui.pages.HasPage("confirm") ||
 		ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
 		ui.pages.HasPage("emptying") ||
-		ui.pages.HasPage("help") ||
-		ui.pages.HasPage("info") {
+		ui.pages.HasPage("help") {
 		return key
 	}
 

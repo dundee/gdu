@@ -292,10 +292,6 @@ func (ui *UI) showInfo() {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
 
-	if selectedFile == ui.currentDir.Parent {
-		return
-	}
-
 	if ui.UseColors {
 		numberColor = "[#e67100::b]"
 	} else {
