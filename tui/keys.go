@@ -29,6 +29,15 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 	}
+	
+	if key.Rune() == 'i' {
+		if ui.pages.HasPage("info") {
+			ui.pages.RemovePage("info")
+			_, page := ui.pages.GetFrontPage()
+			ui.app.SetFocus(page)
+			return nil
+		}
+	}
 
 	switch key.Rune() {
 	case 'Q':
