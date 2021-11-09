@@ -111,11 +111,13 @@ Flags:
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
     zcat report.json.gz | gdu -f-         # read analysis from file
 
+## Modes
+
 Gdu has three modes: interactive (default), non-interactive and export.
 
 Non-interactive mode is started automtically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
 
-Export mode (flag `-o`) outputs all usage data as JSON, which can then be later opened using the `-f` flag.
+Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag.
 
 Hard links are counted only once.
 
@@ -140,7 +142,7 @@ flag with following meaning:
 
 ## Benchmarks
 
-Benchmarks performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
+Benchmarks were performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
 See `benchmark` target in [Makefile](Makefile) for more info.
 
 ### Cold cache
