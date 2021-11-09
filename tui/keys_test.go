@@ -703,8 +703,6 @@ func TestShowInfoAndMoveAround(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
-	ui.table.Select(2, 0)
-	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
 
 	assert.True(t, ui.pages.HasPage("info"))
 

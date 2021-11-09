@@ -292,8 +292,6 @@ func TestShowInfo(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
-	ui.table.Select(2, 0)
-	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
 
 	assert.True(t, ui.pages.HasPage("info"))
 
@@ -324,10 +322,12 @@ func TestShowInfoBW(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
-	ui.table.Select(2, 0)
-	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
 
 	assert.True(t, ui.pages.HasPage("info"))
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
+
+	assert.False(t, ui.pages.HasPage("info"))
 }
 
 func TestShowInfoWithHardlinks(t *testing.T) {
@@ -360,8 +360,6 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 	assert.Equal(t, "test_dir", ui.currentDir.Name)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
-	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
-	ui.table.Select(2, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
 
 	assert.True(t, ui.pages.HasPage("info"))

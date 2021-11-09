@@ -18,43 +18,26 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if key.Key() == tcell.KeyEsc || key.Rune() == 'q' {
 		if ui.pages.HasPage("help") {
 			ui.pages.RemovePage("help")
-			_, page := ui.pages.GetFrontPage()
-			ui.app.SetFocus(page)
+			ui.app.SetFocus(ui.table)
 			return nil
 		}
 		if ui.pages.HasPage("info") {
 			ui.pages.RemovePage("info")
-			_, page := ui.pages.GetFrontPage()
-			ui.app.SetFocus(page)
+			ui.app.SetFocus(ui.table)
 			return nil
 		}
-	}
-	
-	if key.Rune() == 'i' {
-		if ui.pages.HasPage("info") {
-			ui.pages.RemovePage("info")
-			_, page := ui.pages.GetFrontPage()
-			ui.app.SetFocus(page)
-			return nil
-		}
-	}
-
-	switch key.Rune() {
-	case 'Q':
-		ui.app.Stop()
-		fmt.Fprintf(ui.output, "%s\n", ui.currentDirPath)
-		return nil
-	case 'q':
-		ui.app.Stop()
-		return nil
-	case 'b':
-		ui.spawnShell()
-		return nil
-	case '?':
-		ui.showHelp()
 	}
 
 	if ui.pages.HasPage("info") {
+		switch key.Rune() {
+		case 'i':
+			ui.pages.RemovePage("info")
+			ui.app.SetFocus(ui.table)
+			return nil
+		case '?':
+			return nil
+		}
+
 		if key.Key() == tcell.KeyUp ||
 			key.Key() == tcell.KeyDown ||
 			key.Rune() == 'j' ||
@@ -69,6 +52,26 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.table.Select(row, column)
 		}
 		defer ui.showInfo() // refresh file info after any change
+	}
+
+	switch key.Rune() {
+	case 'Q':
+		ui.app.Stop()
+		fmt.Fprintf(ui.output, "%s\n", ui.currentDirPath)
+		return nil
+	case 'q':
+		ui.app.Stop()
+		return nil
+	case 'b':
+		ui.spawnShell()
+		return nil
+	case '?':
+		if ui.pages.HasPage("help") {
+			ui.pages.RemovePage("help")
+			ui.app.SetFocus(ui.table)
+			return nil
+		}
+		ui.showHelp()
 	}
 
 	if ui.pages.HasPage("confirm") ||
