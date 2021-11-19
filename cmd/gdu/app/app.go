@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -91,6 +92,8 @@ func (a *App) Run() (err error) {
 		}
 	}()
 	log.SetOutput(f)
+
+	log.Printf("Runtime flags: %+v", *a.Flags)
 
 	path := a.getPath()
 	ui, err = a.createUI()
@@ -203,6 +206,7 @@ func (a *App) setNoCross(path string) error {
 			return fmt.Errorf("loading mount points: %w", err)
 		}
 		paths := device.GetNestedMountpointsPaths(path, mounts)
+		log.Printf("Ignoring mount points: %s", strings.Join(paths, ", "))
 		a.Flags.IgnoreDirs = append(a.Flags.IgnoreDirs, paths...)
 	}
 	return nil
@@ -240,6 +244,7 @@ func (a *App) runAction(ui UI, path string) error {
 			return err
 		}
 
+		log.Printf("Analyzing path: %s", abspath)
 		if err := ui.AnalyzePath(abspath, nil); err != nil {
 			return fmt.Errorf("scanning dir: %w", err)
 		}
