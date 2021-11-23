@@ -96,6 +96,8 @@ func (a *App) Run() (err error) {
 	log.Printf("Runtime flags: %+v", *a.Flags)
 
 	path := a.getPath()
+	path, _ = filepath.Abs(path)
+
 	ui, err = a.createUI()
 	if err != nil {
 		return
@@ -233,19 +235,17 @@ func (a *App) runAction(ui UI, path string) error {
 			return fmt.Errorf("reading analysis: %w", err)
 		}
 	} else {
-		abspath, _ := filepath.Abs(path)
-
 		if build.RootPathPrefix != "" {
-			abspath = build.RootPathPrefix + abspath
+			path = build.RootPathPrefix + path
 		}
 
-		_, err := a.PathChecker(abspath)
+		_, err := a.PathChecker(path)
 		if err != nil {
 			return err
 		}
 
-		log.Printf("Analyzing path: %s", abspath)
-		if err := ui.AnalyzePath(abspath, nil); err != nil {
+		log.Printf("Analyzing path: %s", path)
+		if err := ui.AnalyzePath(path, nil); err != nil {
 			return fmt.Errorf("scanning dir: %w", err)
 		}
 	}
