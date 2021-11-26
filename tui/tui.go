@@ -73,12 +73,15 @@ type UI struct {
 }
 
 // CreateUI creates the whole UI app
-func CreateUI(app common.TermApplication, screen tcell.Screen, output io.Writer, useColors bool, showApparentSize bool) *UI {
+func CreateUI(
+	app common.TermApplication, screen tcell.Screen, output io.Writer, useColors bool, showApparentSize bool, enableGC bool,
+) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			UseColors:        useColors,
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
+			EnableGC:         enableGC,
 		},
 		app:             app,
 		screen:          screen,

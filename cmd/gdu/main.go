@@ -42,6 +42,7 @@ func init() {
 	flags.StringVarP(&af.IgnoreFromFile, "ignore-from", "X", "", "Read absolute path patterns to ignore from file")
 	flags.BoolVarP(&af.NoHidden, "no-hidden", "H", false, "Ignore hidden directories (beginning with dot)")
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
+	flags.BoolVarP(&af.EnableGC, "enable-gc", "g", false, "Enable memory garbage collection during analysis")
 
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")

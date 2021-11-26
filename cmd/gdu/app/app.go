@@ -51,6 +51,7 @@ type Flags struct {
 	NoProgress        bool
 	NoCross           bool
 	NoHidden          bool
+	EnableGC          bool
 	Summarize         bool
 }
 
@@ -172,6 +173,7 @@ func (a *App) createUI() (UI, error) {
 			output,
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
+			a.Flags.EnableGC,
 		)
 		return ui, nil
 	}
@@ -183,6 +185,7 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoProgress && a.Istty,
 			a.Flags.ShowApparentSize,
 			a.Flags.Summarize,
+			a.Flags.EnableGC,
 		)
 	} else {
 		ui = tui.CreateUI(
@@ -191,6 +194,7 @@ func (a *App) createUI() (UI, error) {
 			os.Stdout,
 			!a.Flags.NoColor,
 			a.Flags.ShowApparentSize,
+			a.Flags.EnableGC,
 		)
 
 		if !a.Flags.NoColor {

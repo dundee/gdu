@@ -30,11 +30,12 @@ type UI struct {
 }
 
 // CreateExportUI creates UI for stdout
-func CreateExportUI(output io.Writer, exportOutput io.Writer, useColors bool, showProgress bool) *UI {
+func CreateExportUI(output io.Writer, exportOutput io.Writer, useColors bool, showProgress bool, enableGC bool) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			ShowProgress: showProgress,
 			Analyzer:     analyze.CreateAnalyzer(),
+			EnableGC:     enableGC,
 		},
 		output:       output,
 		exportOutput: exportOutput,
@@ -85,7 +86,9 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		defer debug.SetGCPercent(debug.SetGCPercent(-1))
+		if !ui.EnableGC {
+			defer debug.SetGCPercent(debug.SetGCPercent(-1))
+		}
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
 		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
 	}()

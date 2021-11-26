@@ -36,6 +36,7 @@ func CreateStdoutUI(
 	showProgress bool,
 	showApparentSize bool,
 	summarize bool,
+	enableGC bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -43,6 +44,7 @@ func CreateStdoutUI(
 			ShowProgress:     showProgress,
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
+			EnableGC:         enableGC,
 		},
 		output:    output,
 		summarize: summarize,
@@ -140,7 +142,9 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		defer debug.SetGCPercent(debug.SetGCPercent(-1))
+		if !ui.EnableGC {
+			defer debug.SetGCPercent(debug.SetGCPercent(-1))
+		}
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
 		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
 	}()

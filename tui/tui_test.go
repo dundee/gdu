@@ -25,7 +25,7 @@ func TestFooter(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false)
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -67,7 +67,7 @@ func TestUpdateProgress(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false)
 	done := ui.Analyzer.GetDoneChan()
 	done <- struct{}{}
 	ui.updateProgress()
@@ -78,7 +78,7 @@ func TestHelp(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false)
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -102,7 +102,7 @@ func TestHelpBw(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false)
 	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
@@ -124,7 +124,7 @@ func TestAppRun(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false)
 
 	err := ui.StartUILoop()
 
@@ -136,7 +136,7 @@ func TestAppRunWithErr(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false)
 
 	err := ui.StartUILoop()
 
@@ -160,7 +160,7 @@ func TestRescanDir(t *testing.T) {
 	simScreen := testapp.CreateSimScreen(50, 50)
 	defer simScreen.Fini()
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -209,7 +209,7 @@ func TestSelectedWithoutCurrentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false)
 
 	ui.fileItemSelected(1, 0)
 
@@ -223,7 +223,7 @@ func TestBeforeDraw(t *testing.T) {
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, screen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, false, true, false)
 
 	for _, f := range ui.app.(*testapp.MockedApp).BeforeDraws {
 		assert.False(t, f(screen))
@@ -235,7 +235,7 @@ func TestIgnorePaths(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false)
 
 	ui.SetIgnoreDirPaths([]string{"/aaa", "/bbb"})
 
@@ -321,7 +321,7 @@ func TestShowErr(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false)
 
 	ui.showErr("Something went wrong", errors.New("error"))
 
@@ -333,7 +333,7 @@ func TestShowErrBW(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false)
 
 	ui.showErr("Something went wrong", errors.New("error"))
 
@@ -377,7 +377,7 @@ func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mocked
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, useColors, apparentSize)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, useColors, apparentSize, false)
 
 	if mockedAnalyzer {
 		ui.Analyzer = &testanalyze.MockedAnalyzer{}

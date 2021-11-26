@@ -72,6 +72,7 @@ Using curl:
   gdu [flags] [directory_to_scan]
 
 Flags:
+  -g, --enable-gc                     Enable memory garbage collection during analysis
   -h, --help                          help for gdu
   -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -I, --ignore-dirs-pattern strings   Absolute path patterns to ignore (separated by comma)
@@ -135,6 +136,23 @@ flag with following meaning:
 * `H` Same file was already counted (hard link).
 
 * `e` Directory is empty.
+
+## RAM usage
+
+Gdu can consume a lot of memory - around 500-1000 MB of RAM for 1 mil files. It's a trade off for being so fast.
+
+If you want lower memory usage and don't mind giving up some speed, you can use `--enable-gc` / `-g` flag.
+It will run garbage collection during the analysis phase.
+As a result, the analysis will be about 25% slower and will consume about 30% less memory.
+
+If you need some more fine tunning, you can use the `GOGC` environment variable to set how often the garbage collection will happen.
+Default value is `100`. Lower value means GC will run more often. Higher than 100 means less often. Negative number will stop GC.
+
+Example running gdu with GC enabled, but not so aggresive as default:
+
+```
+GOGC=200 gdu -g /
+```
 
 ## Running tests
 

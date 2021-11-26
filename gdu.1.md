@@ -57,6 +57,8 @@ non-interactive mode
 
 **-o**, **\----output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
 
+**-g**, **\--enable-gc**\[=false\] Enable garbage collection during analysis
+
 **-v**, **\--version**\[=false\] Print version
 
 # FILE FLAGS

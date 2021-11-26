@@ -16,6 +16,7 @@ type UI struct {
 	UseColors             bool
 	ShowProgress          bool
 	ShowApparentSize      bool
+	EnableGC              bool
 }
 
 // file size constants
