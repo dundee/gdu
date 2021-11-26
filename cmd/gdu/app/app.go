@@ -9,6 +9,9 @@ import (
 	"runtime"
 	"strings"
 
+	"net/http"
+	_ "net/http/pprof" // load profiling http handler
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
@@ -51,6 +54,7 @@ type Flags struct {
 	NoProgress        bool
 	NoCross           bool
 	NoHidden          bool
+	Profiling         bool
 	EnableGC          bool
 	Summarize         bool
 }
@@ -219,6 +223,12 @@ func (a *App) setNoCross(path string) error {
 }
 
 func (a *App) runAction(ui UI, path string) error {
+	if a.Flags.Profiling {
+		go func() {
+			log.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
+	}
+
 	if a.Flags.ShowDisks {
 		if err := ui.ListDevices(a.Getter); err != nil {
 			return fmt.Errorf("loading mount points: %w", err)

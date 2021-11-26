@@ -59,6 +59,8 @@ non-interactive mode
 
 **-g**, **\--enable-gc**\[=false\] Enable garbage collection during analysis
 
+**\--enable-profiling**\[=false\] Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
+
 **-v**, **\--version**\[=false\] Print version
 
 # FILE FLAGS

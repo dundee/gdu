@@ -47,6 +47,21 @@ func TestAnalyzePath(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAnalyzePathProfiling(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", Profiling: true},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+}
+
 func TestAnalyzePathWithIgnoring(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

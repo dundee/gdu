@@ -73,6 +73,7 @@ Using curl:
 
 Flags:
   -g, --enable-gc                     Enable memory garbage collection during analysis
+      --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -h, --help                          help for gdu
   -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -I, --ignore-dirs-pattern strings   Absolute path patterns to ignore (separated by comma)
@@ -162,6 +163,14 @@ GOGC=200 gdu -g /
 
 Benchmarks were performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
 See `benchmark` target in [Makefile](Makefile) for more info.
+
+## Profiling
+
+Gdu can collect profiling data when the `--enable-profiling` flag is set.
+The data are provided via embeded http server on URL `http://localhost:6060/debug/pprof/`.
+
+You can then use e.g. `go tool pprof -web http://localhost:6060/debug/pprof/heap`
+to open the heap profile as SVG image in your web browser.
 
 ### Cold cache
 
