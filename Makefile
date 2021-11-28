@@ -74,11 +74,11 @@ gobench:
 benchmark:
 	hyperfine --export-markdown=bench-cold.md \
 		--prepare 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches' \
-		'gdu -npc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
+		'gdu -npc ~' 'gdu -gnpc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~'
 	hyperfine --export-markdown=bench-warm.md \
 		--warmup 5 \
-		'gdu -npc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
+		'gdu -npc ~' 'gdu -gnpc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~'
 
 clean:
