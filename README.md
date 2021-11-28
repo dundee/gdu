@@ -145,6 +145,7 @@ Gdu can consume a lot of memory - around 500-1000 MB of RAM for 1 mil files. It'
 If you want lower memory usage and don't mind giving up some speed, you can use `--enable-gc` / `-g` flag.
 It will run garbage collection during the analysis phase.
 As a result, the analysis will be about 25% slower and will consume about 30% less memory.
+You should use this option if you are scanning more than circa 3 milion files.
 
 If you need some more fine tunning, you can use the `GOGC` environment variable to set how often the garbage collection will happen.
 Default value is `100`. Lower value means GC will run more often. Higher than 100 means less often. Negative number will stop GC.
