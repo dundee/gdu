@@ -1,5 +1,5 @@
-//go:build windows || plan9
-// +build windows plan9
+//go:build windows || plan9 || netbsd
+// +build windows plan9 netbsd
 
 package device
 

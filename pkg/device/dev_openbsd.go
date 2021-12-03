@@ -1,5 +1,5 @@
-//go:build freebsd || darwin
-// +build freebsd darwin
+//go:build openbsd
+// +build openbsd
 
 package device
 
@@ -14,16 +14,16 @@ import (
 	"syscall"
 )
 
-// BSDDevicesInfoGetter returns info for Darwin devices
-type BSDDevicesInfoGetter struct {
+// OpenBSDDevicesInfoGetter returns info for Darwin devices
+type OpenBSDDevicesInfoGetter struct {
 	MountCmd string
 }
 
 // Getter is current instance of DevicesInfoGetter
-var Getter DevicesInfoGetter = BSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
+var Getter DevicesInfoGetter = OpenBSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 
 // GetMounts returns all mounted filesystems from output of /sbin/mount
-func (t BSDDevicesInfoGetter) GetMounts() (Devices, error) {
+func (t OpenBSDDevicesInfoGetter) GetMounts() (Devices, error) {
 	out, err := exec.Command(t.MountCmd).Output()
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (t BSDDevicesInfoGetter) GetMounts() (Devices, error) {
 }
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
-func (t BSDDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
+func (t OpenBSDDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 	mounts, err := t.GetMounts()
 	if err != nil {
 		return nil, err
@@ -86,8 +86,8 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 				return nil, err
 			}
 
-			mount.Size = int64(info.Bsize) * int64(info.Blocks)
-			mount.Free = int64(info.Bsize) * int64(info.Bavail)
+			mount.Size = int64(info.F_bsize) * int64(info.F_blocks)
+			mount.Free = int64(info.F_bsize) * int64(info.F_bavail)
 
 			devices = append(devices, mount)
 		}
