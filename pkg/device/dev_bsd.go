@@ -14,16 +14,16 @@ import (
 	"syscall"
 )
 
-// DarwinDevicesInfoGetter returns info for Darwin devices
-type DarwinDevicesInfoGetter struct {
+// BSDDevicesInfoGetter returns info for Darwin devices
+type BSDDevicesInfoGetter struct {
 	MountCmd string
 }
 
 // Getter is current instance of DevicesInfoGetter
-var Getter DevicesInfoGetter = DarwinDevicesInfoGetter{MountCmd: "/sbin/mount"}
+var Getter DevicesInfoGetter = BSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 
 // GetMounts returns all mounted filesystems from output of /sbin/mount
-func (t DarwinDevicesInfoGetter) GetMounts() (Devices, error) {
+func (t BSDDevicesInfoGetter) GetMounts() (Devices, error) {
 	out, err := exec.Command(t.MountCmd).Output()
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (t DarwinDevicesInfoGetter) GetMounts() (Devices, error) {
 }
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
-func (t DarwinDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
+func (t BSDDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 	mounts, err := t.GetMounts()
 	if err != nil {
 		return nil, err

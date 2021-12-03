@@ -11,13 +11,13 @@ import (
 )
 
 func TestGetDevicesInfo(t *testing.T) {
-	getter := FreeBSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
+	getter := BSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 	devices, _ := getter.GetDevicesInfo()
 	assert.IsType(t, Devices{}, devices)
 }
 
 func TestGetDevicesInfoFail(t *testing.T) {
-	getter := FreeBSDDevicesInfoGetter{MountCmd: "/nonexistent"}
+	getter := BSDDevicesInfoGetter{MountCmd: "/nonexistent"}
 	_, err := getter.GetDevicesInfo()
 	assert.Equal(t, "fork/exec /nonexistent: no such file or directory", err.Error())
 }
