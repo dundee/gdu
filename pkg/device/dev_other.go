@@ -1,4 +1,5 @@
-// +build windows darwin openbsd netbsd plan9
+//go:build windows || openbsd || netbsd || plan9
+// +build windows openbsd netbsd plan9
 
 package device
 
