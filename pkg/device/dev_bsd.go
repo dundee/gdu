@@ -1,3 +1,6 @@
+//go:build freebsd || openbsd || netbsd || darwin
+// +build freebsd openbsd netbsd darwin
+
 package device
 
 import (

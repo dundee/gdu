@@ -1,4 +1,5 @@
-// +build freebsd
+//go:build freebsd || openbsd || netbsd || darwin
+// +build freebsd openbsd netbsd darwin
 
 package device
 
@@ -41,5 +42,13 @@ argon:/usr/obj on /usr/obj (nfs)`))
 
 	devices, err := processMounts(mounts, true)
 	assert.Len(t, devices, 6)
+	assert.Nil(t, err)
+}
+
+func TestMountsWithSpace(t *testing.T) {
+	mounts, err := readMountOutput(strings.NewReader(`//inglor@vault.lan/volatile on /Users/inglor/Mountpoints/volatile (vault.lan) (smbfs, nodev, nosuid, mounted by inglor)`))
+	assert.Equal(t, "//inglor@vault.lan/volatile", mounts[0].Name)
+	assert.Equal(t, "/Users/inglor/Mountpoints/volatile (vault.lan)", mounts[0].MountPoint)
+	assert.Equal(t, "smbfs", mounts[0].Fstype)
 	assert.Nil(t, err)
 }
