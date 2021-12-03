@@ -11,7 +11,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // BSDDevicesInfoGetter returns info for Darwin devices
@@ -80,8 +81,8 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 
 	for _, mount := range mounts {
 		if strings.HasPrefix(mount.Name, "/dev") || mount.Fstype == "zfs" {
-			info := &syscall.Statfs_t{}
-			err := syscall.Statfs(mount.MountPoint, info)
+			info := &unix.Statfs_t{}
+			err := unix.Statfs(mount.MountPoint, info)
 			if err != nil && !ignoreErrors {
 				return nil, err
 			}

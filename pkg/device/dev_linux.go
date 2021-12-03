@@ -6,7 +6,8 @@ import (
 	"io"
 	"os"
 	"strings"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // LinuxDevicesInfoGetter retruns info for Linux devices
@@ -82,8 +83,8 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 			mount.Fstype == "zfs" ||
 			mount.Fstype == "nfs" ||
 			mount.Fstype == "nfs4" {
-			info := &syscall.Statfs_t{}
-			err := syscall.Statfs(mount.MountPoint, info)
+			info := &unix.Statfs_t{}
+			err := unix.Statfs(mount.MountPoint, info)
 			if err != nil && !ignoreErrors {
 				return nil, err
 			}
