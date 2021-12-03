@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package device
@@ -54,5 +55,16 @@ host2:/dir2/ /mnt/dir2 nfs rw,relatime,vers=3,rsize=524288,wsize=524288,namlen=2
 	assert.Len(t, devices, 2)
 	assert.Equal(t, "host1:/dir1/", devices[0].Name)
 	assert.Equal(t, "/mnt/dir1", devices[0].MountPoint)
+	assert.Nil(t, err)
+}
+
+func TestMountsWithSpaces(t *testing.T) {
+	mounts, _ := readMountsFile(strings.NewReader(`host1:/dir1/ /mnt/dir\040with\040spaces nfs4 rw,nosuid,nodev,noatime,nodiratime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=192.168.1.1,fsc,local_lock=none,addr=192.168.1.2 0 0
+host2:/dir2/ /mnt/dir2 nfs rw,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=192.168.1.3,mountvers=3,mountport=38081,mountproto=udp,fsc,local_lock=none,addr=192.168.1.4 0 0`))
+
+	devices, err := processMounts(mounts, true)
+	assert.Len(t, devices, 2)
+	assert.Equal(t, "host1:/dir1/", devices[0].Name)
+	assert.Equal(t, "/mnt/dir with spaces", devices[0].MountPoint)
 	assert.Nil(t, err)
 }

@@ -57,7 +57,7 @@ func readMountsFile(file io.Reader) (Devices, error) {
 
 		device := &Device{
 			Name:       parts[0],
-			MountPoint: parts[1],
+			MountPoint: unescapeString(parts[1]),
 			Fstype:     parts[2],
 		}
 		mounts = append(mounts, device)
@@ -96,4 +96,8 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 	}
 
 	return devices, nil
+}
+
+func unescapeString(str string) string {
+	return strings.ReplaceAll(str, "\\040", " ")
 }
