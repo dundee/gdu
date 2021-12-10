@@ -142,6 +142,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.setSorting("mtime")
 	case '/':
 		ui.showFilterInput()
+		return nil
 	}
 	return key
 }
