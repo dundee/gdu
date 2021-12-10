@@ -148,7 +148,12 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 		action = "delete "
 		acting = "deleting"
 	}
-	modal := tview.NewModal().SetText(strings.Title(acting) + " " + selectedItem.GetName() + "...")
+	modal := tview.NewModal().SetText(
+		strings.Title(acting) +
+			" " +
+			tview.Escape(selectedItem.GetName()) +
+			"...",
+	)
 	ui.pages.AddPage(acting, modal, true, true)
 
 	var currentDir *analyze.Dir
@@ -172,7 +177,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	go func() {
 		for _, item := range deleteItems {
 			if err := deleteFun(currentDir, item); err != nil {
-				msg := "Can't " + action + selectedItem.GetName()
+				msg := "Can't " + action + tview.Escape(selectedItem.GetName())
 				ui.app.QueueUpdateDraw(func() {
 					ui.pages.RemovePage(acting)
 					ui.showErr(msg, err)
@@ -307,9 +312,12 @@ func (ui *UI) showInfo() {
 	text.SetBorderColor(tcell.ColorDefault)
 	text.SetTitle(" Item info ")
 
-	content += "[::b]Name:[::-] " + selectedFile.GetName() + "\n"
-	content += "[::b]Path:[::-] " +
-		strings.TrimPrefix(selectedFile.GetPath(), build.RootPathPrefix) + "\n"
+	content += "[::b]Name:[::-] "
+	content += tview.Escape(selectedFile.GetName()) + "\n"
+	content += "[::b]Path:[::-] "
+	content += tview.Escape(
+		strings.TrimPrefix(selectedFile.GetPath(), build.RootPathPrefix),
+	) + "\n"
 	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n\n"
 
 	content += "   [::b]Disk usage:[::-] "

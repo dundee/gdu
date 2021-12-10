@@ -5,6 +5,7 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/rivo/tview"
 )
 
 func (ui *UI) formatFileRow(item analyze.Item) string {
@@ -60,7 +61,7 @@ func (ui *UI) formatFileRow(item analyze.Item) string {
 			row += "[::b]/"
 		}
 	}
-	row += item.GetName()
+	row += tview.Escape(item.GetName())
 	return row
 }
 

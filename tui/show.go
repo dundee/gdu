@@ -18,7 +18,9 @@ func (ui *UI) showDir() {
 
 	ui.currentDirPath = ui.currentDir.GetPath()
 	ui.currentDirLabel.SetText("[::b] --- " +
-		strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix) +
+		tview.Escape(
+			strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix),
+		) +
 		" ---").SetDynamicColors(true)
 
 	ui.table.Clear()

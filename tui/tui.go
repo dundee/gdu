@@ -227,7 +227,13 @@ func (ui *UI) confirmDeletion(shouldEmpty bool) {
 		action = "delete"
 	}
 	modal := tview.NewModal().
-		SetText("Are you sure you want to " + action + " \"" + selectedFile.GetName() + "\"?").
+		SetText(
+			"Are you sure you want to " +
+				action +
+				" \"" +
+				tview.Escape(selectedFile.GetName()) +
+				"\"?",
+		).
 		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {

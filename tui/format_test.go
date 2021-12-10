@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testapp"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,4 +36,26 @@ func TestFormatCount(t *testing.T) {
 	assert.Equal(t, "1.0[-::]k", ui.formatCount(1<<10))
 	assert.Equal(t, "1.0[-::]M", ui.formatCount(1<<20))
 	assert.Equal(t, "1.1[-::]G", ui.formatCount(1<<30))
+}
+
+func TestEscapeName(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false)
+
+	dir := &analyze.Dir{
+		File: &analyze.File{
+			Usage: 10,
+		},
+	}
+
+	file := &analyze.File{
+		Name:   "Aaa [red] bbb",
+		Parent: dir,
+		Usage:  10,
+	}
+
+	assert.Contains(t, ui.formatFileRow(file), "Aaa [red[] bbb")
 }
