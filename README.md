@@ -18,7 +18,7 @@ However HDDs work as well, but the performance gain is not so huge.
 
 ## Installation
 
-Head for the [releases](https://github.com/dundee/gdu/releases) and download binary for your system.
+Head for the [releases page](https://github.com/dundee/gdu/releases) and download the binary for your system.
 
 Using curl:
 
