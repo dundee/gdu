@@ -144,7 +144,11 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		a.wait.Done()
 	}()
 
-	a.progressChan <- common.CurrentProgress{path, len(files), totalSize}
+	a.progressChan <- common.CurrentProgress{
+		CurrentItemName: path,
+		ItemCount:       len(files),
+		TotalSize:       totalSize,
+	}
 	return dir
 }
 
