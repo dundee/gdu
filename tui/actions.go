@@ -12,6 +12,7 @@ import (
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/report"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -34,7 +35,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage for given path
-func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
+func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
 	ui.progress.SetTitle(" Scanning... ")
@@ -61,9 +62,9 @@ func (ui *UI) AnalyzePath(path string, parentDir *analyze.Dir) error {
 		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
 
 		if parentDir != nil {
-			currentDir.Parent = parentDir
-			parentDir.Files = parentDir.Files.RemoveByName(currentDir.Name)
-			parentDir.Files.Append(currentDir)
+			currentDir.SetParent(parentDir)
+			parentDir.SetFiles(parentDir.GetFiles().RemoveByName(currentDir.GetName()))
+			parentDir.AddFile(currentDir)
 		} else {
 			ui.topDirPath = path
 			ui.topDir = currentDir
@@ -120,7 +121,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		ui.topDirPath = ui.currentDir.GetPath()
 		ui.topDir = ui.currentDir
 
-		links := make(analyze.HardLinkedItems, 10)
+		links := make(fs.HardLinkedItems, 10)
 		ui.topDir.UpdateStats(links)
 
 		ui.app.QueueUpdateDraw(func() {
@@ -138,7 +139,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 
 func (ui *UI) deleteSelected(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
-	selectedItem := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	selectedItem := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
 	var action, acting string
 	if shouldEmpty {
@@ -156,11 +157,11 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	)
 	ui.pages.AddPage(acting, modal, true, true)
 
-	var currentDir *analyze.Dir
-	var deleteItems []analyze.Item
+	var currentDir fs.Item
+	var deleteItems []fs.Item
 	if shouldEmpty && selectedItem.IsDir() {
 		currentDir = selectedItem.(*analyze.Dir)
-		for _, file := range currentDir.Files {
+		for _, file := range currentDir.GetFiles() {
 			deleteItems = append(deleteItems, file)
 		}
 	} else {
@@ -168,7 +169,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 		deleteItems = append(deleteItems, selectedItem)
 	}
 
-	var deleteFun func(*analyze.Dir, analyze.Item) error
+	var deleteFun func(fs.Item, fs.Item) error
 	if shouldEmpty && !selectedItem.IsDir() {
 		deleteFun = ui.emptier
 	} else {
@@ -207,7 +208,7 @@ func (ui *UI) showFile() *tview.TextView {
 	}
 
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 	if selectedFile.IsDir() {
 		return nil
 	}
@@ -297,7 +298,7 @@ func (ui *UI) showInfo() {
 
 	var content, numberColor string
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
 	if ui.UseColors {
 		numberColor = "[#e67100::b]"

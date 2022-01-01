@@ -5,55 +5,39 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 )
 
-// CurrentProgress struct
-type CurrentProgress struct {
-	CurrentItemName string
-	ItemCount       int
-	TotalSize       int64
-}
-
 var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
-
-// ShouldDirBeIgnored whether path should be ignored
-type ShouldDirBeIgnored func(name, path string) bool
-
-// Analyzer is type for dir analyzing function
-type Analyzer interface {
-	AnalyzeDir(path string, ignore ShouldDirBeIgnored) *Dir
-	GetProgressChan() chan CurrentProgress
-	GetDoneChan() chan struct{}
-	ResetProgress()
-}
 
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
-	progress        *CurrentProgress
-	progressChan    chan CurrentProgress
-	progressOutChan chan CurrentProgress
+	progress        *common.CurrentProgress
+	progressChan    chan common.CurrentProgress
+	progressOutChan chan common.CurrentProgress
 	doneChan        chan struct{}
 	wait            *WaitGroup
-	ignoreDir       ShouldDirBeIgnored
+	ignoreDir       common.ShouldDirBeIgnored
 }
 
 // CreateAnalyzer returns Analyzer
-func CreateAnalyzer() Analyzer {
+func CreateAnalyzer() common.Analyzer {
 	return &ParallelAnalyzer{
-		progress: &CurrentProgress{
+		progress: &common.CurrentProgress{
 			ItemCount: 0,
 			TotalSize: int64(0),
 		},
-		progressChan:    make(chan CurrentProgress, 1),
-		progressOutChan: make(chan CurrentProgress, 1),
+		progressChan:    make(chan common.CurrentProgress, 1),
+		progressOutChan: make(chan common.CurrentProgress, 1),
 		doneChan:        make(chan struct{}, 1),
 		wait:            (&WaitGroup{}).Init(),
 	}
 }
 
 // GetProgressChan returns channel for getting progress
-func (a *ParallelAnalyzer) GetProgressChan() chan CurrentProgress {
+func (a *ParallelAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
 }
 
@@ -70,7 +54,7 @@ func (a *ParallelAnalyzer) ResetProgress() {
 }
 
 // AnalyzeDir analyzes given path
-func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore ShouldDirBeIgnored) *Dir {
+func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore common.ShouldDirBeIgnored) fs.Item {
 	a.ignoreDir = ignore
 
 	go a.updateProgress()
@@ -108,7 +92,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			Flag: getDirFlag(err, len(files)),
 		},
 		ItemCount: 1,
-		Files:     make([]Item, 0, len(files)),
+		Files:     make(fs.Files, 0, len(files)),
 	}
 	setDirPlatformSpecificAttrs(dir, path)
 
@@ -145,7 +129,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 
 			totalSize += info.Size()
 
-			dir.Files.Append(file)
+			dir.AddFile(file)
 		}
 	}
 
@@ -154,13 +138,13 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 
 		for i := 0; i < dirCount; i++ {
 			sub = <-subDirChan
-			dir.Files.Append(sub)
+			dir.AddFile(sub)
 		}
 
 		a.wait.Done()
 	}()
 
-	a.progressChan <- CurrentProgress{path, len(files), totalSize}
+	a.progressChan <- common.CurrentProgress{path, len(files), totalSize}
 	return dir
 }
 

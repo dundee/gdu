@@ -9,6 +9,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
@@ -92,29 +93,29 @@ func TestMoveLeftRight(t *testing.T) {
 	ui.table.Select(0, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 
-	assert.Equal(t, "nested", ui.currentDir.Name)
+	assert.Equal(t, "nested", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0)) // try /.. first
 
-	assert.Equal(t, "nested", ui.currentDir.Name)
+	assert.Equal(t, "nested", ui.currentDir.GetName())
 
 	ui.table.Select(1, 0)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 
-	assert.Equal(t, "subnested", ui.currentDir.Name)
+	assert.Equal(t, "subnested", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 'h', 0))
 
-	assert.Equal(t, "nested", ui.currentDir.Name)
+	assert.Equal(t, "nested", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 'h', 0))
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 'h', 0))
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 }
 
 func TestMoveRightOnDevice(t *testing.T) {
@@ -141,7 +142,7 @@ func TestMoveRightOnDevice(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 }
 
 func TestStop(t *testing.T) {
@@ -300,7 +301,7 @@ func TestShowConfirm(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.table.Select(1, 0)
 
@@ -340,7 +341,7 @@ func TestDelete(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -376,7 +377,7 @@ func TestDeleteParent(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
 	ui.table.Select(0, 0)
@@ -406,7 +407,7 @@ func TestEmptyDir(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -443,7 +444,7 @@ func TestEmptyFile(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -482,7 +483,7 @@ func TestSortByApparentSize(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'a', 0))
 
@@ -506,7 +507,7 @@ func TestShowFileCount(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'c', 0))
 
@@ -530,7 +531,7 @@ func TestShowFileCountBW(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'c', 0))
 
@@ -554,7 +555,7 @@ func TestShowMtime(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'm', 0))
 
@@ -578,7 +579,7 @@ func TestShowMtimeBW(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'm', 0))
 
@@ -590,7 +591,7 @@ func TestRescan(t *testing.T) {
 		File: &analyze.File{
 			Name: "parent",
 		},
-		Files: make([]analyze.Item, 0, 1),
+		Files: make([]fs.Item, 0, 1),
 	}
 	currentDir := &analyze.Dir{
 		File: &analyze.File{
@@ -617,8 +618,8 @@ func TestRescan(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-	assert.Equal(t, parentDir, ui.currentDir.Parent)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	assert.Equal(t, parentDir, ui.currentDir.GetParent())
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -642,7 +643,7 @@ func TestSorting(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 's', 0))
 	assert.Equal(t, "size", ui.sortBy)
@@ -672,7 +673,7 @@ func TestShowFile(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.table.Select(0, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
@@ -699,7 +700,7 @@ func TestShowInfoAndMoveAround(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))

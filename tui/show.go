@@ -28,7 +28,7 @@ func (ui *UI) showDir() {
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
 		cell := tview.NewTableCell("                         [::b]/..")
-		cell.SetReference(ui.currentDir.Parent)
+		cell.SetReference(ui.currentDir.GetParent())
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		ui.table.SetCell(0, 0, cell)
 		rowIndex++
@@ -36,7 +36,7 @@ func (ui *UI) showDir() {
 
 	ui.sortItems()
 
-	for i, item := range ui.currentDir.Files {
+	for i, item := range ui.currentDir.GetFiles() {
 		if ui.filterValue != "" && !strings.Contains(
 			strings.ToLower(item.GetName()),
 			strings.ToLower(ui.filterValue),
@@ -50,7 +50,7 @@ func (ui *UI) showDir() {
 
 		cell := tview.NewTableCell(ui.formatFileRow(item))
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
-		cell.SetReference(ui.currentDir.Files[i])
+		cell.SetReference(ui.currentDir.GetFiles()[i])
 
 		ui.table.SetCell(rowIndex, 0, cell)
 		rowIndex++

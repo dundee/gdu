@@ -3,13 +3,11 @@ package common
 import (
 	"regexp"
 	"strconv"
-
-	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
 // UI struct
 type UI struct {
-	Analyzer              analyze.Analyzer
+	Analyzer              Analyzer
 	IgnoreDirPaths        map[string]struct{}
 	IgnoreDirPathPatterns *regexp.Regexp
 	IgnoreHidden          bool

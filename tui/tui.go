@@ -8,6 +8,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -53,9 +54,9 @@ type UI struct {
 	help            *tview.Flex
 	table           *tview.Table
 	filteringInput  *tview.InputField
-	currentDir      *analyze.Dir
+	currentDir      fs.Item
 	devices         []*device.Device
-	topDir          *analyze.Dir
+	topDir          fs.Item
 	topDirPath      string
 	currentDirPath  string
 	askBeforeDelete bool
@@ -66,10 +67,10 @@ type UI struct {
 	sortBy          string
 	sortOrder       string
 	done            chan struct{}
-	remover         func(*analyze.Dir, analyze.Item) error
-	emptier         func(*analyze.Dir, analyze.Item) error
+	remover         func(fs.Item, fs.Item) error
+	emptier         func(fs.Item, fs.Item) error
 	exec            func(argv0 string, argv []string, envv []string) error
-	linkedItems     analyze.HardLinkedItems
+	linkedItems     fs.HardLinkedItems
 }
 
 // CreateUI creates the whole UI app
@@ -91,7 +92,7 @@ func CreateUI(
 		remover:         analyze.RemoveItemFromDir,
 		emptier:         analyze.EmptyFileFromDir,
 		exec:            Execute,
-		linkedItems:     make(analyze.HardLinkedItems, 10),
+		linkedItems:     make(fs.HardLinkedItems, 10),
 	}
 	ui.resetSorting()
 
@@ -168,7 +169,7 @@ func (ui *UI) resetSorting() {
 
 func (ui *UI) rescanDir() {
 	ui.Analyzer.ResetProgress()
-	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.Parent)
+	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.GetParent())
 	if err != nil {
 		ui.showErr("Error rescanning path", err)
 	}
@@ -180,7 +181,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 	}
 
 	origDir := ui.currentDir
-	selectedDir := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	selectedDir := ui.table.GetCell(row, column).GetReference().(fs.Item)
 	if !selectedDir.IsDir() {
 		return
 	}
@@ -189,8 +190,8 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.hideFilterInput()
 	ui.showDir()
 
-	if selectedDir == origDir.Parent {
-		index, _ := ui.currentDir.Files.IndexOf(origDir)
+	if selectedDir == origDir.GetParent() {
+		index, _ := ui.currentDir.GetFiles().IndexOf(origDir)
 		if ui.currentDir != ui.topDir {
 			index++
 		}
@@ -219,7 +220,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 func (ui *UI) confirmDeletion(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
+	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 	var action string
 	if shouldEmpty {
 		action = "empty"

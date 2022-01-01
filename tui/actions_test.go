@@ -9,6 +9,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -75,7 +76,7 @@ func TestDeviceSelected(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -101,7 +102,7 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 		File: &analyze.File{
 			Name: "parent",
 		},
-		Files: make([]analyze.Item, 0, 1),
+		Files: make([]fs.Item, 0, 1),
 	}
 
 	simScreen := testapp.CreateSimScreen(50, 50)
@@ -121,8 +122,8 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-	assert.Equal(t, parentDir, ui.currentDir.Parent)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	assert.Equal(t, parentDir, ui.currentDir.GetParent())
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -149,7 +150,7 @@ func TestReadAnalysis(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "gdu", ui.currentDir.Name)
+	assert.Equal(t, "gdu", ui.currentDir.GetName())
 }
 
 func TestReadAnalysisWithWrongFile(t *testing.T) {
@@ -192,7 +193,7 @@ func TestViewDirContents(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	res := ui.showFile() // selected item is dir, do nothing
 	assert.Nil(t, res)
@@ -228,11 +229,11 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.table.Select(3, 0)
 
-	selectedFile := ui.table.GetCell(3, 0).GetReference().(analyze.Item)
+	selectedFile := ui.table.GetCell(3, 0).GetReference().(fs.Item)
 	assert.Equal(t, "ddd", selectedFile.GetName())
 
 	res := ui.showFile()
@@ -257,7 +258,7 @@ func TestViewFile(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.table.Select(0, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
@@ -288,7 +289,7 @@ func TestShowInfo(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
@@ -318,7 +319,7 @@ func TestShowInfoBW(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
@@ -348,7 +349,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 		f()
 	}
 
-	nested := ui.currentDir.Files[0].(*analyze.Dir)
+	nested := ui.currentDir.GetFiles()[0].(*analyze.Dir)
 	subnested := nested.Files[1].(*analyze.Dir)
 	file := subnested.Files[0].(*analyze.File)
 	file2 := nested.Files[0].(*analyze.File)
@@ -357,7 +358,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 
 	ui.currentDir.UpdateStats(ui.linkedItems)
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
@@ -402,7 +403,7 @@ func TestExitViewFile(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.table.Select(0, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))

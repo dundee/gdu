@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
 // CreateIgnorePattern creates one pattern from all path patterns
@@ -103,7 +101,7 @@ func (ui *UI) IsHiddenDir(name, path string) bool {
 }
 
 // CreateIgnoreFunc returns function for detecting if dir should be ignored
-func (ui *UI) CreateIgnoreFunc() analyze.ShouldDirBeIgnored {
+func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
 	switch {
 	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns == nil && !ui.IgnoreHidden:
 		return ui.ShouldDirBeIgnored

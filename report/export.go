@@ -16,6 +16,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/fatih/color"
 )
 
@@ -67,9 +68,9 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
+func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	var (
-		dir         *analyze.Dir
+		dir         fs.Item
 		wait        sync.WaitGroup
 		waitWritten sync.WaitGroup
 		err         error
@@ -90,12 +91,12 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 			defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		}
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
-		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
+		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 	}()
 
 	wait.Wait()
 
-	sort.Sort(dir.Files)
+	sort.Sort(dir.GetFiles())
 
 	var buff bytes.Buffer
 
@@ -144,7 +145,7 @@ func (ui *UI) updateProgress() {
 	progressChan := ui.Analyzer.GetProgressChan()
 	doneChan := ui.Analyzer.GetDoneChan()
 
-	var progress analyze.CurrentProgress
+	var progress common.CurrentProgress
 
 	i := 0
 	for {

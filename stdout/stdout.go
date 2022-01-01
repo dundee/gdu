@@ -13,6 +13,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/report"
 	"github.com/fatih/color"
 )
@@ -125,9 +126,9 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
-func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
+func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	var (
-		dir  *analyze.Dir
+		dir  fs.Item
 		wait sync.WaitGroup
 	)
 
@@ -146,7 +147,7 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 			defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		}
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
-		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
+		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 	}()
 
 	wait.Wait()
@@ -160,15 +161,15 @@ func (ui *UI) AnalyzePath(path string, _ *analyze.Dir) error {
 	return nil
 }
 
-func (ui *UI) showDir(dir *analyze.Dir) {
-	sort.Sort(dir.Files)
+func (ui *UI) showDir(dir fs.Item) {
+	sort.Sort(dir.GetFiles())
 
-	for _, file := range dir.Files {
+	for _, file := range dir.GetFiles() {
 		ui.printItem(file)
 	}
 }
 
-func (ui *UI) printTotalItem(file analyze.Item) {
+func (ui *UI) printTotalItem(file fs.Item) {
 	var lineFormat string
 	if ui.UseColors {
 		lineFormat = "%20s %s\n"
@@ -191,7 +192,7 @@ func (ui *UI) printTotalItem(file analyze.Item) {
 	)
 }
 
-func (ui *UI) printItem(file analyze.Item) {
+func (ui *UI) printItem(file fs.Item) {
 	var lineFormat string
 	if ui.UseColors {
 		lineFormat = "%s %20s %s\n"
@@ -251,7 +252,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		}
 		runtime.GC()
 
-		dir.UpdateStats(make(analyze.HardLinkedItems, 10))
+		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 
 		if ui.ShowProgress {
 			doneChan <- struct{}{}
@@ -304,7 +305,7 @@ func (ui *UI) updateProgress() {
 	progressChan := ui.Analyzer.GetProgressChan()
 	doneChan := ui.Analyzer.GetDoneChan()
 
-	var progress analyze.CurrentProgress
+	var progress common.CurrentProgress
 
 	i := 0
 	for {

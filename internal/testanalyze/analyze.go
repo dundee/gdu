@@ -4,14 +4,16 @@ import (
 	"errors"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 // MockedAnalyzer returns dir with files with different size exponents
 type MockedAnalyzer struct{}
 
 // AnalyzeDir returns dir with files with different size exponents
-func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnored) *analyze.Dir {
+func (a *MockedAnalyzer) AnalyzeDir(path string, ignore common.ShouldDirBeIgnored) fs.Item {
 	dir := &analyze.Dir{
 		File: &analyze.File{
 			Name:  "test_dir",
@@ -56,14 +58,14 @@ func (a *MockedAnalyzer) AnalyzeDir(path string, ignore analyze.ShouldDirBeIgnor
 		Mtime:  time.Date(2021, 8, 27, 22, 23, 24, 0, time.UTC),
 		Parent: dir,
 	}
-	dir.Files = analyze.Files{dir2, dir3, dir4, file}
+	dir.Files = fs.Files{dir2, dir3, dir4, file}
 
 	return dir
 }
 
 // GetProgressChan returns always Done
-func (a *MockedAnalyzer) GetProgressChan() chan analyze.CurrentProgress {
-	return make(chan analyze.CurrentProgress)
+func (a *MockedAnalyzer) GetProgressChan() chan common.CurrentProgress {
+	return make(chan common.CurrentProgress)
 }
 
 // GetDoneChan returns always Done
@@ -77,6 +79,6 @@ func (a *MockedAnalyzer) GetDoneChan() chan struct{} {
 func (a *MockedAnalyzer) ResetProgress() {}
 
 // RemoveItemFromDirWithErr returns error
-func RemoveItemFromDirWithErr(dir *analyze.Dir, file analyze.Item) error {
+func RemoveItemFromDirWithErr(dir fs.Item, file fs.Item) error {
 	return errors.New("Failed")
 }

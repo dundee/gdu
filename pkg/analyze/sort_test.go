@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSortByUsage(t *testing.T) {
-	files := Files{
+	files := fs.Files{
 		&File{
 			Usage: 1,
 		},
@@ -29,7 +30,7 @@ func TestSortByUsage(t *testing.T) {
 }
 
 func TestSortByUsageAsc(t *testing.T) {
-	files := Files{
+	files := fs.Files{
 		&File{
 			Size: 1,
 		},
@@ -49,7 +50,7 @@ func TestSortByUsageAsc(t *testing.T) {
 }
 
 func TestSortBySize(t *testing.T) {
-	files := Files{
+	files := fs.Files{
 		&File{
 			Size: 1,
 		},
@@ -61,7 +62,7 @@ func TestSortBySize(t *testing.T) {
 		},
 	}
 
-	sort.Sort(ByApparentSize(files))
+	sort.Sort(fs.ByApparentSize(files))
 
 	assert.Equal(t, int64(3), files[0].GetSize())
 	assert.Equal(t, int64(2), files[1].GetSize())
@@ -69,7 +70,7 @@ func TestSortBySize(t *testing.T) {
 }
 
 func TestSortBySizeAsc(t *testing.T) {
-	files := Files{
+	files := fs.Files{
 		&File{
 			Size: 1,
 		},
@@ -81,7 +82,7 @@ func TestSortBySizeAsc(t *testing.T) {
 		},
 	}
 
-	sort.Sort(sort.Reverse(ByApparentSize(files)))
+	sort.Sort(sort.Reverse(fs.ByApparentSize(files)))
 
 	assert.Equal(t, int64(1), files[0].GetSize())
 	assert.Equal(t, int64(2), files[1].GetSize())
@@ -89,7 +90,7 @@ func TestSortBySizeAsc(t *testing.T) {
 }
 
 func TestSortByItemCount(t *testing.T) {
-	files := Files{
+	files := fs.Files{
 		&Dir{
 			ItemCount: 1,
 		},
@@ -101,7 +102,7 @@ func TestSortByItemCount(t *testing.T) {
 		},
 	}
 
-	sort.Sort(ByItemCount(files))
+	sort.Sort(fs.ByItemCount(files))
 
 	assert.Equal(t, 3, files[0].GetItemCount())
 	assert.Equal(t, 2, files[1].GetItemCount())
@@ -109,7 +110,7 @@ func TestSortByItemCount(t *testing.T) {
 }
 
 func TestSortByName(t *testing.T) {
-	files := Files{
+	files := fs.Files{
 		&File{
 			Name: "aa",
 		},
@@ -121,7 +122,7 @@ func TestSortByName(t *testing.T) {
 		},
 	}
 
-	sort.Sort(ByName(files))
+	sort.Sort(fs.ByName(files))
 
 	assert.Equal(t, "cc", files[0].GetName())
 	assert.Equal(t, "bb", files[1].GetName())
@@ -129,7 +130,7 @@ func TestSortByName(t *testing.T) {
 }
 
 func TestSortByMtime(t *testing.T) {
-	files := Files{
+	files := fs.Files{
 		&File{
 			Mtime: time.Date(2021, 8, 19, 0, 40, 0, 0, time.UTC),
 		},
@@ -141,7 +142,7 @@ func TestSortByMtime(t *testing.T) {
 		},
 	}
 
-	sort.Sort(ByMtime(files))
+	sort.Sort(fs.ByMtime(files))
 
 	assert.Equal(t, 42, files[0].GetMtime().Minute())
 	assert.Equal(t, 41, files[1].GetMtime().Minute())

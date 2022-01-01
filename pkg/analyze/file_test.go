@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ func TestIsDir(t *testing.T) {
 		Size:   2,
 		Parent: &dir,
 	}
-	dir.Files = Files{file}
+	dir.Files = fs.Files{file}
 
 	assert.True(t, dir.IsDir())
 	assert.False(t, file.IsDir())
@@ -48,7 +49,7 @@ func TestGetType(t *testing.T) {
 		Parent: &dir,
 		Flag:   '@',
 	}
-	dir.Files = Files{file, file2}
+	dir.Files = fs.Files{file, file2}
 
 	assert.Equal(t, "Directory", dir.GetType())
 	assert.Equal(t, "File", file.GetType())
@@ -74,7 +75,7 @@ func TestFind(t *testing.T) {
 		Size:   3,
 		Parent: &dir,
 	}
-	dir.Files = Files{file, file2}
+	dir.Files = fs.Files{file, file2}
 
 	i, _ := dir.Files.IndexOf(file)
 	assert.Equal(t, 0, i)
@@ -101,7 +102,7 @@ func TestRemove(t *testing.T) {
 		Size:   3,
 		Parent: &dir,
 	}
-	dir.Files = Files{file, file2}
+	dir.Files = fs.Files{file, file2}
 
 	dir.Files = dir.Files.Remove(file)
 
@@ -131,7 +132,7 @@ func TestRemoveByName(t *testing.T) {
 		Usage:  4,
 		Parent: &dir,
 	}
-	dir.Files = Files{file, file2}
+	dir.Files = fs.Files{file, file2}
 
 	dir.Files = dir.Files.RemoveByName("yyy")
 
@@ -160,7 +161,7 @@ func TestRemoveNotInDir(t *testing.T) {
 		Size:  3,
 		Usage: 4,
 	}
-	dir.Files = Files{file}
+	dir.Files = fs.Files{file}
 
 	_, ok := dir.Files.IndexOf(file2)
 	assert.Equal(t, false, ok)
@@ -191,7 +192,7 @@ func TestRemoveByNameNotInDir(t *testing.T) {
 		Size:  3,
 		Usage: 4,
 	}
-	dir.Files = Files{file}
+	dir.Files = fs.Files{file}
 
 	_, ok := dir.Files.IndexOf(file2)
 	assert.Equal(t, false, ok)
@@ -227,8 +228,8 @@ func TestRemoveFile(t *testing.T) {
 		Usage:  4,
 		Parent: subdir,
 	}
-	dir.Files = Files{subdir}
-	subdir.Files = Files{file}
+	dir.Files = fs.Files{subdir}
+	subdir.Files = fs.Files{file}
 
 	err := RemoveItemFromDir(subdir, file)
 	assert.Nil(t, err)
@@ -300,8 +301,8 @@ func TestTruncateFile(t *testing.T) {
 		Usage:  4,
 		Parent: subdir,
 	}
-	dir.Files = Files{subdir}
-	subdir.Files = Files{file}
+	dir.Files = fs.Files{subdir}
+	subdir.Files = fs.Files{file}
 
 	err := EmptyFileFromDir(subdir, file)
 
@@ -341,8 +342,8 @@ func TestTruncateFileWithErr(t *testing.T) {
 		Usage:  4,
 		Parent: subdir,
 	}
-	dir.Files = Files{subdir}
-	subdir.Files = Files{file}
+	dir.Files = fs.Files{subdir}
+	subdir.Files = fs.Files{file}
 
 	err := EmptyFileFromDir(subdir, file)
 
@@ -371,7 +372,7 @@ func TestUpdateStats(t *testing.T) {
 		Mtime:  time.Date(2021, 8, 19, 0, 42, 0, 0, time.UTC),
 		Parent: &dir,
 	}
-	dir.Files = Files{file, file2}
+	dir.Files = fs.Files{file, file2}
 
 	dir.UpdateStats(nil)
 

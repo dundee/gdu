@@ -94,14 +94,14 @@ func processDir(items []interface{}) (*analyze.Dir, error) {
 
 			file.Parent = dir
 
-			dir.Files.Append(file)
+			dir.AddFile(file)
 		case []interface{}:
 			subdir, err := processDir(item)
 			if err != nil {
 				return nil, err
 			}
 			subdir.Parent = dir
-			dir.Files.Append(subdir)
+			dir.AddFile(subdir)
 		}
 	}
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,8 +54,8 @@ func TestEncode(t *testing.T) {
 		Mli:  1234,
 		Flag: 'H',
 	}
-	dir.Files = Files{subdir}
-	subdir.Files = Files{file, file2, file3}
+	dir.Files = fs.Files{subdir}
+	subdir.Files = fs.Files{file, file2, file3}
 
 	var buff bytes.Buffer
 	err := dir.EncodeJSON(&buff, true)

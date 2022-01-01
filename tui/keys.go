@@ -3,7 +3,7 @@ package tui
 import (
 	"fmt"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -175,8 +175,8 @@ func (ui *UI) handleDelete(shouldEmpty bool) {
 	}
 	// do not allow deleting parent dir
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(analyze.Item)
-	if selectedFile == ui.currentDir.Parent {
+	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
+	if selectedFile == ui.currentDir.GetParent() {
 		return
 	}
 

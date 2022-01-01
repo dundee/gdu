@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
 func (ui *UI) updateProgress() {
@@ -16,7 +15,7 @@ func (ui *UI) updateProgress() {
 	progressChan := ui.Analyzer.GetProgressChan()
 	doneChan := ui.Analyzer.GetDoneChan()
 
-	var progress analyze.CurrentProgress
+	var progress common.CurrentProgress
 
 	for {
 		select {

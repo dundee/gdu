@@ -3,8 +3,8 @@ package tui
 import (
 	"sort"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 func (ui *UI) setSorting(newOrder string) {
@@ -30,37 +30,37 @@ func (ui *UI) sortItems() {
 	if ui.sortBy == "size" {
 		if ui.ShowApparentSize {
 			if ui.sortOrder == "desc" {
-				sort.Sort(analyze.ByApparentSize(ui.currentDir.Files))
+				sort.Sort(fs.ByApparentSize(ui.currentDir.GetFiles()))
 			} else {
-				sort.Sort(sort.Reverse(analyze.ByApparentSize(ui.currentDir.Files)))
+				sort.Sort(sort.Reverse(fs.ByApparentSize(ui.currentDir.GetFiles())))
 			}
 		} else {
 			if ui.sortOrder == "desc" {
-				sort.Sort(ui.currentDir.Files)
+				sort.Sort(ui.currentDir.GetFiles())
 			} else {
-				sort.Sort(sort.Reverse(ui.currentDir.Files))
+				sort.Sort(sort.Reverse(ui.currentDir.GetFiles()))
 			}
 		}
 	}
 	if ui.sortBy == "itemCount" {
 		if ui.sortOrder == "desc" {
-			sort.Sort(analyze.ByItemCount(ui.currentDir.Files))
+			sort.Sort(fs.ByItemCount(ui.currentDir.GetFiles()))
 		} else {
-			sort.Sort(sort.Reverse(analyze.ByItemCount(ui.currentDir.Files)))
+			sort.Sort(sort.Reverse(fs.ByItemCount(ui.currentDir.GetFiles())))
 		}
 	}
 	if ui.sortBy == "name" {
 		if ui.sortOrder == "desc" {
-			sort.Sort(analyze.ByName(ui.currentDir.Files))
+			sort.Sort(fs.ByName(ui.currentDir.GetFiles()))
 		} else {
-			sort.Sort(sort.Reverse(analyze.ByName(ui.currentDir.Files)))
+			sort.Sort(sort.Reverse(fs.ByName(ui.currentDir.GetFiles())))
 		}
 	}
 	if ui.sortBy == "mtime" {
 		if ui.sortOrder == "desc" {
-			sort.Sort(analyze.ByMtime(ui.currentDir.Files))
+			sort.Sort(fs.ByMtime(ui.currentDir.GetFiles()))
 		} else {
-			sort.Sort(sort.Reverse(analyze.ByMtime(ui.currentDir.Files)))
+			sort.Sort(sort.Reverse(fs.ByMtime(ui.currentDir.GetFiles())))
 		}
 	}
 }

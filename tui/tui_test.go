@@ -13,6 +13,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,7 +44,7 @@ func TestFooter(t *testing.T) {
 		Usage:  4096,
 		Parent: dir,
 	}
-	dir.Files = analyze.Files{file}
+	dir.Files = fs.Files{file}
 
 	ui.currentDir = dir
 	ui.showDir()
@@ -148,7 +149,7 @@ func TestRescanDir(t *testing.T) {
 		File: &analyze.File{
 			Name: "parent",
 		},
-		Files: make([]analyze.Item, 0, 1),
+		Files: make([]fs.Item, 0, 1),
 	}
 	currentDir := &analyze.Dir{
 		File: &analyze.File{
@@ -173,8 +174,8 @@ func TestRescanDir(t *testing.T) {
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
-	assert.Equal(t, parentDir, ui.currentDir.Parent)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	assert.Equal(t, parentDir, ui.currentDir.GetParent())
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
@@ -392,7 +393,7 @@ func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mocked
 		f()
 	}
 
-	assert.Equal(t, "test_dir", ui.currentDir.Name)
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	return ui
 }

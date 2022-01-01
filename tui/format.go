@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) formatFileRow(item analyze.Item) string {
+func (ui *UI) formatFileRow(item fs.Item) string {
 	var part int
 
 	if ui.ShowApparentSize {

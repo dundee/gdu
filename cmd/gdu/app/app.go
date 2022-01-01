@@ -16,8 +16,8 @@ import (
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	gfs "github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
@@ -28,7 +28,7 @@ import (
 // UI is common interface for both terminal UI and text output
 type UI interface {
 	ListDevices(getter device.DevicesInfoGetter) error
-	AnalyzePath(path string, parentDir *analyze.Dir) error
+	AnalyzePath(path string, parentDir gfs.Item) error
 	ReadAnalysis(input io.Reader) error
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
