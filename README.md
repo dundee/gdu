@@ -28,7 +28,7 @@ Using curl:
 
 [Arch Linux](https://aur.archlinux.org/packages/gdu/):
 
-    yay -S gdu
+    pacman -S gdu
 
 [Debian](https://packages.debian.org/bullseye/gdu):
 
