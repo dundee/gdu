@@ -88,6 +88,7 @@ Flags:
   -o, --output-file string            Export all info into file as JSON
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
+      --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
   -s, --summarize                     Show only a total in non-interactive mode
   -v, --version                       Print version
 ```

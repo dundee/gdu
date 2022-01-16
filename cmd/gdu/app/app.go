@@ -57,6 +57,7 @@ type Flags struct {
 	Profiling         bool
 	EnableGC          bool
 	Summarize         bool
+	UseSIPrefix       bool
 }
 
 // App defines the main application
@@ -178,6 +179,7 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
 			a.Flags.EnableGC,
+			a.Flags.UseSIPrefix,
 		)
 		return ui, nil
 	}
@@ -190,6 +192,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ShowApparentSize,
 			a.Flags.Summarize,
 			a.Flags.EnableGC,
+			a.Flags.UseSIPrefix,
 		)
 	} else {
 		ui = tui.CreateUI(
@@ -199,6 +202,7 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor,
 			a.Flags.ShowApparentSize,
 			a.Flags.EnableGC,
+			a.Flags.UseSIPrefix,
 		)
 
 		if !a.Flags.NoColor {

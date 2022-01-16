@@ -53,6 +53,8 @@ non-interactive mode
 
 **-a**, **\--show-apparent-size**\[=false\] Show apparent size
 
+**\--si**\[=false\] Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
+
 **-f**, **\----input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 
 **-o**, **\----output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.

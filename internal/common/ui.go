@@ -12,12 +12,13 @@ type UI struct {
 	IgnoreDirPathPatterns *regexp.Regexp
 	IgnoreHidden          bool
 	UseColors             bool
+	UseSIPrefix           bool
 	ShowProgress          bool
 	ShowApparentSize      bool
 	EnableGC              bool
 }
 
-// file size constants
+// binary multiplies prefixes (IEC)
 const (
 	_          = iota
 	Ki float64 = 1 << (10 * iota)
@@ -28,11 +29,14 @@ const (
 	Ei
 )
 
-// file count constants
+// SI prefixes
 const (
-	K int = 1e3
-	M int = 1e6
-	G int = 1e9
+	K int64 = 1e3
+	M int64 = 1e6
+	G int64 = 1e9
+	T int64 = 1e12
+	P int64 = 1e15
+	E int64 = 1e18
 )
 
 // FormatNumber returns number as a string with thousands separator

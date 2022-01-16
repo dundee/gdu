@@ -31,12 +31,20 @@ type UI struct {
 }
 
 // CreateExportUI creates UI for stdout
-func CreateExportUI(output io.Writer, exportOutput io.Writer, useColors bool, showProgress bool, enableGC bool) *UI {
+func CreateExportUI(
+	output io.Writer,
+	exportOutput io.Writer,
+	useColors bool,
+	showProgress bool,
+	enableGC bool,
+	useSIPrefix bool,
+) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			ShowProgress: showProgress,
 			Analyzer:     analyze.CreateAnalyzer(),
 			EnableGC:     enableGC,
+			UseSIPrefix:  useSIPrefix,
 		},
 		output:       output,
 		exportOutput: exportOutput,
@@ -180,6 +188,13 @@ func (ui *UI) updateProgress() {
 }
 
 func (ui *UI) formatSize(size int64) string {
+	if ui.UseSIPrefix {
+		return ui.formatWithDecPrefix(size)
+	}
+	return ui.formatWithBinPrefix(size)
+}
+
+func (ui *UI) formatWithBinPrefix(size int64) string {
 	fsize := float64(size)
 
 	switch {
@@ -195,6 +210,27 @@ func (ui *UI) formatSize(size int64) string {
 		return ui.orange.Sprintf("%.1f", fsize/common.Mi) + " MiB"
 	case fsize >= common.Ki:
 		return ui.orange.Sprintf("%.1f", fsize/common.Ki) + " KiB"
+	default:
+		return ui.orange.Sprintf("%d", size) + " B"
+	}
+}
+
+func (ui *UI) formatWithDecPrefix(size int64) string {
+	fsize := float64(size)
+
+	switch {
+	case size >= common.E:
+		return ui.orange.Sprintf("%.1f", fsize/float64(common.E)) + " EB"
+	case size >= common.P:
+		return ui.orange.Sprintf("%.1f", fsize/float64(common.P)) + " PB"
+	case size >= common.T:
+		return ui.orange.Sprintf("%.1f", fsize/float64(common.T)) + " TB"
+	case size >= common.G:
+		return ui.orange.Sprintf("%.1f", fsize/float64(common.G)) + " GB"
+	case size >= common.M:
+		return ui.orange.Sprintf("%.1f", fsize/float64(common.M)) + " MB"
+	case size >= common.K:
+		return ui.orange.Sprintf("%.1f", fsize/float64(common.K)) + " kB"
 	default:
 		return ui.orange.Sprintf("%d", size) + " B"
 	}

@@ -81,8 +81,31 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 		}
 	}
 
-	fsize := float64(size)
+	if ui.UseSIPrefix {
+		return formatWithDecPrefix(size, color)
+	}
+	return formatWithBinPrefix(float64(size), color)
+}
 
+func (ui *UI) formatCount(count int) string {
+	row := ""
+	color := "[-::]"
+	count64 := int64(count)
+
+	switch {
+	case count64 >= common.G:
+		row += fmt.Sprintf("%.1f%sG", float64(count)/float64(common.G), color)
+	case count64 >= common.M:
+		row += fmt.Sprintf("%.1f%sM", float64(count)/float64(common.M), color)
+	case count64 >= common.K:
+		row += fmt.Sprintf("%.1f%sk", float64(count)/float64(common.K), color)
+	default:
+		row += fmt.Sprintf("%d%s", count, color)
+	}
+	return row
+}
+
+func formatWithBinPrefix(fsize float64, color string) string {
 	switch {
 	case fsize >= common.Ei:
 		return fmt.Sprintf("%.1f%s EiB", fsize/common.Ei, color)
@@ -97,23 +120,26 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 	case fsize >= common.Ki:
 		return fmt.Sprintf("%.1f%s KiB", fsize/common.Ki, color)
 	default:
-		return fmt.Sprintf("%d%s B", size, color)
+		return fmt.Sprintf("%d%s B", int64(fsize), color)
 	}
 }
 
-func (ui *UI) formatCount(count int) string {
-	row := ""
-	color := "[-::]"
-
+func formatWithDecPrefix(size int64, color string) string {
+	fsize := float64(size)
 	switch {
-	case count >= common.G:
-		row += fmt.Sprintf("%.1f%sG", float64(count)/float64(common.G), color)
-	case count >= common.M:
-		row += fmt.Sprintf("%.1f%sM", float64(count)/float64(common.M), color)
-	case count >= common.K:
-		row += fmt.Sprintf("%.1f%sk", float64(count)/float64(common.K), color)
+	case size >= common.E:
+		return fmt.Sprintf("%.1f%s EB", fsize/float64(common.E), color)
+	case size >= common.P:
+		return fmt.Sprintf("%.1f%s PB", fsize/float64(common.P), color)
+	case size >= common.T:
+		return fmt.Sprintf("%.1f%s TB", fsize/float64(common.T), color)
+	case size >= common.G:
+		return fmt.Sprintf("%.1f%s GB", fsize/float64(common.G), color)
+	case size >= common.M:
+		return fmt.Sprintf("%.1f%s MB", fsize/float64(common.M), color)
+	case size >= common.K:
+		return fmt.Sprintf("%.1f%s kB", fsize/float64(common.K), color)
 	default:
-		row += fmt.Sprintf("%d%s", count, color)
+		return fmt.Sprintf("%d%s B", size, color)
 	}
-	return row
 }

@@ -75,7 +75,13 @@ type UI struct {
 
 // CreateUI creates the whole UI app
 func CreateUI(
-	app common.TermApplication, screen tcell.Screen, output io.Writer, useColors bool, showApparentSize bool, enableGC bool,
+	app common.TermApplication,
+	screen tcell.Screen,
+	output io.Writer,
+	useColors bool,
+	showApparentSize bool,
+	enableGC bool,
+	useSIPrefix bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -83,6 +89,7 @@ func CreateUI(
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
 			EnableGC:         enableGC,
+			UseSIPrefix:      useSIPrefix,
 		},
 		app:             app,
 		screen:          screen,
