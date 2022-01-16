@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"net/http"
-	_ "net/http/pprof" // load profiling http handler
+	"net/http/pprof"
 
 	log "github.com/sirupsen/logrus"
 
@@ -70,6 +70,10 @@ type App struct {
 	Screen      tcell.Screen
 	Getter      device.DevicesInfoGetter
 	PathChecker func(string) (fs.FileInfo, error)
+}
+
+func init() {
+	http.DefaultServeMux = http.NewServeMux()
 }
 
 // Run starts gdu main logic
@@ -229,6 +233,11 @@ func (a *App) setNoCross(path string) error {
 func (a *App) runAction(ui UI, path string) error {
 	if a.Flags.Profiling {
 		go func() {
+			http.HandleFunc("/debug/pprof/", pprof.Index)
+			http.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+			http.HandleFunc("/debug/pprof/profile", pprof.Profile)
+			http.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+			http.HandleFunc("/debug/pprof/trace", pprof.Trace)
 			log.Println(http.ListenAndServe("localhost:6060", nil))
 		}()
 	}
