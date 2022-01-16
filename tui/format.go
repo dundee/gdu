@@ -84,18 +84,18 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 	fsize := float64(size)
 
 	switch {
-	case fsize >= common.EB:
-		return fmt.Sprintf("%.1f%s EiB", fsize/common.EB, color)
-	case fsize >= common.PB:
-		return fmt.Sprintf("%.1f%s PiB", fsize/common.PB, color)
-	case fsize >= common.TB:
-		return fmt.Sprintf("%.1f%s TiB", fsize/common.TB, color)
-	case fsize >= common.GB:
-		return fmt.Sprintf("%.1f%s GiB", fsize/common.GB, color)
-	case fsize >= common.MB:
-		return fmt.Sprintf("%.1f%s MiB", fsize/common.MB, color)
-	case fsize >= common.KB:
-		return fmt.Sprintf("%.1f%s KiB", fsize/common.KB, color)
+	case fsize >= common.Ei:
+		return fmt.Sprintf("%.1f%s EiB", fsize/common.Ei, color)
+	case fsize >= common.Pi:
+		return fmt.Sprintf("%.1f%s PiB", fsize/common.Pi, color)
+	case fsize >= common.Ti:
+		return fmt.Sprintf("%.1f%s TiB", fsize/common.Ti, color)
+	case fsize >= common.Gi:
+		return fmt.Sprintf("%.1f%s GiB", fsize/common.Gi, color)
+	case fsize >= common.Mi:
+		return fmt.Sprintf("%.1f%s MiB", fsize/common.Mi, color)
+	case fsize >= common.Ki:
+		return fmt.Sprintf("%.1f%s KiB", fsize/common.Ki, color)
 	default:
 		return fmt.Sprintf("%d%s B", size, color)
 	}

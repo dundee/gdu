@@ -183,18 +183,18 @@ func (ui *UI) formatSize(size int64) string {
 	fsize := float64(size)
 
 	switch {
-	case fsize >= common.EB:
-		return ui.orange.Sprintf("%.1f", fsize/common.EB) + " EiB"
-	case fsize >= common.PB:
-		return ui.orange.Sprintf("%.1f", fsize/common.PB) + " PiB"
-	case fsize >= common.TB:
-		return ui.orange.Sprintf("%.1f", fsize/common.TB) + " TiB"
-	case fsize >= common.GB:
-		return ui.orange.Sprintf("%.1f", fsize/common.GB) + " GiB"
-	case fsize >= common.MB:
-		return ui.orange.Sprintf("%.1f", fsize/common.MB) + " MiB"
-	case fsize >= common.KB:
-		return ui.orange.Sprintf("%.1f", fsize/common.KB) + " KiB"
+	case fsize >= common.Ei:
+		return ui.orange.Sprintf("%.1f", fsize/common.Ei) + " EiB"
+	case fsize >= common.Pi:
+		return ui.orange.Sprintf("%.1f", fsize/common.Pi) + " PiB"
+	case fsize >= common.Ti:
+		return ui.orange.Sprintf("%.1f", fsize/common.Ti) + " TiB"
+	case fsize >= common.Gi:
+		return ui.orange.Sprintf("%.1f", fsize/common.Gi) + " GiB"
+	case fsize >= common.Mi:
+		return ui.orange.Sprintf("%.1f", fsize/common.Mi) + " MiB"
+	case fsize >= common.Ki:
+		return ui.orange.Sprintf("%.1f", fsize/common.Ki) + " KiB"
 	default:
 		return ui.orange.Sprintf("%d", size) + " B"
 	}

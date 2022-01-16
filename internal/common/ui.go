@@ -20,12 +20,12 @@ type UI struct {
 // file size constants
 const (
 	_          = iota
-	KB float64 = 1 << (10 * iota)
-	MB
-	GB
-	TB
-	PB
-	EB
+	Ki float64 = 1 << (10 * iota)
+	Mi
+	Gi
+	Ti
+	Pi
+	Ei
 )
 
 // file count constants
