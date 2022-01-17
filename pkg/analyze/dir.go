@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -54,7 +55,13 @@ func (a *ParallelAnalyzer) ResetProgress() {
 }
 
 // AnalyzeDir analyzes given path
-func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore common.ShouldDirBeIgnored) fs.Item {
+func (a *ParallelAnalyzer) AnalyzeDir(
+	path string, ignore common.ShouldDirBeIgnored, enableGC bool,
+) fs.Item {
+	if !enableGC {
+		defer debug.SetGCPercent(debug.SetGCPercent(-1))
+	}
+
 	a.ignoreDir = ignore
 
 	go a.updateProgress()

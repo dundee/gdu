@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime/debug"
 	"sort"
 	"strconv"
 	"sync"
@@ -95,10 +94,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		if !ui.EnableGC {
-			defer debug.SetGCPercent(debug.SetGCPercent(-1))
-		}
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.EnableGC)
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 	}()
 

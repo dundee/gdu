@@ -56,10 +56,9 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 	go func() {
 		if !ui.EnableGC {
-			defer debug.SetGCPercent(debug.SetGCPercent(-1))
 			defer debug.FreeOSMemory()
 		}
-		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
+		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.EnableGC)
 
 		if parentDir != nil {
 			currentDir.SetParent(parentDir)
