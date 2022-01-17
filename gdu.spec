@@ -51,7 +51,7 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %files
 %{_bindir}/gdu
 # %{_mandir}/man1/gdu.1.gz
-%{_mandir}/man1/gdu.1.gz
+# %{_mandir}/man1/gdu.1.gz
 
 %changelog
 * Tue Dec 14 2021 Danie de Jager - 5.12.1-1
