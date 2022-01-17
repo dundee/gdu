@@ -32,7 +32,7 @@ func CreateAnalyzer() common.Analyzer {
 		},
 		progressChan:    make(chan common.CurrentProgress, 1),
 		progressOutChan: make(chan common.CurrentProgress, 1),
-		doneChan:        make(chan struct{}, 1),
+		doneChan:        make(chan struct{}, 2),
 		wait:            (&WaitGroup{}).Init(),
 	}
 }
@@ -56,10 +56,11 @@ func (a *ParallelAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *ParallelAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, enableGC bool,
+	path string, ignore common.ShouldDirBeIgnored, constGC bool,
 ) fs.Item {
-	if !enableGC {
+	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
+		go manageMemoryUsage(a.doneChan)
 	}
 
 	a.ignoreDir = ignore
@@ -72,6 +73,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 
 	a.doneChan <- struct{}{} // finish updateProgress here
 	a.doneChan <- struct{}{} // and there
+	a.doneChan <- struct{}{} // and manageMemoryUsage
 
 	return dir
 }

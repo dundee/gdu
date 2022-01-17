@@ -71,7 +71,7 @@ Using curl:
   gdu [flags] [directory_to_scan]
 
 Flags:
-  -g, --enable-gc                     Enable memory garbage collection during analysis
+  -g, --const-gc                      Enable memory garbage collection during analysis with constant level set by GOGC
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -h, --help                          help for gdu
   -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
@@ -138,19 +138,27 @@ flag with following meaning:
 
 * `e` Directory is empty.
 
-## RAM usage
+## Memory usage
 
-Gdu can consume a lot of memory - around 500-1000 MB of RAM for 1 mil files. It's a trade off for being so fast.
+### Automatic balancing
 
-If you want lower memory usage and don't mind giving up some speed, you can use `--enable-gc` / `-g` flag.
-It will run garbage collection during the analysis phase.
+Gdu tries to balance performance and memory usage.
+
+When less memory is used by gdu than the total free memory of the host,
+then Garbage Collection is disabled during the analysis phase completely to gain maximum speed.
+
+Otherwise GC is enabled.
+The more memory is used and the less memory is free, the more often will the GC happen.
+
+### Manual memory usage control
+
+If you want manual control over Garbage Collection, you can use `--const-gc` / `-g` flag.
+It will run Garbage Collection during the analysis phase with constant level of aggressiveness.
 As a result, the analysis will be about 25% slower and will consume about 30% less memory.
-You should use this option if you are scanning more than circa 3 milion files.
+To change the level, you can set the `GOGC` environment variable to specify how often the garbage collection will happen.
+Lower value (than 100) means GC will run more often. Higher means less often. Negative number will stop GC.
 
-If you need some more fine tunning, you can use the `GOGC` environment variable to set how often the garbage collection will happen.
-Default value is `100`. Lower value means GC will run more often. Higher than 100 means less often. Negative number will stop GC.
-
-Example running gdu with GC enabled, but not so aggresive as default:
+Example running gdu with constant GC, but not so aggresive as default:
 
 ```
 GOGC=200 gdu -g /

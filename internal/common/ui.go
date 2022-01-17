@@ -15,7 +15,7 @@ type UI struct {
 	UseSIPrefix           bool
 	ShowProgress          bool
 	ShowApparentSize      bool
-	EnableGC              bool
+	ConstGC               bool
 }
 
 // binary multiplies prefixes (IEC)

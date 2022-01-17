@@ -80,7 +80,7 @@ func CreateUI(
 	output io.Writer,
 	useColors bool,
 	showApparentSize bool,
-	enableGC bool,
+	constGC bool,
 	useSIPrefix bool,
 ) *UI {
 	ui := &UI{
@@ -88,7 +88,7 @@ func CreateUI(
 			UseColors:        useColors,
 			ShowApparentSize: showApparentSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			EnableGC:         enableGC,
+			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
 		app:             app,

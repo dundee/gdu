@@ -35,14 +35,14 @@ func CreateExportUI(
 	exportOutput io.Writer,
 	useColors bool,
 	showProgress bool,
-	enableGC bool,
+	constGC bool,
 	useSIPrefix bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			ShowProgress: showProgress,
 			Analyzer:     analyze.CreateAnalyzer(),
-			EnableGC:     enableGC,
+			ConstGC:      constGC,
 			UseSIPrefix:  useSIPrefix,
 		},
 		output:       output,
@@ -94,7 +94,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.EnableGC)
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 	}()
 
