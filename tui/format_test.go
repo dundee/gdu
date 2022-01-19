@@ -73,5 +73,5 @@ func TestEscapeName(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file), "Aaa [red[] bbb")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize()), "Aaa [red[] bbb")
 }
