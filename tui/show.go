@@ -13,6 +13,8 @@ func (ui *UI) showDir() {
 	var (
 		totalUsage int64
 		totalSize  int64
+		maxUsage   int64
+		maxSize    int64
 		itemCount  int
 	)
 
@@ -36,6 +38,15 @@ func (ui *UI) showDir() {
 
 	ui.sortItems()
 
+	for _, item := range ui.currentDir.GetFiles() {
+		if item.GetUsage() > maxUsage {
+			maxUsage = item.GetUsage()
+		}
+		if item.GetSize() > maxSize {
+			maxSize = item.GetSize()
+		}
+	}
+
 	for i, item := range ui.currentDir.GetFiles() {
 		if ui.filterValue != "" && !strings.Contains(
 			strings.ToLower(item.GetName()),
@@ -48,7 +59,7 @@ func (ui *UI) showDir() {
 		totalSize += item.GetSize()
 		itemCount += item.GetItemCount()
 
-		cell := tview.NewTableCell(ui.formatFileRow(item))
+		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize))
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		cell.SetReference(ui.currentDir.GetFiles()[i])
 
