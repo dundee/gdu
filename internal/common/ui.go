@@ -15,6 +15,7 @@ type UI struct {
 	UseSIPrefix           bool
 	ShowProgress          bool
 	ShowApparentSize      bool
+	ShowRelativeSize      bool
 	ConstGC               bool
 }
 

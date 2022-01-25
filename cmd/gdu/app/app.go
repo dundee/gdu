@@ -48,6 +48,7 @@ type Flags struct {
 	MaxCores          int
 	ShowDisks         bool
 	ShowApparentSize  bool
+	ShowRelativeSize  bool
 	ShowVersion       bool
 	NoColor           bool
 	NonInteractive    bool
@@ -194,6 +195,7 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
 			a.Flags.ShowApparentSize,
+			a.Flags.ShowRelativeSize,
 			a.Flags.Summarize,
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
@@ -205,6 +207,7 @@ func (a *App) createUI() (UI, error) {
 			os.Stdout,
 			!a.Flags.NoColor,
 			a.Flags.ShowApparentSize,
+			a.Flags.ShowRelativeSize,
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)

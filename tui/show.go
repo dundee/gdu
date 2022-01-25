@@ -38,13 +38,18 @@ func (ui *UI) showDir() {
 
 	ui.sortItems()
 
-	for _, item := range ui.currentDir.GetFiles() {
-		if item.GetUsage() > maxUsage {
-			maxUsage = item.GetUsage()
+	if ui.ShowRelativeSize {
+		for _, item := range ui.currentDir.GetFiles() {
+			if item.GetUsage() > maxUsage {
+				maxUsage = item.GetUsage()
+			}
+			if item.GetSize() > maxSize {
+				maxSize = item.GetSize()
+			}
 		}
-		if item.GetSize() > maxSize {
-			maxSize = item.GetSize()
-		}
+	} else {
+		maxUsage = ui.currentDir.GetUsage()
+		maxSize = ui.currentDir.GetSize()
 	}
 
 	for i, item := range ui.currentDir.GetFiles() {
