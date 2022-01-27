@@ -42,6 +42,21 @@ func TestCloseHelp(t *testing.T) {
 	assert.False(t, ui.pages.HasPage("help"))
 }
 
+func TestCloseHelpWithQuestionMark(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui.showHelp()
+
+	assert.True(t, ui.pages.HasPage("help"))
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, '?', 0))
+
+	assert.False(t, ui.pages.HasPage("help"))
+}
+
 func TestKeyWhileDeleting(t *testing.T) {
 	simScreen := testapp.CreateSimScreen(50, 50)
 	defer simScreen.Fini()
@@ -734,6 +749,10 @@ func TestShowInfoAndMoveAround(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'k', 0)) // move up
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'j', 0)) // move down
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'k', 0)) // move up
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, '?', 0)) // does nothing
+
+	assert.True(t, ui.pages.HasPage("info")) // we can still see info page
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
 
