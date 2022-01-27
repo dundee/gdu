@@ -182,7 +182,7 @@ func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int
-	for _, entry := range f.Files {
+	for _, entry := range f.GetFiles() {
 		count, size, usage := entry.GetItemStats(linkedItems)
 		totalSize += size
 		totalUsage += usage
