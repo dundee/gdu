@@ -586,6 +586,31 @@ func TestShowMtimeBW(t *testing.T) {
 	assert.True(t, ui.showMtime)
 }
 
+func TestShowRelativeBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	assert.False(t, ui.ShowRelativeSize)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'B', 0))
+
+	assert.True(t, ui.ShowRelativeSize)
+}
+
 func TestRescan(t *testing.T) {
 	parentDir := &analyze.Dir{
 		File: &analyze.File{

@@ -127,7 +127,7 @@ func TestSortDevicesByName(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -143,7 +143,7 @@ func TestSortDevicesByUsedSize(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)

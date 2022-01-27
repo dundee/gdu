@@ -59,7 +59,7 @@ func TestDeviceSelected(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
@@ -109,7 +109,7 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, true, true, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.topDir = parentDir
 	ui.done = make(chan struct{})
@@ -138,7 +138,7 @@ func TestReadAnalysis(t *testing.T) {
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
 	ui.done = make(chan struct{})
 
 	err = ui.ReadAnalysis(input)
