@@ -14,7 +14,7 @@ func TestFormatSize(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
 
 	assert.Equal(t, "1[white:black:-] B", ui.formatSize(1, false, false))
 	assert.Equal(t, "1.0[white:black:-] KiB", ui.formatSize(1<<10, false, false))
@@ -30,7 +30,7 @@ func TestFormatSizeDec(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, true)
 
 	assert.Equal(t, "1[white:black:-] B", ui.formatSize(1, false, false))
 	assert.Equal(t, "1.0[white:black:-] kB", ui.formatSize(1<<10, false, false))
@@ -46,7 +46,7 @@ func TestFormatCount(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
 
 	assert.Equal(t, "1[-::]", ui.formatCount(1))
 	assert.Equal(t, "1.0[-::]k", ui.formatCount(1<<10))
@@ -59,7 +59,7 @@ func TestEscapeName(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
