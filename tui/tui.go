@@ -2,6 +2,7 @@ package tui
 
 import (
 	"io"
+	"slices"
 
 	log "github.com/sirupsen/logrus"
 
@@ -76,7 +77,7 @@ func CreateUI(
 			UseColors:        useColors,
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
-			Analyzer:         analyze.CreateAnalyzer(),
+			Analyzer:         analyze.CreateStoredAnalyzer(),
 			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
@@ -222,14 +223,19 @@ func (ui *UI) fileItemSelected(row, column int) {
 		return
 	}
 
-	ui.currentDir = selectedDir.(*analyze.Dir)
+	ui.currentDir = selectedDir
 	ui.hideFilterInput()
 	ui.markedRows = make(map[int]struct{})
 	ui.showDir()
 
-	if selectedDir == origDir.GetParent() {
-		index, _ := ui.currentDir.GetFiles().IndexOf(origDir)
-		if ui.currentDir != ui.topDir {
+	if origDir.GetParent() != nil && selectedDir.GetName() == origDir.GetParent().GetName() {
+		index := slices.IndexFunc(
+			ui.currentDir.GetFiles(),
+			func(v fs.Item) bool {
+				return v.GetName() == origDir.GetName()
+			},
+		)
+		if ui.currentDir.GetPath() != ui.topDir.GetPath() {
 			index++
 		}
 		ui.table.Select(index, 0)

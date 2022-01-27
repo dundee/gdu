@@ -48,7 +48,7 @@ func CreateStdoutUI(
 			ShowProgress:     showProgress,
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
-			Analyzer:         analyze.CreateAnalyzer(),
+			Analyzer:         analyze.CreateStoredAnalyzer(),
 			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
