@@ -10,7 +10,7 @@ import (
 )
 
 // set GC percentage according to memory usage and system free memory
-func manageMemoryUsage(c chan struct{}) {
+func manageMemoryUsage(c <-chan struct{}) {
 	disabledGC := true
 
 	for {
