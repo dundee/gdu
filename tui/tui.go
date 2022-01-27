@@ -21,7 +21,7 @@ const helpText = `    [::b]up/down, k/j    [white:black:-]Move cursor up/down
                [::b]r    [white:black:-]Rescan current directory
                [::b]/    [white:black:-]Search items by name
                [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
-               [::b]B    [white:black:-]Toggle between showing size relative to directory or biggest file
+               [::b]B    [white:black:-]Toggle bar alignment to biggest file or directory
                [::b]c    [white:black:-]Show/hide file count
                [::b]m    [white:black:-]Show/hide latest mtime
                [::b]b    [white:black:-]Spawn shell in current directory
