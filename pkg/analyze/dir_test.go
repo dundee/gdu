@@ -27,9 +27,9 @@ func TestAnalyzeDir(t *testing.T) {
 
 	progress := <-analyzer.GetProgressChan()
 	assert.GreaterOrEqual(t, progress.TotalSize, int64(0))
-	analyzer.ResetProgress()
 
 	<-analyzer.GetDoneChan()
+	analyzer.ResetProgress()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	// test dir info

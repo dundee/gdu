@@ -49,9 +49,11 @@ func (a *ParallelAnalyzer) GetDoneChan() chan struct{} {
 
 // ResetProgress returns progress
 func (a *ParallelAnalyzer) ResetProgress() {
-	a.progress.ItemCount = 0
-	a.progress.TotalSize = int64(0)
-	a.progress.CurrentItemName = ""
+	a.progress = &common.CurrentProgress{}
+	a.progressChan = make(chan common.CurrentProgress, 1)
+	a.progressOutChan = make(chan common.CurrentProgress, 1)
+	a.doneChan = make(chan struct{}, 2)
+	a.wait = (&WaitGroup{}).Init()
 }
 
 // AnalyzeDir analyzes given path
