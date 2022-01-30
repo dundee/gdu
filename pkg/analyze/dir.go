@@ -24,7 +24,7 @@ type ParallelAnalyzer struct {
 }
 
 // CreateAnalyzer returns Analyzer
-func CreateAnalyzer() common.Analyzer {
+func CreateAnalyzer() *ParallelAnalyzer {
 	return &ParallelAnalyzer{
 		progress: &common.CurrentProgress{
 			ItemCount: 0,
