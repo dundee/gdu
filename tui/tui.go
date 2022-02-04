@@ -179,6 +179,7 @@ func (ui *UI) resetSorting() {
 
 func (ui *UI) rescanDir() {
 	ui.Analyzer.ResetProgress()
+	ui.linkedItems = make(fs.HardLinkedItems)
 	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.GetParent())
 	if err != nil {
 		ui.showErr("Error rescanning path", err)
