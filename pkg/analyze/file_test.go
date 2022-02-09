@@ -402,3 +402,62 @@ func TestGetPathWithoutLeadingSlash(t *testing.T) {
 
 	assert.Equal(t, "C:\\", dir.GetPath())
 }
+
+func TestSetParent(t *testing.T) {
+	dir := &Dir{
+		File: &File{
+			Name:  "root",
+			Size:  5,
+			Usage: 12,
+		},
+		ItemCount: 3,
+		BasePath:  "/",
+	}
+	file := &File{
+		Name: "xxx",
+		Mli:  5,
+	}
+	file.SetParent(dir)
+
+	assert.Equal(t, "root", file.GetParent().GetName())
+}
+
+func TestGetFiles(t *testing.T) {
+	file := &File{
+		Name: "xxx",
+		Mli:  5,
+	}
+	dir := &Dir{
+		File: &File{
+			Name:  "root",
+			Size:  5,
+			Usage: 12,
+		},
+		ItemCount: 3,
+		BasePath:  "/",
+		Files:     fs.Files{file},
+	}
+
+	assert.Equal(t, file.Name, dir.GetFiles()[0].GetName())
+	assert.Equal(t, fs.Files{}, file.GetFiles())
+}
+
+func TestSetFilesPanicsOnFile(t *testing.T) {
+	file := &File{
+		Name: "xxx",
+		Mli:  5,
+	}
+	assert.Panics(t, func() {
+		file.SetFiles(fs.Files{file})
+	})
+}
+
+func TestAddFilePanicsOnFile(t *testing.T) {
+	file := &File{
+		Name: "xxx",
+		Mli:  5,
+	}
+	assert.Panics(t, func() {
+		file.AddFile(file)
+	})
+}

@@ -361,6 +361,9 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.table.Select(1, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.table.Select(1, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
 
 	assert.True(t, ui.pages.HasPage("info"))
