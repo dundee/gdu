@@ -387,5 +387,18 @@ func TestGetMultiLinkedInode(t *testing.T) {
 	}
 
 	assert.Equal(t, uint64(5), file.GetMultiLinkedInode())
+}
 
+func TestGetPathWithoutLeadingSlash(t *testing.T) {
+	dir := &Dir{
+		File: &File{
+			Name:  "C:\\",
+			Size:  5,
+			Usage: 12,
+		},
+		ItemCount: 3,
+		BasePath:  "",
+	}
+
+	assert.Equal(t, "C:\\", dir.GetPath())
 }
