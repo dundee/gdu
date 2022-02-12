@@ -103,6 +103,7 @@ func (ui *UI) showDir() {
 func (ui *UI) showDevices() {
 	var totalUsage int64
 
+	ui.table.Clear()
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
 	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
 	ui.table.SetCell(0, 2, tview.NewTableCell("Used").SetSelectable(false))
@@ -149,6 +150,15 @@ func (ui *UI) showDevices() {
 
 	ui.table.Select(1, 0)
 	ui.table.SetSelectedFunc(ui.deviceItemSelected)
+
+	if ui.topDirPath != "" {
+		for i, device := range ui.devices {
+			if device.MountPoint == ui.topDirPath {
+				ui.table.Select(i+1, 0)
+				break
+			}
+		}
+	}
 }
 
 func (ui *UI) showErr(msg string, err error) {

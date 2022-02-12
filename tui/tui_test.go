@@ -357,7 +357,7 @@ func TestMin(t *testing.T) {
 func getDevicesInfoMock() device.DevicesInfoGetter {
 	item := &device.Device{
 		Name:       "/dev/root",
-		MountPoint: "/",
+		MountPoint: "test_dir",
 		Size:       1e12,
 		Free:       1e6,
 	}

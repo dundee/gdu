@@ -9,6 +9,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -158,6 +159,12 @@ func TestMoveRightOnDevice(t *testing.T) {
 	}
 
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	// go back to list of devices
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 'h', 0))
+
+	assert.Nil(t, ui.currentDir)
+	assert.Equal(t, "/dev/root", ui.table.GetCell(1, 0).GetReference().(*device.Device).Name)
 }
 
 func TestStop(t *testing.T) {

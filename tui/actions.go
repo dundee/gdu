@@ -24,6 +24,7 @@ const linesTreshold = 20
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	var err error
+	ui.getter = getter
 	ui.devices, err = getter.GetDevicesInfo()
 	if err != nil {
 		return err

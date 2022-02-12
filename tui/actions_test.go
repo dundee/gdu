@@ -78,9 +78,9 @@ func TestDeviceSelected(t *testing.T) {
 
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
+	assert.Equal(t, 4, ui.table.GetRowCount())
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
 }
 
 func TestAnalyzePath(t *testing.T) {

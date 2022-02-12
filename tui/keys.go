@@ -156,6 +156,13 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 func (ui *UI) handleLeft() {
 	if ui.currentDirPath == ui.topDirPath {
+		if ui.devices != nil {
+			ui.currentDir = nil
+			err := ui.ListDevices(ui.getter)
+			if err != nil {
+				ui.showErr("Error listing devices", err)
+			}
+		}
 		return
 	}
 	if ui.currentDir != nil {

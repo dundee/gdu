@@ -70,6 +70,7 @@ type UI struct {
 	done            chan struct{}
 	remover         func(fs.Item, fs.Item) error
 	emptier         func(fs.Item, fs.Item) error
+	getter          device.DevicesInfoGetter
 	exec            func(argv0 string, argv []string, envv []string) error
 	linkedItems     fs.HardLinkedItems
 }
