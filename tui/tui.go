@@ -21,6 +21,7 @@ const helpText = `    [::b]up/down, k/j    [white:black:-]Move cursor up/down
                [::b]r    [white:black:-]Rescan current directory
                [::b]/    [white:black:-]Search items by name
                [::b]a    [white:black:-]Toggle between showing disk usage and apparent size
+               [::b]B    [white:black:-]Toggle bar alignment to biggest file or directory
                [::b]c    [white:black:-]Show/hide file count
                [::b]m    [white:black:-]Show/hide latest mtime
                [::b]b    [white:black:-]Spawn shell in current directory
@@ -69,6 +70,7 @@ type UI struct {
 	done            chan struct{}
 	remover         func(fs.Item, fs.Item) error
 	emptier         func(fs.Item, fs.Item) error
+	getter          device.DevicesInfoGetter
 	exec            func(argv0 string, argv []string, envv []string) error
 	linkedItems     fs.HardLinkedItems
 }
@@ -80,15 +82,17 @@ func CreateUI(
 	output io.Writer,
 	useColors bool,
 	showApparentSize bool,
-	enableGC bool,
+	showRelativeSize bool,
+	constGC bool,
 	useSIPrefix bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			UseColors:        useColors,
 			ShowApparentSize: showApparentSize,
+			ShowRelativeSize: showRelativeSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			EnableGC:         enableGC,
+			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
 		app:             app,
@@ -176,6 +180,7 @@ func (ui *UI) resetSorting() {
 
 func (ui *UI) rescanDir() {
 	ui.Analyzer.ResetProgress()
+	ui.linkedItems = make(fs.HardLinkedItems)
 	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.GetParent())
 	if err != nil {
 		ui.showErr("Error rescanning path", err)

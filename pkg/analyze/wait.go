@@ -33,7 +33,12 @@ func (s *WaitGroup) Done() {
 
 // Wait blocks until value is 0
 func (s *WaitGroup) Wait() {
-	s.wait.Lock()
+	s.access.Lock()
+	isValue := s.value > 0
+	s.access.Unlock()
+	if isValue {
+		s.wait.Lock()
+	}
 }
 
 func (s *WaitGroup) check() {

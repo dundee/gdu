@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -23,7 +24,7 @@ type ParallelAnalyzer struct {
 }
 
 // CreateAnalyzer returns Analyzer
-func CreateAnalyzer() common.Analyzer {
+func CreateAnalyzer() *ParallelAnalyzer {
 	return &ParallelAnalyzer{
 		progress: &common.CurrentProgress{
 			ItemCount: 0,
@@ -31,7 +32,7 @@ func CreateAnalyzer() common.Analyzer {
 		},
 		progressChan:    make(chan common.CurrentProgress, 1),
 		progressOutChan: make(chan common.CurrentProgress, 1),
-		doneChan:        make(chan struct{}, 1),
+		doneChan:        make(chan struct{}, 2),
 		wait:            (&WaitGroup{}).Init(),
 	}
 }
@@ -48,13 +49,22 @@ func (a *ParallelAnalyzer) GetDoneChan() chan struct{} {
 
 // ResetProgress returns progress
 func (a *ParallelAnalyzer) ResetProgress() {
-	a.progress.ItemCount = 0
-	a.progress.TotalSize = int64(0)
-	a.progress.CurrentItemName = ""
+	a.progress = &common.CurrentProgress{}
+	a.progressChan = make(chan common.CurrentProgress, 1)
+	a.progressOutChan = make(chan common.CurrentProgress, 1)
+	a.doneChan = make(chan struct{}, 2)
+	a.wait = (&WaitGroup{}).Init()
 }
 
 // AnalyzeDir analyzes given path
-func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore common.ShouldDirBeIgnored) fs.Item {
+func (a *ParallelAnalyzer) AnalyzeDir(
+	path string, ignore common.ShouldDirBeIgnored, constGC bool,
+) fs.Item {
+	if !constGC {
+		defer debug.SetGCPercent(debug.SetGCPercent(-1))
+		go manageMemoryUsage(a.doneChan)
+	}
+
 	a.ignoreDir = ignore
 
 	go a.updateProgress()
@@ -65,6 +75,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(path string, ignore common.ShouldDirBeIgno
 
 	a.doneChan <- struct{}{} // finish updateProgress here
 	a.doneChan <- struct{}{} // and there
+	a.doneChan <- struct{}{} // and manageMemoryUsage
 
 	return dir
 }

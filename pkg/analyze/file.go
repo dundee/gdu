@@ -165,7 +165,10 @@ func (f *Dir) GetPath() string {
 	if f.BasePath != "" {
 		return filepath.Join(f.BasePath, f.Name)
 	}
-	return filepath.Join(f.Parent.GetPath(), f.Name)
+	if f.Parent != nil {
+		return filepath.Join(f.Parent.GetPath(), f.Name)
+	}
+	return f.Name
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir

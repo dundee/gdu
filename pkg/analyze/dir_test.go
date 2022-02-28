@@ -21,13 +21,15 @@ func TestAnalyzeDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false }).(*Dir)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*Dir)
 
 	progress := <-analyzer.GetProgressChan()
 	assert.GreaterOrEqual(t, progress.TotalSize, int64(0))
-	analyzer.ResetProgress()
 
 	<-analyzer.GetDoneChan()
+	analyzer.ResetProgress()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	// test dir info
@@ -44,18 +46,34 @@ func TestAnalyzeDir(t *testing.T) {
 	assert.Equal(t, "file2", dir.Files[0].(*Dir).Files[0].GetName())
 	assert.Equal(t, int64(2), dir.Files[0].(*Dir).Files[0].GetSize())
 
-	assert.Equal(t, "file", dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetName())
-	assert.Equal(t, int64(5), dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetSize())
+	assert.Equal(
+		t, "file", dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetName(),
+	)
+	assert.Equal(
+		t, int64(5), dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetSize(),
+	)
 
 	// test parent link
-	assert.Equal(t, "test_dir", dir.Files[0].(*Dir).Files[1].(*Dir).Files[0].GetParent().GetParent().GetParent().GetName())
+	assert.Equal(
+		t,
+		"test_dir",
+		dir.Files[0].(*Dir).
+			Files[1].(*Dir).
+			Files[0].
+			GetParent().
+			GetParent().
+			GetParent().
+			GetName(),
+	)
 }
 
 func TestIgnoreDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	dir := CreateAnalyzer().AnalyzeDir("test_dir", func(_, _ string) bool { return true }).(*Dir)
+	dir := CreateAnalyzer().AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return true }, false,
+	).(*Dir)
 
 	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, 1, dir.ItemCount)
@@ -72,7 +90,9 @@ func TestFlags(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false }).(*Dir)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*Dir)
 	<-analyzer.GetDoneChan()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
@@ -98,7 +118,9 @@ func TestHardlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false }).(*Dir)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*Dir)
 	<-analyzer.GetDoneChan()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
@@ -123,7 +145,9 @@ func TestErr(t *testing.T) {
 	}()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false }).(*Dir)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*Dir)
 	<-analyzer.GetDoneChan()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
@@ -142,7 +166,9 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 	b.ResetTimer()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir("test_dir", func(_, _ string) bool { return false })
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	)
 	<-analyzer.GetDoneChan()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 }

@@ -114,6 +114,13 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			ui.showDir()
 			ui.table.Select(row, column)
 		}
+	case 'B':
+		ui.ShowRelativeSize = !ui.ShowRelativeSize
+		if ui.currentDir != nil {
+			row, column := ui.table.GetSelection()
+			ui.showDir()
+			ui.table.Select(row, column)
+		}
 	case 'c':
 		ui.showItemCount = !ui.showItemCount
 		if ui.currentDir != nil {
@@ -149,6 +156,13 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 func (ui *UI) handleLeft() {
 	if ui.currentDirPath == ui.topDirPath {
+		if ui.devices != nil {
+			ui.currentDir = nil
+			err := ui.ListDevices(ui.getter)
+			if err != nil {
+				ui.showErr("Error listing devices", err)
+			}
+		}
 		return
 	}
 	if ui.currentDir != nil {

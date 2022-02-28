@@ -8,13 +8,13 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) formatFileRow(item fs.Item) string {
+func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64) string {
 	var part int
 
 	if ui.ShowApparentSize {
-		part = int(float64(item.GetSize()) / float64(item.GetParent().GetSize()) * 10.0)
+		part = int(float64(item.GetSize()) / float64(maxSize) * 10.0)
 	} else {
-		part = int(float64(item.GetUsage()) / float64(item.GetParent().GetUsage()) * 10.0)
+		part = int(float64(item.GetUsage()) / float64(maxUsage) * 10.0)
 	}
 
 	row := string(item.GetFlag())

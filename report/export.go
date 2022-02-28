@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime/debug"
 	"sort"
 	"strconv"
 	"sync"
@@ -36,14 +35,14 @@ func CreateExportUI(
 	exportOutput io.Writer,
 	useColors bool,
 	showProgress bool,
-	enableGC bool,
+	constGC bool,
 	useSIPrefix bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			ShowProgress: showProgress,
 			Analyzer:     analyze.CreateAnalyzer(),
-			EnableGC:     enableGC,
+			ConstGC:      constGC,
 			UseSIPrefix:  useSIPrefix,
 		},
 		output:       output,
@@ -95,10 +94,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		if !ui.EnableGC {
-			defer debug.SetGCPercent(debug.SetGCPercent(-1))
-		}
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 	}()
 

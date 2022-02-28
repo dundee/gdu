@@ -48,6 +48,7 @@ type Flags struct {
 	MaxCores          int
 	ShowDisks         bool
 	ShowApparentSize  bool
+	ShowRelativeSize  bool
 	ShowVersion       bool
 	NoColor           bool
 	NonInteractive    bool
@@ -55,7 +56,7 @@ type Flags struct {
 	NoCross           bool
 	NoHidden          bool
 	Profiling         bool
-	EnableGC          bool
+	ConstGC           bool
 	Summarize         bool
 	UseSIPrefix       bool
 }
@@ -182,7 +183,7 @@ func (a *App) createUI() (UI, error) {
 			output,
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
-			a.Flags.EnableGC,
+			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
 		return ui, nil
@@ -194,8 +195,9 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
 			a.Flags.ShowApparentSize,
+			a.Flags.ShowRelativeSize,
 			a.Flags.Summarize,
-			a.Flags.EnableGC,
+			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
 	} else {
@@ -205,7 +207,8 @@ func (a *App) createUI() (UI, error) {
 			os.Stdout,
 			!a.Flags.NoColor,
 			a.Flags.ShowApparentSize,
-			a.Flags.EnableGC,
+			a.Flags.ShowRelativeSize,
+			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
 

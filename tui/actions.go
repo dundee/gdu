@@ -24,6 +24,7 @@ const linesTreshold = 20
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	var err error
+	ui.getter = getter
 	ui.devices, err = getter.GetDevicesInfo()
 	if err != nil {
 		return err
@@ -55,11 +56,8 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	go ui.updateProgress()
 
 	go func() {
-		if !ui.EnableGC {
-			defer debug.SetGCPercent(debug.SetGCPercent(-1))
-			defer debug.FreeOSMemory()
-		}
-		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc())
+		defer debug.FreeOSMemory()
+		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
 
 		if parentDir != nil {
 			currentDir.SetParent(parentDir)
