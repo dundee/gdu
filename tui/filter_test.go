@@ -25,7 +25,7 @@ func TestFiltering(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -74,7 +74,7 @@ func TestSwitchToTable(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -117,7 +117,7 @@ func TestExitFiltering(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 

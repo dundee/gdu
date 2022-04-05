@@ -102,7 +102,7 @@ func TestMoveLeftRight(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -154,7 +154,7 @@ func TestMoveRightOnDevice(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -194,7 +194,7 @@ func TestStopWithPrintingPath(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -225,7 +225,7 @@ func TestSpawnShell(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -319,7 +319,7 @@ func TestShowConfirm(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -359,7 +359,7 @@ func TestDelete(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -373,7 +373,7 @@ func TestDelete(t *testing.T) {
 
 	<-ui.done
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -395,7 +395,7 @@ func TestDeleteParent(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -425,7 +425,7 @@ func TestEmptyDir(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -439,7 +439,7 @@ func TestEmptyDir(t *testing.T) {
 
 	<-ui.done
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -462,7 +462,7 @@ func TestEmptyFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -480,7 +480,7 @@ func TestEmptyFile(t *testing.T) {
 
 	<-ui.done
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -501,7 +501,7 @@ func TestSortByApparentSize(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -525,7 +525,7 @@ func TestShowFileCount(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -549,7 +549,7 @@ func TestShowFileCountBW(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -573,7 +573,7 @@ func TestShowMtime(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -597,7 +597,7 @@ func TestShowMtimeBW(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -621,7 +621,7 @@ func TestShowRelativeBar(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -661,7 +661,7 @@ func TestRescan(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -686,7 +686,7 @@ func TestSorting(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -716,7 +716,7 @@ func TestShowFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -743,7 +743,7 @@ func TestShowInfoAndMoveAround(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 

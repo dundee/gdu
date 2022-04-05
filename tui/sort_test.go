@@ -171,7 +171,7 @@ func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bo
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
