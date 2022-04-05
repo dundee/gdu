@@ -72,7 +72,7 @@ func TestDeviceSelected(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -118,7 +118,7 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -146,7 +146,7 @@ func TestReadAnalysis(t *testing.T) {
 
 	<-ui.done // wait for reading
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -169,7 +169,7 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 
 	<-ui.done // wait for reading
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -189,7 +189,7 @@ func TestViewDirContents(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -225,7 +225,7 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -254,7 +254,7 @@ func TestViewFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -285,7 +285,7 @@ func TestShowInfo(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -315,7 +315,7 @@ func TestShowInfoBW(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -345,7 +345,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
@@ -402,7 +402,7 @@ func TestExitViewFile(t *testing.T) {
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 
