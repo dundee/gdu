@@ -15,12 +15,13 @@ var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
-	progress        *common.CurrentProgress
-	progressChan    chan common.CurrentProgress
-	progressOutChan chan common.CurrentProgress
-	doneChan        common.SignalGroup
-	wait            *WaitGroup
-	ignoreDir       common.ShouldDirBeIgnored
+	progress         *common.CurrentProgress
+	progressChan     chan common.CurrentProgress
+	progressOutChan  chan common.CurrentProgress
+	progressDoneChan chan struct{}
+	doneChan         common.SignalGroup
+	wait             *WaitGroup
+	ignoreDir        common.ShouldDirBeIgnored
 }
 
 // CreateAnalyzer returns Analyzer
@@ -30,10 +31,11 @@ func CreateAnalyzer() *ParallelAnalyzer {
 			ItemCount: 0,
 			TotalSize: int64(0),
 		},
-		progressChan:    make(chan common.CurrentProgress, 1),
-		progressOutChan: make(chan common.CurrentProgress, 1),
-		doneChan:        make(common.SignalGroup),
-		wait:            (&WaitGroup{}).Init(),
+		progressChan:     make(chan common.CurrentProgress, 1),
+		progressOutChan:  make(chan common.CurrentProgress, 1),
+		progressDoneChan: make(chan struct{}),
+		doneChan:         make(common.SignalGroup),
+		wait:             (&WaitGroup{}).Init(),
 	}
 }
 
@@ -52,6 +54,7 @@ func (a *ParallelAnalyzer) ResetProgress() {
 	a.progress = &common.CurrentProgress{}
 	a.progressChan = make(chan common.CurrentProgress, 1)
 	a.progressOutChan = make(chan common.CurrentProgress, 1)
+	a.progressDoneChan = make(chan struct{})
 	a.doneChan = make(common.SignalGroup)
 	a.wait = (&WaitGroup{}).Init()
 }
@@ -73,6 +76,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	dir.BasePath = filepath.Dir(path)
 	a.wait.Wait()
 
+	a.progressDoneChan <- struct{}{}
 	a.doneChan.Broadcast()
 
 	return dir
@@ -164,7 +168,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 func (a *ParallelAnalyzer) updateProgress() {
 	for {
 		select {
-		case <-a.doneChan:
+		case <-a.progressDoneChan:
 			return
 		case progress := <-a.progressChan:
 			a.progress.CurrentItemName = progress.CurrentItemName
