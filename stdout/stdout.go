@@ -303,7 +303,7 @@ func (ui *UI) updateProgress() {
 	}
 
 	progressChan := ui.Analyzer.GetProgressChan()
-	doneChan := ui.Analyzer.GetDoneChan()
+	doneChan := ui.Analyzer.GetDone()
 
 	var progress common.CurrentProgress
 

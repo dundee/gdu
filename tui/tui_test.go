@@ -69,8 +69,8 @@ func TestUpdateProgress(t *testing.T) {
 	defer simScreen.Fini()
 
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
-	done := ui.Analyzer.GetDoneChan()
-	done <- struct{}{}
+	done := ui.Analyzer.GetDone()
+	done.Broadcast()
 	ui.updateProgress()
 	assert.True(t, true)
 }

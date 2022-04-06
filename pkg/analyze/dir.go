@@ -18,7 +18,7 @@ type ParallelAnalyzer struct {
 	progress        *common.CurrentProgress
 	progressChan    chan common.CurrentProgress
 	progressOutChan chan common.CurrentProgress
-	doneChan        chan struct{}
+	doneChan        common.SignalGroup
 	wait            *WaitGroup
 	ignoreDir       common.ShouldDirBeIgnored
 }
@@ -32,7 +32,7 @@ func CreateAnalyzer() *ParallelAnalyzer {
 		},
 		progressChan:    make(chan common.CurrentProgress, 1),
 		progressOutChan: make(chan common.CurrentProgress, 1),
-		doneChan:        make(chan struct{}, 2),
+		doneChan:        make(common.SignalGroup),
 		wait:            (&WaitGroup{}).Init(),
 	}
 }
@@ -43,7 +43,7 @@ func (a *ParallelAnalyzer) GetProgressChan() chan common.CurrentProgress {
 }
 
 // GetDoneChan returns channel for checking when analysis is done
-func (a *ParallelAnalyzer) GetDoneChan() chan struct{} {
+func (a *ParallelAnalyzer) GetDone() common.SignalGroup {
 	return a.doneChan
 }
 
@@ -52,7 +52,7 @@ func (a *ParallelAnalyzer) ResetProgress() {
 	a.progress = &common.CurrentProgress{}
 	a.progressChan = make(chan common.CurrentProgress, 1)
 	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.doneChan = make(chan struct{}, 2)
+	a.doneChan = make(common.SignalGroup)
 	a.wait = (&WaitGroup{}).Init()
 }
 
@@ -73,9 +73,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	dir.BasePath = filepath.Dir(path)
 	a.wait.Wait()
 
-	a.doneChan <- struct{}{} // finish updateProgress here
-	a.doneChan <- struct{}{} // and there
-	a.doneChan <- struct{}{} // and manageMemoryUsage
+	a.doneChan.Broadcast()
 
 	return dir
 }

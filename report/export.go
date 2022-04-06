@@ -147,7 +147,7 @@ func (ui *UI) updateProgress() {
 	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
 	progressChan := ui.Analyzer.GetProgressChan()
-	doneChan := ui.Analyzer.GetDoneChan()
+	doneChan := ui.Analyzer.GetDone()
 
 	var progress common.CurrentProgress
 
