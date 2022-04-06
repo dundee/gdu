@@ -28,7 +28,7 @@ func TestAnalyzeDir(t *testing.T) {
 	progress := <-analyzer.GetProgressChan()
 	assert.GreaterOrEqual(t, progress.TotalSize, int64(0))
 
-	<-analyzer.GetDoneChan()
+	analyzer.GetDone().Wait()
 	analyzer.ResetProgress()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
@@ -93,7 +93,7 @@ func TestFlags(t *testing.T) {
 	dir := analyzer.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, false,
 	).(*Dir)
-	<-analyzer.GetDoneChan()
+	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	sort.Sort(dir.Files)
@@ -121,7 +121,7 @@ func TestHardlink(t *testing.T) {
 	dir := analyzer.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, false,
 	).(*Dir)
-	<-analyzer.GetDoneChan()
+	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, int64(7+4096*3), dir.Size) // file2 and file3 are counted just once for size
@@ -148,7 +148,7 @@ func TestErr(t *testing.T) {
 	dir := analyzer.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, false,
 	).(*Dir)
-	<-analyzer.GetDoneChan()
+	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, "test_dir", dir.GetName())
@@ -169,6 +169,6 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 	dir := analyzer.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, false,
 	)
-	<-analyzer.GetDoneChan()
+	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 }
