@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// LinuxDevicesInfoGetter retruns info for Linux devices
+// LinuxDevicesInfoGetter returns info for Linux devices
 type LinuxDevicesInfoGetter struct {
 	MountsPath string
 }
