@@ -51,7 +51,7 @@ func rebalanceGC(disabledGC *bool) {
 			*disabledGC = true
 		}
 	} else {
-		// the more memory we use and the less memory is free, the more aggresive the GC will be
+		// the more memory we use and the less memory is free, the more aggressive the GC will be
 		gcPercent := int(100 / float64(memStats.Alloc) * float64(free))
 		log.Printf(
 			"setting GC percent to %d, alloc: %d, free: %d",

@@ -117,7 +117,7 @@ Flags:
 
 Gdu has three modes: interactive (default), non-interactive and export.
 
-Non-interactive mode is started automtically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
+Non-interactive mode is started automatically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
 
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag.
 
@@ -158,7 +158,7 @@ As a result, the analysis will be about 25% slower and will consume about 30% le
 To change the level, you can set the `GOGC` environment variable to specify how often the garbage collection will happen.
 Lower value (than 100) means GC will run more often. Higher means less often. Negative number will stop GC.
 
-Example running gdu with constant GC, but not so aggresive as default:
+Example running gdu with constant GC, but not so aggressive as default:
 
 ```
 GOGC=200 gdu -g /
@@ -176,7 +176,7 @@ See `benchmark` target in [Makefile](Makefile) for more info.
 ## Profiling
 
 Gdu can collect profiling data when the `--enable-profiling` flag is set.
-The data are provided via embeded http server on URL `http://localhost:6060/debug/pprof/`.
+The data are provided via embedded http server on URL `http://localhost:6060/debug/pprof/`.
 
 You can then use e.g. `go tool pprof -web http://localhost:6060/debug/pprof/heap`
 to open the heap profile as SVG image in your web browser.
