@@ -5,6 +5,7 @@ CMD_GDU := cmd/gdu
 VERSION := $(shell git describe --tags 2>/dev/null)
 DATE := $(shell date +'%Y-%m-%d')
 GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw
+GOFLAGS_STATIC ?= -trimpath -mod=readonly -modcacherw
 LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.Version=$(VERSION)' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
@@ -19,6 +20,11 @@ build:
 	@echo "Version: " $(VERSION)
 	mkdir -p dist
 	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
+
+build-static:
+	@echo "Version: " $(VERSION)
+	mkdir -p dist
+	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
 
 build-all:
 	@echo "Version: " $(VERSION)
@@ -37,6 +43,7 @@ build-all:
 		$(PACKAGE)/$(CMD_GDU)
 
 	cd dist; GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o gdu_linux_amd64 $(PACKAGE)/$(CMD_GDU)
+	cd dist; GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o gdu_linux_amd64_static $(PACKAGE)/$(CMD_GDU)
 
 	cd dist; CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o gdu_linux_armv5l $(PACKAGE)/$(CMD_GDU)
 	cd dist; CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o gdu_linux_armv6l $(PACKAGE)/$(CMD_GDU)
