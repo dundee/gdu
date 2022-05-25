@@ -33,17 +33,17 @@ func TestFiltering(t *testing.T) {
 	ui.filterValue = ""
 	ui.showDir()
 
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa") // nothing is filtered
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc") // nothing is filtered
 
-	ui.filterValue = "cc"
+	ui.filterValue = "aa"
 	ui.showDir()
 
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc") // shows only cccc
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa") // shows only cccc
 
 	ui.hideFilterInput()
 	ui.showDir()
 
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa") // filtering reset
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc") // filtering reset
 }
 
 func TestFilteringWithoutCurrentDir(t *testing.T) {

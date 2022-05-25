@@ -29,6 +29,29 @@ func TestSortByUsage(t *testing.T) {
 	assert.Equal(t, int64(1), files[2].GetUsage())
 }
 
+func TestStableSortByUsage(t *testing.T) {
+	files := fs.Files{
+		&File{
+			Name:  "aaa",
+			Usage: 1,
+		},
+		&File{
+			Name:  "bbb",
+			Usage: 1,
+		},
+		&File{
+			Name:  "ccc",
+			Usage: 3,
+		},
+	}
+
+	sort.Sort(files)
+
+	assert.Equal(t, "ccc", files[0].GetName())
+	assert.Equal(t, "bbb", files[1].GetName())
+	assert.Equal(t, "aaa", files[2].GetName())
+}
+
 func TestSortByUsageAsc(t *testing.T) {
 	files := fs.Files{
 		&File{
