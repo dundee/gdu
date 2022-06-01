@@ -3,6 +3,7 @@ MAJOR_VER := v5
 PACKAGE := github.com/dundee/$(NAME)/$(MAJOR_VER)
 CMD_GDU := cmd/gdu
 VERSION := $(shell git describe --tags 2>/dev/null)
+NAMEVER := $(NAME)-$(subst v,,$(VERSION))
 DATE := $(shell date +'%Y-%m-%d')
 GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw
 GOFLAGS_STATIC ?= -trimpath -mod=readonly -modcacherw
@@ -11,10 +12,17 @@ LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
 	-X '$(PACKAGE)/build.Time=$(shell LC_ALL=en_US.UTF-8 date)'
 
-all: clean build-all man clean-uncompressed-dist shasums
+all: clean tarball build-all man clean-uncompressed-dist shasums
 
 run:
 	go run $(PACKAGE)/$(CMD_GDU)
+
+vendor: go.mod go.sum
+	go mod vendor
+
+tarball: vendor
+	-mkdir dist
+	tar czf dist/$(NAMEVER).tgz --transform "s,^,$(NAMEVER)/," --exclude dist --exclude test_dir --exclude coverage.txt *
 
 build:
 	@echo "Version: " $(VERSION)
@@ -99,6 +107,7 @@ clean:
 	go mod tidy
 	-rm coverage.txt
 	-rm -r test_dir
+	-rm -r vendor
 	-rm -r dist
 
 clean-uncompressed-dist:
@@ -111,4 +120,4 @@ shasums:
 release:
 	gh release create -t "gdu $(VERSION)" $(VERSION) ./dist/*
 
-.PHONY: run build test coverage coverage-html clean man
+.PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release
