@@ -186,6 +186,19 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestReadAnalysisWithSummarize(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), " gdu\n")
+}
+
 func TestMaxInt(t *testing.T) {
 	assert.Equal(t, 5, maxInt(2, 5))
 	assert.Equal(t, 4, maxInt(4, 2))
