@@ -3,6 +3,8 @@ package fs
 import (
 	"io"
 	"time"
+
+	"github.com/maruel/natural"
 )
 
 // Item is a FS item (file or dir)
@@ -78,7 +80,7 @@ func (f Files) Less(i, j int) bool {
 		return f[i].GetUsage() < f[j].GetUsage()
 	}
 	// if usage is the same, sort by name
-	return f[i].GetName() < f[j].GetName()
+	return natural.Less(f[i].GetName(), f[j].GetName())
 }
 
 // ByApparentSize sorts files by apparent size
@@ -91,7 +93,7 @@ func (f ByApparentSize) Less(i, j int) bool {
 		return f[i].GetSize() < f[j].GetSize()
 	}
 	// if size is the same, sort by name
-	return f[i].GetName() < f[j].GetName()
+	return natural.Less(f[i].GetName(), f[j].GetName())
 }
 
 // ByItemCount sorts files by item count
@@ -104,7 +106,7 @@ func (f ByItemCount) Less(i, j int) bool {
 		return f[i].GetItemCount() < f[j].GetItemCount()
 	}
 	// if item count is the same, sort by name
-	return f[i].GetName() < f[j].GetName()
+	return natural.Less(f[i].GetName(), f[j].GetName())
 }
 
 // ByName sorts files by name
@@ -112,7 +114,7 @@ type ByName Files
 
 func (f ByName) Len() int           { return len(f) }
 func (f ByName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
-func (f ByName) Less(i, j int) bool { return f[i].GetName() < f[j].GetName() }
+func (f ByName) Less(i, j int) bool { return natural.Less(f[i].GetName(), f[j].GetName()) }
 
 // ByMtime sorts files by name
 type ByMtime Files
@@ -124,5 +126,5 @@ func (f ByMtime) Less(i, j int) bool {
 		return f[i].GetMtime().Before(f[j].GetMtime())
 	}
 	// if item count is the same, sort by name
-	return f[i].GetName() < f[j].GetName()
+	return natural.Less(f[i].GetName(), f[j].GetName())
 }
