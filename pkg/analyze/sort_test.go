@@ -152,6 +152,26 @@ func TestSortByName(t *testing.T) {
 	assert.Equal(t, "aa", files[2].GetName())
 }
 
+func TestNaturalSortByNameAsc(t *testing.T) {
+	files := fs.Files{
+		&File{
+			Name: "aa3",
+		},
+		&File{
+			Name: "aa20",
+		},
+		&File{
+			Name: "aa100",
+		},
+	}
+
+	sort.Sort(fs.ByName(files))
+
+	assert.Equal(t, "aa3", files[0].GetName())
+	assert.Equal(t, "aa20", files[1].GetName())
+	assert.Equal(t, "aa100", files[2].GetName())
+}
+
 func TestSortByMtime(t *testing.T) {
 	files := fs.Files{
 		&File{
