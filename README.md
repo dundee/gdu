@@ -83,11 +83,13 @@ Flags:
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
+      --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
+  -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
   -s, --summarize                     Show only a total in non-interactive mode
   -v, --version                       Print version
