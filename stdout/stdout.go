@@ -162,7 +162,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 }
 
 func (ui *UI) showDir(dir fs.Item) {
-	sort.Sort(dir.GetFiles())
+	sort.Sort(sort.Reverse(dir.GetFiles()))
 
 	for _, file := range dir.GetFiles() {
 		ui.printItem(file)

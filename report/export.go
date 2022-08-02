@@ -100,7 +100,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 
 	wait.Wait()
 
-	sort.Sort(dir.GetFiles())
+	sort.Sort(sort.Reverse(dir.GetFiles()))
 
 	var buff bytes.Buffer
 
