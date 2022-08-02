@@ -75,10 +75,10 @@ func (f Files) Len() int      { return len(f) }
 func (f Files) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 func (f Files) Less(i, j int) bool {
 	if f[i].GetUsage() != f[j].GetUsage() {
-		return f[i].GetUsage() > f[j].GetUsage()
+		return f[i].GetUsage() < f[j].GetUsage()
 	}
 	// if usage is the same, sort by name
-	return f[i].GetName() > f[j].GetName()
+	return f[i].GetName() < f[j].GetName()
 }
 
 // ByApparentSize sorts files by apparent size
@@ -88,10 +88,10 @@ func (f ByApparentSize) Len() int      { return len(f) }
 func (f ByApparentSize) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 func (f ByApparentSize) Less(i, j int) bool {
 	if f[i].GetSize() != f[j].GetSize() {
-		return f[i].GetSize() > f[j].GetSize()
+		return f[i].GetSize() < f[j].GetSize()
 	}
 	// if size is the same, sort by name
-	return f[i].GetName() > f[j].GetName()
+	return f[i].GetName() < f[j].GetName()
 }
 
 // ByItemCount sorts files by item count
@@ -101,10 +101,10 @@ func (f ByItemCount) Len() int      { return len(f) }
 func (f ByItemCount) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 func (f ByItemCount) Less(i, j int) bool {
 	if f[i].GetItemCount() != f[j].GetItemCount() {
-		return f[i].GetItemCount() > f[j].GetItemCount()
+		return f[i].GetItemCount() < f[j].GetItemCount()
 	}
 	// if item count is the same, sort by name
-	return f[i].GetName() > f[j].GetName()
+	return f[i].GetName() < f[j].GetName()
 }
 
 // ByName sorts files by name
@@ -112,7 +112,7 @@ type ByName Files
 
 func (f ByName) Len() int           { return len(f) }
 func (f ByName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
-func (f ByName) Less(i, j int) bool { return f[i].GetName() > f[j].GetName() }
+func (f ByName) Less(i, j int) bool { return f[i].GetName() < f[j].GetName() }
 
 // ByMtime sorts files by name
 type ByMtime Files
@@ -121,8 +121,8 @@ func (f ByMtime) Len() int      { return len(f) }
 func (f ByMtime) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 func (f ByMtime) Less(i, j int) bool {
 	if !f[i].GetMtime().Equal(f[j].GetMtime()) {
-		return f[i].GetMtime().After(f[j].GetMtime())
+		return f[i].GetMtime().Before(f[j].GetMtime())
 	}
 	// if item count is the same, sort by name
-	return f[i].GetName() > f[j].GetName()
+	return f[i].GetName() < f[j].GetName()
 }
