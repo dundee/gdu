@@ -15,6 +15,42 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return key
 	}
 
+	key = ui.handleClosingModals(key)
+	if key == nil {
+		return nil
+	}
+	key = ui.handleInfoPageEvents(key)
+	if key == nil {
+		return nil
+	}
+	key = ui.handleBreakingActions(key)
+	if key == nil {
+		return nil
+	}
+
+	if ui.pages.HasPage("confirm") ||
+		ui.pages.HasPage("progress") ||
+		ui.pages.HasPage("deleting") ||
+		ui.pages.HasPage("emptying") ||
+		ui.pages.HasPage("help") {
+		return key
+	}
+
+	key = ui.handleLeftRight(key)
+	if key == nil {
+		return nil
+	}
+
+	if key.Key() == tcell.KeyTab && ui.filteringInput != nil {
+		ui.filtering = true
+		ui.app.SetFocus(ui.filteringInput)
+		return nil
+	}
+
+	return ui.handleMainActions(key)
+}
+
+func (ui *UI) handleClosingModals(key *tcell.EventKey) *tcell.EventKey {
 	if key.Key() == tcell.KeyEsc || key.Rune() == 'q' {
 		if ui.pages.HasPage("help") {
 			ui.pages.RemovePage("help")
@@ -27,7 +63,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 	}
+	return key
+}
 
+func (ui *UI) handleInfoPageEvents(key *tcell.EventKey) *tcell.EventKey {
 	if ui.pages.HasPage("info") {
 		switch key.Rune() {
 		case 'i':
@@ -51,9 +90,12 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 			}
 			ui.table.Select(row, column)
 		}
-		defer ui.showInfo() // refresh file info after any change
+		ui.showInfo() // refresh file info after any change
 	}
+	return key
+}
 
+func (ui *UI) handleBreakingActions(key *tcell.EventKey) *tcell.EventKey {
 	switch key.Rune() {
 	case 'Q':
 		ui.app.Stop()
@@ -73,15 +115,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		}
 		ui.showHelp()
 	}
+	return key
+}
 
-	if ui.pages.HasPage("confirm") ||
-		ui.pages.HasPage("progress") ||
-		ui.pages.HasPage("deleting") ||
-		ui.pages.HasPage("emptying") ||
-		ui.pages.HasPage("help") {
-		return key
-	}
-
+func (ui *UI) handleLeftRight(key *tcell.EventKey) *tcell.EventKey {
 	if key.Rune() == 'h' || key.Key() == tcell.KeyLeft {
 		ui.handleLeft()
 		return nil
@@ -91,13 +128,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.handleRight()
 		return nil
 	}
+	return key
+}
 
-	if key.Key() == tcell.KeyTab && ui.filteringInput != nil {
-		ui.filtering = true
-		ui.app.SetFocus(ui.filteringInput)
-		return nil
-	}
-
+func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	switch key.Rune() {
 	case 'd':
 		ui.handleDelete(false)
