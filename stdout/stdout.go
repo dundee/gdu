@@ -25,6 +25,7 @@ type UI struct {
 	orange    *color.Color
 	blue      *color.Color
 	summarize bool
+	noPrefix  bool
 }
 
 var progressRunes = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
@@ -39,6 +40,7 @@ func CreateStdoutUI(
 	summarize bool,
 	constGC bool,
 	useSIPrefix bool,
+	noPrefix bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -52,6 +54,7 @@ func CreateStdoutUI(
 		},
 		output:    output,
 		summarize: summarize,
+		noPrefix:  noPrefix,
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -336,6 +339,9 @@ func (ui *UI) updateProgress() {
 }
 
 func (ui *UI) formatSize(size int64) string {
+	if ui.noPrefix {
+		return ui.orange.Sprintf("%d", size)
+	}
 	if ui.UseSIPrefix {
 		return ui.formatWithDecPrefix(size)
 	}

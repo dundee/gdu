@@ -59,6 +59,7 @@ type Flags struct {
 	ConstGC           bool
 	Summarize         bool
 	UseSIPrefix       bool
+	NoPrefix          bool
 }
 
 // App defines the main application
@@ -105,6 +106,10 @@ func (a *App) Run() (err error) {
 	log.SetOutput(f)
 
 	log.Printf("Runtime flags: %+v", *a.Flags)
+
+	if a.Flags.NoPrefix && a.Flags.UseSIPrefix {
+		return fmt.Errorf("--no-prefix and --si cannot be used at once")
+	}
 
 	path := a.getPath()
 	path, _ = filepath.Abs(path)
@@ -199,6 +204,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.Summarize,
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
+			a.Flags.NoPrefix,
 		)
 	} else {
 		ui = tui.CreateUI(
