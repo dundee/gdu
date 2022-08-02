@@ -39,7 +39,7 @@ func TestSortByName(t *testing.T) {
 
 	devices := Devices{item, nested, notNested}
 
-	sort.Sort(ByName(devices))
+	sort.Sort(sort.Reverse(ByName(devices)))
 
 	assert.Equal(t, "/zzz/yyy", devices[0].Name)
 	assert.Equal(t, "/xxx/yyy", devices[1].Name)
@@ -65,7 +65,7 @@ func TestSortByUsedSize(t *testing.T) {
 
 	devices := Devices{item, nested, notNested}
 
-	sort.Sort(sort.Reverse(ByUsedSize(devices)))
+	sort.Sort(ByUsedSize(devices))
 
 	assert.Equal(t, "zzz", devices[0].Name)
 	assert.Equal(t, "yyy", devices[1].Name)

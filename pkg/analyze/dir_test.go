@@ -96,7 +96,7 @@ func TestFlags(t *testing.T) {
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
-	sort.Sort(dir.Files)
+	sort.Sort(sort.Reverse(dir.Files))
 
 	assert.Equal(t, int64(28+4096*4), dir.Size)
 	assert.Equal(t, 7, dir.ItemCount)
