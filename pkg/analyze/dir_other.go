@@ -16,8 +16,8 @@ func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
 
 func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 	stat, err := os.Stat(path)
-    if err != nil {
+	if err != nil {
 		return
-    }
+	}
 	dir.Mtime = stat.ModTime()
 }
