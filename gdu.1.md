@@ -57,6 +57,8 @@ non-interactive mode
 
 **\--no-prefix**\[=false\] Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
 
+**\--no-mouse**\[=false\] Do not use mouse
+
 **-f**, **\----input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 
 **-o**, **\----output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.

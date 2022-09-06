@@ -113,6 +113,7 @@ func CreateUI(
 	})
 
 	ui.app.SetInputCapture(ui.keyPressed)
+	ui.app.SetMouseCapture(ui.onMouse)
 
 	var textColor, textBgColor tcell.Color
 	if ui.UseColors {
