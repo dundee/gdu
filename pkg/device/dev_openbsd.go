@@ -4,6 +4,7 @@
 package device
 
 import (
+	"fmt"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -17,7 +18,7 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 			info := &unix.Statfs_t{}
 			err := unix.Statfs(mount.MountPoint, info)
 			if err != nil && !ignoreErrors {
-				return nil, err
+				return nil, fmt.Errorf("getting stats for mount point: \"%s\", %w", mount.MountPoint, err)
 			}
 
 			mount.Size = int64(info.F_bsize) * int64(info.F_blocks)
