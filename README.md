@@ -83,6 +83,7 @@ Flags:
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
+      --no-mouse                      Do not use mouse
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
   -n, --non-interactive               Do not run in interactive mode

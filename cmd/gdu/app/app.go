@@ -51,6 +51,7 @@ type Flags struct {
 	ShowRelativeSize  bool
 	ShowVersion       bool
 	NoColor           bool
+	NoMouse           bool
 	NonInteractive    bool
 	NoProgress        bool
 	NoCross           bool

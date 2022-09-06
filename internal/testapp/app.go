@@ -81,6 +81,13 @@ func (app *MockedApp) SetInputCapture(capture func(event *tcell.EventKey) *tcell
 	return nil
 }
 
+// SetMouseCapture does nothing
+func (app *MockedApp) SetMouseCapture(
+	capture func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction),
+) *tview.Application {
+	return nil
+}
+
 // QueueUpdateDraw does nothing
 func (app *MockedApp) QueueUpdateDraw(f func()) *tview.Application {
 	app.mutex.Lock()

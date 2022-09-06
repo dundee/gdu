@@ -54,6 +54,7 @@ func init() {
 	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
+	flags.BoolVar(&af.NoMouse, "no-mouse", false, "Do not use mouse")
 }
 
 func runE(command *cobra.Command, args []string) error {
@@ -87,6 +88,10 @@ func runE(command *cobra.Command, args []string) error {
 
 		termApp = tview.NewApplication()
 		termApp.SetScreen(screen)
+
+		if !af.NoMouse {
+			termApp.EnableMouse(true)
+		}
 	}
 
 	a := app.App{
