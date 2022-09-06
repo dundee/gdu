@@ -50,7 +50,7 @@ func readMountOutput(rdr io.Reader) (Devices, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		re := regexp.MustCompile("^(.*) on (/.*) \\(([^)]+)\\)$")
+		re := regexp.MustCompile("^(.*) on (/.*) type (.*) \\(([^)]+)\\)$")
 		parts := re.FindAllStringSubmatch(line, -1)
 
 		if len(parts) < 1 {
