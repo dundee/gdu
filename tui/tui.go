@@ -224,6 +224,8 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 	ui.resetSorting()
 
+	ui.Analyzer.ResetProgress()
+	ui.linkedItems = make(fs.HardLinkedItems)
 	err = ui.AnalyzePath(selectedDevice.MountPoint, nil)
 	if err != nil {
 		ui.showErr("Error analyzing device", err)
