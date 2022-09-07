@@ -61,7 +61,10 @@ func init() {
 	flags.Bool("no-mouse", false, "Do not use mouse")
 	flags.Bool("write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 
-	viper.BindPFlags(flags)
+	err := viper.BindPFlags(flags)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func initConfig() error {
