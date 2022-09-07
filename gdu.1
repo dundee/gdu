@@ -14,7 +14,7 @@
 . ftr VB CB
 . ftr VBI CBI
 .\}
-.TH "gdu" "1" "2022-09-06" "" ""
+.TH "gdu" "1" "2022-09-07" "" ""
 .hy
 .SH NAME
 .PP
@@ -81,6 +81,11 @@ If the file is \[dq]-\[dq], read from standard input.
 \f[B]-o\f[R], \f[B]-\[em]output-file\f[R] Export all info into file as
 JSON.
 If the file is \[dq]-\[dq], write to standard output.
+.PP
+\f[B]--config-file\f[R]=\[dq]$HOME/.gdu.yaml\[dq] Read config from file
+.PP
+\f[B]--write-config\f[R][=false] Write current configuration to file
+(default is $HOME/.gdu.yaml)
 .PP
 \f[B]-g\f[R], \f[B]--const-gc\f[R][=false] Enable memory garbage
 collection during analysis with constant level set by GOGC
