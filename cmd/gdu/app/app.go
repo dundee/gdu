@@ -39,6 +39,7 @@ type UI interface {
 
 // Flags define flags accepted by Run
 type Flags struct {
+	CfgFile           string
 	LogFile           string
 	InputFile         string
 	OutputFile        string
@@ -61,6 +62,7 @@ type Flags struct {
 	Summarize         bool
 	UseSIPrefix       bool
 	NoPrefix          bool
+	WriteConfig       bool
 }
 
 // App defines the main application
@@ -81,10 +83,7 @@ func init() {
 
 // Run starts gdu main logic
 func (a *App) Run() (err error) {
-	var (
-		f  *os.File
-		ui UI
-	)
+	var ui UI
 
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
@@ -92,19 +91,6 @@ func (a *App) Run() (err error) {
 		fmt.Fprintln(a.Writer, "Built user:\t", build.User)
 		return
 	}
-
-	f, err = os.OpenFile(a.Flags.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		err = fmt.Errorf("opening log file: %w", err)
-		return
-	}
-	defer func() {
-		cerr := f.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-	log.SetOutput(f)
 
 	log.Printf("Runtime flags: %+v", *a.Flags)
 

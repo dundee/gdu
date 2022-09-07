@@ -71,6 +71,7 @@ Using curl:
   gdu [flags] [directory_to_scan]
 
 Flags:
+      --config-file string            Read config from file (default is $HOME/.gdu.yaml)
   -g, --const-gc                      Enable memory garbage collection during analysis with constant level set by GOGC
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -h, --help                          help for gdu
@@ -94,6 +95,7 @@ Flags:
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
   -s, --summarize                     Show only a total in non-interactive mode
   -v, --version                       Print version
+      --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
 ```
 
 ## Examples
@@ -140,6 +142,25 @@ flag with following meaning:
 * `H` Same file was already counted (hard link).
 
 * `e` Directory is empty.
+
+## Configuration file
+
+Gdu can read (and write) YAML configuration file.
+It's stored in $HOME/.gdu.yaml by default.
+
+### Examples
+
+* To configure gdu to permanently run in gray-scale color mode:
+
+```
+echo "no-color: true" > ~/.gdu.yaml
+```
+
+* To save the current configuration
+
+```
+gdu --write-config
+```
 
 ## Memory usage
 

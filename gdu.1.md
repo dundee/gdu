@@ -63,6 +63,10 @@ non-interactive mode
 
 **-o**, **\----output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
 
+**\--config-file**=\"$HOME/.gdu.yaml\"             Read config from file
+
+**\--write-config**\[=false\] Write current configuration to file (default is $HOME/.gdu.yaml)
+
 **-g**, **\--const-gc**\[=false\] Enable memory garbage collection during analysis with constant level set by GOGC
 
 **\--enable-profiling**\[=false\] Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
