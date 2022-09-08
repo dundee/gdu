@@ -83,10 +83,10 @@ show-man:
 	pandoc gdu.1.date.md -s -t man | man -l -
 
 test:
-	go test -v ./...
+	gotestsum
 
 coverage:
-	go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+	gotestsum -- -race -coverprofile=coverage.txt -covermode=atomic ./...
 
 coverage-html: coverage
 	go tool cover -html=coverage.txt
@@ -120,5 +120,8 @@ shasums:
 
 release:
 	gh release create -t "gdu $(VERSION)" $(VERSION) ./dist/*
+
+install-dev-dependencies:
+	go install gotest.tools/gotestsum@latest
 
 .PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release

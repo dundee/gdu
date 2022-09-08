@@ -190,6 +190,7 @@ GOGC=200 gdu -g /
 
 ## Running tests
 
+    make install-dev-dependencies
     make test
 
 ## Benchmarks
