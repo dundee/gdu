@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,13 +11,14 @@ import (
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
 	"github.com/dundee/gdu/v5/pkg/device"
 )
 
 var af *app.Flags
+var configErr error
 
 var rootCmd = &cobra.Command{
 	Use:   "gdu [directory_to_scan]",
@@ -34,86 +36,50 @@ However HDDs work as well, but the performance gain is not so huge.
 func init() {
 	af = &app.Flags{}
 	flags := rootCmd.Flags()
-	flags.String("config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
-	flags.StringP("log-file", "l", "/dev/null", "Path to a logfile")
-	flags.StringP("output-file", "o", "", "Export all info into file as JSON")
-	flags.StringP("input-file", "f", "", "Import analysis from JSON file")
-	flags.IntP("max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that GDU will use. %d cores available", runtime.NumCPU()))
-	flags.BoolP("version", "v", false, "Print version")
+	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
+	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
+	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
+	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that GDU will use. %d cores available", runtime.NumCPU()))
+	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
 
-	flags.StringSliceP("ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
-	flags.StringSliceP("ignore-dirs-pattern", "I", []string{}, "Absolute path patterns to ignore (separated by comma)")
-	flags.StringP("ignore-from", "X", "", "Read absolute path patterns to ignore from file")
-	flags.BoolP("no-hidden", "H", false, "Ignore hidden directories (beginning with dot)")
-	flags.BoolP("no-cross", "x", false, "Do not cross filesystem boundaries")
-	flags.BoolP("const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
-	flags.Bool("enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
+	flags.StringSliceVarP(&af.IgnoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"}, "Absolute paths to ignore (separated by comma)")
+	flags.StringSliceVarP(&af.IgnoreDirPatterns, "ignore-dirs-pattern", "I", []string{}, "Absolute path patterns to ignore (separated by comma)")
+	flags.StringVarP(&af.IgnoreFromFile, "ignore-from", "X", "", "Read absolute path patterns to ignore from file")
+	flags.BoolVarP(&af.NoHidden, "no-hidden", "H", false, "Ignore hidden directories (beginning with dot)")
+	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
+	flags.BoolVarP(&af.ConstGC, "const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
+	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
 
-	flags.BoolP("show-disks", "d", false, "Show all mounted disks")
-	flags.BoolP("show-apparent-size", "a", false, "Show apparent size")
-	flags.BoolP("show-relative-size", "B", false, "Show relative size")
-	flags.BoolP("no-color", "c", false, "Do not use colorized output")
-	flags.BoolP("non-interactive", "n", false, "Do not run in interactive mode")
-	flags.BoolP("no-progress", "p", false, "Do not show progress in non-interactive mode")
-	flags.BoolP("summarize", "s", false, "Show only a total in non-interactive mode")
-	flags.Bool("si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
-	flags.Bool("no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
-	flags.Bool("no-mouse", false, "Do not use mouse")
-	flags.Bool("write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
+	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
+	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")
+	flags.BoolVarP(&af.ShowRelativeSize, "show-relative-size", "B", false, "Show relative size")
+	flags.BoolVarP(&af.NoColor, "no-color", "c", false, "Do not use colorized output")
+	flags.BoolVarP(&af.NonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")
+	flags.BoolVarP(&af.NoProgress, "no-progress", "p", false, "Do not show progress in non-interactive mode")
+	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")
+	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
+	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
+	flags.BoolVar(&af.NoMouse, "no-mouse", false, "Do not use mouse")
+	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 
-	err := viper.BindPFlags(flags)
-	if err != nil {
-		panic(err)
-	}
+	initConfig()
 }
 
-func initConfig() error {
-	if af.CfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(af.CfgFile)
-	} else {
-		// Find home directory.
+func initConfig() {
+	if af.CfgFile == "" {
 		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".gdu" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".gdu.yaml")
+		if err != nil {
+			configErr = err
+			return
+		}
+		af.CfgFile = filepath.Join(home, ".gdu.yaml")
+	}
+	data, err := os.ReadFile(af.CfgFile)
+	if err != nil {
+		return // config file does not exist, return
 	}
 
-	viper.AutomaticEnv()
-
-	return viper.ReadInConfig()
-}
-
-func setAppFlags() {
-	af.CfgFile = viper.GetString("config-file")
-	af.LogFile = viper.GetString("log-file")
-	af.OutputFile = viper.GetString("output-file")
-	af.InputFile = viper.GetString("input-file")
-	af.MaxCores = viper.GetInt("max-cores")
-	af.ShowVersion = viper.GetBool("version")
-
-	af.IgnoreDirs = viper.GetStringSlice("ignore-dirs")
-	af.IgnoreDirPatterns = viper.GetStringSlice("ignore-dirs-pattern")
-	af.IgnoreFromFile = viper.GetString("ignore-from")
-	af.NoHidden = viper.GetBool("no-hidden")
-	af.NoCross = viper.GetBool("no-cross")
-	af.ConstGC = viper.GetBool("const-gc")
-	af.Profiling = viper.GetBool("enable-profiling")
-
-	af.ShowDisks = viper.GetBool("show-disks")
-	af.ShowApparentSize = viper.GetBool("show-apparent-size")
-	af.ShowRelativeSize = viper.GetBool("show-relative-size")
-	af.NoColor = viper.GetBool("no-color")
-	af.NonInteractive = viper.GetBool("non-interactive")
-	af.NoProgress = viper.GetBool("no-progress")
-	af.Summarize = viper.GetBool("summarize")
-	af.UseSIPrefix = viper.GetBool("si")
-	af.NoPrefix = viper.GetBool("no-prefix")
-	af.NoMouse = viper.GetBool("no-mouse")
-	af.WriteConfig = viper.GetBool("write-config")
+	configErr = yaml.Unmarshal(data, &af)
 }
 
 func runE(command *cobra.Command, args []string) error {
@@ -123,12 +89,12 @@ func runE(command *cobra.Command, args []string) error {
 		err     error
 	)
 
-	coerr := initConfig()
-
-	setAppFlags()
-
 	if af.WriteConfig {
-		err = viper.WriteConfig()
+		data, err := yaml.Marshal(af)
+		if err != nil {
+			return fmt.Errorf("Error marshaling config file: %w", err)
+		}
+		err = os.WriteFile(af.CfgFile, data, 0600)
 		if err != nil {
 			return fmt.Errorf("Error writing config file: %w", err)
 		}
@@ -151,8 +117,8 @@ func runE(command *cobra.Command, args []string) error {
 	}
 	log.SetOutput(f)
 
-	if coerr != nil {
-		log.Printf("Error reading config file: %s", coerr.Error())
+	if configErr != nil {
+		log.Printf("Error reading config file: %s", configErr.Error())
 	}
 
 	istty := isatty.IsTerminal(os.Stdout.Fd())

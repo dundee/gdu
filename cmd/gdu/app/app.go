@@ -39,30 +39,30 @@ type UI interface {
 
 // Flags define flags accepted by Run
 type Flags struct {
-	CfgFile           string
-	LogFile           string
-	InputFile         string
-	OutputFile        string
-	IgnoreDirs        []string
-	IgnoreDirPatterns []string
-	IgnoreFromFile    string
-	MaxCores          int
-	ShowDisks         bool
-	ShowApparentSize  bool
-	ShowRelativeSize  bool
-	ShowVersion       bool
-	NoColor           bool
-	NoMouse           bool
-	NonInteractive    bool
-	NoProgress        bool
-	NoCross           bool
-	NoHidden          bool
-	Profiling         bool
-	ConstGC           bool
-	Summarize         bool
-	UseSIPrefix       bool
-	NoPrefix          bool
-	WriteConfig       bool
+	CfgFile           string   `yaml:"-"`
+	LogFile           string   `yaml:"log-file"`
+	InputFile         string   `yaml:"input-file"`
+	OutputFile        string   `yaml:"output-file"`
+	IgnoreDirs        []string `yaml:"ignore-dirs"`
+	IgnoreDirPatterns []string `yaml:"ignore-dir-patterns"`
+	IgnoreFromFile    string   `yaml:"ignore-from-file"`
+	MaxCores          int      `yaml:"max-cores"`
+	ShowDisks         bool     `yaml:"-"`
+	ShowApparentSize  bool     `yaml:"show-apparent-size"`
+	ShowRelativeSize  bool     `yaml:"show-relative-size"`
+	ShowVersion       bool     `yaml:"-"`
+	NoColor           bool     `yaml:"no-color"`
+	NoMouse           bool     `yaml:"no-mouse"`
+	NonInteractive    bool     `yaml:"non-interactive"`
+	NoProgress        bool     `yaml:"no-progress"`
+	NoCross           bool     `yaml:"no-cross"`
+	NoHidden          bool     `yaml:"no-hidden"`
+	Profiling         bool     `yaml:"profiling"`
+	ConstGC           bool     `yaml:"const-gc"`
+	Summarize         bool     `yaml:"summarize"`
+	UseSIPrefix       bool     `yaml:"use-si-prefix"`
+	NoPrefix          bool     `yaml:"no-prefix"`
+	WriteConfig       bool     `yaml:"write-config"`
 }
 
 // App defines the main application
