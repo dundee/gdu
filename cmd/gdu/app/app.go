@@ -63,6 +63,18 @@ type Flags struct {
 	UseSIPrefix       bool     `yaml:"use-si-prefix"`
 	NoPrefix          bool     `yaml:"no-prefix"`
 	WriteConfig       bool     `yaml:"write-config"`
+	Style             Style    `yaml:"style"`
+}
+
+// Style define style config
+type Style struct {
+	SelectedRow ColorStyle `yaml:"selected-row"`
+}
+
+// ColorStyle defines styling of some item
+type ColorStyle struct {
+	TextColor       string `yaml:"text-color"`
+	BackgroundColor string `yaml:"background-color"`
 }
 
 // App defines the main application
@@ -194,6 +206,19 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.NoPrefix,
 		)
 	} else {
+		var opts []tui.Option
+
+		if a.Flags.Style.SelectedRow.TextColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetSelectedTextColor(tcell.GetColor(a.Flags.Style.SelectedRow.TextColor))
+			})
+		}
+		if a.Flags.Style.SelectedRow.BackgroundColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
+			})
+		}
+
 		ui = tui.CreateUI(
 			a.TermApp,
 			a.Screen,
@@ -203,6 +228,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ShowRelativeSize,
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
+			opts...,
 		)
 
 		if !a.Flags.NoColor {
