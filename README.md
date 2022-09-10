@@ -148,20 +148,6 @@ flag with following meaning:
 Gdu can read (and write) YAML configuration file.
 It's stored in $HOME/.gdu.yaml by default.
 
-## Styling
-
-There are wast ways how terminals can be colored.
-Some gdu primitives (like basic text) addapt to different color schemas, but the selected/highlighted row does not.
-
-If the default look is not sufficient, it can be changed in configuration file, e.g.:
-
-```
-style:
-    selected-row:
-        text-color: black
-        background-color: "#ff0000"
-```
-
 ### Examples
 
 * To configure gdu to permanently run in gray-scale color mode:
@@ -174,6 +160,20 @@ echo "no-color: true" > ~/.gdu.yaml
 
 ```
 gdu --write-config
+```
+
+## Styling
+
+There are wast ways how terminals can be colored.
+Some gdu primitives (like basic text) addapt to different color schemas, but the selected/highlighted row does not.
+
+If the default look is not sufficient, it can be changed in configuration file, e.g.:
+
+```
+style:
+    selected-row:
+        text-color: black
+        background-color: "#ff0000"
 ```
 
 ## Memory usage
