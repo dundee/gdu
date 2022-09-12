@@ -100,6 +100,10 @@ func runE(command *cobra.Command, args []string) error {
 		}
 	}
 
+	if runtime.GOOS == "windows" && af.LogFile == "/dev/null" {
+		af.LogFile = "nul"
+	}
+
 	var f *os.File
 	if af.LogFile == "-" {
 		f = os.Stdout
@@ -126,9 +130,6 @@ func runE(command *cobra.Command, args []string) error {
 	// we are not able to analyze disk usage on Windows and Plan9
 	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
 		af.ShowApparentSize = true
-	}
-	if runtime.GOOS == "windows" && af.LogFile == "/dev/null" {
-		af.LogFile = "nul"
 	}
 
 	if !af.ShowVersion && !af.NonInteractive && istty && af.OutputFile == "" {
