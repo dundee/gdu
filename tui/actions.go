@@ -46,7 +46,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 10, 1, false).
-			AddItem(ui.progress, 8, 1, false).
+			AddItem(ui.progress, 10, 1, false).
 			AddItem(nil, 10, 1, false), 0, 50, false).
 		AddItem(nil, 0, 1, false)
 
