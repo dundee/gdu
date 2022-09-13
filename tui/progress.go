@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/path"
 )
 
 func (ui *UI) updateProgress() {
@@ -33,7 +34,7 @@ func (ui *UI) updateProgress() {
 					color +
 					ui.formatSize(totalSize, false, false) +
 					"[white:black:-]\nCurrent item: [white:black:b]" +
-					currentItem)
+					path.ShortenPath(currentItem, 70))
 			})
 		}(progress.ItemCount, progress.TotalSize, progress.CurrentItemName)
 
