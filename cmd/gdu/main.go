@@ -11,6 +11,7 @@ import (
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
@@ -36,6 +37,7 @@ However HDDs work as well, but the performance gain is not so huge.
 func init() {
 	af = &app.Flags{}
 	flags := rootCmd.Flags()
+	flags.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
@@ -66,6 +68,10 @@ func init() {
 }
 
 func initConfig() {
+	s := pflag.NewFlagSet("config", pflag.ContinueOnError)
+	s.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
+	s.Parse(os.Args[1:])
+
 	if af.CfgFile == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
