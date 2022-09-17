@@ -70,7 +70,11 @@ func init() {
 func initConfig() {
 	s := pflag.NewFlagSet("config", pflag.ContinueOnError)
 	s.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
-	s.Parse(os.Args[1:])
+	err := s.Parse(os.Args[1:])
+	if err != nil {
+		configErr = err
+		return
+	}
 
 	if af.CfgFile == "" {
 		home, err := os.UserHomeDir()
