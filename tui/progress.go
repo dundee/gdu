@@ -17,6 +17,7 @@ func (ui *UI) updateProgress() {
 	doneChan := ui.Analyzer.GetDone()
 
 	var progress common.CurrentProgress
+	start := time.Now()
 
 	for {
 		select {
@@ -26,13 +27,18 @@ func (ui *UI) updateProgress() {
 		}
 
 		func(itemCount int, totalSize int64, currentItem string) {
+			delta := time.Now().Sub(start).Round(time.Second)
+
 			ui.app.QueueUpdateDraw(func() {
 				ui.progress.SetText("Total items: " +
 					color +
 					common.FormatNumber(int64(itemCount)) +
-					"[white:black:-] size: " +
+					"[white:black:-], size: " +
 					color +
 					ui.formatSize(totalSize, false, false) +
+					"[white:black:-], elapsed time: " +
+					color +
+					delta.String() +
 					"[white:black:-]\nCurrent item: [white:black:b]" +
 					path.ShortenPath(currentItem, 70))
 			})
