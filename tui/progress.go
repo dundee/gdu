@@ -27,7 +27,7 @@ func (ui *UI) updateProgress() {
 		}
 
 		func(itemCount int, totalSize int64, currentItem string) {
-			delta := time.Now().Sub(start).Round(time.Second)
+			delta := time.Since(start).Round(time.Second)
 
 			ui.app.QueueUpdateDraw(func() {
 				ui.progress.SetText("Total items: " +
