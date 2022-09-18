@@ -1,6 +1,6 @@
 module github.com/dundee/gdu/v5
 
-go 1.16
+go 1.18
 
 require (
 	github.com/fatih/color v1.13.0
