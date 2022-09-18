@@ -40,7 +40,7 @@ func (ui *UI) updateProgress() {
 					color +
 					delta.String() +
 					"[white:black:-]\nCurrent item: [white:black:b]" +
-					path.ShortenPath(currentItem, 70))
+					path.ShortenPath(currentItem, ui.currentItemNameMaxLen))
 			})
 		}(progress.ItemCount, progress.TotalSize, progress.CurrentItemName)
 
