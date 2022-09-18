@@ -203,6 +203,18 @@ func TestReadWrongAnalysisFromFile(t *testing.T) {
 	assert.Contains(t, err.Error(), "Array of maps not found")
 }
 
+func TestWrongCombinationOfPrefixes(t *testing.T) {
+	out, err := runApp(
+		&Flags{NoPrefix: true, UseSIPrefix: true},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Contains(t, err.Error(), "cannot be used at once")
+}
+
 func TestReadWrongAnalysisFromNotExistingFile(t *testing.T) {
 	out, err := runApp(
 		&Flags{LogFile: "/dev/null", InputFile: "xxx.json"},

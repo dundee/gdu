@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
@@ -68,28 +69,36 @@ func init() {
 }
 
 func initConfig() {
-	s := pflag.NewFlagSet("config", pflag.ContinueOnError)
-	s.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
-	err := s.Parse(os.Args[1:])
-	if err != nil {
-		configErr = err
-		return
-	}
-
-	if af.CfgFile == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			configErr = err
-			return
-		}
-		af.CfgFile = filepath.Join(home, ".gdu.yaml")
-	}
+	setConfigFilePath()
 	data, err := os.ReadFile(af.CfgFile)
 	if err != nil {
 		return // config file does not exist, return
 	}
 
 	configErr = yaml.Unmarshal(data, &af)
+}
+
+func setConfigFilePath() {
+	command := strings.Join(os.Args, " ")
+	if strings.Contains(command, "--config-file") {
+		re := regexp.MustCompile("--config-file[= ]([^/ ]+)")
+		parts := re.FindStringSubmatch(command)
+
+		if len(parts) > 1 {
+			af.CfgFile = parts[1]
+			return
+		}
+	}
+	setDefaultConfigFilePath()
+}
+
+func setDefaultConfigFilePath() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		configErr = err
+		return
+	}
+	af.CfgFile = filepath.Join(home, ".gdu.yaml")
 }
 
 func runE(command *cobra.Command, args []string) error {
@@ -104,9 +113,12 @@ func runE(command *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("Error marshaling config file: %w", err)
 		}
+		if af.CfgFile == "" {
+			setDefaultConfigFilePath()
+		}
 		err = os.WriteFile(af.CfgFile, data, 0600)
 		if err != nil {
-			return fmt.Errorf("Error writing config file: %w", err)
+			return fmt.Errorf("Error writing config file %s: %w", af.CfgFile, err)
 		}
 	}
 
