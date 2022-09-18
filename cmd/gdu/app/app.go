@@ -68,7 +68,13 @@ type Flags struct {
 
 // Style define style config
 type Style struct {
-	SelectedRow ColorStyle `yaml:"selected-row"`
+	SelectedRow   ColorStyle        `yaml:"selected-row"`
+	ProgressModal ProgressModalOpts `yaml:"progress-modal"`
+}
+
+// ProgressModalOpts defines options for progress modal
+type ProgressModalOpts struct {
+	CurrentItemNameMaxLen int `yaml:"current-item-path-max-len"`
 }
 
 // ColorStyle defines styling of some item
@@ -216,6 +222,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Style.SelectedRow.BackgroundColor != "" {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
+			})
+		}
+		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
 			})
 		}
 

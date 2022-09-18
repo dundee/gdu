@@ -75,6 +75,7 @@ type UI struct {
 	linkedItems             fs.HardLinkedItems
 	selectedTextColor       tcell.Color
 	selectedBackgroundColor tcell.Color
+	currentItemNameMaxLen   int
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -112,6 +113,7 @@ func CreateUI(
 		linkedItems:             make(fs.HardLinkedItems, 10),
 		selectedTextColor:       tview.Styles.TitleColor,
 		selectedBackgroundColor: tview.Styles.MoreContrastBackgroundColor,
+		currentItemNameMaxLen:   70,
 	}
 	for _, o := range opts {
 		o(ui)
@@ -190,6 +192,12 @@ func (ui *UI) SetSelectedTextColor(color tcell.Color) {
 // SetSelectedBackgroundColor sets the color for the highighted selected text
 func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 	ui.selectedBackgroundColor = color
+}
+
+// SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item
+// to be shown in the progress modal
+func (ui *UI) SetCurrentItemNameMaxLen(len int) {
+	ui.currentItemNameMaxLen = len
 }
 
 // StartUILoop starts tview application

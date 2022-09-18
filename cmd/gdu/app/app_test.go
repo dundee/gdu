@@ -146,6 +146,9 @@ func TestAnalyzePathWithStyle(t *testing.T) {
 					TextColor:       "black",
 					BackgroundColor: "red",
 				},
+				ProgressModal: ProgressModalOpts{
+					CurrentItemNameMaxLen: 10,
+				},
 			},
 		},
 		[]string{"test_dir"},
