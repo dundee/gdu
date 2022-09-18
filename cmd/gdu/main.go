@@ -72,6 +72,7 @@ func initConfig() {
 	setConfigFilePath()
 	data, err := os.ReadFile(af.CfgFile)
 	if err != nil {
+		configErr = err
 		return // config file does not exist, return
 	}
 
@@ -81,7 +82,7 @@ func initConfig() {
 func setConfigFilePath() {
 	command := strings.Join(os.Args, " ")
 	if strings.Contains(command, "--config-file") {
-		re := regexp.MustCompile("--config-file[= ]([^/ ]+)")
+		re := regexp.MustCompile("--config-file[= ]([^ ]+)")
 		parts := re.FindStringSubmatch(command)
 
 		if len(parts) > 1 {
