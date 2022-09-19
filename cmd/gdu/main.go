@@ -99,6 +99,13 @@ func setDefaultConfigFilePath() {
 		configErr = err
 		return
 	}
+
+	path := filepath.Join(home, ".config", "gdu", "gdu.yaml")
+	if _, err := os.Stat(path); err == nil {
+		af.CfgFile = path
+		return
+	}
+
 	af.CfgFile = filepath.Join(home, ".gdu.yaml")
 }
 
