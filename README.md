@@ -146,7 +146,8 @@ flag with following meaning:
 ## Configuration file
 
 Gdu can read (and write) YAML configuration file.
-It's stored in $HOME/.gdu.yaml by default.
+
+`$HOME/.config/gdu/gdu.yaml` and `$HOME/.gdu.yaml` are checked for the presense of the config file by default.
 
 ### Examples
 
