@@ -23,6 +23,7 @@ func TestFormatSize(t *testing.T) {
 	assert.Equal(t, "1.0[white:black:-] TiB", ui.formatSize(1<<40, false, false))
 	assert.Equal(t, "1.0[white:black:-] PiB", ui.formatSize(1<<50, false, false))
 	assert.Equal(t, "1.0[white:black:-] EiB", ui.formatSize(1<<60, false, false))
+	assert.Equal(t, "-1.0[white:black:-] KiB", ui.formatSize(-1<<10, false, false))
 }
 
 func TestFormatSizeDec(t *testing.T) {
@@ -39,6 +40,7 @@ func TestFormatSizeDec(t *testing.T) {
 	assert.Equal(t, "1.1[white:black:-] TB", ui.formatSize(1<<40, false, false))
 	assert.Equal(t, "1.1[white:black:-] PB", ui.formatSize(1<<50, false, false))
 	assert.Equal(t, "1.2[white:black:-] EB", ui.formatSize(1<<60, false, false))
+	assert.Equal(t, "-1.0[white:black:-] kB", ui.formatSize(-1<<10, false, false))
 }
 
 func TestFormatCount(t *testing.T) {

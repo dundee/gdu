@@ -350,19 +350,20 @@ func (ui *UI) formatSize(size int64) string {
 
 func (ui *UI) formatWithBinPrefix(size int64) string {
 	fsize := float64(size)
+	asize := math.Abs(fsize)
 
 	switch {
-	case fsize >= common.Ei:
+	case asize >= common.Ei:
 		return ui.orange.Sprintf("%.1f", fsize/common.Ei) + " EiB"
-	case fsize >= common.Pi:
+	case asize >= common.Pi:
 		return ui.orange.Sprintf("%.1f", fsize/common.Pi) + " PiB"
-	case fsize >= common.Ti:
+	case asize >= common.Ti:
 		return ui.orange.Sprintf("%.1f", fsize/common.Ti) + " TiB"
-	case fsize >= common.Gi:
+	case asize >= common.Gi:
 		return ui.orange.Sprintf("%.1f", fsize/common.Gi) + " GiB"
-	case fsize >= common.Mi:
+	case asize >= common.Mi:
 		return ui.orange.Sprintf("%.1f", fsize/common.Mi) + " MiB"
-	case fsize >= common.Ki:
+	case asize >= common.Ki:
 		return ui.orange.Sprintf("%.1f", fsize/common.Ki) + " KiB"
 	default:
 		return ui.orange.Sprintf("%d", size) + " B"
@@ -371,20 +372,21 @@ func (ui *UI) formatWithBinPrefix(size int64) string {
 
 func (ui *UI) formatWithDecPrefix(size int64) string {
 	fsize := float64(size)
+	asize := math.Abs(fsize)
 
 	switch {
-	case size >= common.E:
-		return ui.orange.Sprintf("%.1f", fsize/float64(common.E)) + " EB"
-	case size >= common.P:
-		return ui.orange.Sprintf("%.1f", fsize/float64(common.P)) + " PB"
-	case size >= common.T:
-		return ui.orange.Sprintf("%.1f", fsize/float64(common.T)) + " TB"
-	case size >= common.G:
-		return ui.orange.Sprintf("%.1f", fsize/float64(common.G)) + " GB"
-	case size >= common.M:
-		return ui.orange.Sprintf("%.1f", fsize/float64(common.M)) + " MB"
-	case size >= common.K:
-		return ui.orange.Sprintf("%.1f", fsize/float64(common.K)) + " kB"
+	case asize >= common.E:
+		return ui.orange.Sprintf("%.1f", fsize/common.E) + " EB"
+	case asize >= common.P:
+		return ui.orange.Sprintf("%.1f", fsize/common.P) + " PB"
+	case asize >= common.T:
+		return ui.orange.Sprintf("%.1f", fsize/common.T) + " TB"
+	case asize >= common.G:
+		return ui.orange.Sprintf("%.1f", fsize/common.G) + " GB"
+	case asize >= common.M:
+		return ui.orange.Sprintf("%.1f", fsize/common.M) + " MB"
+	case asize >= common.K:
+		return ui.orange.Sprintf("%.1f", fsize/common.K) + " kB"
 	default:
 		return ui.orange.Sprintf("%d", size) + " B"
 	}
