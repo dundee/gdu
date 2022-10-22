@@ -32,6 +32,7 @@ Item under cursor:
                [::b]d    [white:black:-]Delete file or directory
                [::b]e    [white:black:-]Empty file or directory
                [::b]v    [white:black:-]Show content of file
+               [::b]o    [white:black:-]Open file or directory in external program
                [::b]i    [white:black:-]Show info about item
 
 Sort by (twice toggles asc/desc):

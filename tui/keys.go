@@ -139,6 +139,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.handleDelete(true)
 	case 'v':
 		ui.showFile()
+	case 'o':
+		ui.openItem()
 	case 'i':
 		ui.showInfo()
 	case 'a':
