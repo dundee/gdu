@@ -62,8 +62,9 @@ type Flags struct {
 	Summarize         bool     `yaml:"summarize"`
 	UseSIPrefix       bool     `yaml:"use-si-prefix"`
 	NoPrefix          bool     `yaml:"no-prefix"`
-	WriteConfig       bool     `yaml:"write-config"`
+	WriteConfig       bool     `yaml:"-"`
 	Style             Style    `yaml:"style"`
+	Sorting           Sorting  `yaml:"sorting"`
 }
 
 // Style define style config
@@ -81,6 +82,12 @@ type ProgressModalOpts struct {
 type ColorStyle struct {
 	TextColor       string `yaml:"text-color"`
 	BackgroundColor string `yaml:"background-color"`
+}
+
+// Sorting defines default sorting of items
+type Sorting struct {
+	By    string `yaml:"by"`
+	Order string `yaml:"order"`
 }
 
 // App defines the main application
@@ -227,6 +234,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
+			})
+		}
+		if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
 			})
 		}
 

@@ -157,6 +157,14 @@ Gdu can read (and write) YAML configuration file.
 echo "no-color: true" > ~/.gdu.yaml
 ```
 
+* To set default sorting in configuration file:
+
+```
+sorting:
+    by: name // size, name, itemCount, mtime
+    order: desc
+```
+
 * To save the current configuration
 
 ```

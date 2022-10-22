@@ -123,6 +123,34 @@ func TestSetSorting(t *testing.T) {
 	assert.Equal(t, "asc", ui.sortOrder)
 }
 
+func TestSetDEfaultSorting(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	var opts []Option
+	opts = append(opts, func(ui *UI) {
+		ui.SetDefaultSorting("name", "asc")
+	})
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false, opts...)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+
+	if err := ui.AnalyzePath("test_dir", nil); err != nil {
+		panic(err)
+	}
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "name", ui.sortBy)
+	assert.Equal(t, "asc", ui.sortOrder)
+}
+
 func TestSortDevicesByName(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
