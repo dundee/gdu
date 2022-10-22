@@ -223,8 +223,8 @@ func (ui *UI) handleDelete(shouldEmpty bool) {
 	}
 	// do not allow deleting parent dir
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	if selectedFile == ui.currentDir.GetParent() {
+	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
+	if !ok || selectedFile == ui.currentDir.GetParent() {
 		return
 	}
 
