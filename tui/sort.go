@@ -7,6 +7,16 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
+// SetDefaultSorting sets the default sorting
+func (ui *UI) SetDefaultSorting(by, order string) {
+	if by != "" {
+		ui.defaultSortBy = by
+	}
+	if order == "asc" || order == "desc" {
+		ui.defaultSortOrder = order
+	}
+}
+
 func (ui *UI) setSorting(newOrder string) {
 	if newOrder == ui.sortBy {
 		if ui.sortOrder == "asc" {

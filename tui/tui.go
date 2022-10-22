@@ -76,6 +76,8 @@ type UI struct {
 	selectedTextColor       tcell.Color
 	selectedBackgroundColor tcell.Color
 	currentItemNameMaxLen   int
+	defaultSortBy           string
+	defaultSortOrder        string
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -114,6 +116,8 @@ func CreateUI(
 		selectedTextColor:       tview.Styles.TitleColor,
 		selectedBackgroundColor: tview.Styles.MoreContrastBackgroundColor,
 		currentItemNameMaxLen:   70,
+		defaultSortBy:           "size",
+		defaultSortOrder:        "desc",
 	}
 	for _, o := range opts {
 		o(ui)
@@ -206,8 +210,8 @@ func (ui *UI) StartUILoop() error {
 }
 
 func (ui *UI) resetSorting() {
-	ui.sortBy = "size"
-	ui.sortOrder = "desc"
+	ui.sortBy = ui.defaultSortBy
+	ui.sortOrder = ui.defaultSortOrder
 }
 
 func (ui *UI) rescanDir() {

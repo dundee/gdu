@@ -134,6 +134,27 @@ func TestAnalyzePathWithGui(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAnalyzePathWithDefaultSorting(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile: "/dev/null",
+			Sorting: Sorting{
+				By:    "name",
+				Order: "asc",
+			},
+		},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
 func TestAnalyzePathWithStyle(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
