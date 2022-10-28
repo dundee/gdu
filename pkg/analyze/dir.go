@@ -44,7 +44,7 @@ func (a *ParallelAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
 }
 
-// GetDoneChan returns channel for checking when analysis is done
+// GetDone returns channel for checking when analysis is done
 func (a *ParallelAnalyzer) GetDone() common.SignalGroup {
 	return a.doneChan
 }
