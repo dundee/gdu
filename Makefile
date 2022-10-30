@@ -11,6 +11,10 @@ LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.Version=$(VERSION)' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
 	-X '$(PACKAGE)/build.Time=$(shell LC_ALL=en_US.UTF-8 date)'
+TAR := tar
+ifeq ($(shell uname -s),Darwin)
+	TAR := gtar # brew install gnu-tar
+endif
 
 all: clean tarball build-all man clean-uncompressed-dist shasums
 
@@ -22,7 +26,7 @@ vendor: go.mod go.sum
 
 tarball: vendor
 	-mkdir dist
-	tar czf dist/$(NAMEVER).tgz --transform "s,^,$(NAMEVER)/," --exclude dist --exclude test_dir --exclude coverage.txt *
+	$(TAR) czf dist/$(NAMEVER).tgz --transform "s,^,$(NAMEVER)/," --exclude dist --exclude test_dir --exclude coverage.txt *
 
 build:
 	@echo "Version: " $(VERSION)
