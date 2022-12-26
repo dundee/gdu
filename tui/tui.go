@@ -79,6 +79,7 @@ type UI struct {
 	currentItemNameMaxLen   int
 	defaultSortBy           string
 	defaultSortOrder        string
+	markedRows              map[int]struct{}
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -119,6 +120,7 @@ func CreateUI(
 		currentItemNameMaxLen:   70,
 		defaultSortBy:           "size",
 		defaultSortOrder:        "desc",
+		markedRows:              make(map[int]struct{}),
 	}
 	for _, o := range opts {
 		o(ui)
@@ -237,6 +239,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 
 	ui.currentDir = selectedDir.(*analyze.Dir)
 	ui.hideFilterInput()
+	ui.markedRows = make(map[int]struct{})
 	ui.showDir()
 
 	if selectedDir == origDir.GetParent() {
@@ -270,6 +273,14 @@ func (ui *UI) deviceItemSelected(row, column int) {
 }
 
 func (ui *UI) confirmDeletion(shouldEmpty bool) {
+	if len(ui.markedRows) > 0 {
+		ui.confirmDeletionMarked(shouldEmpty)
+	} else {
+		ui.confirmDeletionSelected(shouldEmpty)
+	}
+}
+
+func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 	var action string

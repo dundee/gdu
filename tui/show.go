@@ -29,7 +29,12 @@ func (ui *UI) showDir() {
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
-		cell := tview.NewTableCell("                         [::b]/..")
+		prefix := "                         "
+		if len(ui.markedRows) > 0 {
+			prefix += "  "
+		}
+
+		cell := tview.NewTableCell(prefix + "[::b]/..")
 		cell.SetReference(ui.currentDir.GetParent())
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		ui.table.SetCell(0, 0, cell)
@@ -64,9 +69,16 @@ func (ui *UI) showDir() {
 		totalSize += item.GetSize()
 		itemCount += item.GetItemCount()
 
-		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize))
-		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
+		_, marked := ui.markedRows[rowIndex]
+		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked))
 		cell.SetReference(ui.currentDir.GetFiles()[i])
+
+		if marked {
+			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.PrimaryTextColor))
+			cell.SetBackgroundColor(tview.Styles.ContrastBackgroundColor)
+		} else {
+			cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
+		}
 
 		ui.table.SetCell(rowIndex, 0, cell)
 		rowIndex++
@@ -81,8 +93,15 @@ func (ui *UI) showDir() {
 		footerTextColor = "[black:white:-]"
 	}
 
+	selected := ""
+	if len(ui.markedRows) > 0 {
+		selected = " Selected items: " + footerNumberColor +
+			strconv.Itoa(len(ui.markedRows)) + footerTextColor
+	}
+
 	ui.footerLabel.SetText(
-		" Total disk usage: " +
+		selected +
+			" Total disk usage: " +
 			footerNumberColor +
 			ui.formatSize(totalUsage, true, false) +
 			" Apparent size: " +

@@ -75,5 +75,29 @@ func TestEscapeName(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize()), "Aaa [red[] bbb")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false), "Aaa [red[] bbb")
+}
+
+func TestMarked(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui.markedRows[0] = struct{}{}
+
+	dir := &analyze.Dir{
+		File: &analyze.File{
+			Usage: 10,
+		},
+	}
+
+	file := &analyze.File{
+		Name:   "Aaa",
+		Parent: dir,
+		Usage:  10,
+	}
+
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), true), "✓ Aaa")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false), "[##########]   Aaa")
 }
