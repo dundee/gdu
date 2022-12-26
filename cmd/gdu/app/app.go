@@ -256,6 +256,8 @@ func (a *App) createUI() (UI, error) {
 
 		if !a.Flags.NoColor {
 			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
+		} else {
+			tview.Styles.ContrastBackgroundColor = tcell.NewRGBColor(150, 150, 150)
 		}
 		tview.Styles.BorderColor = tcell.ColorDefault
 	}

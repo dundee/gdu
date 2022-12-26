@@ -344,6 +344,18 @@ func TestDeleteEmpty(t *testing.T) {
 	assert.NotNil(t, key)
 }
 
+func TestMarkEmpty(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui.done = make(chan struct{})
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
+	assert.NotNil(t, key)
+}
+
 func TestDelete(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -368,6 +380,44 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
 	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestDeleteMarked(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui.done = make(chan struct{})
+	ui.askBeforeDelete = false
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
 
@@ -410,6 +460,36 @@ func TestDeleteParent(t *testing.T) {
 	assert.DirExists(t, "test_dir/nested")
 }
 
+func TestMarkParent(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui.done = make(chan struct{})
+	ui.askBeforeDelete = false
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
+
+	assert.Equal(t, len(ui.markedRows), 0)
+}
+
 func TestEmptyDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -434,6 +514,45 @@ func TestEmptyDir(t *testing.T) {
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
 	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'e', 0))
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.NoDirExists(t, "test_dir/nested/subnested")
+}
+
+func TestMarkedEmptyDir(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui.done = make(chan struct{})
+	ui.askBeforeDelete = false
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'e', 0))
 
@@ -475,6 +594,49 @@ func TestEmptyFile(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0)) // into nested
 
 	ui.table.Select(2, 0) // file2
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'e', 0))
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.DirExists(t, "test_dir/nested/subnested")
+}
+
+func TestMarkedEmptyFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui.done = make(chan struct{})
+	ui.askBeforeDelete = false
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0)) // into nested
+
+	ui.table.Select(2, 0) // file2
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'e', 0))
 

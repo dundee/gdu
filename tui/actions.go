@@ -136,6 +136,14 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return nil
 }
 
+func (ui *UI) delete(shouldEmpty bool) {
+	if len(ui.markedRows) > 0 {
+		ui.deleteMarked(shouldEmpty)
+	} else {
+		ui.deleteSelected(shouldEmpty)
+	}
+}
+
 func (ui *UI) deleteSelected(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
 	selectedItem := ui.table.GetCell(row, column).GetReference().(fs.Item)

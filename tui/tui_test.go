@@ -272,6 +272,36 @@ func TestConfirmEmpty(t *testing.T) {
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
 
+func TestConfirmEmptyMarked(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, false, true, true)
+
+	ui.table.Select(1, 0)
+	ui.markedRows[1] = struct{}{}
+	ui.confirmDeletion(true)
+
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmDeletionMarked(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, true, true, true)
+
+	ui.table.Select(1, 0)
+	ui.markedRows[1] = struct{}{}
+	ui.confirmDeletion(false)
+
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmDeletionMarkedBW(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, false, true, true)
+
+	ui.table.Select(1, 0)
+	ui.markedRows[1] = struct{}{}
+	ui.confirmDeletion(false)
+
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
 func TestDeleteSelected(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -305,7 +335,31 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected(false)
+	ui.delete(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.True(t, ui.pages.HasPage("error"))
+	assert.DirExists(t, "test_dir/nested")
+}
+
+func TestDeleteMarkedWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.remover = testanalyze.RemoveItemFromDirWithErr
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+	ui.markedRows[0] = struct{}{}
+
+	ui.deleteMarked(false)
 
 	<-ui.done
 
@@ -346,13 +400,52 @@ func TestMin(t *testing.T) {
 	assert.Equal(t, 3, min(4, 3))
 }
 
-// func printScreen(simScreen tcell.SimulationScreen) {
-// 	b, _, _ := simScreen.GetContents()
+func TestSetSelectedBackgroundColor(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
 
-// 	for i, r := range b {
-// 		println(i, string(r.Bytes))
-// 	}
-// }
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+
+	ui.SetSelectedBackgroundColor(tcell.ColorRed)
+
+	assert.Equal(t, ui.selectedBackgroundColor, tcell.ColorRed)
+}
+
+func TestSetSelectedTextColor(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+
+	ui.SetSelectedTextColor(tcell.ColorRed)
+
+	assert.Equal(t, ui.selectedTextColor, tcell.ColorRed)
+}
+
+func TestSetCurrentItemNameMaxLen(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+
+	ui.SetCurrentItemNameMaxLen(5)
+
+	assert.Equal(t, ui.currentItemNameMaxLen, 5)
+}
+
+// nolint: unused // Why: for debugging
+func printScreen(simScreen tcell.SimulationScreen) {
+	b, _, _ := simScreen.GetContents()
+
+	for i, r := range b {
+		if string(r.Bytes) != " " {
+			println(i, string(r.Bytes))
+		}
+	}
+}
 
 func getDevicesInfoMock() device.DevicesInfoGetter {
 	item := &device.Device{

@@ -186,6 +186,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	case '/':
 		ui.showFilterInput()
 		return nil
+	case ' ':
+		ui.handleMark()
 	}
 	return key
 }
@@ -233,6 +235,20 @@ func (ui *UI) handleDelete(shouldEmpty bool) {
 	if ui.askBeforeDelete {
 		ui.confirmDeletion(shouldEmpty)
 	} else {
-		ui.deleteSelected(shouldEmpty)
+		ui.delete(shouldEmpty)
 	}
+}
+
+func (ui *UI) handleMark() {
+	if ui.currentDir == nil {
+		return
+	}
+	// do not allow deleting parent dir
+	row, column := ui.table.GetSelection()
+	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
+	if !ok || selectedFile == ui.currentDir.GetParent() {
+		return
+	}
+
+	ui.fileItemMarked(row)
 }
