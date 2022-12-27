@@ -49,6 +49,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 
 			ui.app.QueueUpdateDraw(func() {
 				modal.SetText(
+					// nolint: staticcheck // Why: fixed string
 					strings.Title(acting) +
 						" " +
 						tview.Escape(one.GetName()) +

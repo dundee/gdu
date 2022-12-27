@@ -436,7 +436,7 @@ func TestSetCurrentItemNameMaxLen(t *testing.T) {
 	assert.Equal(t, ui.currentItemNameMaxLen, 5)
 }
 
-// nolint: unused // Why: for debugging
+// nolint: deadcode,unused // Why: for debugging
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()
 

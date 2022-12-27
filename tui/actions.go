@@ -157,6 +157,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 		acting = "deleting"
 	}
 	modal := tview.NewModal().SetText(
+		// nolint: staticcheck // Why: fixed string
 		strings.Title(acting) +
 			" " +
 			tview.Escape(selectedItem.GetName()) +
