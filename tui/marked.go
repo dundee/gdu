@@ -17,7 +17,8 @@ func (ui *UI) fileItemMarked(row int) {
 		ui.markedRows[row] = struct{}{}
 	}
 	ui.showDir()
-	ui.table.Select(row, 0)
+	// select next row if possible
+	ui.table.Select(min(row+1, ui.table.GetRowCount()-1), 0)
 }
 
 func (ui *UI) deleteMarked(shouldEmpty bool) {
