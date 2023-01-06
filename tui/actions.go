@@ -371,7 +371,7 @@ func (ui *UI) openItem() {
 	case "darwin":
 		openBinary = "open"
 	case "windows":
-		openBinary = "Invoke-Item"
+		openBinary = "explorer"
 	}
 
 	cmd := exec.Command(openBinary, selectedFile.GetPath())
