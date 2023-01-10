@@ -55,9 +55,17 @@ non-interactive mode
 
 **\--si**\[=false\] Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
 
+**\--no-prefix**\[=false\] Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
+
+**\--no-mouse**\[=false\] Do not use mouse
+
 **-f**, **\----input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 
 **-o**, **\----output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
+
+**\--config-file**=\"$HOME/.gdu.yaml\"             Read config from file
+
+**\--write-config**\[=false\] Write current configuration to file (default is $HOME/.gdu.yaml)
 
 **-g**, **\--const-gc**\[=false\] Enable memory garbage collection during analysis with constant level set by GOGC
 

@@ -71,6 +71,7 @@ Using curl:
   gdu [flags] [directory_to_scan]
 
 Flags:
+      --config-file string            Read config from file (default is $HOME/.gdu.yaml)
   -g, --const-gc                      Enable memory garbage collection during analysis with constant level set by GOGC
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -h, --help                          help for gdu
@@ -83,14 +84,18 @@ Flags:
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
+      --no-mouse                      Do not use mouse
+      --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
+  -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
   -s, --summarize                     Show only a total in non-interactive mode
   -v, --version                       Print version
+      --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
 ```
 
 ## Examples
@@ -117,7 +122,7 @@ Flags:
 
 Gdu has three modes: interactive (default), non-interactive and export.
 
-Non-interactive mode is started automtically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
+Non-interactive mode is started automatically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
 
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag.
 
@@ -137,6 +142,48 @@ flag with following meaning:
 * `H` Same file was already counted (hard link).
 
 * `e` Directory is empty.
+
+## Configuration file
+
+Gdu can read (and write) YAML configuration file.
+
+`$HOME/.config/gdu/gdu.yaml` and `$HOME/.gdu.yaml` are checked for the presense of the config file by default.
+
+### Examples
+
+* To configure gdu to permanently run in gray-scale color mode:
+
+```
+echo "no-color: true" > ~/.gdu.yaml
+```
+
+* To set default sorting in configuration file:
+
+```
+sorting:
+    by: name // size, name, itemCount, mtime
+    order: desc
+```
+
+* To save the current configuration
+
+```
+gdu --write-config
+```
+
+## Styling
+
+There are wast ways how terminals can be colored.
+Some gdu primitives (like basic text) addapt to different color schemas, but the selected/highlighted row does not.
+
+If the default look is not sufficient, it can be changed in configuration file, e.g.:
+
+```
+style:
+    selected-row:
+        text-color: black
+        background-color: "#ff0000"
+```
 
 ## Memory usage
 
@@ -158,7 +205,7 @@ As a result, the analysis will be about 25% slower and will consume about 30% le
 To change the level, you can set the `GOGC` environment variable to specify how often the garbage collection will happen.
 Lower value (than 100) means GC will run more often. Higher means less often. Negative number will stop GC.
 
-Example running gdu with constant GC, but not so aggresive as default:
+Example running gdu with constant GC, but not so aggressive as default:
 
 ```
 GOGC=200 gdu -g /
@@ -166,6 +213,7 @@ GOGC=200 gdu -g /
 
 ## Running tests
 
+    make install-dev-dependencies
     make test
 
 ## Benchmarks
@@ -176,7 +224,7 @@ See `benchmark` target in [Makefile](Makefile) for more info.
 ## Profiling
 
 Gdu can collect profiling data when the `--enable-profiling` flag is set.
-The data are provided via embeded http server on URL `http://localhost:6060/debug/pprof/`.
+The data are provided via embedded http server on URL `http://localhost:6060/debug/pprof/`.
 
 You can then use e.g. `go tool pprof -web http://localhost:6060/debug/pprof/heap`
 to open the heap profile as SVG image in your web browser.

@@ -13,9 +13,9 @@ func TestAnalyzeByApparentSize(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("size", "desc", true)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
 	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "aaa")
 	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
 }
 
@@ -33,9 +33,9 @@ func TestAnalyzeBySize(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("size", "desc", false)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
 	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "aaa")
 	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
 }
 
@@ -73,10 +73,10 @@ func TestAnalyzeByItemCount(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("itemCount", "desc", false)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
 }
 
 func TestAnalyzeByItemCountAsc(t *testing.T) {
@@ -119,6 +119,34 @@ func TestSetSorting(t *testing.T) {
 	assert.Equal(t, "name", ui.sortBy)
 	assert.Equal(t, "desc", ui.sortOrder)
 	ui.setSorting("name")
+	assert.Equal(t, "name", ui.sortBy)
+	assert.Equal(t, "asc", ui.sortOrder)
+}
+
+func TestSetDEfaultSorting(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	var opts []Option
+	opts = append(opts, func(ui *UI) {
+		ui.SetDefaultSorting("name", "asc")
+	})
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false, opts...)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+
+	if err := ui.AnalyzePath("test_dir", nil); err != nil {
+		panic(err)
+	}
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
 	assert.Equal(t, "name", ui.sortBy)
 	assert.Equal(t, "asc", ui.sortOrder)
 }
@@ -171,7 +199,7 @@ func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bo
 
 	<-ui.done // wait for analyzer
 
-	for _, f := range ui.app.(*testapp.MockedApp).UpdateDraws {
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
 

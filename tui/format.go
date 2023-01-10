@@ -2,13 +2,14 @@ package tui
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64) string {
+func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked bool) string {
 	var part int
 
 	if ui.ShowApparentSize {
@@ -19,7 +20,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64) string 
 
 	row := string(item.GetFlag())
 
-	if ui.UseColors {
+	if ui.UseColors && !marked {
 		row += "[#e67100::b]"
 	} else {
 		row += "[::b]"
@@ -34,7 +35,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64) string 
 	row += getUsageGraph(part)
 
 	if ui.showItemCount {
-		if ui.UseColors {
+		if ui.UseColors && !marked {
 			row += "[#e67100::b]"
 		} else {
 			row += "[::b]"
@@ -43,7 +44,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64) string 
 	}
 
 	if ui.showMtime {
-		if ui.UseColors {
+		if ui.UseColors && !marked {
 			row += "[#e67100::b]"
 		} else {
 			row += "[::b]"
@@ -54,8 +55,17 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64) string 
 		)
 	}
 
+	if len(ui.markedRows) > 0 {
+		if marked {
+			row += string('✓')
+		} else {
+			row += " "
+		}
+		row += " "
+	}
+
 	if item.IsDir() {
-		if ui.UseColors {
+		if ui.UseColors && !marked {
 			row += "[#3498db::b]/"
 		} else {
 			row += "[::b]/"
@@ -90,7 +100,7 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 func (ui *UI) formatCount(count int) string {
 	row := ""
 	color := "[-::]"
-	count64 := int64(count)
+	count64 := float64(count)
 
 	switch {
 	case count64 >= common.G:
@@ -106,18 +116,20 @@ func (ui *UI) formatCount(count int) string {
 }
 
 func formatWithBinPrefix(fsize float64, color string) string {
+	asize := math.Abs(fsize)
+
 	switch {
-	case fsize >= common.Ei:
+	case asize >= common.Ei:
 		return fmt.Sprintf("%.1f%s EiB", fsize/common.Ei, color)
-	case fsize >= common.Pi:
+	case asize >= common.Pi:
 		return fmt.Sprintf("%.1f%s PiB", fsize/common.Pi, color)
-	case fsize >= common.Ti:
+	case asize >= common.Ti:
 		return fmt.Sprintf("%.1f%s TiB", fsize/common.Ti, color)
-	case fsize >= common.Gi:
+	case asize >= common.Gi:
 		return fmt.Sprintf("%.1f%s GiB", fsize/common.Gi, color)
-	case fsize >= common.Mi:
+	case asize >= common.Mi:
 		return fmt.Sprintf("%.1f%s MiB", fsize/common.Mi, color)
-	case fsize >= common.Ki:
+	case asize >= common.Ki:
 		return fmt.Sprintf("%.1f%s KiB", fsize/common.Ki, color)
 	default:
 		return fmt.Sprintf("%d%s B", int64(fsize), color)
@@ -126,19 +138,20 @@ func formatWithBinPrefix(fsize float64, color string) string {
 
 func formatWithDecPrefix(size int64, color string) string {
 	fsize := float64(size)
+	asize := math.Abs(fsize)
 	switch {
-	case size >= common.E:
-		return fmt.Sprintf("%.1f%s EB", fsize/float64(common.E), color)
-	case size >= common.P:
-		return fmt.Sprintf("%.1f%s PB", fsize/float64(common.P), color)
-	case size >= common.T:
-		return fmt.Sprintf("%.1f%s TB", fsize/float64(common.T), color)
-	case size >= common.G:
-		return fmt.Sprintf("%.1f%s GB", fsize/float64(common.G), color)
-	case size >= common.M:
-		return fmt.Sprintf("%.1f%s MB", fsize/float64(common.M), color)
-	case size >= common.K:
-		return fmt.Sprintf("%.1f%s kB", fsize/float64(common.K), color)
+	case asize >= common.E:
+		return fmt.Sprintf("%.1f%s EB", fsize/common.E, color)
+	case asize >= common.P:
+		return fmt.Sprintf("%.1f%s PB", fsize/common.P, color)
+	case asize >= common.T:
+		return fmt.Sprintf("%.1f%s TB", fsize/common.T, color)
+	case asize >= common.G:
+		return fmt.Sprintf("%.1f%s GB", fsize/common.G, color)
+	case asize >= common.M:
+		return fmt.Sprintf("%.1f%s MB", fsize/common.M, color)
+	case asize >= common.K:
+		return fmt.Sprintf("%.1f%s kB", fsize/common.K, color)
 	default:
 		return fmt.Sprintf("%d%s B", size, color)
 	}

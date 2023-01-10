@@ -39,26 +39,55 @@ type UI interface {
 
 // Flags define flags accepted by Run
 type Flags struct {
-	LogFile           string
-	InputFile         string
-	OutputFile        string
-	IgnoreDirs        []string
-	IgnoreDirPatterns []string
-	IgnoreFromFile    string
-	MaxCores          int
-	ShowDisks         bool
-	ShowApparentSize  bool
-	ShowRelativeSize  bool
-	ShowVersion       bool
-	NoColor           bool
-	NonInteractive    bool
-	NoProgress        bool
-	NoCross           bool
-	NoHidden          bool
-	Profiling         bool
-	ConstGC           bool
-	Summarize         bool
-	UseSIPrefix       bool
+	CfgFile           string   `yaml:"-"`
+	LogFile           string   `yaml:"log-file"`
+	InputFile         string   `yaml:"input-file"`
+	OutputFile        string   `yaml:"output-file"`
+	IgnoreDirs        []string `yaml:"ignore-dirs"`
+	IgnoreDirPatterns []string `yaml:"ignore-dir-patterns"`
+	IgnoreFromFile    string   `yaml:"ignore-from-file"`
+	MaxCores          int      `yaml:"max-cores"`
+	ShowDisks         bool     `yaml:"-"`
+	ShowApparentSize  bool     `yaml:"show-apparent-size"`
+	ShowRelativeSize  bool     `yaml:"show-relative-size"`
+	ShowVersion       bool     `yaml:"-"`
+	NoColor           bool     `yaml:"no-color"`
+	NoMouse           bool     `yaml:"no-mouse"`
+	NonInteractive    bool     `yaml:"non-interactive"`
+	NoProgress        bool     `yaml:"no-progress"`
+	NoCross           bool     `yaml:"no-cross"`
+	NoHidden          bool     `yaml:"no-hidden"`
+	Profiling         bool     `yaml:"profiling"`
+	ConstGC           bool     `yaml:"const-gc"`
+	Summarize         bool     `yaml:"summarize"`
+	UseSIPrefix       bool     `yaml:"use-si-prefix"`
+	NoPrefix          bool     `yaml:"no-prefix"`
+	WriteConfig       bool     `yaml:"-"`
+	Style             Style    `yaml:"style"`
+	Sorting           Sorting  `yaml:"sorting"`
+}
+
+// Style define style config
+type Style struct {
+	SelectedRow   ColorStyle        `yaml:"selected-row"`
+	ProgressModal ProgressModalOpts `yaml:"progress-modal"`
+}
+
+// ProgressModalOpts defines options for progress modal
+type ProgressModalOpts struct {
+	CurrentItemNameMaxLen int `yaml:"current-item-path-max-len"`
+}
+
+// ColorStyle defines styling of some item
+type ColorStyle struct {
+	TextColor       string `yaml:"text-color"`
+	BackgroundColor string `yaml:"background-color"`
+}
+
+// Sorting defines default sorting of items
+type Sorting struct {
+	By    string `yaml:"by"`
+	Order string `yaml:"order"`
 }
 
 // App defines the main application
@@ -79,10 +108,7 @@ func init() {
 
 // Run starts gdu main logic
 func (a *App) Run() (err error) {
-	var (
-		f  *os.File
-		ui UI
-	)
+	var ui UI
 
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
@@ -91,20 +117,11 @@ func (a *App) Run() (err error) {
 		return
 	}
 
-	f, err = os.OpenFile(a.Flags.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		err = fmt.Errorf("opening log file: %w", err)
-		return
-	}
-	defer func() {
-		cerr := f.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-	log.SetOutput(f)
-
 	log.Printf("Runtime flags: %+v", *a.Flags)
+
+	if a.Flags.NoPrefix && a.Flags.UseSIPrefix {
+		return fmt.Errorf("--no-prefix and --si cannot be used at once")
+	}
 
 	path := a.getPath()
 	path, _ = filepath.Abs(path)
@@ -199,8 +216,32 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.Summarize,
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
+			a.Flags.NoPrefix,
 		)
 	} else {
+		var opts []tui.Option
+
+		if a.Flags.Style.SelectedRow.TextColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetSelectedTextColor(tcell.GetColor(a.Flags.Style.SelectedRow.TextColor))
+			})
+		}
+		if a.Flags.Style.SelectedRow.BackgroundColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
+			})
+		}
+		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
+			})
+		}
+		if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
+			})
+		}
+
 		ui = tui.CreateUI(
 			a.TermApp,
 			a.Screen,
@@ -210,10 +251,13 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ShowRelativeSize,
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
+			opts...,
 		)
 
 		if !a.Flags.NoColor {
 			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
+		} else {
+			tview.Styles.ContrastBackgroundColor = tcell.NewRGBColor(150, 150, 150)
 		}
 		tview.Styles.BorderColor = tcell.ColorDefault
 	}

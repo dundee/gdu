@@ -71,9 +71,9 @@ func (a *MockedAnalyzer) GetProgressChan() chan common.CurrentProgress {
 }
 
 // GetDoneChan returns always Done
-func (a *MockedAnalyzer) GetDoneChan() chan struct{} {
-	c := make(chan struct{}, 1)
-	defer func() { c <- struct{}{} }()
+func (a *MockedAnalyzer) GetDone() common.SignalGroup {
+	c := make(common.SignalGroup)
+	defer c.Broadcast()
 	return c
 }
 

@@ -113,6 +113,7 @@ func TestFormatSize(t *testing.T) {
 	assert.Contains(t, ui.formatSize(1<<40+1), "TiB")
 	assert.Contains(t, ui.formatSize(1<<50+1), "PiB")
 	assert.Contains(t, ui.formatSize(1<<60+1), "EiB")
+	assert.Contains(t, ui.formatSize(-1<<10-1), "KiB")
 }
 
 func TestFormatSizeDec(t *testing.T) {
@@ -128,4 +129,5 @@ func TestFormatSizeDec(t *testing.T) {
 	assert.Contains(t, ui.formatSize(1<<40+1), "TB")
 	assert.Contains(t, ui.formatSize(1<<50+1), "PB")
 	assert.Contains(t, ui.formatSize(1<<60+1), "EB")
+	assert.Contains(t, ui.formatSize(-1<<10-1), "kB")
 }

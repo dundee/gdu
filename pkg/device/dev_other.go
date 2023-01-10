@@ -5,7 +5,7 @@ package device
 
 import "errors"
 
-// OtherDevicesInfoGetter retruns info for other devices
+// OtherDevicesInfoGetter returns info for other devices
 type OtherDevicesInfoGetter struct{}
 
 // Getter is current instance of DevicesInfoGetter

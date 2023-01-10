@@ -32,7 +32,7 @@ func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.Si
 // MockedApp is tview.Application with mocked methods
 type MockedApp struct {
 	FailRun     bool
-	UpdateDraws []func()
+	updateDraws []func()
 	BeforeDraws []func(screen tcell.Screen) bool
 	mutex       *sync.Mutex
 }
@@ -41,7 +41,7 @@ type MockedApp struct {
 func CreateMockedApp(failRun bool) common.TermApplication {
 	app := &MockedApp{
 		FailRun:     failRun,
-		UpdateDraws: make([]func(), 0, 1),
+		updateDraws: make([]func(), 0, 1),
 		BeforeDraws: make([]func(screen tcell.Screen) bool, 0, 1),
 		mutex:       &sync.Mutex{},
 	}
@@ -81,12 +81,26 @@ func (app *MockedApp) SetInputCapture(capture func(event *tcell.EventKey) *tcell
 	return nil
 }
 
+// SetMouseCapture does nothing
+func (app *MockedApp) SetMouseCapture(
+	capture func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction),
+) *tview.Application {
+	return nil
+}
+
 // QueueUpdateDraw does nothing
 func (app *MockedApp) QueueUpdateDraw(f func()) *tview.Application {
 	app.mutex.Lock()
-	app.UpdateDraws = append(app.UpdateDraws, f)
+	app.updateDraws = append(app.updateDraws, f)
 	app.mutex.Unlock()
 	return nil
+}
+
+// QueueUpdateDraw does nothing
+func (app *MockedApp) GetUpdateDraws() []func() {
+	app.mutex.Lock()
+	defer app.mutex.Unlock()
+	return app.updateDraws
 }
 
 // SetBeforeDrawFunc does nothing

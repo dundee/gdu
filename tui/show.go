@@ -9,6 +9,35 @@ import (
 	"github.com/rivo/tview"
 )
 
+const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
+  [::b]pgup/pgdn, g/G     [white:black:-]Move cursor top/bottom
+ [::b]enter, right, l     [white:black:-]Go to directory/device
+         [::b]left, h     [white:black:-]Go to parent directory
+
+               [::b]r     [white:black:-]Rescan current directory
+               [::b]/     [white:black:-]Search items by name
+               [::b]a     [white:black:-]Toggle between showing disk usage and apparent size
+               [::b]B     [white:black:-]Toggle bar alignment to biggest file or directory
+               [::b]c     [white:black:-]Show/hide file count
+               [::b]m     [white:black:-]Show/hide latest mtime
+               [::b]b     [white:black:-]Spawn shell in current directory
+               [::b]q     [white:black:-]Quit gdu
+               [::b]Q     [white:black:-]Quit gdu and print current directory path
+
+Item under cursor:
+               [::b]d     [white:black:-]Delete file or directory
+               [::b]e     [white:black:-]Empty file or directory
+			   [::b]space [white:black:-]Mark file or directory for deletion
+               [::b]v     [white:black:-]Show content of file
+               [::b]o     [white:black:-]Open file or directory in external program
+               [::b]i     [white:black:-]Show info about item
+
+Sort by (twice toggles asc/desc):
+               [::b]n     [white:black:-]Sort by name (asc/desc)
+               [::b]s     [white:black:-]Sort by size (asc/desc)
+               [::b]C     [white:black:-]Sort by file count (asc/desc)
+               [::b]M     [white:black:-]Sort by mtime (asc/desc)`
+
 func (ui *UI) showDir() {
 	var (
 		totalUsage int64
@@ -29,7 +58,12 @@ func (ui *UI) showDir() {
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
-		cell := tview.NewTableCell("                         [::b]/..")
+		prefix := "                         "
+		if len(ui.markedRows) > 0 {
+			prefix += "  "
+		}
+
+		cell := tview.NewTableCell(prefix + "[::b]/..")
 		cell.SetReference(ui.currentDir.GetParent())
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		ui.table.SetCell(0, 0, cell)
@@ -64,9 +98,16 @@ func (ui *UI) showDir() {
 		totalSize += item.GetSize()
 		itemCount += item.GetItemCount()
 
-		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize))
-		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
+		_, marked := ui.markedRows[rowIndex]
+		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked))
 		cell.SetReference(ui.currentDir.GetFiles()[i])
+
+		if marked {
+			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.PrimaryTextColor))
+			cell.SetBackgroundColor(tview.Styles.ContrastBackgroundColor)
+		} else {
+			cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
+		}
 
 		ui.table.SetCell(rowIndex, 0, cell)
 		rowIndex++
@@ -81,8 +122,15 @@ func (ui *UI) showDir() {
 		footerTextColor = "[black:white:-]"
 	}
 
+	selected := ""
+	if len(ui.markedRows) > 0 {
+		selected = " Selected items: " + footerNumberColor +
+			strconv.Itoa(len(ui.markedRows)) + footerTextColor
+	}
+
 	ui.footerLabel.SetText(
-		" Total disk usage: " +
+		selected +
+			" Total disk usage: " +
 			footerNumberColor +
 			ui.formatSize(totalUsage, true, false) +
 			" Apparent size: " +

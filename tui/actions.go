@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -45,9 +46,9 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-			AddItem(nil, 10, 1, false).
+			AddItem(nil, 0, 1, false).
 			AddItem(ui.progress, 8, 1, false).
-			AddItem(nil, 10, 1, false), 0, 50, false).
+			AddItem(nil, 0, 1, false), 0, 50, false).
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("progress", flex, true, true)
@@ -135,6 +136,14 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return nil
 }
 
+func (ui *UI) delete(shouldEmpty bool) {
+	if len(ui.markedRows) > 0 {
+		ui.deleteMarked(shouldEmpty)
+	} else {
+		ui.deleteSelected(shouldEmpty)
+	}
+}
+
 func (ui *UI) deleteSelected(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
 	selectedItem := ui.table.GetCell(row, column).GetReference().(fs.Item)
@@ -148,6 +157,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 		acting = "deleting"
 	}
 	modal := tview.NewModal().SetText(
+		// nolint: staticcheck // Why: fixed string
 		strings.Title(acting) +
 			" " +
 			tview.Escape(selectedItem.GetName()) +
@@ -346,4 +356,27 @@ func (ui *UI) showInfo() {
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("info", flex, true, true)
+}
+
+func (ui *UI) openItem() {
+	row, column := ui.table.GetSelection()
+	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
+	if !ok || selectedFile == ui.currentDir.GetParent() {
+		return
+	}
+
+	openBinary := "xdg-open"
+
+	switch runtime.GOOS {
+	case "darwin":
+		openBinary = "open"
+	case "windows":
+		openBinary = "explorer"
+	}
+
+	cmd := exec.Command(openBinary, selectedFile.GetPath())
+	err := cmd.Start()
+	if err != nil {
+		ui.showErr("Error opening", err)
+	}
 }

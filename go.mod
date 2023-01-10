@@ -1,18 +1,33 @@
 module github.com/dundee/gdu/v5
 
-go 1.16
+go 1.18
 
 require (
-	github.com/fatih/color v1.12.0
-	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
-	github.com/mattn/go-isatty v0.0.13
+	github.com/fatih/color v1.13.0
+	github.com/gdamore/tcell/v2 v2.5.3
+	github.com/maruel/natural v1.1.0
+	github.com/mattn/go-isatty v0.0.16
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
-	github.com/rivo/tview v0.0.0-20210624165335-29d673af0ce2
-	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.2.1
-	github.com/stretchr/testify v1.7.0
-	golang.org/x/sys v0.0.0-20210903071746-97244b99971b
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	github.com/rivo/tview v0.0.0-20220916081518-2e69b7385a37
+	github.com/sirupsen/logrus v1.9.0
+	github.com/spf13/cobra v1.5.0
+	github.com/stretchr/testify v1.8.0
+	golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41
+	gopkg.in/yaml.v3 v3.0.1
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/gdamore/encoding v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rivo/uniseg v0.4.2 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

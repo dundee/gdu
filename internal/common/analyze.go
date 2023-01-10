@@ -16,6 +16,6 @@ type ShouldDirBeIgnored func(name, path string) bool
 type Analyzer interface {
 	AnalyzeDir(path string, ignore ShouldDirBeIgnored, constGC bool) fs.Item
 	GetProgressChan() chan CurrentProgress
-	GetDoneChan() chan struct{}
+	GetDone() SignalGroup
 	ResetProgress()
 }

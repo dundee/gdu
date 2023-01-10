@@ -29,7 +29,7 @@ func (f *File) IsDir() bool {
 	return false
 }
 
-// GetParent retruns parent dir
+// GetParent returns parent dir
 func (f *File) GetParent() fs.Item {
 	return f.Parent
 }
@@ -39,7 +39,7 @@ func (f *File) SetParent(parent fs.Item) {
 	f.Parent = parent
 }
 
-// GetPath retruns absolute Get of the file
+// GetPath returns absolute Get of the file
 func (f *File) GetPath() string {
 	return filepath.Join(f.Parent.GetPath(), f.Name)
 }
@@ -160,7 +160,7 @@ func (f *Dir) IsDir() bool {
 	return true
 }
 
-// GetPath retruns absolute path of the file
+// GetPath returns absolute path of the file
 func (f *Dir) GetPath() string {
 	if f.BasePath != "" {
 		return filepath.Join(f.BasePath, f.Name)
