@@ -11,6 +11,14 @@ func (ui *UI) onMouse(event *tcell.EventMouse, action tview.MouseAction) (*tcell
 		return nil, action
 	}
 
+	if ui.pages.HasPage("confirm") ||
+		ui.pages.HasPage("progress") ||
+		ui.pages.HasPage("deleting") ||
+		ui.pages.HasPage("emptying") ||
+		ui.pages.HasPage("help") {
+		return nil, action
+	}
+
 	switch action {
 	case tview.MouseLeftDoubleClick:
 		row, column := ui.table.GetSelection()
