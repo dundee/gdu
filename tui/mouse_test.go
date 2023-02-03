@@ -75,6 +75,32 @@ func TestScroll(t *testing.T) {
 	assert.Equal(t, row, 0)
 }
 
+func TestScrollWhenPageOpened(t *testing.T) {
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	// open confirm dialog
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
+
+	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseScrollDown)
+	row, _ := ui.table.GetSelection()
+	// scrolling does nothing
+	assert.Equal(t, 0, row)
+}
+
 func TestEmptyEvent(t *testing.T) {
 	simScreen := testapp.CreateSimScreen(50, 50)
 	defer simScreen.Fini()
