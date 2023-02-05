@@ -98,6 +98,10 @@ func CreateUI(
 		o(ui)
 	}
 
+	if ui.FollowSymlinks {
+		ui.Analyzer.SetFollowSymlinks(true)
+	}
+
 	ui.resetSorting()
 
 	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
@@ -177,6 +181,11 @@ func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 // to be shown in the progress modal
 func (ui *UI) SetCurrentItemNameMaxLen(len int) {
 	ui.currentItemNameMaxLen = len
+}
+
+// SetFollowSymlinks sets whether symlinks to files should be followed
+func (ui *UI) SetFollowSymlinks(v bool) {
+	ui.FollowSymlinks = v
 }
 
 // StartUILoop starts tview application
