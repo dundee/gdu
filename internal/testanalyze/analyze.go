@@ -70,7 +70,7 @@ func (a *MockedAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return make(chan common.CurrentProgress)
 }
 
-// GetDoneChan returns always Done
+// GetDone returns always Done
 func (a *MockedAnalyzer) GetDone() common.SignalGroup {
 	c := make(common.SignalGroup)
 	defer c.Broadcast()
@@ -79,6 +79,9 @@ func (a *MockedAnalyzer) GetDone() common.SignalGroup {
 
 // ResetProgress does nothing
 func (a *MockedAnalyzer) ResetProgress() {}
+
+// SetFollowSymlinks does nothing
+func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {}
 
 // RemoveItemFromDirWithErr returns error
 func RemoveItemFromDirWithErr(dir fs.Item, file fs.Item) error {

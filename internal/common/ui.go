@@ -19,6 +19,11 @@ type UI struct {
 	ConstGC               bool
 }
 
+// SetFollowSymlinks sets whether symlinks to files should be followed
+func (ui *UI) SetFollowSymlinks(v bool) {
+	ui.Analyzer.SetFollowSymlinks(v)
+}
+
 // binary multiplies prefixes (IEC)
 const (
 	_          = iota

@@ -22,6 +22,7 @@ type ParallelAnalyzer struct {
 	doneChan         common.SignalGroup
 	wait             *WaitGroup
 	ignoreDir        common.ShouldDirBeIgnored
+	followSymlinks   bool
 }
 
 // CreateAnalyzer returns Analyzer
@@ -39,12 +40,17 @@ func CreateAnalyzer() *ParallelAnalyzer {
 	}
 }
 
+// SetFollowSymlinks sets whether symlink to files should be followed
+func (a *ParallelAnalyzer) SetFollowSymlinks(v bool) {
+	a.followSymlinks = v
+}
+
 // GetProgressChan returns channel for getting progress
 func (a *ParallelAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
 }
 
-// GetDoneChan returns channel for checking when analysis is done
+// GetDone returns channel for checking when analysis is done
 func (a *ParallelAnalyzer) GetDone() common.SignalGroup {
 	return a.doneChan
 }
@@ -130,8 +136,18 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			info, err = f.Info()
 			if err != nil {
 				log.Print(err.Error())
+				dir.Flag = '!'
 				continue
 			}
+			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
+				err = followSymlink(entryPath, &info)
+				if err != nil {
+					log.Print(err.Error())
+					dir.Flag = '!'
+					continue
+				}
+			}
+
 			file = &File{
 				Name:   name,
 				Flag:   getFlag(info),
@@ -203,4 +219,19 @@ func getFlag(f os.FileInfo) rune {
 	default:
 		return ' '
 	}
+}
+
+func followSymlink(path string, f *os.FileInfo) error {
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return err
+	}
+	tInfo, err := os.Lstat(target)
+	if err != nil {
+		return err
+	}
+	if !tInfo.IsDir() {
+		*f = tInfo
+	}
+	return nil
 }

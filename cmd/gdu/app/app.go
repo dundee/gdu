@@ -34,6 +34,7 @@ type UI interface {
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreHidden(value bool)
+	SetFollowSymlinks(value bool)
 	StartUILoop() error
 }
 
@@ -57,6 +58,7 @@ type Flags struct {
 	NoProgress        bool     `yaml:"no-progress"`
 	NoCross           bool     `yaml:"no-cross"`
 	NoHidden          bool     `yaml:"no-hidden"`
+	FollowSymlinks    bool     `yaml:"follow-symlinks"`
 	Profiling         bool     `yaml:"profiling"`
 	ConstGC           bool     `yaml:"const-gc"`
 	Summarize         bool     `yaml:"summarize"`
@@ -203,10 +205,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
-		return ui, nil
-	}
-
-	if a.Flags.NonInteractive || !a.Istty {
+	} else if a.Flags.NonInteractive || !a.Istty {
 		ui = stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
@@ -261,6 +260,11 @@ func (a *App) createUI() (UI, error) {
 		}
 		tview.Styles.BorderColor = tcell.ColorDefault
 	}
+
+	if a.Flags.FollowSymlinks {
+		ui.SetFollowSymlinks(true)
+	}
+
 	return ui, nil
 }
 
