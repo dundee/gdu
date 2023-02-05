@@ -51,7 +51,7 @@ func init() {
 	flags.BoolVarP(&af.NoHidden, "no-hidden", "H", false, "Ignore hidden directories (beginning with dot)")
 	flags.BoolVarP(
 		&af.FollowSymlinks, "follow-symlinks", "L", false,
-		"Follow symlinks for files, i.e. show the size of the file they point to. Symlinks to directories are not followed",
+		"Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)",
 	)
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 	flags.BoolVarP(&af.ConstGC, "const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
