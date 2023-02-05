@@ -74,6 +74,7 @@ Flags:
       --config-file string            Read config from file (default is $HOME/.gdu.yaml)
   -g, --const-gc                      Enable memory garbage collection during analysis with constant level set by GOGC
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
+  -L, --follow-symlinks               Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
   -h, --help                          help for gdu
   -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
   -I, --ignore-dirs-pattern strings   Absolute path patterns to ignore (separated by comma)
