@@ -165,6 +165,32 @@ func TestFollowSymlink(t *testing.T) {
 	assert.Equal(t, 'e', dir.Files[1].GetFlag())
 }
 
+func TestBrokenSymlinkSkipped(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	err := os.Mkdir("test_dir/empty", 0644)
+	assert.Nil(t, err)
+
+	err = os.Symlink("xxx", "test_dir/nested/file3")
+	assert.Nil(t, err)
+
+	analyzer := CreateAnalyzer()
+	analyzer.SetFollowSymlinks(true)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*Dir)
+	analyzer.GetDone().Wait()
+	dir.UpdateStats(make(fs.HardLinkedItems))
+
+	sort.Sort(sort.Reverse(dir.Files))
+
+	assert.Equal(t, int64(7+4096*4), dir.Size)
+	assert.Equal(t, 6, dir.ItemCount)
+
+	assert.Equal(t, '!', dir.Files[0].GetFlag())
+}
+
 func BenchmarkAnalyzeDir(b *testing.B) {
 	fin := testdir.CreateTestDir()
 	defer fin()

@@ -136,17 +136,20 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			info, err = f.Info()
 			if err != nil {
 				log.Print(err.Error())
+				dir.Flag = '!'
 				continue
 			}
 			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
 				target, err := filepath.EvalSymlinks(entryPath)
 				if err != nil {
 					log.Print(err.Error())
+					dir.Flag = '!'
 					continue
 				}
 				tInfo, err := os.Lstat(target)
 				if err != nil {
 					log.Print(err.Error())
+					dir.Flag = '!'
 					continue
 				}
 				if !tInfo.IsDir() {
