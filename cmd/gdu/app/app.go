@@ -57,6 +57,7 @@ type Flags struct {
 	NoProgress        bool     `yaml:"no-progress"`
 	NoCross           bool     `yaml:"no-cross"`
 	NoHidden          bool     `yaml:"no-hidden"`
+	FollowSymlinks    bool     `yaml:"follow-symlinks"`
 	Profiling         bool     `yaml:"profiling"`
 	ConstGC           bool     `yaml:"const-gc"`
 	Summarize         bool     `yaml:"summarize"`
@@ -239,6 +240,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
+			})
+		}
+		if a.Flags.FollowSymlinks {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetFollowSymlinks(a.Flags.FollowSymlinks)
 			})
 		}
 
