@@ -133,6 +133,38 @@ func TestHardlink(t *testing.T) {
 	assert.Equal(t, 'H', dir.Files[0].(*Dir).Files[1].GetFlag())
 }
 
+func TestFollowSymlink(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	err := os.Mkdir("test_dir/empty", 0644)
+	assert.Nil(t, err)
+
+	err = os.Symlink("./file2", "test_dir/nested/file3")
+	assert.Nil(t, err)
+
+	analyzer := CreateAnalyzer()
+	analyzer.SetFollowSymlinks(true)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*Dir)
+	analyzer.GetDone().Wait()
+	dir.UpdateStats(make(fs.HardLinkedItems))
+
+	sort.Sort(sort.Reverse(dir.Files))
+
+	assert.Equal(t, int64(9+4096*4), dir.Size)
+	assert.Equal(t, 7, dir.ItemCount)
+
+	// test file3
+	assert.Equal(t, "nested", dir.Files[0].GetName())
+	assert.Equal(t, "file3", dir.Files[0].(*Dir).Files[1].GetName())
+	assert.Equal(t, int64(2), dir.Files[0].(*Dir).Files[1].GetSize())
+	assert.Equal(t, ' ', dir.Files[0].(*Dir).Files[1].GetFlag())
+
+	assert.Equal(t, 'e', dir.Files[1].GetFlag())
+}
+
 func BenchmarkAnalyzeDir(b *testing.B) {
 	fin := testdir.CreateTestDir()
 	defer fin()
