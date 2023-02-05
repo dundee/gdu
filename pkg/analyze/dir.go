@@ -140,20 +140,11 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				continue
 			}
 			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-				target, err := filepath.EvalSymlinks(entryPath)
+				err = followSymlink(entryPath, &info)
 				if err != nil {
 					log.Print(err.Error())
 					dir.Flag = '!'
 					continue
-				}
-				tInfo, err := os.Lstat(target)
-				if err != nil {
-					log.Print(err.Error())
-					dir.Flag = '!'
-					continue
-				}
-				if !tInfo.IsDir() {
-					info = tInfo
 				}
 			}
 
@@ -228,4 +219,19 @@ func getFlag(f os.FileInfo) rune {
 	default:
 		return ' '
 	}
+}
+
+func followSymlink(path string, f *os.FileInfo) error {
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return err
+	}
+	tInfo, err := os.Lstat(target)
+	if err != nil {
+		return err
+	}
+	if !tInfo.IsDir() {
+		*f = tInfo
+	}
+	return nil
 }
