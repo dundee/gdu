@@ -42,6 +42,9 @@ ignore (separated by comma)
 
 **-H**, **\--no-hidden**\[=false\] Ignore hidden directories (beginning with dot)
 
+**-L**, **\--follow-symlinks**\[=false\] Follow symlinks for files, i.e. show the
+size of the file to which symlink points to (symlinks to directories are not followed)
+
 **-n**, **\--non-interactive**\[=false\] Do not run in interactive mode
 
 **-p**, **\--no-progress**\[=false\] Do not show progress in
