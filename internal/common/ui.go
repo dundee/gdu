@@ -11,13 +11,17 @@ type UI struct {
 	IgnoreDirPaths        map[string]struct{}
 	IgnoreDirPathPatterns *regexp.Regexp
 	IgnoreHidden          bool
-	FollowSymlinks        bool
 	UseColors             bool
 	UseSIPrefix           bool
 	ShowProgress          bool
 	ShowApparentSize      bool
 	ShowRelativeSize      bool
 	ConstGC               bool
+}
+
+// SetFollowSymlinks sets whether symlinks to files should be followed
+func (ui *UI) SetFollowSymlinks(v bool) {
+	ui.Analyzer.SetFollowSymlinks(v)
 }
 
 // binary multiplies prefixes (IEC)

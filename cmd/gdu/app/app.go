@@ -34,6 +34,7 @@ type UI interface {
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreHidden(value bool)
+	SetFollowSymlinks(value bool)
 	StartUILoop() error
 }
 
@@ -204,10 +205,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
-		return ui, nil
-	}
-
-	if a.Flags.NonInteractive || !a.Istty {
+	} else if a.Flags.NonInteractive || !a.Istty {
 		ui = stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
@@ -242,11 +240,6 @@ func (a *App) createUI() (UI, error) {
 				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
 			})
 		}
-		if a.Flags.FollowSymlinks {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetFollowSymlinks(a.Flags.FollowSymlinks)
-			})
-		}
 
 		ui = tui.CreateUI(
 			a.TermApp,
@@ -267,6 +260,11 @@ func (a *App) createUI() (UI, error) {
 		}
 		tview.Styles.BorderColor = tcell.ColorDefault
 	}
+
+	if a.Flags.FollowSymlinks {
+		ui.SetFollowSymlinks(true)
+	}
+
 	return ui, nil
 }
 
