@@ -1,8 +1,8 @@
 Name:           gdu
-Version:        5.21.1
-Release:        2
+Version:        5.22.0
+Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
-ExclusiveArch:  aarch64
+ExclusiveArch:  x86_64
 
 License:        MIT
 URL:            https://github.com/dundee/gdu
@@ -46,6 +46,7 @@ GO111MODULE=on CGO_ENABLED=0 go build \
 -o %{name} github.com/dundee/gdu/v5/cmd/gdu
 %endif
 
+
 %install
 rm -rf $RPM_BUILD_ROOT
 install -Dpm 0755 %{name} %{buildroot}%{_bindir}/%{name}
@@ -62,6 +63,10 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Mon Feb 6 2023 Danie de Jager - 5.22.0-1
+- feat: added option to follow symlinks in #206
+- fix: ignore mouse events when modal is opened in #205
+- Updated SPEC file used for rpm creation by @daniejstriata in #198
 * Mon Jan 9 2023 Danie de Jager - 5.21.1-2
 - updated SPEC file to support builds on Fedora
 * Mon Jan 9 2023 Danie de Jager - 5.21.1-1
@@ -70,6 +75,10 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 - feat: mark multiple items for deletion by @dundee in #193
 - feat: move cursor to next row when marked by @dundee in #194
 - Use GNU tar on Darwin to fix build error by @sryze in #188
+* Mon Oct 24 2022 Danie de Jager - 5.20.0-1
+- feat: set default sorting using config option
+- feat: open file or directory in external program
+- fix: check reference type
 * Wed Sep 28 2022 Danie de Jager - 5.19.0-1
 - feat: upgrade all dependencies
 - feat: bump go version to 1.18
