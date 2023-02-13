@@ -65,6 +65,10 @@ Using curl:
 
     go install github.com/dundee/gdu/v5/cmd/gdu@latest
 
+[Winget](https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dundee/gdu):
+
+    winget install gdu
+
 ## Usage
 
 ```
