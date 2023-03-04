@@ -99,14 +99,18 @@ gobench:
 	go test -bench=. $(PACKAGE)/pkg/analyze
 
 benchmark:
+	sudo cpupower frequency-set -g performance
 	hyperfine --export-markdown=bench-cold.md \
 		--prepare 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches' \
+		--ignore-failure \
 		'gdu -npc ~' 'gdu -gnpc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~'
 	hyperfine --export-markdown=bench-warm.md \
 		--warmup 5 \
+		--ignore-failure \
 		'gdu -npc ~' 'gdu -gnpc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~'
+	sudo cpupower frequency-set -g schedutil
 
 clean:
 	go mod tidy
