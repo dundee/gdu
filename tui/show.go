@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"os"
+
 	"strconv"
 	"strings"
 
@@ -47,6 +49,7 @@ func (ui *UI) showDir() {
 		itemCount  int
 	)
 
+	os.Chdir(ui.currentDir.GetPath())
 	ui.currentDirPath = ui.currentDir.GetPath()
 	ui.currentDirLabel.SetText("[::b] --- " +
 		tview.Escape(
