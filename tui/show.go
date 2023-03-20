@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dundee/gdu/v5/build"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/dundee/gdu/v5/build"
 )
 
 const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
@@ -49,8 +51,13 @@ func (ui *UI) showDir() {
 		itemCount  int
 	)
 
-	os.Chdir(ui.currentDir.GetPath())
 	ui.currentDirPath = ui.currentDir.GetPath()
+
+	err := os.Chdir(ui.currentDirPath)
+	if err != nil {
+		log.Printf("error setting cwd: %s", err.Error())
+	}
+
 	ui.currentDirLabel.SetText("[::b] --- " +
 		tview.Escape(
 			strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix),
