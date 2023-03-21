@@ -159,7 +159,7 @@ Gdu can read (and write) YAML configuration file.
 * To configure gdu to permanently run in gray-scale color mode:
 
 ```
-echo "no-color: true" > ~/.gdu.yaml
+echo "no-color: true" >> ~/.gdu.yaml
 ```
 
 * To set default sorting in configuration file:
@@ -168,6 +168,12 @@ echo "no-color: true" > ~/.gdu.yaml
 sorting:
     by: name // size, name, itemCount, mtime
     order: desc
+```
+
+* To configure gdu to set CWD variable when browsing directories:
+
+```
+echo "change-cwd: true" >> ~/.gdu.yaml
 ```
 
 * To save the current configuration

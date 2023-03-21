@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"os"
-
 	"strconv"
 	"strings"
 
@@ -53,9 +51,12 @@ func (ui *UI) showDir() {
 
 	ui.currentDirPath = ui.currentDir.GetPath()
 
-	err := os.Chdir(ui.currentDirPath)
-	if err != nil {
-		log.Printf("error setting cwd: %s", err.Error())
+	if ui.changeCwdFn != nil {
+		err := ui.changeCwdFn(ui.currentDirPath)
+		if err != nil {
+			log.Printf("error setting cwd: %s", err.Error())
+		}
+		log.Printf("changing cwd to %s", ui.currentDirPath)
 	}
 
 	ui.currentDirLabel.SetText("[::b] --- " +
