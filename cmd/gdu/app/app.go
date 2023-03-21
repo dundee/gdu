@@ -65,6 +65,7 @@ type Flags struct {
 	UseSIPrefix       bool     `yaml:"use-si-prefix"`
 	NoPrefix          bool     `yaml:"no-prefix"`
 	WriteConfig       bool     `yaml:"-"`
+	ChangeCwd         bool     `yaml:"change-cwd"`
 	Style             Style    `yaml:"style"`
 	Sorting           Sorting  `yaml:"sorting"`
 }
@@ -238,6 +239,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
+			})
+		}
+		if a.Flags.ChangeCwd != false {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetChangeCwdFn(os.Chdir)
 			})
 		}
 

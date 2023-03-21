@@ -45,6 +45,7 @@ type UI struct {
 	emptier                 func(fs.Item, fs.Item) error
 	getter                  device.DevicesInfoGetter
 	exec                    func(argv0 string, argv []string, envv []string) error
+	changeCwdFn             func(string) error
 	linkedItems             fs.HardLinkedItems
 	selectedTextColor       tcell.Color
 	selectedBackgroundColor tcell.Color
@@ -177,6 +178,12 @@ func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 // to be shown in the progress modal
 func (ui *UI) SetCurrentItemNameMaxLen(len int) {
 	ui.currentItemNameMaxLen = len
+}
+
+// SetChangeCwdFn sets function that can be used to change current working dir
+// during dir browsing
+func (ui *UI) SetChangeCwdFn(fn func(string) error) {
+	ui.changeCwdFn = fn
 }
 
 // StartUILoop starts tview application

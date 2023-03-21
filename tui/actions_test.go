@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"testing"
 
@@ -269,6 +270,76 @@ func TestViewFile(t *testing.T) {
 
 	event := file.GetInputCapture()(tcell.NewEventKey(tcell.KeyRune, 'j', 0))
 	assert.Equal(t, 'j', event.Rune())
+}
+
+func TestChangeCwd(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+	cwd := ""
+
+	opt := func(ui *UI) {
+		ui.SetChangeCwdFn(func(p string) error {
+			cwd = p
+			return nil
+		})
+	}
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false, opt)
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	ui.table.Select(0, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.table.Select(1, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+
+	assert.Equal(t, cwd, "test_dir/nested/subnested")
+}
+
+func TestChangeCwdWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen(50, 50)
+	defer simScreen.Fini()
+	cwd := ""
+
+	opt := func(ui *UI) {
+		ui.SetChangeCwdFn(func(p string) error {
+			cwd = p
+			return errors.New("failed")
+		})
+	}
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false, opt)
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	ui.table.Select(0, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.table.Select(1, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+
+	assert.Equal(t, cwd, "test_dir/nested/subnested")
 }
 
 func TestShowInfo(t *testing.T) {
