@@ -330,6 +330,10 @@ func TestShowConfirm(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
 
 	assert.True(t, ui.pages.HasPage("confirm"))
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, '?', 0))
+
+	assert.False(t, ui.pages.HasPage("help"))
 }
 
 func TestDeleteEmpty(t *testing.T) {
