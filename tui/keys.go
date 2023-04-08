@@ -23,7 +23,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if key == nil {
 		return nil
 	}
-	key = ui.handleBreakingActions(key)
+	key = ui.handleQuit(key)
 	if key == nil {
 		return nil
 	}
@@ -31,9 +31,22 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if ui.pages.HasPage("confirm") ||
 		ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
-		ui.pages.HasPage("emptying") ||
-		ui.pages.HasPage("help") {
+		ui.pages.HasPage("emptying") {
 		return key
+	}
+
+	key = ui.handleHelp(key)
+	if key == nil {
+		return nil
+	}
+
+	if ui.pages.HasPage("help") {
+		return key
+	}
+
+	key = ui.handleShell(key)
+	if key == nil {
+		return nil
 	}
 
 	key = ui.handleLeftRight(key)
@@ -41,9 +54,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 
-	if key.Key() == tcell.KeyTab && ui.filteringInput != nil {
-		ui.filtering = true
-		ui.app.SetFocus(ui.filteringInput)
+	key = ui.handleFiltering(key)
+	if key == nil {
 		return nil
 	}
 
@@ -95,7 +107,7 @@ func (ui *UI) handleInfoPageEvents(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
-func (ui *UI) handleBreakingActions(key *tcell.EventKey) *tcell.EventKey {
+func (ui *UI) handleQuit(key *tcell.EventKey) *tcell.EventKey {
 	switch key.Rune() {
 	case 'Q':
 		ui.app.Stop()
@@ -104,16 +116,27 @@ func (ui *UI) handleBreakingActions(key *tcell.EventKey) *tcell.EventKey {
 	case 'q':
 		ui.app.Stop()
 		return nil
-	case 'b':
-		ui.spawnShell()
-		return nil
-	case '?':
+	}
+	return key
+}
+
+func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {
+	if key.Rune() == '?' {
 		if ui.pages.HasPage("help") {
 			ui.pages.RemovePage("help")
 			ui.app.SetFocus(ui.table)
 			return nil
 		}
 		ui.showHelp()
+		return nil
+	}
+	return key
+}
+
+func (ui *UI) handleShell(key *tcell.EventKey) *tcell.EventKey {
+	if key.Rune() == 'b' {
+		ui.spawnShell()
+		return nil
 	}
 	return key
 }
@@ -126,6 +149,15 @@ func (ui *UI) handleLeftRight(key *tcell.EventKey) *tcell.EventKey {
 
 	if key.Rune() == 'l' || key.Key() == tcell.KeyRight {
 		ui.handleRight()
+		return nil
+	}
+	return key
+}
+
+func (ui *UI) handleFiltering(key *tcell.EventKey) *tcell.EventKey {
+	if key.Key() == tcell.KeyTab && ui.filteringInput != nil {
+		ui.filtering = true
+		ui.app.SetFocus(ui.filteringInput)
 		return nil
 	}
 	return key
