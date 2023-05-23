@@ -2,12 +2,18 @@ package tui
 
 import (
 	"fmt"
+	"syscall"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
+	if ui.handleCtrlZ(key) == nil {
+		return nil
+	}
+
 	if ui.pages.HasPage("file") {
 		return key // send event to primitive
 	}
@@ -104,6 +110,22 @@ func (ui *UI) handleInfoPageEvents(key *tcell.EventKey) *tcell.EventKey {
 		}
 		ui.showInfo() // refresh file info after any change
 	}
+	return key
+}
+
+// handle ctrl+z job control
+func (ui *UI) handleCtrlZ(key *tcell.EventKey) *tcell.EventKey {
+	if key.Key() == tcell.KeyCtrlZ {
+		ui.app.Suspend(func() {
+			termApp := ui.app.(*tview.Application)
+			termApp.Lock()
+			defer termApp.Unlock()
+
+			syscall.Kill(syscall.Getpid(), syscall.SIGTSTP)
+		})
+		return nil
+	}
+
 	return key
 }
 
