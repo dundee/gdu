@@ -17,7 +17,7 @@ import (
 )
 
 func TestShowHelp(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -29,7 +29,7 @@ func TestShowHelp(t *testing.T) {
 }
 
 func TestCloseHelp(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -44,7 +44,7 @@ func TestCloseHelp(t *testing.T) {
 }
 
 func TestCloseHelpWithQuestionMark(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -59,7 +59,7 @@ func TestCloseHelpWithQuestionMark(t *testing.T) {
 }
 
 func TestKeyWhileDeleting(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -73,7 +73,7 @@ func TestKeyWhileDeleting(t *testing.T) {
 }
 
 func TestLeftRightKeyWhileConfirm(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -91,7 +91,7 @@ func TestLeftRightKeyWhileConfirm(t *testing.T) {
 func TestMoveLeftRight(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -137,7 +137,7 @@ func TestMoveLeftRight(t *testing.T) {
 func TestMoveRightOnDevice(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -168,7 +168,7 @@ func TestMoveRightOnDevice(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -181,7 +181,7 @@ func TestStop(t *testing.T) {
 func TestStopWithPrintingPath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -207,7 +207,7 @@ func TestStopWithPrintingPath(t *testing.T) {
 func TestSpawnShell(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -237,7 +237,7 @@ func TestSpawnShell(t *testing.T) {
 func TestSpawnShellWithoutDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -259,7 +259,7 @@ func TestSpawnShellWithoutDir(t *testing.T) {
 func TestSpawnShellWithWrongDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -284,7 +284,7 @@ func TestSpawnShellWithWrongDir(t *testing.T) {
 func TestSpawnShellWithError(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -307,7 +307,7 @@ func TestSpawnShellWithError(t *testing.T) {
 }
 
 func TestShowConfirm(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -337,7 +337,7 @@ func TestShowConfirm(t *testing.T) {
 }
 
 func TestDeleteEmpty(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -349,7 +349,7 @@ func TestDeleteEmpty(t *testing.T) {
 }
 
 func TestMarkEmpty(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -363,7 +363,7 @@ func TestMarkEmpty(t *testing.T) {
 func TestDelete(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -399,7 +399,7 @@ func TestDelete(t *testing.T) {
 func TestDeleteMarked(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -437,7 +437,7 @@ func TestDeleteMarked(t *testing.T) {
 func TestDeleteParent(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -467,7 +467,7 @@ func TestDeleteParent(t *testing.T) {
 func TestMarkParent(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -497,7 +497,7 @@ func TestMarkParent(t *testing.T) {
 func TestEmptyDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -534,7 +534,7 @@ func TestEmptyDir(t *testing.T) {
 func TestMarkedEmptyDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -573,7 +573,7 @@ func TestMarkedEmptyDir(t *testing.T) {
 func TestEmptyFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -614,7 +614,7 @@ func TestEmptyFile(t *testing.T) {
 func TestMarkedEmptyFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -655,7 +655,7 @@ func TestMarkedEmptyFile(t *testing.T) {
 }
 
 func TestSortByApparentSize(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -679,7 +679,7 @@ func TestSortByApparentSize(t *testing.T) {
 }
 
 func TestShowFileCount(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -703,7 +703,7 @@ func TestShowFileCount(t *testing.T) {
 }
 
 func TestShowFileCountBW(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -727,7 +727,7 @@ func TestShowFileCountBW(t *testing.T) {
 }
 
 func TestShowMtime(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -751,7 +751,7 @@ func TestShowMtime(t *testing.T) {
 }
 
 func TestShowMtimeBW(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -775,7 +775,7 @@ func TestShowMtimeBW(t *testing.T) {
 }
 
 func TestShowRelativeBar(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -813,7 +813,7 @@ func TestRescan(t *testing.T) {
 		},
 	}
 
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -840,7 +840,7 @@ func TestRescan(t *testing.T) {
 }
 
 func TestSorting(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -871,7 +871,7 @@ func TestSorting(t *testing.T) {
 func TestShowFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -898,7 +898,7 @@ func TestShowFile(t *testing.T) {
 func TestShowInfoAndMoveAround(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)

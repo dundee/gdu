@@ -124,7 +124,7 @@ func TestSetSorting(t *testing.T) {
 }
 
 func TestSetDEfaultSorting(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	var opts []Option
@@ -184,7 +184,7 @@ func TestSortDevicesByUsedSize(t *testing.T) {
 }
 
 func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bool) *UI {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)

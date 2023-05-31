@@ -56,7 +56,7 @@ func TestShowDevicesBW(t *testing.T) {
 }
 
 func TestDeviceSelected(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -106,7 +106,7 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 		Files: make([]fs.Item, 0, 1),
 	}
 
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -132,7 +132,7 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 }
 
 func TestReadAnalysis(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
@@ -155,7 +155,7 @@ func TestReadAnalysis(t *testing.T) {
 }
 
 func TestReadAnalysisWithWrongFile(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0644)
@@ -178,7 +178,7 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 }
 
 func TestViewDirContents(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -201,7 +201,7 @@ func TestViewDirContents(t *testing.T) {
 }
 
 func TestViewFileWithoutCurrentDir(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -214,7 +214,7 @@ func TestViewFileWithoutCurrentDir(t *testing.T) {
 }
 
 func TestViewContentsOfNotExistingFile(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -244,7 +244,7 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 func TestViewFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -275,7 +275,7 @@ func TestViewFile(t *testing.T) {
 func TestChangeCwd(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 	cwd := ""
 
@@ -310,7 +310,7 @@ func TestChangeCwd(t *testing.T) {
 func TestChangeCwdWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 	cwd := ""
 
@@ -345,7 +345,7 @@ func TestChangeCwdWithErr(t *testing.T) {
 func TestShowInfo(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -375,7 +375,7 @@ func TestShowInfo(t *testing.T) {
 func TestShowInfoBW(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -405,7 +405,7 @@ func TestShowInfoBW(t *testing.T) {
 func TestShowInfoWithHardlinks(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -447,7 +447,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 func TestShowInfoWithoutCurrentDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -462,7 +462,7 @@ func TestShowInfoWithoutCurrentDir(t *testing.T) {
 func TestExitViewFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
