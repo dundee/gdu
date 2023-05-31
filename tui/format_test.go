@@ -10,7 +10,7 @@ import (
 )
 
 func TestFormatSize(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -27,7 +27,7 @@ func TestFormatSize(t *testing.T) {
 }
 
 func TestFormatSizeDec(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -44,7 +44,7 @@ func TestFormatSizeDec(t *testing.T) {
 }
 
 func TestFormatCount(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -57,7 +57,7 @@ func TestFormatCount(t *testing.T) {
 }
 
 func TestEscapeName(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -79,7 +79,7 @@ func TestEscapeName(t *testing.T) {
 }
 
 func TestMarked(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)

@@ -171,10 +171,6 @@ func runE(command *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("Error creating screen: %w", err)
 		}
-		err = screen.Init()
-		if err != nil {
-			return fmt.Errorf("Error initializing screen: %w", err)
-		}
 		defer screen.Clear()
 		defer screen.Fini()
 

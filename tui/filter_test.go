@@ -13,7 +13,7 @@ import (
 )
 
 func TestFiltering(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -47,7 +47,7 @@ func TestFiltering(t *testing.T) {
 }
 
 func TestFilteringWithoutCurrentDir(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -63,7 +63,7 @@ func TestFilteringWithoutCurrentDir(t *testing.T) {
 func TestSwitchToTable(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -106,7 +106,7 @@ func TestSwitchToTable(t *testing.T) {
 func TestExitFiltering(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)

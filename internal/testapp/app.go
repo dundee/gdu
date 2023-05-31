@@ -10,22 +10,17 @@ import (
 )
 
 // CreateSimScreen returns tcell.SimulationScreen
-func CreateSimScreen(width, height int) tcell.SimulationScreen {
+func CreateSimScreen() tcell.SimulationScreen {
 	screen := tcell.NewSimulationScreen("UTF-8")
-	err := screen.Init()
-	if err != nil {
-		panic(err)
-	}
-	screen.SetSize(width, height)
-
 	return screen
 }
 
 // CreateTestAppWithSimScreen returns app with simulation screen for tests
 func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.SimulationScreen) {
 	app := tview.NewApplication()
-	screen := CreateSimScreen(width, height)
+	screen := CreateSimScreen()
 	app.SetScreen(screen)
+	screen.SetSize(width, height)
 	return app, screen
 }
 

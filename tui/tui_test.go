@@ -55,6 +55,8 @@ func TestFooter(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
+	printScreen(simScreen)
+
 	text := []byte(" Total disk usage: 4.0 KiB Apparent size: 2 B Items: 1")
 	for i, r := range b {
 		if i >= len(text) {
@@ -121,7 +123,7 @@ func TestHelpBw(t *testing.T) {
 }
 
 func TestAppRun(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -133,7 +135,7 @@ func TestAppRun(t *testing.T) {
 }
 
 func TestAppRunWithErr(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -158,7 +160,7 @@ func TestRescanDir(t *testing.T) {
 		},
 	}
 
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
@@ -206,7 +208,7 @@ func TestFileSelected(t *testing.T) {
 }
 
 func TestSelectedWithoutCurrentDir(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -232,7 +234,7 @@ func TestBeforeDraw(t *testing.T) {
 }
 
 func TestIgnorePaths(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -372,7 +374,7 @@ func TestDeleteMarkedWithErr(t *testing.T) {
 }
 
 func TestShowErr(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -384,7 +386,7 @@ func TestShowErr(t *testing.T) {
 }
 
 func TestShowErrBW(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -401,7 +403,7 @@ func TestMin(t *testing.T) {
 }
 
 func TestSetSelectedBackgroundColor(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -413,7 +415,7 @@ func TestSetSelectedBackgroundColor(t *testing.T) {
 }
 
 func TestSetSelectedTextColor(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -425,7 +427,7 @@ func TestSetSelectedTextColor(t *testing.T) {
 }
 
 func TestSetCurrentItemNameMaxLen(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -467,7 +469,7 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 }
 
 func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mockedAnalyzer bool) *UI {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)

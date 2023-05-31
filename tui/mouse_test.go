@@ -16,7 +16,7 @@ import (
 func TestDoubleClick(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
@@ -50,7 +50,7 @@ func TestDoubleClick(t *testing.T) {
 }
 
 func TestScroll(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -76,7 +76,7 @@ func TestScroll(t *testing.T) {
 }
 
 func TestScrollWhenPageOpened(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -102,7 +102,7 @@ func TestScrollWhenPageOpened(t *testing.T) {
 }
 
 func TestEmptyEvent(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
@@ -114,7 +114,7 @@ func TestEmptyEvent(t *testing.T) {
 }
 
 func TestMouseMove(t *testing.T) {
-	simScreen := testapp.CreateSimScreen(50, 50)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
