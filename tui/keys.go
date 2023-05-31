@@ -121,7 +121,10 @@ func (ui *UI) handleCtrlZ(key *tcell.EventKey) *tcell.EventKey {
 			termApp.Lock()
 			defer termApp.Unlock()
 
-			syscall.Kill(syscall.Getpid(), syscall.SIGTSTP)
+			err := syscall.Kill(syscall.Getpid(), syscall.SIGTSTP)
+			if err != nil {
+				ui.showErr("Error sending STOP signal", err)
+			}
 		})
 		return nil
 	}
