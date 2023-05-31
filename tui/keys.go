@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"syscall"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
@@ -121,7 +120,7 @@ func (ui *UI) handleCtrlZ(key *tcell.EventKey) *tcell.EventKey {
 			termApp.Lock()
 			defer termApp.Unlock()
 
-			err := syscall.Kill(syscall.Getpid(), syscall.SIGTSTP)
+			err := stopProcess()
 			if err != nil {
 				ui.showErr("Error sending STOP signal", err)
 			}

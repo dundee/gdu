@@ -27,3 +27,7 @@ func (ui *UI) spawnShell() {
 		ui.showErr("Error executing shell", err)
 	}
 }
+
+func stopProcess() error {
+	return nil
+}

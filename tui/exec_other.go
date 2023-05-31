@@ -5,6 +5,7 @@ package tui
 
 import (
 	"os"
+	"syscall"
 )
 
 func getShellBin() string {
@@ -30,4 +31,8 @@ func (ui *UI) spawnShell() {
 			ui.showErr("Error executing shell", err)
 		}
 	})
+}
+
+func stopProcess() error {
+	return syscall.Kill(syscall.Getpid(), syscall.SIGTSTP)
 }
