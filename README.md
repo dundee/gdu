@@ -246,27 +246,29 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 
 | Command | Mean [s] | Min [s] | Max [s] | Relative |
 |:---|---:|---:|---:|---:|
-| `diskus ~` | 4.629 ± 0.028 | 4.581 | 4.667 | 1.00 |
-| `gdu -npc ~` | 4.715 ± 0.016 | 4.694 | 4.751 | 1.02 ± 0.01 |
-| `gdu -gnpc ~` | 4.718 ± 0.015 | 4.701 | 4.754 | 1.02 ± 0.01 |
-| `dua ~` | 5.815 ± 0.007 | 5.805 | 5.829 | 1.26 ± 0.01 |
-| `dust -d0 ~` | 5.878 ± 0.079 | 5.817 | 6.093 | 1.27 ± 0.02 |
-| `du -hs ~` | 22.805 ± 0.071 | 22.694 | 22.896 | 4.93 ± 0.03 |
-| `duc index ~` | 23.418 ± 0.046 | 23.340 | 23.473 | 5.06 ± 0.03 |
-| `ncdu -0 -o /dev/null ~` | 23.786 ± 0.074 | 23.626 | 23.891 | 5.14 ± 0.04 |
+| `gdu -npc ~` | 4.995 ± 0.032 | 4.964 | 5.083 | 1.00 |
+| `gdu -gnpc ~` | 5.080 ± 0.132 | 5.000 | 5.339 | 1.02 ± 0.03 |
+| `diskus ~` | 5.174 ± 0.042 | 5.113 | 5.231 | 1.04 ± 0.01 |
+| `pdu ~` | 5.940 ± 0.011 | 5.918 | 5.956 | 1.19 ± 0.01 |
+| `dua ~` | 6.176 ± 0.012 | 6.160 | 6.195 | 1.24 ± 0.01 |
+| `dust -d0 ~` | 6.556 ± 0.497 | 6.217 | 7.319 | 1.31 ± 0.10 |
+| `du -hs ~` | 24.105 ± 0.061 | 24.045 | 24.220 | 4.83 ± 0.03 |
+| `ncdu -0 -o /dev/null ~` | 25.065 ± 0.071 | 24.970 | 25.180 | 5.02 ± 0.04 |
+| `duc index ~` | 25.711 ± 3.168 | 24.550 | 34.723 | 5.15 ± 0.64 |
 
 ### Warm cache
 
 | Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
 |:---|---:|---:|---:|---:|
-| `diskus ~` | 370.1 ± 13.2 | 356.1 | 402.4 | 1.00 |
-| `dua ~` | 472.0 ± 7.3 | 460.1 | 482.5 | 1.28 ± 0.05 |
-| `dust -d0 ~` | 568.7 ± 14.6 | 551.0 | 601.2 | 1.54 ± 0.07 |
-| `gdu -npc ~` | 609.9 ± 6.3 | 599.5 | 619.8 | 1.65 ± 0.06 |
-| `gdu -gnpc ~` | 732.3 ± 14.0 | 710.7 | 758.2 | 1.98 ± 0.08 |
-| `du -hs ~` | 1322.4 ± 9.1 | 1309.9 | 1333.6 | 3.57 ± 0.13 |
-| `duc index ~` | 1548.3 ± 15.2 | 1529.5 | 1574.4 | 4.18 ± 0.15 |
-| `ncdu -0 -o /dev/null ~` | 2220.2 ± 9.4 | 2205.6 | 2231.5 | 6.00 ± 0.21 |
+| `pdu ~` | 354.9 ± 3.9 | 350.1 | 363.2 | 1.00 |
+| `diskus ~` | 406.5 ± 6.9 | 395.2 | 419.2 | 1.15 ± 0.02 |
+| `dua ~` | 525.0 ± 10.0 | 506.8 | 536.7 | 1.48 ± 0.03 |
+| `dust -d0 ~` | 592.1 ± 15.5 | 567.8 | 626.7 | 1.67 ± 0.05 |
+| `gdu -npc ~` | 711.4 ± 9.8 | 702.9 | 734.8 | 2.00 ± 0.04 |
+| `gdu -gnpc ~` | 847.7 ± 11.1 | 827.2 | 861.2 | 2.39 ± 0.04 |
+| `du -hs ~` | 1387.0 ± 6.5 | 1379.9 | 1398.3 | 3.91 ± 0.05 |
+| `duc index ~` | 1638.3 ± 5.1 | 1630.7 | 1646.7 | 4.62 ± 0.05 |
+| `ncdu -0 -o /dev/null ~` | 2348.9 ± 9.1 | 2330.5 | 2364.5 | 6.62 ± 0.08 |
 
 ## Alternatives
 
@@ -276,3 +278,4 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 * [diskus](https://github.com/sharkdp/diskus) - Very simple but very fast tool written in Rust
 * [duc](https://duc.zevv.nl/) - Collection of tools with many possibilities for inspecting and visualising disk usage
 * [dust](https://github.com/bootandy/dust) - Tool written in Rust showing tree like structures of disk usage
+* [pdu](https://github.com/KSXGitHub/parallel-disk-usage) - Tool written in Rust showing tree like structures of disk usage

@@ -104,12 +104,12 @@ benchmark:
 		--prepare 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches' \
 		--ignore-failure \
 		'gdu -npc ~' 'gdu -gnpc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
-		'diskus ~' 'du -hs ~' 'dust -d0 ~'
+		'diskus ~' 'du -hs ~' 'dust -d0 ~' 'pdu ~'
 	hyperfine --export-markdown=bench-warm.md \
 		--warmup 5 \
 		--ignore-failure \
 		'gdu -npc ~' 'gdu -gnpc ~' 'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
-		'diskus ~' 'du -hs ~' 'dust -d0 ~'
+		'diskus ~' 'du -hs ~' 'dust -d0 ~' 'pdu ~'
 	sudo cpupower frequency-set -g schedutil
 
 clean:
