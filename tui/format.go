@@ -13,9 +13,9 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked 
 	var part int
 
 	if ui.ShowApparentSize {
-		part = int(float64(item.GetSize()) / float64(maxSize) * 10.0)
+		part = int(float64(item.GetSize()) / float64(maxSize) * 100.0)
 	} else {
-		part = int(float64(item.GetUsage()) / float64(maxUsage) * 10.0)
+		part = int(float64(item.GetUsage()) / float64(maxUsage) * 100.0)
 	}
 
 	row := string(item.GetFlag())
@@ -32,7 +32,11 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked 
 		row += fmt.Sprintf("%15s", ui.formatSize(item.GetUsage(), false, true))
 	}
 
-	row += getUsageGraph(part)
+	if ui.useOldSizeBar {
+		row += " " + getUsageGraphOld(part) + " "
+	} else {
+		row += getUsageGraph(part)
+	}
 
 	if ui.showItemCount {
 		if ui.UseColors && !marked {

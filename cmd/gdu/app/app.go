@@ -74,6 +74,7 @@ type Flags struct {
 type Style struct {
 	SelectedRow   ColorStyle        `yaml:"selected-row"`
 	ProgressModal ProgressModalOpts `yaml:"progress-modal"`
+	UseOldSizeBar bool              `yaml:"use-old-size-bar"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -234,6 +235,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
+			})
+		}
+		if a.Flags.Style.UseOldSizeBar {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.UseOldSizeBar()
 			})
 		}
 		if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
