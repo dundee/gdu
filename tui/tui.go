@@ -50,6 +50,7 @@ type UI struct {
 	selectedTextColor       tcell.Color
 	selectedBackgroundColor tcell.Color
 	currentItemNameMaxLen   int
+	useOldSizeBar           bool
 	defaultSortBy           string
 	defaultSortOrder        string
 	markedRows              map[int]struct{}
@@ -178,6 +179,11 @@ func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 // to be shown in the progress modal
 func (ui *UI) SetCurrentItemNameMaxLen(len int) {
 	ui.currentItemNameMaxLen = len
+}
+
+// UseOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)
+func (ui *UI) UseOldSizeBar() {
+	ui.useOldSizeBar = true
 }
 
 // SetChangeCwdFn sets function that can be used to change current working dir

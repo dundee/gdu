@@ -85,6 +85,7 @@ func TestMarked(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
 	ui.markedRows[0] = struct{}{}
+	ui.useOldSizeBar = true
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -100,4 +101,26 @@ func TestMarked(t *testing.T) {
 
 	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), true), "✓ Aaa")
 	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false), "[##########]   Aaa")
+}
+
+func TestSizeBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+
+	dir := &analyze.Dir{
+		File: &analyze.File{
+			Usage: 10,
+		},
+	}
+
+	file := &analyze.File{
+		Name:   "Aaa",
+		Parent: dir,
+		Usage:  10,
+	}
+
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false), "██████████▏Aaa")
 }
