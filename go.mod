@@ -9,7 +9,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/rivo/tview v0.0.0-20230530133550-8bd761dda819
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sys v0.8.0
