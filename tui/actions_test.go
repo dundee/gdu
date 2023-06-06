@@ -63,6 +63,7 @@ func TestDeviceSelected(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
+	ui.UseOldSizeBar()
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.ListDevices(getDevicesInfoMock())
 
