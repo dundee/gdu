@@ -1,5 +1,5 @@
 Name:           gdu
-Version:        5.22.0
+Version:        5.25.0
 Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
 ExclusiveArch:  x86_64
@@ -63,6 +63,16 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Tue Jun 6 2023 Danie de Jager - 5.25.0-1
+- feat: use unicode block elements in size bar in #255
+* Thu Jun 1 2023 Danie de Jager - 5.24.0-1
+- feat: add ctrl+z for job control by @yurenchen000 in #250
+- feat: upgrade dependencies by @dundee in #252
+* Thu May 11 2023 Danie de Jager - 5.23.0-2
+- Compiled wiht golang 1.19.9
+* Tue Apr 11 2023 Danie de Jager - 5.23.0-1
+- feat: added configuration option to change CWD when browsing directories by @leapfog in #230
+- fix: do not show help modal when confirm modal is already opened by @dundee in #237
 * Mon Feb 6 2023 Danie de Jager - 5.22.0-1
 - feat: added option to follow symlinks in #206
 - fix: ignore mouse events when modal is opened in #205
