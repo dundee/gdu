@@ -185,6 +185,7 @@ func TestAnalyzePathWithStyle(t *testing.T) {
 				ProgressModal: ProgressModalOpts{
 					CurrentItemNameMaxLen: 10,
 				},
+				UseOldSizeBar: true,
 			},
 		},
 		[]string{"test_dir"},

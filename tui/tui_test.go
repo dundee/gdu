@@ -438,6 +438,18 @@ func TestSetCurrentItemNameMaxLen(t *testing.T) {
 	assert.Equal(t, ui.currentItemNameMaxLen, 5)
 }
 
+func TestUseOldSizeBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+
+	ui.UseOldSizeBar()
+
+	assert.Equal(t, ui.useOldSizeBar, true)
+}
+
 // nolint: deadcode,unused // Why: for debugging
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()
