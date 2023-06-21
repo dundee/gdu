@@ -101,6 +101,17 @@ Flags:
   -s, --summarize                     Show only a total in non-interactive mode
   -v, --version                       Print version
       --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
+
+In interactive mode:
+  ↑ or k                              Move cursor up
+  ↓ or j                              Move cursor down
+  → or Enter                          Go to highlighted directory
+  ← or h                              Go to parent directory
+  d                                   Delete the selected file or directory
+  e                                   Empty the selected directory
+  n                                   Sort by name
+  s                                   Sort by size
+  c                                   Show number of items in directory
 ```
 
 ## Examples
