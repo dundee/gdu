@@ -283,7 +283,7 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 
 ## Alternatives
 
-* [ncdu](https://dev.yorhel.nl/ncdu) - NCurses based tool written in pure C
+* [ncdu](https://dev.yorhel.nl/ncdu) - NCurses based tool written in Zig
 * [godu](https://github.com/viktomas/godu) - Analyzer with carousel like user interface
 * [dua](https://github.com/Byron/dua-cli) - Tool written in Rust with interface similar to gdu (and ncdu)
 * [diskus](https://github.com/sharkdp/diskus) - Very simple but very fast tool written in Rust
