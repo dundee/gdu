@@ -40,7 +40,6 @@ Using curl:
     apt-get update
     apt-get install gdu
 
-
 [NixOS](https://search.nixos.org/packages?channel=unstable&show=gdu&query=gdu):
 
     nix-env -iA nixos.gdu
@@ -68,6 +67,10 @@ Using curl:
 [Winget](https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dundee/gdu):
 
     winget install gdu
+
+[Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/gdu.json):
+
+    scoop install gdu
 
 ## Usage
 
