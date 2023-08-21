@@ -215,15 +215,22 @@ func (ui *UI) rescanDir() {
 
 func (ui *UI) fileItemSelected(row, column int) {
 	if ui.currentDir == nil {
+		return // Add this check to handle nil case
+	}
+
+	selectedDirCell := ui.table.GetCell(row, column)
+
+	// Check if the selectedDirCell is nil before using it
+	if selectedDirCell == nil || selectedDirCell.GetReference() == nil {
+		return
+	}
+
+	selectedDir := selectedDirCell.GetReference().(fs.Item)
+	if selectedDir == nil || !selectedDir.IsDir() {
 		return
 	}
 
 	origDir := ui.currentDir
-	selectedDir := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	if !selectedDir.IsDir() {
-		return
-	}
-
 	ui.currentDir = selectedDir
 	ui.hideFilterInput()
 	ui.markedRows = make(map[int]struct{})
