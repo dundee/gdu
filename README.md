@@ -47,8 +47,8 @@ Using curl:
 
 [Homebrew](https://formulae.brew.sh/formula/gdu):
 
-    brew install -f gdu
-    brew link --overwrite gdu  # if you have coreutils installed as well
+    brew install gdu
+> Note:  Homebrew links gdu's binary as `gdu-go` in macOS to prevent naming conflicts with gdu from coreutils.
 
 [Snap](https://snapcraft.io/gdu-disk-usage-analyzer):
 
