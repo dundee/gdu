@@ -26,8 +26,8 @@ func (ui *UI) SetFollowSymlinks(v bool) {
 
 // binary multiplies prefixes (IEC)
 const (
-	_          = iota
-	Ki float64 = 1 << (10 * iota)
+	_ float64 = 1 << (10 * iota)
+	Ki
 	Mi
 	Gi
 	Ti
