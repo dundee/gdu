@@ -69,7 +69,9 @@ Using curl:
 
     winget install gdu
 
-Now, either run it as `gdu_windows_amd64.exe`, *or* add `alias gdu="gdu_windows_amd64.exe"` to the bottom of your `~/.bashrc` file when using the Git Bash terminal, and run it as `gdu`. 
+You can either run it as `gdu_windows_amd64.exe` or 
+* add an alias with `Doskey`.
+* add `alias gdu="gdu_windows_amd64.exe"` to your `~/.bashrc` file if using Git Bash to run it as `gdu`.
 
 ## Usage
 
@@ -285,8 +287,8 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 
 ## Alternatives
 
-* [ncdu](https://dev.yorhel.nl/ncdu) - NCurses based tool written in pure C
-* [godu](https://github.com/viktomas/godu) - Analyzer with carousel like user interface
+* [ncdu](https://dev.yorhel.nl/ncdu) - NCurses based tool written in pure `C` (LTS) or `zig` (Stable)
+* [godu](https://github.com/viktomas/godu) - Analyzer with a carousel like user interface
 * [dua](https://github.com/Byron/dua-cli) - Tool written in Rust with interface similar to gdu (and ncdu)
 * [diskus](https://github.com/sharkdp/diskus) - Very simple but very fast tool written in Rust
 * [duc](https://duc.zevv.nl/) - Collection of tools with many possibilities for inspecting and visualising disk usage
