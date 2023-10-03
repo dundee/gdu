@@ -65,9 +65,11 @@ Using curl:
 
     go install github.com/dundee/gdu/v5/cmd/gdu@latest
 
-[Winget](https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dundee/gdu):
+[Winget](https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dundee/gdu) (for Windows users):
 
     winget install gdu
+
+Now, either run it as `gdu_windows_amd64.exe`, *or* add `alias gdu="gdu_windows_amd64.exe"` to the bottom of your `~/.bashrc` file when using the Git Bash terminal, and run it as `gdu`. 
 
 ## Usage
 
@@ -101,6 +103,17 @@ Flags:
   -s, --summarize                     Show only a total in non-interactive mode
   -v, --version                       Print version
       --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
+
+In interactive mode:
+  ↑ or k                              Move cursor up
+  ↓ or j                              Move cursor down
+  → or Enter                          Go to highlighted directory
+  ← or h                              Go to parent directory
+  d                                   Delete the selected file or directory
+  e                                   Empty the selected directory
+  n                                   Sort by name
+  s                                   Sort by size
+  c                                   Show number of items in directory
 ```
 
 ## Examples
