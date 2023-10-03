@@ -289,8 +289,8 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 
 * [ncdu](https://dev.yorhel.nl/ncdu) - NCurses based tool written in pure `C` (LTS) or `zig` (Stable)
 * [godu](https://github.com/viktomas/godu) - Analyzer with a carousel like user interface
-* [dua](https://github.com/Byron/dua-cli) - Tool written in Rust with interface similar to gdu (and ncdu)
-* [diskus](https://github.com/sharkdp/diskus) - Very simple but very fast tool written in Rust
+* [dua](https://github.com/Byron/dua-cli) - Tool written in `Rust` with interface similar to gdu (and ncdu)
+* [diskus](https://github.com/sharkdp/diskus) - Very simple but very fast tool written in `Rust`
 * [duc](https://duc.zevv.nl/) - Collection of tools with many possibilities for inspecting and visualising disk usage
-* [dust](https://github.com/bootandy/dust) - Tool written in Rust showing tree like structures of disk usage
-* [pdu](https://github.com/KSXGitHub/parallel-disk-usage) - Tool written in Rust showing tree like structures of disk usage
+* [dust](https://github.com/bootandy/dust) - Tool written in `Rust` showing tree like structures of disk usage
+* [pdu](https://github.com/KSXGitHub/parallel-disk-usage) - Tool written in `Rust` showing tree like structures of disk usage
