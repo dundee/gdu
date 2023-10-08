@@ -64,9 +64,11 @@ Using curl:
 
     go install github.com/dundee/gdu/v5/cmd/gdu@latest
 
-[Winget](https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dundee/gdu):
+[Winget](https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dundee/gdu) (for Windows users):
 
     winget install gdu
+
+Now, either run it as `gdu_windows_amd64.exe`, *or* add `alias gdu="gdu_windows_amd64.exe"` to the bottom of your `~/.bashrc` file when using the Git Bash terminal, and run it as `gdu`. 
 
 [Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/gdu.json):
 
