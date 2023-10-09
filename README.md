@@ -40,7 +40,6 @@ Using curl:
     apt-get update
     apt-get install gdu
 
-
 [NixOS](https://search.nixos.org/packages?channel=unstable&show=gdu&query=gdu):
 
     nix-env -iA nixos.gdu
@@ -70,6 +69,10 @@ Using curl:
     winget install gdu
 
 Now, either run it as `gdu_windows_amd64.exe`, *or* add `alias gdu="gdu_windows_amd64.exe"` to the bottom of your `~/.bashrc` file when using the Git Bash terminal, and run it as `gdu`. 
+
+[Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/gdu.json):
+
+    scoop install gdu
 
 ## Usage
 
