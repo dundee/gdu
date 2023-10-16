@@ -82,9 +82,13 @@ func TestLeftRightKeyWhileConfirm(t *testing.T) {
 	modal := tview.NewModal().SetText("Really?")
 	ui.pages.AddPage("confirm", modal, true, true)
 
-	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 'h', 0))
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 0, 0))
 	assert.Equal(t, tcell.KeyLeft, key.Key())
-	key = ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	key = ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 0, 0))
+	assert.Equal(t, tcell.KeyRight, key.Key())
+	key = ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'h', 0))
+	assert.Equal(t, tcell.KeyLeft, key.Key())
+	key = ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'l', 0))
 	assert.Equal(t, tcell.KeyRight, key.Key())
 }
 
