@@ -33,8 +33,11 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 
-	if ui.pages.HasPage("confirm") ||
-		ui.pages.HasPage("progress") ||
+	if ui.pages.HasPage("confirm") {
+		return ui.handleConfirmation(key)
+	}
+
+	if ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
 		ui.pages.HasPage("emptying") {
 		return key
@@ -79,6 +82,16 @@ func (ui *UI) handleClosingModals(key *tcell.EventKey) *tcell.EventKey {
 			ui.app.SetFocus(ui.table)
 			return nil
 		}
+	}
+	return key
+}
+
+func (ui *UI) handleConfirmation(key *tcell.EventKey) *tcell.EventKey {
+	if key.Rune() == 'h' {
+		return tcell.NewEventKey(tcell.KeyLeft, 0, 0)
+	}
+	if key.Rune() == 'l' {
+		return tcell.NewEventKey(tcell.KeyRight, 0, 0)
 	}
 	return key
 }
