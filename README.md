@@ -47,7 +47,8 @@ Using curl:
 [Homebrew](https://formulae.brew.sh/formula/gdu):
 
     brew install -f gdu
-    brew link --overwrite gdu  # if you have coreutils installed as well
+    # gdu will be installed as `gdu-go` to avoid conflicts with coreutils
+    gdu-go
 
 [Snap](https://snapcraft.io/gdu-disk-usage-analyzer):
 
