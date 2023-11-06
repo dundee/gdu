@@ -5,8 +5,8 @@ CMD_GDU := cmd/gdu
 VERSION := $(shell git describe --tags 2>/dev/null)
 NAMEVER := $(NAME)-$(subst v,,$(VERSION))
 DATE := $(shell date +'%Y-%m-%d')
-GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw
-GOFLAGS_STATIC ?= -trimpath -mod=readonly -modcacherw
+GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw -pgo=default.pgo
+GOFLAGS_STATIC ?= -trimpath -mod=readonly -modcacherw -pgo=default.pgo
 LDFLAGS := -s -w -extldflags '-static' \
 	-X '$(PACKAGE)/build.Version=$(VERSION)' \
 	-X '$(PACKAGE)/build.User=$(shell id -u -n)' \
