@@ -17,6 +17,8 @@ Provides:       %{name} = %{version}
 %description
 Pretty fast disk usage analyzer written in Go.
 
+BuildRequires: golang
+
 %global debug_package %{nil}
 
 %prep
