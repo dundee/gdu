@@ -2,7 +2,6 @@ Name:           gdu
 Version:        5.25.0
 Release:        1%{?dist}
 Summary:        Pretty fast disk usage analyzer written in Go
-ExclusiveArch:  x86_64
 
 License:        MIT
 URL:            https://github.com/dundee/gdu
@@ -10,6 +9,7 @@ URL:            https://github.com/dundee/gdu
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  golang
+BuildRequires:  systemd-rpm-macros
 Requires:       bash
 
 Provides:       %{name} = %{version}
