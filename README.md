@@ -26,7 +26,7 @@ Using curl:
     chmod +x gdu_linux_amd64
     mv gdu_linux_amd64 /usr/bin/gdu
 
-[Arch Linux](https://archlinux.org/packages/community/x86_64/gdu/):
+[Arch Linux](https://archlinux.org/packages/extra/x86_64/gdu/):
 
     pacman -S gdu
 
