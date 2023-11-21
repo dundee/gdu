@@ -9,15 +9,13 @@ URL:            https://github.com/dundee/gdu
 
 Source0:        %{name}-%{version}.tar.gz
 
-#BuildRequires:  golang
+BuildRequires:  golang
 Requires:       bash
 
 Provides:       %{name} = %{version}
 
 %description
 Pretty fast disk usage analyzer written in Go.
-
-BuildRequires: golang
 
 %global debug_package %{nil}
 
