@@ -1,6 +1,6 @@
 Name:           gdu
 Version:        5.25.0
-Release:        1
+Release:        1%{?dist}
 Summary:        Pretty fast disk usage analyzer written in Go
 ExclusiveArch:  x86_64
 
