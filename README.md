@@ -77,7 +77,7 @@ You can either run it as `gdu_windows_amd64.exe` or
 
     scoop install gdu
 ### COPR builds
-[Amazon Linux 2023]
+Amazon Linux 2023:
 ```
 [copr:copr.fedorainfracloud.org:faramirza:gdu]
 name=Copr repo for gdu owned by faramirza
@@ -90,7 +90,7 @@ repo_gpgcheck=0
 enabled=1
 enabled_metadata=1
 ```
-[EPEL 7]
+EPEL 7:
 ```
 [copr:copr.fedorainfracloud.org:faramirza:gdu]
 name=Copr repo for gdu owned by faramirza
@@ -103,7 +103,7 @@ repo_gpgcheck=0
 enabled=1
 enabled_metadata=1
 ```
-[EPEL 8]
+EPEL 8:
 ```
 [copr:copr.fedorainfracloud.org:faramirza:gdu]
 name=Copr repo for gdu owned by faramirza
@@ -116,7 +116,7 @@ repo_gpgcheck=0
 enabled=1
 enabled_metadata=1
 ```
-[EPEL 9]
+EPEL 9:
 ```
 [copr:copr.fedorainfracloud.org:faramirza:gdu]
 name=Copr repo for gdu owned by faramirza
@@ -129,7 +129,7 @@ repo_gpgcheck=0
 enabled=1
 enabled_metadata=1
 ```
-[Fedora 38]
+Fedora 38:
 ```
 [copr:copr.fedorainfracloud.org:faramirza:gdu]
 name=Copr repo for gdu owned by faramirza
@@ -142,7 +142,7 @@ repo_gpgcheck=0
 enabled=1
 enabled_metadata=1
 ```
-[Fedora 39]
+Fedora 39:
 ```
 [copr:copr.fedorainfracloud.org:faramirza:gdu]
 name=Copr repo for gdu owned by faramirza
