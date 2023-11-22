@@ -76,6 +76,85 @@ You can either run it as `gdu_windows_amd64.exe` or
 [Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/gdu.json):
 
     scoop install gdu
+### COPR builds
+[Amazon Linux 2023]
+```
+[copr:copr.fedorainfracloud.org:faramirza:gdu]
+name=Copr repo for gdu owned by faramirza
+baseurl=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/amazonlinux-2023-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+```
+[EPEL 7]
+```
+[copr:copr.fedorainfracloud.org:faramirza:gdu]
+name=Copr repo for gdu owned by faramirza
+baseurl=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+```
+[EPEL 8]
+```
+[copr:copr.fedorainfracloud.org:faramirza:gdu]
+name=Copr repo for gdu owned by faramirza
+baseurl=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/epel-8-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+```
+[EPEL 9]
+```
+[copr:copr.fedorainfracloud.org:faramirza:gdu]
+name=Copr repo for gdu owned by faramirza
+baseurl=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/epel-9-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+```
+[Fedora 38]
+```
+[copr:copr.fedorainfracloud.org:faramirza:gdu]
+name=Copr repo for gdu owned by faramirza
+baseurl=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+```
+[Fedora 39]
+```
+[copr:copr.fedorainfracloud.org:faramirza:gdu]
+name=Copr repo for gdu owned by faramirza
+baseurl=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/faramirza/gdu/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+```
 
 ## Usage
 
