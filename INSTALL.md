@@ -51,7 +51,10 @@ You can either run it as `gdu_windows_amd64.exe` or
 
     scoop install gdu
 
-## COPR builds
+## [COPR builds](https://copr.fedorainfracloud.org/coprs/faramirza/gdu/)
+COPR Builds exist for the the following Linux Distros.
+
+[How to enable a CORP Repo](https://docs.pagure.org/copr.copr/how_to_enable_repo.html)
 
 Amazon Linux 2023:
 ```
