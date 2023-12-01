@@ -30,7 +30,7 @@ GO111MODULE=on CGO_ENABLED=0 go build \
 -mod=readonly \
 -modcacherw \
 -ldflags \
-%if 0%{?fedora}
+%if 0%{?fedora} || 0%{?amzn} 
 "-linkmode=external \
 -s -w \
 -X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
