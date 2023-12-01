@@ -1,6 +1,6 @@
 Name:           gdu
 Version:        5.25.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Pretty fast disk usage analyzer written in Go
 
 License:        MIT
@@ -10,7 +10,7 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  golang
 BuildRequires:  systemd-rpm-macros
-Requires:       bash
+Requires:       git
 
 Provides:       %{name} = %{version}
 
@@ -63,6 +63,8 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Fri Dec 1 2023 Danie de Jager - 5.25.0-2
+- Improved SPEC to build on AL2023.
 * Tue Jun 6 2023 Danie de Jager - 5.25.0-1
 - feat: use unicode block elements in size bar in #255
 * Thu Jun 1 2023 Danie de Jager - 5.24.0-1
