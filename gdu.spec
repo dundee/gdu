@@ -1,6 +1,6 @@
 Name:           gdu
 Version:        5.25.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Pretty fast disk usage analyzer written in Go
 
 License:        MIT
@@ -10,7 +10,7 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  golang
 BuildRequires:  systemd-rpm-macros
-Requires:       git
+BuildRequires:  git
 
 Provides:       %{name} = %{version}
 
@@ -30,17 +30,17 @@ GO111MODULE=on CGO_ENABLED=0 go build \
 -mod=readonly \
 -modcacherw \
 -ldflags \
-%if 0%{?fedora} || 0%{?amzn2023} 
+%if 0%{?fedora} || 0%{?amzn} 
 "-linkmode=external \
 -s -w \
--X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
+-X 'github.com/dundee/gdu/v5/build.Version=v%{version}' \
 -X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
 -X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
 -o %{name} github.com/dundee/gdu/v5/cmd/gdu
 %endif
 %if 0%{?rhel}
 "-s -w \
--X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
+-X 'github.com/dundee/gdu/v5/build.Version=v%{version}' \
 -X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
 -X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
 -o %{name} github.com/dundee/gdu/v5/cmd/gdu
@@ -63,7 +63,7 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
-* Fri Dec 1 2023 Danie de Jager - 5.25.0-2
+* Fri Dec 1 2023 Danie de Jager - 5.25.0-3
 - Improved SPEC to build on AL2023.
 * Tue Jun 6 2023 Danie de Jager - 5.25.0-1
 - feat: use unicode block elements in size bar in #255
