@@ -161,10 +161,8 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 		}
 	}
 
-	log.Printf("storing %+v", dir.Dir.File)
 	err = a.storage.StoreDir(dir)
 	if err != nil {
-		panic(err)
 		log.Print(err.Error())
 	}
 
@@ -215,10 +213,6 @@ func (f *StoredDir) GetParent() fs.Item {
 
 	path := filepath.Dir(f.BasePath)
 	name := filepath.Base(f.BasePath)
-
-	// panic("XXX " + f.BasePath + " " + f.Name + " " + name + " " + path)
-	// panic("YYY " + path + " " + name)
-
 	dir := &StoredDir{
 		&Dir{
 			File: &File{
@@ -230,7 +224,6 @@ func (f *StoredDir) GetParent() fs.Item {
 	}
 	err := DefaultStorage.LoadDir(dir)
 	if err != nil {
-		panic(err)
 		log.Print(err.Error())
 	}
 	return dir
@@ -261,7 +254,6 @@ func (f *StoredDir) GetFiles() fs.Files {
 
 			err := DefaultStorage.LoadDir(dir)
 			if err != nil {
-				panic(err)
 				log.Print(err.Error())
 			}
 			files = append(files, dir)
@@ -313,7 +305,6 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	f.Usage = totalUsage
 	err := DefaultStorage.StoreDir(f)
 	if err != nil {
-		panic(err)
 		log.Print(err.Error())
 	}
 }
