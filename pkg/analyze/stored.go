@@ -300,6 +300,7 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 			}
 		}
 	}
+	f.cachedFiles = nil
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize
 	f.Usage = totalUsage
