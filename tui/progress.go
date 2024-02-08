@@ -23,6 +23,10 @@ func (ui *UI) updateProgress() {
 		select {
 		case progress = <-progressChan:
 		case <-doneChan:
+			ui.app.QueueUpdateDraw(func() {
+				ui.progress.SetTitle(" Finalizing... ")
+				ui.progress.SetText("Calculating disk usage...")
+			})
 			return
 		}
 
