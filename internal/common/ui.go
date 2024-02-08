@@ -19,6 +19,10 @@ type UI struct {
 	ConstGC               bool
 }
 
+func (ui *UI) SetAnalyzer(a Analyzer) {
+	ui.Analyzer = a
+}
+
 // SetFollowSymlinks sets whether symlinks to files should be followed
 func (ui *UI) SetFollowSymlinks(v bool) {
 	ui.Analyzer.SetFollowSymlinks(v)
