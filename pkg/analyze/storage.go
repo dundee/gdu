@@ -7,7 +7,6 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -64,8 +63,6 @@ func (s *Storage) StoreDir(dir fs.Item) error {
 		if err != nil {
 			return errors.Wrap(err, "encoding dir value")
 		}
-
-		log.Printf("data %s %s", dir.GetPath(), b.String())
 
 		txn.Set([]byte(dir.GetPath()), b.Bytes())
 		return nil
