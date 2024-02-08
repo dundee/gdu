@@ -16,6 +16,7 @@ import (
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/report"
@@ -35,6 +36,7 @@ type UI interface {
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreHidden(value bool)
 	SetFollowSymlinks(value bool)
+	SetAnalyzer(analyzer common.Analyzer)
 	StartUILoop() error
 }
 
@@ -61,6 +63,7 @@ type Flags struct {
 	FollowSymlinks    bool     `yaml:"follow-symlinks"`
 	Profiling         bool     `yaml:"profiling"`
 	ConstGC           bool     `yaml:"const-gc"`
+	UseStorage        bool     `yaml:"use-storage"`
 	Summarize         bool     `yaml:"summarize"`
 	UseSIPrefix       bool     `yaml:"use-si-prefix"`
 	NoPrefix          bool     `yaml:"no-prefix"`
@@ -135,6 +138,12 @@ func (a *App) Run() (err error) {
 		return
 	}
 
+	if a.Flags.UseStorage {
+		ui.SetAnalyzer(analyze.CreateStoredAnalyzer())
+	}
+	if a.Flags.FollowSymlinks {
+		ui.SetFollowSymlinks(true)
+	}
 	if err = a.setNoCross(path); err != nil {
 		return
 	}
@@ -271,10 +280,6 @@ func (a *App) createUI() (UI, error) {
 			tview.Styles.ContrastBackgroundColor = tcell.NewRGBColor(150, 150, 150)
 		}
 		tview.Styles.BorderColor = tcell.ColorDefault
-	}
-
-	if a.Flags.FollowSymlinks {
-		ui.SetFollowSymlinks(true)
 	}
 
 	return ui, nil

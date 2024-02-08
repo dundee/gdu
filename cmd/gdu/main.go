@@ -56,6 +56,7 @@ func init() {
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 	flags.BoolVarP(&af.ConstGC, "const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
+	flags.BoolVar(&af.UseStorage, "use-storage", false, "Use key-value disk storage for analysis data (experimental)")
 
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")
