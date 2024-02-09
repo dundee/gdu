@@ -1,6 +1,6 @@
 module github.com/dundee/gdu/v5
 
-go 1.18
+go 1.20
 
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
@@ -14,6 +14,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
 	golang.org/x/sys v0.8.0
 	gopkg.in/yaml.v3 v3.0.1
 )
