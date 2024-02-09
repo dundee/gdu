@@ -1,9 +1,11 @@
 package analyze
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -117,6 +119,8 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			Files:     make(fs.Files, 0, len(files)),
 		},
 	}
+	parent := &ParentDir{Path: path}
+
 	setDirPlatformSpecificAttrs(dir.Dir, path)
 
 	for _, f := range files {
@@ -151,9 +155,10 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				continue
 			}
 			file = &File{
-				Name: name,
-				Flag: getFlag(info),
-				Size: info.Size(),
+				Name:   name,
+				Flag:   getFlag(info),
+				Size:   info.Size(),
+				Parent: parent,
 			}
 			setPlatformSpecificAttrs(file, info)
 
@@ -300,3 +305,30 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 		log.Print(err.Error())
 	}
 }
+
+type ParentDir struct {
+	Path string
+}
+
+func (p *ParentDir) GetPath() string {
+	return p.Path
+}
+func (p *ParentDir) GetName() string                                  { panic("not implemented") }
+func (p *ParentDir) GetFlag() rune                                    { panic("not implemented") }
+func (p *ParentDir) IsDir() bool                                      { panic("not implemented") }
+func (p *ParentDir) GetSize() int64                                   { panic("not implemented") }
+func (p *ParentDir) GetType() string                                  { panic("not implemented") }
+func (p *ParentDir) GetUsage() int64                                  { panic("not implemented") }
+func (p *ParentDir) GetMtime() time.Time                              { panic("not implemented") }
+func (p *ParentDir) GetItemCount() int                                { panic("not implemented") }
+func (p *ParentDir) GetParent() fs.Item                               { panic("not implemented") }
+func (p *ParentDir) SetParent(fs.Item)                                { panic("not implemented") }
+func (p *ParentDir) GetMultiLinkedInode() uint64                      { panic("not implemented") }
+func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("not implemented") }
+func (p *ParentDir) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
+	panic("not implemented")
+}
+func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems) { panic("not implemented") }
+func (p *ParentDir) AddFile(fs.Item)                            { panic("not implemented") }
+func (p *ParentDir) GetFiles() fs.Files                         { panic("not implemented") }
+func (p *ParentDir) SetFiles(fs.Files)                          { panic("not implemented") }
