@@ -2,7 +2,8 @@ package tui
 
 import (
 	"io"
-	"slices"
+
+	"golang.org/x/exp/slices"
 
 	log "github.com/sirupsen/logrus"
 
