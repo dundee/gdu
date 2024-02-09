@@ -27,6 +27,7 @@ type Item interface {
 	AddFile(Item)
 	GetFiles() Files
 	SetFiles(Files)
+	RemoveFile(Item)
 }
 
 // Files - slice of pointers to File

@@ -14,6 +14,7 @@ func init() {
 	gob.RegisterName("analyze.StoredDir", &StoredDir{})
 	gob.RegisterName("analyze.Dir", &Dir{})
 	gob.RegisterName("analyze.File", &File{})
+	gob.RegisterName("analyze.ParentDir", &ParentDir{})
 }
 
 var DefaultStorage *Storage
