@@ -75,13 +75,34 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return errors.New("Reading analysis is not possible while exporting")
 }
 
+func (ui *UI) ReadFromStorage(storagePath, path string) error {
+	storage := analyze.NewStorage(storagePath, path)
+	closeFn := storage.Open()
+	defer closeFn()
+
+	dir, err := storage.GetDirForPath(path)
+	if err != nil {
+		return err
+	}
+
+	var waitWritten sync.WaitGroup
+	if ui.ShowProgress {
+		waitWritten.Add(1)
+		go func() {
+			defer waitWritten.Done()
+			ui.updateProgress()
+		}()
+	}
+
+	return ui.exportDir(dir, &waitWritten)
+}
+
 // AnalyzePath analyzes recursively disk usage in given path
 func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	var (
 		dir         fs.Item
 		wait        sync.WaitGroup
 		waitWritten sync.WaitGroup
-		err         error
 	)
 
 	if ui.ShowProgress {
@@ -101,9 +122,16 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 
 	wait.Wait()
 
+	return ui.exportDir(dir, &waitWritten)
+}
+
+func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 	sort.Sort(sort.Reverse(dir.GetFiles()))
 
-	var buff bytes.Buffer
+	var (
+		buff bytes.Buffer
+		err  error
+	)
 
 	buff.Write([]byte(`[1,2,{"progname":"gdu","progver":"`))
 	buff.Write([]byte(build.Version))

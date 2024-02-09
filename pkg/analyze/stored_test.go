@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"sort"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -40,7 +39,7 @@ func TestStoredAnalyzer(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	a := CreateStoredAnalyzer()
+	a := CreateStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, false,
 	).(*StoredDir)
@@ -49,8 +48,6 @@ func TestStoredAnalyzer(t *testing.T) {
 	a.ResetProgress()
 
 	dir.UpdateStats(make(fs.HardLinkedItems))
-
-	sort.Sort(sort.Reverse(dir.GetFiles()[0].(*StoredDir).GetFiles()))
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)

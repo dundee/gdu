@@ -48,7 +48,7 @@ func CreateStdoutUI(
 			ShowProgress:     showProgress,
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
-			Analyzer:         analyze.CreateStoredAnalyzer(),
+			Analyzer:         analyze.CreateAnalyzer(),
 			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
@@ -161,6 +161,24 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 		ui.showDir(dir)
 	}
 
+	return nil
+}
+
+func (ui *UI) ReadFromStorage(storagePath, path string) error {
+	storage := analyze.NewStorage(storagePath, path)
+	closeFn := storage.Open()
+	defer closeFn()
+
+	dir, err := storage.GetDirForPath(path)
+	if err != nil {
+		return err
+	}
+
+	if ui.summarize {
+		ui.printTotalItem(dir)
+	} else {
+		ui.showDir(dir)
+	}
 	return nil
 }
 

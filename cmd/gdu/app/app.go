@@ -31,6 +31,7 @@ type UI interface {
 	ListDevices(getter device.DevicesInfoGetter) error
 	AnalyzePath(path string, parentDir gfs.Item) error
 	ReadAnalysis(input io.Reader) error
+	ReadFromStorage(storagePath, path string) error
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
@@ -64,6 +65,8 @@ type Flags struct {
 	Profiling         bool     `yaml:"profiling"`
 	ConstGC           bool     `yaml:"const-gc"`
 	UseStorage        bool     `yaml:"use-storage"`
+	StoragePath       string   `yaml:"storage-path"`
+	ReadFromStorage   bool     `yaml:"read-from-storage"`
 	Summarize         bool     `yaml:"summarize"`
 	UseSIPrefix       bool     `yaml:"use-si-prefix"`
 	NoPrefix          bool     `yaml:"no-prefix"`
@@ -139,7 +142,7 @@ func (a *App) Run() (err error) {
 	}
 
 	if a.Flags.UseStorage {
-		ui.SetAnalyzer(analyze.CreateStoredAnalyzer())
+		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
 	}
 	if a.Flags.FollowSymlinks {
 		ui.SetFollowSymlinks(true)
@@ -328,6 +331,11 @@ func (a *App) runAction(ui UI, path string) error {
 
 		if err := ui.ReadAnalysis(input); err != nil {
 			return fmt.Errorf("reading analysis: %w", err)
+		}
+	} else if a.Flags.ReadFromStorage {
+		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
+		if err := ui.ReadFromStorage(a.Flags.StoragePath, path); err != nil {
+			return fmt.Errorf("reading from storage: %w", err)
 		}
 	} else {
 		if build.RootPathPrefix != "" {

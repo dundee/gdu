@@ -136,6 +136,24 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return nil
 }
 
+func (ui *UI) ReadFromStorage(storagePath, path string) error {
+	storage := analyze.NewStorage(storagePath, path)
+	closeFn := storage.Open()
+	defer closeFn()
+
+	dir, err := storage.GetDirForPath(path)
+	if err != nil {
+		return err
+	}
+
+	ui.currentDir = dir
+	ui.topDirPath = ui.currentDir.GetPath()
+	ui.topDir = ui.currentDir
+
+	ui.showDir()
+	return nil
+}
+
 func (ui *UI) delete(shouldEmpty bool) {
 	if len(ui.markedRows) > 0 {
 		ui.deleteMarked(shouldEmpty)

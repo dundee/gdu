@@ -56,7 +56,10 @@ func init() {
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 	flags.BoolVarP(&af.ConstGC, "const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
-	flags.BoolVar(&af.UseStorage, "use-storage", false, "Use key-value disk storage for analysis data (experimental)")
+
+	flags.BoolVar(&af.UseStorage, "use-storage", false, "Use persistent key-value storage for analysis data (experimental)")
+	flags.StringVar(&af.StoragePath, "storage-path", "/tmp/badger", "Path to persistent key-value storage directory (default is /tmp/badger)")
+	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Read analysis data from persistent key-value storage")
 
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")
