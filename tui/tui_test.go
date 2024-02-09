@@ -67,9 +67,10 @@ func TestFooter(t *testing.T) {
 }
 
 func TestUpdateProgress(t *testing.T) {
-	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
+	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
+	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
 	done := ui.Analyzer.GetDone()
 	done.Broadcast()
