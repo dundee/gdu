@@ -68,8 +68,7 @@ func (s *Storage) StoreDir(dir fs.Item) error {
 			return errors.Wrap(err, "encoding dir value")
 		}
 
-		txn.Set([]byte(dir.GetPath()), b.Bytes())
-		return nil
+		return txn.Set([]byte(dir.GetPath()), b.Bytes())
 	})
 }
 
