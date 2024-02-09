@@ -3,6 +3,7 @@ package analyze
 import (
 	"bytes"
 	"encoding/gob"
+	"path/filepath"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -18,13 +19,15 @@ func init() {
 var DefaultStorage *Storage
 
 type Storage struct {
-	db     *badger.DB
-	topDir string
+	db          *badger.DB
+	storagePath string
+	topDir      string
 }
 
-func NewStorage(topDir string) *Storage {
+func NewStorage(storagePath, topDir string) *Storage {
 	st := &Storage{
-		topDir: topDir,
+		storagePath: storagePath,
+		topDir:      topDir,
 	}
 	DefaultStorage = st
 	return st
@@ -40,7 +43,7 @@ func (s *Storage) IsOpen() bool {
 }
 
 func (s *Storage) Open() func() {
-	options := badger.DefaultOptions("/tmp/badger")
+	options := badger.DefaultOptions(s.storagePath)
 	options.Logger = nil
 	db, err := badger.Open(options)
 	if err != nil {
@@ -83,4 +86,24 @@ func (s *Storage) LoadDir(dir fs.Item) error {
 			return dec.Decode(dir)
 		})
 	})
+}
+
+// GetDirForPath returns Dir for given path
+func (s *Storage) GetDirForPath(path string) (fs.Item, error) {
+	dirPath := filepath.Dir(path)
+	name := filepath.Base(path)
+	dir := &StoredDir{
+		&Dir{
+			File: &File{
+				Name: name,
+			},
+			BasePath: dirPath,
+		},
+		nil,
+	}
+	err := s.LoadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	return dir, nil
 }

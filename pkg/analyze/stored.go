@@ -13,6 +13,7 @@ import (
 // StoredAnalyzer implements Analyzer
 type StoredAnalyzer struct {
 	storage          *Storage
+	storagePath      string
 	progress         *common.CurrentProgress
 	progressChan     chan common.CurrentProgress
 	progressOutChan  chan common.CurrentProgress
@@ -24,8 +25,9 @@ type StoredAnalyzer struct {
 }
 
 // CreateStoredAnalyzer returns Analyzer
-func CreateStoredAnalyzer() *StoredAnalyzer {
+func CreateStoredAnalyzer(storagePath string) *StoredAnalyzer {
 	return &StoredAnalyzer{
+		storagePath: storagePath,
 		progress: &common.CurrentProgress{
 			ItemCount: 0,
 			TotalSize: int64(0),
@@ -71,7 +73,7 @@ func (a *StoredAnalyzer) AnalyzeDir(
 		go manageMemoryUsage(a.doneChan)
 	}
 
-	a.storage = NewStorage(path)
+	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
 	defer closeFn()
 
@@ -211,18 +213,7 @@ func (f *StoredDir) GetParent() fs.Item {
 		defer closeFn()
 	}
 
-	path := filepath.Dir(f.BasePath)
-	name := filepath.Base(f.BasePath)
-	dir := &StoredDir{
-		&Dir{
-			File: &File{
-				Name: name,
-			},
-			BasePath: path,
-		},
-		nil,
-	}
-	err := DefaultStorage.LoadDir(dir)
+	dir, err := DefaultStorage.GetDirForPath(f.BasePath)
 	if err != nil {
 		log.Print(err.Error())
 	}
