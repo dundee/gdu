@@ -262,6 +262,40 @@ func (f *StoredDir) GetFiles() fs.Files {
 	return files
 }
 
+// SetFiles sets files in directory
+func (f *StoredDir) SetFiles(files fs.Files) {
+	f.Files = files
+}
+
+// RemoveFile panics on file
+func (f *StoredDir) RemoveFile(item fs.Item) {
+	if !DefaultStorage.IsOpen() {
+		closeFn := DefaultStorage.Open()
+		defer closeFn()
+	}
+
+	f.SetFiles(f.GetFiles().Remove(item))
+	f.cachedFiles = nil
+
+	cur := f
+	for {
+		cur.ItemCount -= item.GetItemCount()
+		cur.Size -= item.GetSize()
+		cur.Usage -= item.GetUsage()
+
+		err := DefaultStorage.StoreDir(cur)
+		if err != nil {
+			log.Print(err.Error())
+		}
+
+		parent := cur.GetParent()
+		if parent == nil {
+			break
+		}
+		cur = parent.(*StoredDir)
+	}
+}
+
 // GetItemStats returns item count, apparent usage and real usage of this dir
 func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
 	f.UpdateStats(linkedItems)
@@ -332,3 +366,4 @@ func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems) { panic("not imp
 func (p *ParentDir) AddFile(fs.Item)                            { panic("not implemented") }
 func (p *ParentDir) GetFiles() fs.Files                         { panic("not implemented") }
 func (p *ParentDir) SetFiles(fs.Files)                          { panic("not implemented") }
+func (f *ParentDir) RemoveFile(item fs.Item)                    { panic("not implemented") }

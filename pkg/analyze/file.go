@@ -122,6 +122,11 @@ func (f *File) AddFile(item fs.Item) {
 	panic("AddFile should not be called on file")
 }
 
+// RemoveFile panics on file
+func (f *File) RemoveFile(item fs.Item) {
+	panic("RemoveFile should not be called on file")
+}
+
 // Dir struct
 type Dir struct {
 	*File
@@ -204,16 +209,11 @@ func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	f.Usage = totalUsage
 }
 
-// RemoveItemFromDir removes item from dir
-func RemoveItemFromDir(dir fs.Item, item fs.Item) error {
-	err := os.RemoveAll(item.GetPath())
-	if err != nil {
-		return err
-	}
+// RemoveFile panics on file
+func (f *Dir) RemoveFile(item fs.Item) {
+	f.SetFiles(f.GetFiles().Remove(item))
 
-	dir.SetFiles(dir.GetFiles().Remove(item))
-
-	cur := dir.(*Dir)
+	cur := f
 	for {
 		cur.ItemCount -= item.GetItemCount()
 		cur.Size -= item.GetSize()
@@ -224,6 +224,16 @@ func RemoveItemFromDir(dir fs.Item, item fs.Item) error {
 		}
 		cur = cur.Parent.(*Dir)
 	}
+}
+
+// RemoveItemFromDir removes item from dir
+func RemoveItemFromDir(dir fs.Item, item fs.Item) error {
+	err := os.RemoveAll(item.GetPath())
+	if err != nil {
+		return err
+	}
+
+	dir.RemoveFile(item)
 	return nil
 }
 

@@ -335,7 +335,7 @@ func (a *App) runAction(ui UI, path string) error {
 	} else if a.Flags.ReadFromStorage {
 		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
 		if err := ui.ReadFromStorage(a.Flags.StoragePath, path); err != nil {
-			return fmt.Errorf("reading from storage: %w", err)
+			return fmt.Errorf("reading from storage (%s): %w", a.Flags.StoragePath, err)
 		}
 	} else {
 		if build.RootPathPrefix != "" {

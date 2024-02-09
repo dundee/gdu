@@ -71,3 +71,35 @@ func TestStoredAnalyzer(t *testing.T) {
 		t, int64(5), dir.GetFiles()[0].(*StoredDir).GetFiles()[1].(*StoredDir).GetFiles()[0].GetSize(),
 	)
 }
+
+func TestRemoveStoredFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	a := CreateStoredAnalyzer("/tmp/badger")
+	dir := a.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*StoredDir)
+
+	a.GetDone().Wait()
+	a.ResetProgress()
+
+	dir.UpdateStats(make(fs.HardLinkedItems))
+
+	// test dir info
+	assert.Equal(t, "test_dir", dir.Name)
+	assert.Equal(t, int64(7+4096*3), dir.Size)
+	assert.Equal(t, 5, dir.ItemCount)
+	assert.True(t, dir.IsDir())
+
+	subdir := dir.GetFiles()[0].(*StoredDir)
+	subdir.RemoveFile(subdir.GetFiles()[0])
+
+	closeFn := DefaultStorage.Open()
+	defer closeFn()
+	stored, err := DefaultStorage.GetDirForPath("test_dir")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 4, stored.GetItemCount())
+	assert.Equal(t, int64(5+4096*3), stored.GetSize())
+}
