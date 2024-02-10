@@ -69,7 +69,7 @@ Using curl:
 
     winget install gdu
 
-You can either run it as `gdu_windows_amd64.exe` or 
+You can either run it as `gdu_windows_amd64.exe` or
 * add an alias with `Doskey`.
 * add `alias gdu="gdu_windows_amd64.exe"` to your `~/.bashrc` file if using Git Bash to run it as `gdu`.
 
@@ -181,11 +181,14 @@ Flags:
   -p, --no-progress                   Do not show progress in non-interactive mode
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
+  -r, --read-from-storage             Read analysis data from persistent key-value storage
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
   -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
+      --storage-path string           Path to persistent key-value storage directory (default is /tmp/badger) (default "/tmp/badger")
   -s, --summarize                     Show only a total in non-interactive mode
+      --use-storage                   Use persistent key-value storage for analysis data (experimental)
   -v, --version                       Print version
       --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
 
@@ -220,6 +223,9 @@ In interactive mode:
 
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
     zcat report.json.gz | gdu -f-         # read analysis from file
+
+    GOGC=10 gdu -g --use-storage /        # use persistent key-value storage for saving analysis data
+    gdu -r /                              # read saved analysis data from persistent key-value storage
 
 ## Modes
 
@@ -318,6 +324,18 @@ Example running gdu with constant GC, but not so aggressive as default:
 
 ```
 GOGC=200 gdu -g /
+```
+
+## Saving analysis data to persistent key-value storage (experimental)
+
+Gdu can store the analysis data to persistent key-value storage instead of just memory.
+Gdu will run much slower (approx 10x) but it should use much less memory (when using small GOGC as well).
+Gdu can also reopen with the saved data.
+Currently only BadgerDB is supported as the key-value storage (embedded).
+
+```
+GOGC=10 gdu -g --use-storage /    # saves analysis data to key-value storage
+gdu -r /                          # reads just saved data, does not run analysis again
 ```
 
 ## Running tests
