@@ -136,6 +136,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return nil
 }
 
+// ReadFromStorage reads analysis data from persistent key-value storage
 func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	storage := analyze.NewStorage(storagePath, path)
 	closeFn := storage.Open()

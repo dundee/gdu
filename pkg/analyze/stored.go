@@ -225,6 +225,9 @@ func (f *StoredDir) GetParent() fs.Item {
 	return dir
 }
 
+// GetFiles returns files in directory
+// If files are already cached, return them
+// Otherwise load them from storage
 func (f *StoredDir) GetFiles() fs.Files {
 	if f.cachedFiles != nil {
 		return f.cachedFiles
@@ -340,6 +343,8 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	}
 }
 
+// ParentDir represents parent directory of single file
+// It is used to get path to parent directory of a file
 type ParentDir struct {
 	Path string
 }
@@ -347,23 +352,25 @@ type ParentDir struct {
 func (p *ParentDir) GetPath() string {
 	return p.Path
 }
-func (p *ParentDir) GetName() string                                  { panic("not implemented") }
-func (p *ParentDir) GetFlag() rune                                    { panic("not implemented") }
-func (p *ParentDir) IsDir() bool                                      { panic("not implemented") }
-func (p *ParentDir) GetSize() int64                                   { panic("not implemented") }
-func (p *ParentDir) GetType() string                                  { panic("not implemented") }
-func (p *ParentDir) GetUsage() int64                                  { panic("not implemented") }
-func (p *ParentDir) GetMtime() time.Time                              { panic("not implemented") }
-func (p *ParentDir) GetItemCount() int                                { panic("not implemented") }
-func (p *ParentDir) GetParent() fs.Item                               { panic("not implemented") }
-func (p *ParentDir) SetParent(fs.Item)                                { panic("not implemented") }
-func (p *ParentDir) GetMultiLinkedInode() uint64                      { panic("not implemented") }
-func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("not implemented") }
-func (p *ParentDir) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
-	panic("not implemented")
+func (p *ParentDir) GetName() string                                  { panic("must not be called") }
+func (p *ParentDir) GetFlag() rune                                    { panic("must not be called") }
+func (p *ParentDir) IsDir() bool                                      { panic("must not be called") }
+func (p *ParentDir) GetSize() int64                                   { panic("must not be called") }
+func (p *ParentDir) GetType() string                                  { panic("must not be called") }
+func (p *ParentDir) GetUsage() int64                                  { panic("must not be called") }
+func (p *ParentDir) GetMtime() time.Time                              { panic("must not be called") }
+func (p *ParentDir) GetItemCount() int                                { panic("must not be called") }
+func (p *ParentDir) GetParent() fs.Item                               { panic("must not be called") }
+func (p *ParentDir) SetParent(fs.Item)                                { panic("must not be called") }
+func (p *ParentDir) GetMultiLinkedInode() uint64                      { panic("must not be called") }
+func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("must not be called") }
+func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)       { panic("must not be called") }
+func (p *ParentDir) AddFile(fs.Item)                                  { panic("must not be called") }
+func (p *ParentDir) GetFiles() fs.Files                               { panic("must not be called") }
+func (p *ParentDir) SetFiles(fs.Files)                                { panic("must not be called") }
+func (f *ParentDir) RemoveFile(item fs.Item)                          { panic("must not be called") }
+func (p *ParentDir) GetItemStats(
+	linkedItems fs.HardLinkedItems,
+) (int, int64, int64) {
+	panic("must not be called")
 }
-func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems) { panic("not implemented") }
-func (p *ParentDir) AddFile(fs.Item)                            { panic("not implemented") }
-func (p *ParentDir) GetFiles() fs.Files                         { panic("not implemented") }
-func (p *ParentDir) SetFiles(fs.Files)                          { panic("not implemented") }
-func (f *ParentDir) RemoveFile(item fs.Item)                    { panic("not implemented") }

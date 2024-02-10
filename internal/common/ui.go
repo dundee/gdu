@@ -19,6 +19,7 @@ type UI struct {
 	ConstGC               bool
 }
 
+// SetAnalyzer sets analyzer instance
 func (ui *UI) SetAnalyzer(a Analyzer) {
 	ui.Analyzer = a
 }
