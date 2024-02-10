@@ -2,6 +2,10 @@ package tui
 
 import (
 	"fmt"
+	"bytes"
+	"strconv"
+	"time"
+	"os"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
@@ -244,6 +248,23 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		if ui.currentDir != nil {
 			ui.rescanDir()
 		}
+	case 'S':
+    var buff bytes.Buffer
+
+    buff.Write([]byte(`[1,2,{"progname":"gdu","progver":"`))
+    //~ buff.Write([]byte(build.Version))
+    buff.Write([]byte(`","timestamp":`))
+    buff.Write([]byte(strconv.FormatInt(time.Now().Unix(), 10)))
+    buff.Write([]byte("},\n"))
+
+    file, fileErr := os.Create(ui.exportTree)
+    if fileErr != nil {
+        fmt.Println(fileErr)
+    }
+
+    ui.topDir.EncodeJSON(&buff, true)
+    buff.Write([]byte("]\n"))
+    buff.WriteTo(file)
 	case 's':
 		ui.setSorting("size")
 	case 'C':

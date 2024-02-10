@@ -46,6 +46,7 @@ type Flags struct {
 	CfgFile           string   `yaml:"-"`
 	LogFile           string   `yaml:"log-file"`
 	InputFile         string   `yaml:"input-file"`
+	ExportTree        string   `yaml:"export-file"`
 	OutputFile        string   `yaml:"output-file"`
 	IgnoreDirs        []string `yaml:"ignore-dirs"`
 	IgnoreDirPatterns []string `yaml:"ignore-dir-patterns"`
@@ -264,6 +265,12 @@ func (a *App) createUI() (UI, error) {
 				ui.SetChangeCwdFn(os.Chdir)
 			})
 		}
+
+    if a.Flags.ExportTree != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetExportTree(a.Flags.ExportTree)
+			})
+    }
 
 		ui = tui.CreateUI(
 			a.TermApp,

@@ -17,6 +17,7 @@ const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
          [::b]left, h     [white:black:-]Go to parent directory
 
                [::b]r     [white:black:-]Rescan current directory
+               [::b]S     [white:black:-]Export actual tree
                [::b]/     [white:black:-]Search items by name
                [::b]a     [white:black:-]Toggle between showing disk usage and apparent size
                [::b]B     [white:black:-]Toggle bar alignment to biggest file or directory
