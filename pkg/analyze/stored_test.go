@@ -102,4 +102,9 @@ func TestRemoveStoredFile(t *testing.T) {
 
 	assert.Equal(t, 4, stored.GetItemCount())
 	assert.Equal(t, int64(5+4096*3), stored.GetSize())
+
+	file := stored.GetFiles()[0].GetFiles()[0].GetFiles()[0]
+	assert.Equal(t, false, file.IsDir())
+	assert.Equal(t, "file", file.GetName())
+	assert.Equal(t, "test_dir/nested/subnested", file.GetParent().GetPath())
 }
