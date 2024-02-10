@@ -17,14 +17,17 @@ func init() {
 	gob.RegisterName("analyze.ParentDir", &ParentDir{})
 }
 
+// DefaultStorage is a default instance of badger storage
 var DefaultStorage *Storage
 
+// Storage represents a badger storage
 type Storage struct {
 	db          *badger.DB
 	storagePath string
 	topDir      string
 }
 
+// NewStorage returns new instance of badger storage
 func NewStorage(storagePath, topDir string) *Storage {
 	st := &Storage{
 		storagePath: storagePath,
@@ -39,10 +42,12 @@ func (s *Storage) GetTopDir() string {
 	return s.topDir
 }
 
+// IsOpen returns true if badger DB is open
 func (s *Storage) IsOpen() bool {
 	return s.db != nil
 }
 
+// Open opens badger DB
 func (s *Storage) Open() func() {
 	options := badger.DefaultOptions(s.storagePath)
 	options.Logger = nil
