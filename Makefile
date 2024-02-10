@@ -98,6 +98,9 @@ coverage-html: coverage
 gobench:
 	go test -bench=. $(PACKAGE)/pkg/analyze
 
+heap-profile:
+	go tool pprof -web http://localhost:6060/debug/pprof/heap
+
 benchmark:
 	sudo cpupower frequency-set -g performance
 	hyperfine --export-markdown=bench-cold.md \
