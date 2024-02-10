@@ -33,6 +33,7 @@ type UI struct {
 	topDir                  fs.Item
 	topDirPath              string
 	currentDirPath          string
+	exportTree              string
 	askBeforeDelete         bool
 	showItemCount           bool
 	showMtime               bool
@@ -179,6 +180,11 @@ func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 // to be shown in the progress modal
 func (ui *UI) SetCurrentItemNameMaxLen(len int) {
 	ui.currentItemNameMaxLen = len
+}
+
+// SetExportTree set the path where to export when doing the key "S"
+func (ui *UI) SetExportTree(path string) {
+	ui.exportTree = path
 }
 
 // UseOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)
