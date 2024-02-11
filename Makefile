@@ -136,5 +136,6 @@ release:
 
 install-dev-dependencies:
 	go install gotest.tools/gotestsum@latest
+	go install github.com/mitchellh/gox@latest
 
 .PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release
