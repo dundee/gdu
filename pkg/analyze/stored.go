@@ -77,7 +77,13 @@ func (a *StoredAnalyzer) AnalyzeDir(
 
 	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
-	defer closeFn()
+	defer func() {
+		// nasty hack to close storage after all goroutines are done
+		// Wait returns immediately if value is 0
+		// few last goroutines might still start after that
+		time.Sleep(1 * time.Second)
+		closeFn()
+	}()
 
 	a.ignoreDir = ignore
 
