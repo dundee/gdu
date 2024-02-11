@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"path/filepath"
+	"sync"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -25,6 +26,9 @@ type Storage struct {
 	db          *badger.DB
 	storagePath string
 	topDir      string
+	m           sync.RWMutex
+	counter     int
+	counterM    sync.Mutex
 }
 
 // NewStorage returns new instance of badger storage
@@ -44,6 +48,8 @@ func (s *Storage) GetTopDir() string {
 
 // IsOpen returns true if badger DB is open
 func (s *Storage) IsOpen() bool {
+	s.m.RLock()
+	defer s.m.RUnlock()
 	return s.db != nil
 }
 
@@ -58,13 +64,17 @@ func (s *Storage) Open() func() {
 	s.db = db
 
 	return func() {
-		db.Close()
+		s.db.Close()
 		s.db = nil
 	}
 }
 
 // StoreDir saves item info into badger DB
 func (s *Storage) StoreDir(dir fs.Item) error {
+	s.checkCount()
+	s.m.RLock()
+	defer s.m.RUnlock()
+
 	return s.db.Update(func(txn *badger.Txn) error {
 		b := &bytes.Buffer{}
 		enc := gob.NewEncoder(b)
@@ -79,6 +89,10 @@ func (s *Storage) StoreDir(dir fs.Item) error {
 
 // LoadDir saves item info into badger DB
 func (s *Storage) LoadDir(dir fs.Item) error {
+	s.checkCount()
+	s.m.RLock()
+	defer s.m.RUnlock()
+
 	return s.db.View(func(txn *badger.Txn) error {
 		path := dir.GetPath()
 		item, err := txn.Get([]byte(path))
@@ -111,4 +125,17 @@ func (s *Storage) GetDirForPath(path string) (fs.Item, error) {
 		return nil, err
 	}
 	return dir, nil
+}
+
+func (s *Storage) checkCount() {
+	s.counterM.Lock()
+	defer s.counterM.Unlock()
+	s.counter++
+	if s.counter >= 10000 {
+		s.m.Lock()
+		defer s.m.Unlock()
+		s.counter = 0
+		s.db.Close()
+		s.Open()
+	}
 }
