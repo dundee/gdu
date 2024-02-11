@@ -43,6 +43,7 @@ func (s *WaitGroup) Wait() {
 
 func (s *WaitGroup) check() {
 	if s.value == 0 {
+		s.wait.TryLock()
 		s.wait.Unlock()
 	}
 }
