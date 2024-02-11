@@ -134,15 +134,17 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 // AnalyzePath analyzes recursively disk usage in given path
 func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	var (
-		dir  fs.Item
-		wait sync.WaitGroup
+		dir             fs.Item
+		wait            sync.WaitGroup
+		updateStatsDone chan struct{}
 	)
+	updateStatsDone = make(chan struct{}, 1)
 
 	if ui.ShowProgress {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			ui.updateProgress()
+			ui.updateProgress(updateStatsDone)
 		}()
 	}
 
@@ -151,6 +153,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 		defer wait.Done()
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
+		updateStatsDone <- struct{}{}
 	}()
 
 	wait.Wait()
@@ -322,14 +325,14 @@ func (ui *UI) showReadingProgress(doneChan chan struct{}) {
 	}
 }
 
-func (ui *UI) updateProgress() {
+func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 	emptyRow := "\r"
 	for j := 0; j < 100; j++ {
 		emptyRow += " "
 	}
 
 	progressChan := ui.Analyzer.GetProgressChan()
-	doneChan := ui.Analyzer.GetDone()
+	analysisDoneChan := ui.Analyzer.GetDone()
 
 	var progress common.CurrentProgress
 
@@ -339,9 +342,23 @@ func (ui *UI) updateProgress() {
 
 		select {
 		case progress = <-progressChan:
-		case <-doneChan:
-			fmt.Fprint(ui.output, "\r")
-			return
+		case <-analysisDoneChan:
+			for {
+				fmt.Fprint(ui.output, emptyRow)
+				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+				fmt.Fprint(ui.output, "Calculating disk usage...")
+				time.Sleep(100 * time.Millisecond)
+				i++
+				i %= 10
+
+				select {
+				case <-updateStatsDone:
+					fmt.Fprint(ui.output, emptyRow)
+					fmt.Fprint(ui.output, "\r")
+					return
+				default:
+				}
+			}
 		}
 
 		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
