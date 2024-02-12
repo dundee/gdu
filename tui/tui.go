@@ -35,7 +35,6 @@ type UI struct {
 	topDir                  fs.Item
 	topDirPath              string
 	currentDirPath          string
-	exportTree              string
 	askBeforeDelete         bool
 	showItemCount           bool
 	showMtime               bool
@@ -57,6 +56,7 @@ type UI struct {
 	defaultSortBy           string
 	defaultSortOrder        string
 	markedRows              map[int]struct{}
+	exportName              string
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -98,6 +98,7 @@ func CreateUI(
 		defaultSortBy:           "size",
 		defaultSortOrder:        "desc",
 		markedRows:              make(map[int]struct{}),
+		exportName:              "export.json",
 	}
 	for _, o := range opts {
 		o(ui)
@@ -182,11 +183,6 @@ func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 // to be shown in the progress modal
 func (ui *UI) SetCurrentItemNameMaxLen(len int) {
 	ui.currentItemNameMaxLen = len
-}
-
-// SetExportTree set the path where to export when doing the key "S"
-func (ui *UI) SetExportTree(path string) {
-	ui.exportTree = path
 }
 
 // UseOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)

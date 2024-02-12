@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/rivo/tview"
 )
 
 var (
@@ -64,4 +65,14 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func modal(p tview.Primitive, width, height int) tview.Primitive {
+	return tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(p, height, 1, true).
+			AddItem(nil, 0, 1, false), width, 1, true).
+		AddItem(nil, 0, 1, false)
 }

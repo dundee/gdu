@@ -2,13 +2,16 @@ package tui
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -398,4 +401,73 @@ func (ui *UI) openItem() {
 	if err != nil {
 		ui.showErr("Error opening", err)
 	}
+}
+
+func (ui *UI) confirmExport() {
+	form := tview.NewForm().
+		AddInputField("File name", "export.json", 30, nil, func(v string) {
+			ui.exportName = v
+		}).
+		AddButton("Export", ui.exportAnalysis).
+		SetButtonsAlign(tview.AlignCenter)
+	form.SetBorder(true).
+		SetTitle(" Export data to JSON ").
+		SetInputCapture(func(key *tcell.EventKey) *tcell.EventKey {
+			if key.Key() == tcell.KeyEsc {
+				ui.pages.RemovePage("export")
+				ui.app.SetFocus(ui.table)
+				return nil
+			}
+			return key
+		})
+	flex := modal(form, 50, 7)
+	ui.pages.AddPage("export", flex, true, true)
+	ui.app.SetFocus(form)
+}
+
+func (ui *UI) exportAnalysis() {
+	ui.pages.RemovePage("export")
+
+	text := tview.NewTextView().SetText("Export in progress...").SetTextAlign(tview.AlignCenter)
+	text.SetBorder(true).SetTitle(" Export data to JSON ")
+	flex := modal(text, 50, 3)
+	ui.pages.AddPage("exporting", flex, true, true)
+
+	go func() {
+		var err error
+		defer ui.app.QueueUpdateDraw(func() {
+			ui.pages.RemovePage("exporting")
+			if err == nil {
+				ui.app.SetFocus(ui.table)
+			}
+		})
+
+		var buff bytes.Buffer
+
+		buff.Write([]byte(`[1,2,{"progname":"gdu","progver":"`))
+		buff.Write([]byte(build.Version))
+		buff.Write([]byte(`","timestamp":`))
+		buff.Write([]byte(strconv.FormatInt(time.Now().Unix(), 10)))
+		buff.Write([]byte("},\n"))
+
+		file, err := os.Create(ui.exportName)
+		if err != nil {
+			ui.showErrFromGo("Error creating file", err)
+			return
+		}
+
+		if err = ui.topDir.EncodeJSON(&buff, true); err != nil {
+			ui.showErrFromGo("Error encoding JSON", err)
+			return
+		}
+
+		if _, err = buff.Write([]byte("]\n")); err != nil {
+			ui.showErrFromGo("Error writting to buffer", err)
+			return
+		}
+		if _, err = buff.WriteTo(file); err != nil {
+			ui.showErrFromGo("Error writting to file", err)
+			return
+		}
+	}()
 }
