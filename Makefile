@@ -101,6 +101,11 @@ gobench:
 heap-profile:
 	go tool pprof -web http://localhost:6060/debug/pprof/heap
 
+pgo:
+	wget -O cpu.pprof http://localhost:6060/debug/pprof/profile?seconds=30
+	go tool pprof -proto cpu.pprof default.pgo > merged.pprof
+	mv merged.pprof default.pgo
+
 benchmark:
 	sudo cpupower frequency-set -g performance
 	hyperfine --export-markdown=bench-cold.md \
