@@ -45,7 +45,6 @@ func TestStoredAnalyzer(t *testing.T) {
 	).(*StoredDir)
 
 	a.GetDone().Wait()
-	a.ResetProgress()
 
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
