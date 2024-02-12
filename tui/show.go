@@ -17,7 +17,7 @@ const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
          [::b]left, h     [white:black:-]Go to parent directory
 
                [::b]r     [white:black:-]Rescan current directory
-               [::b]S     [white:black:-]Export actual tree
+               [::b]E     [white:black:-]Export analysis data to file as JSON
                [::b]/     [white:black:-]Search items by name
                [::b]a     [white:black:-]Toggle between showing disk usage and apparent size
                [::b]B     [white:black:-]Toggle bar alignment to biggest file or directory
@@ -234,6 +234,13 @@ func (ui *UI) showErr(msg string, err error) {
 	}
 
 	ui.pages.AddPage("error", modal, true, true)
+	ui.app.SetFocus(modal)
+}
+
+func (ui *UI) showErrFromGo(msg string, err error) {
+	ui.app.QueueUpdateDraw(func() {
+		ui.showErr(msg, err)
+	})
 }
 
 func (ui *UI) showHelp() {
