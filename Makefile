@@ -61,14 +61,14 @@ build-all:
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
 
-	cd dist; GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o gdu_linux_amd64 $(PACKAGE)/$(CMD_GDU)
-	cd dist; GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o gdu_linux_amd64_static $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64 $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64_static $(PACKAGE)/$(CMD_GDU)
 
-	cd dist; CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o gdu_linux_armv5l $(PACKAGE)/$(CMD_GDU)
-	cd dist; CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o gdu_linux_armv6l $(PACKAGE)/$(CMD_GDU)
-	cd dist; CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o gdu_linux_armv7l $(PACKAGE)/$(CMD_GDU)
-	cd dist; CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
-	cd dist; CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv5l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv6l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv7l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
 
 	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_* gdu_android_*; do tar czf $$file.tgz $$file; done
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
