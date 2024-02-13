@@ -450,5 +450,9 @@ func (ui *UI) exportAnalysis() {
 			ui.showErrFromGo("Error writting to file", err)
 			return
 		}
+
+		if ui.done != nil {
+			ui.done <- struct{}{}
+		}
 	}()
 }
