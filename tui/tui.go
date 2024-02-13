@@ -134,6 +134,7 @@ func CreateUI(
 
 	ui.table = tview.NewTable().SetSelectable(true, false)
 	ui.table.SetBackgroundColor(tcell.ColorDefault)
+	ui.table.SetSelectedFunc(ui.fileItemSelected)
 
 	if ui.UseColors {
 
