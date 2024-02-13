@@ -55,7 +55,6 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("progress", flex, true, true)
-	ui.table.SetSelectedFunc(ui.fileItemSelected)
 
 	go ui.updateProgress()
 
