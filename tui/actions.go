@@ -384,7 +384,7 @@ func (ui *UI) openItem() {
 	}
 }
 
-func (ui *UI) confirmExport() {
+func (ui *UI) confirmExport() *tview.Form {
 	form := tview.NewForm().
 		AddInputField("File name", "export.json", 30, nil, func(v string) {
 			ui.exportName = v
@@ -404,6 +404,7 @@ func (ui *UI) confirmExport() {
 	flex := modal(form, 50, 7)
 	ui.pages.AddPage("export", flex, true, true)
 	ui.app.SetFocus(form)
+	return form
 }
 
 func (ui *UI) exportAnalysis() {
@@ -422,6 +423,11 @@ func (ui *UI) exportAnalysis() {
 				ui.app.SetFocus(ui.table)
 			}
 		})
+		if ui.done != nil {
+			defer func() {
+				ui.done <- struct{}{}
+			}()
+		}
 
 		var buff bytes.Buffer
 
@@ -449,10 +455,6 @@ func (ui *UI) exportAnalysis() {
 		if _, err = buff.WriteTo(file); err != nil {
 			ui.showErrFromGo("Error writting to file", err)
 			return
-		}
-
-		if ui.done != nil {
-			ui.done <- struct{}{}
 		}
 	}()
 }
