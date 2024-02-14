@@ -16,7 +16,7 @@ ifeq ($(shell uname -s),Darwin)
 	TAR := gtar # brew install gnu-tar
 endif
 
-all: clean tarball build-all man clean-uncompressed-dist shasums
+all: clean tarball build-all build-docker man clean-uncompressed-dist shasums
 
 run:
 	go run $(PACKAGE)/$(CMD_GDU)
@@ -73,8 +73,6 @@ build-all:
 	CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv7l $(PACKAGE)/$(CMD_GDU)
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
 	CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
-
-	docker build . --tag ghcr.io/dundee/gdu:$(VERSION)
 
 	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_* gdu_android_*; do tar czf $$file.tgz $$file; done
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
@@ -143,7 +141,6 @@ shasums:
 	cd dist; gpg --sign --armor --detach-sign sha256sums.txt
 
 release:
-	docker push ghcr.io/dundee/gdu:$(VERSION)
 	gh release create -t "gdu $(VERSION)" $(VERSION) ./dist/*
 
 install-dev-dependencies:
