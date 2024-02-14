@@ -26,7 +26,11 @@ Using curl:
     chmod +x gdu_linux_amd64
     mv gdu_linux_amd64 /usr/bin/gdu
 
-Or see the [installation page](./INSTALL.md) for other ways how to install Gdu to your system.
+See the [installation page](./INSTALL.md) for other ways how to install Gdu to your system.
+
+Or you can use Gdu directly via Docker:
+
+    docker run --rm --init --interactive --tty --privileged --volume /:/mnt/root ghcr.io/dundee/gdu /mnt/root
 
 ## Usage
 
