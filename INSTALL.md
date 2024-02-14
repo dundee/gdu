@@ -1,5 +1,10 @@
 # Installation
 
+[Docker](https://github.com/dundee/gdu):
+
+    docker build . -t gdu
+    docker run --rm --init --interactive --tty --privileged --volume /:/mnt/root localhost/gdu /mnt/root
+
 [Arch Linux](https://archlinux.org/packages/extra/x86_64/gdu/):
 
     pacman -S gdu
