@@ -30,7 +30,7 @@ See the [installation page](./INSTALL.md) for other ways how to install Gdu to y
 
 Or you can use Gdu directly via Docker:
 
-    docker run --rm --init --interactive --tty --privileged --volume /:/mnt/root ghcr.io/dundee/gdu /mnt/root
+    docker run --rm --init --interactive --tty --privileged --volume /:/mnt/root ghcr.io/dundee/gdu:master /mnt/root
 
 ## Usage
 
