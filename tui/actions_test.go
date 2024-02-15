@@ -85,6 +85,22 @@ func TestDeviceSelected(t *testing.T) {
 	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
 }
 
+func TestNilDeviceSelected(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	ui.UseOldSizeBar()
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+
+	ui.deviceItemSelected(1, 0)
+
+	assert.Equal(t, 0, ui.table.GetRowCount())
+}
+
 func TestAnalyzePath(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 

@@ -255,7 +255,10 @@ func (ui *UI) fileItemSelected(row, column int) {
 
 func (ui *UI) deviceItemSelected(row, column int) {
 	var err error
-	selectedDevice := ui.table.GetCell(row, column).GetReference().(*device.Device)
+	selectedDevice, ok := ui.table.GetCell(row, column).GetReference().(*device.Device)
+	if !ok {
+		return
+	}
 
 	paths := device.GetNestedMountpointsPaths(selectedDevice.MountPoint, ui.devices)
 	ui.IgnoreDirPathPatterns, err = common.CreateIgnorePattern(paths)
