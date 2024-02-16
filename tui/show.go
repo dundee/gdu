@@ -189,7 +189,7 @@ func (ui *UI) showDevices() {
 		ui.table.SetCell(i+1, 2, tview.NewTableCell(sizeColor+ui.formatSize(device.Size-device.Free, false, true)))
 		ui.table.SetCell(i+1, 3, tview.NewTableCell(getDeviceUsagePart(device, ui.useOldSizeBar)))
 		ui.table.SetCell(i+1, 4, tview.NewTableCell(ui.formatSize(device.Free, false, true)))
-		ui.table.SetCell(i+1, 5, tview.NewTableCell(textColor+device.MountPoint))
+		ui.table.SetCell(i+1, 5, tview.NewTableCell(textColor+device.MountPoint).SetReference(ui.devices[i]))
 	}
 
 	var footerNumberColor, footerTextColor string
