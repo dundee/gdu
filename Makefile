@@ -117,13 +117,13 @@ benchmark:
 		--ignore-failure \
 		'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~' 'pdu ~' \
-		'gdu -npc ~' 'gdu -gnpc ~'
+		'gdu -npc ~' 'gdu -gnpc ~' 'gdu -npc --use-storage ~'
 	hyperfine --export-markdown=bench-warm.md \
 		--warmup 5 \
 		--ignore-failure \
 		'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~' 'pdu ~' \
-		'gdu -npc ~' 'gdu -gnpc ~'
+		'gdu -npc ~' 'gdu -gnpc ~' 'gdu -npc --use-storage ~'
 	sudo cpupower frequency-set -g schedutil
 
 clean:
