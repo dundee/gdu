@@ -1,12 +1,12 @@
 Name:           gdu
-Version:        5.25.0
-Release:        3%{?dist}
+Version:        5.27.0
+Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
 
 License:        MIT
 URL:            https://github.com/dundee/gdu
 
-Source0:        %{name}-%{version}.tar.gz
+Source0:        https://github.com/dundee/gdu/archive/refs/tags/%{version}.tar.gz
 
 BuildRequires:  golang
 BuildRequires:  systemd-rpm-macros
@@ -20,8 +20,7 @@ Pretty fast disk usage analyzer written in Go.
 %global debug_package %{nil}
 
 %prep
-%autosetup
-
+%autosetup -n %{name}
 
 %build
 GO111MODULE=on CGO_ENABLED=0 go build \
@@ -33,14 +32,14 @@ GO111MODULE=on CGO_ENABLED=0 go build \
 %if 0%{?fedora} || 0%{?amzn} 
 "-linkmode=external \
 -s -w \
--X 'github.com/dundee/gdu/v5/build.Version=v%{version}' \
+-X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
 -X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
 -X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
 -o %{name} github.com/dundee/gdu/v5/cmd/gdu
 %endif
 %if 0%{?rhel}
 "-s -w \
--X 'github.com/dundee/gdu/v5/build.Version=v%{version}' \
+-X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
 -X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
 -X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
 -o %{name} github.com/dundee/gdu/v5/cmd/gdu
@@ -63,7 +62,19 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
-* Fri Dec 1 2023 Danie de Jager - 5.25.0-3
+* Sun Feb 18 2024 Danie de Jager - 5.27.0-1
+- feat: export in interactive mode by @kadogo in #298
+- feat: handle vim-style navigation in confirmation by @samihda in #283
+- fix: panic with Interface Conversion Nil Error by @ShivamB25 in #274
+- fix: Enter key properly working when reading analysis from file by @dundee in #312
+- fix: check if type matches for selected device by @dundee in #318
+- ci: package gdu in docker container by @rare-magma in #313
+- ci: add values for building gdu with tito by @daniejstriata in #288
+- ci: change Winget Releaser job to ubuntu-latest by @sitiom in #271
+* Tue Feb 13 2024 Danie de Jager - 5.26.0-1
+- feat: use key-value store for analysis data in #297
+- feat: use profile-guided optimization in #286
+* Fri Dec 1 2023 Danie de Jager - 5.25.0-2
 - Improved SPEC to build on AL2023.
 * Tue Jun 6 2023 Danie de Jager - 5.25.0-1
 - feat: use unicode block elements in size bar in #255
