@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -57,12 +58,12 @@ func TestFooter(t *testing.T) {
 
 	printScreen(simScreen)
 
-	text := []byte(" Total disk usage: 4.0 KiB Apparent size: 2 B Items: 1")
+	text := []byte(" Total disk    usage: 4.0 KiB Apparent size: 2 B Items: 1")
 	for i, r := range b {
 		if i >= len(text) {
 			break
 		}
-		assert.Equal(t, string(text[i]), string(r.Bytes[0]))
+		assert.Equal(t, string(text[i]), string(r.Bytes[0]), fmt.Sprintf("Index: %d", i))
 	}
 }
 
