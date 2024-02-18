@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.0.0-20240204151237-861aa94d61c8
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
 	golang.org/x/sys v0.17.0
