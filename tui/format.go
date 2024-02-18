@@ -83,7 +83,7 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 	var color string
 	if reverseColor {
 		if ui.UseColors {
-			color = "[black:#2479d0:-]"
+			color = "[#000000:#2479d0:-]"
 		} else {
 			color = "[black:white:-]"
 		}
