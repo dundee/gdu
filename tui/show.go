@@ -128,7 +128,7 @@ func (ui *UI) showDir() {
 	var footerNumberColor, footerTextColor string
 	if ui.UseColors {
 		footerNumberColor = "[#ffffff:#2479d0:b]"
-		footerTextColor = "[black:#2479d0:-]"
+		footerTextColor = "[#000000:#2479d0:-]"
 	} else {
 		footerNumberColor = "[black:white:b]"
 		footerTextColor = "[black:white:-]"
@@ -141,7 +141,7 @@ func (ui *UI) showDir() {
 	}
 
 	ui.footerLabel.SetText(
-		selected +
+		selected + footerTextColor +
 			" Total disk usage: " +
 			footerNumberColor +
 			ui.formatSize(totalUsage, true, false) +
@@ -195,7 +195,7 @@ func (ui *UI) showDevices() {
 	var footerNumberColor, footerTextColor string
 	if ui.UseColors {
 		footerNumberColor = "[#ffffff:#2479d0:b]"
-		footerTextColor = "[black:#2479d0:-]"
+		footerTextColor = "[#000000:#2479d0:-]"
 	} else {
 		footerNumberColor = "[black:white:b]"
 		footerTextColor = "[black:white:-]"
