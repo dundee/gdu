@@ -43,37 +43,38 @@ type UI interface {
 
 // Flags define flags accepted by Run
 type Flags struct {
-	CfgFile           string   `yaml:"-"`
-	LogFile           string   `yaml:"log-file"`
-	InputFile         string   `yaml:"input-file"`
-	OutputFile        string   `yaml:"output-file"`
-	IgnoreDirs        []string `yaml:"ignore-dirs"`
-	IgnoreDirPatterns []string `yaml:"ignore-dir-patterns"`
-	IgnoreFromFile    string   `yaml:"ignore-from-file"`
-	MaxCores          int      `yaml:"max-cores"`
-	ShowDisks         bool     `yaml:"-"`
-	ShowApparentSize  bool     `yaml:"show-apparent-size"`
-	ShowRelativeSize  bool     `yaml:"show-relative-size"`
-	ShowVersion       bool     `yaml:"-"`
-	NoColor           bool     `yaml:"no-color"`
-	NoMouse           bool     `yaml:"no-mouse"`
-	NonInteractive    bool     `yaml:"non-interactive"`
-	NoProgress        bool     `yaml:"no-progress"`
-	NoCross           bool     `yaml:"no-cross"`
-	NoHidden          bool     `yaml:"no-hidden"`
-	FollowSymlinks    bool     `yaml:"follow-symlinks"`
-	Profiling         bool     `yaml:"profiling"`
-	ConstGC           bool     `yaml:"const-gc"`
-	UseStorage        bool     `yaml:"use-storage"`
-	StoragePath       string   `yaml:"storage-path"`
-	ReadFromStorage   bool     `yaml:"read-from-storage"`
-	Summarize         bool     `yaml:"summarize"`
-	UseSIPrefix       bool     `yaml:"use-si-prefix"`
-	NoPrefix          bool     `yaml:"no-prefix"`
-	WriteConfig       bool     `yaml:"-"`
-	ChangeCwd         bool     `yaml:"change-cwd"`
-	Style             Style    `yaml:"style"`
-	Sorting           Sorting  `yaml:"sorting"`
+	CfgFile            string   `yaml:"-"`
+	LogFile            string   `yaml:"log-file"`
+	InputFile          string   `yaml:"input-file"`
+	OutputFile         string   `yaml:"output-file"`
+	IgnoreDirs         []string `yaml:"ignore-dirs"`
+	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
+	IgnoreFromFile     string   `yaml:"ignore-from-file"`
+	MaxCores           int      `yaml:"max-cores"`
+	SequentialScanning bool     `yaml:"sequential-scanning"`
+	ShowDisks          bool     `yaml:"-"`
+	ShowApparentSize   bool     `yaml:"show-apparent-size"`
+	ShowRelativeSize   bool     `yaml:"show-relative-size"`
+	ShowVersion        bool     `yaml:"-"`
+	NoColor            bool     `yaml:"no-color"`
+	NoMouse            bool     `yaml:"no-mouse"`
+	NonInteractive     bool     `yaml:"non-interactive"`
+	NoProgress         bool     `yaml:"no-progress"`
+	NoCross            bool     `yaml:"no-cross"`
+	NoHidden           bool     `yaml:"no-hidden"`
+	FollowSymlinks     bool     `yaml:"follow-symlinks"`
+	Profiling          bool     `yaml:"profiling"`
+	ConstGC            bool     `yaml:"const-gc"`
+	UseStorage         bool     `yaml:"use-storage"`
+	StoragePath        string   `yaml:"storage-path"`
+	ReadFromStorage    bool     `yaml:"read-from-storage"`
+	Summarize          bool     `yaml:"summarize"`
+	UseSIPrefix        bool     `yaml:"use-si-prefix"`
+	NoPrefix           bool     `yaml:"no-prefix"`
+	WriteConfig        bool     `yaml:"-"`
+	ChangeCwd          bool     `yaml:"change-cwd"`
+	Style              Style    `yaml:"style"`
+	Sorting            Sorting  `yaml:"sorting"`
 }
 
 // Style define style config
@@ -143,6 +144,9 @@ func (a *App) Run() (err error) {
 
 	if a.Flags.UseStorage {
 		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
+	}
+	if a.Flags.SequentialScanning {
+		ui.SetAnalyzer(analyze.CreateSeqAnalyzer())
 	}
 	if a.Flags.FollowSymlinks {
 		ui.SetFollowSymlinks(true)
