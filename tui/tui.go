@@ -21,12 +21,14 @@ type UI struct {
 	app                     common.TermApplication
 	screen                  tcell.Screen
 	output                  io.Writer
+	grid                    *tview.Grid
 	header                  *tview.TextView
 	footer                  *tview.Flex
 	footerLabel             *tview.TextView
 	currentDirLabel         *tview.TextView
 	pages                   *tview.Pages
 	progress                *tview.TextView
+	status                  *tview.TextView
 	help                    *tview.Flex
 	table                   *tview.Table
 	filteringInput          *tview.InputField
@@ -155,14 +157,14 @@ func CreateUI(
 	ui.footer = tview.NewFlex()
 	ui.footer.AddItem(ui.footerLabel, 0, 1, false)
 
-	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
-	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
+	ui.grid = tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
+	ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
 		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
 		AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
 		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
 
 	ui.pages = tview.NewPages().
-		AddPage("background", grid, true, true)
+		AddPage("background", ui.grid, true, true)
 	ui.pages.SetBackgroundColor(tcell.ColorDefault)
 
 	ui.app.SetRoot(ui.pages, true)
