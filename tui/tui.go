@@ -137,7 +137,6 @@ func CreateUI(
 	ui.table.SetSelectedFunc(ui.fileItemSelected)
 
 	if ui.UseColors {
-
 		ui.table.SetSelectedStyle(tcell.Style{}.
 			Foreground(ui.selectedTextColor).
 			Background(ui.selectedBackgroundColor).Bold(true))
@@ -202,6 +201,10 @@ func (ui *UI) StartUILoop() error {
 	return ui.app.Run()
 }
 
+func (ui *UI) SetShowItemCount() {
+	ui.showItemCount = true
+}
+
 func (ui *UI) resetSorting() {
 	ui.sortBy = ui.defaultSortBy
 	ui.sortOrder = ui.defaultSortOrder
@@ -262,7 +265,6 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 	paths := device.GetNestedMountpointsPaths(selectedDevice.MountPoint, ui.devices)
 	ui.IgnoreDirPathPatterns, err = common.CreateIgnorePattern(paths)
-
 	if err != nil {
 		log.Printf("Creating path patterns for other devices failed: %s", paths)
 	}
