@@ -56,6 +56,7 @@ type Flags struct {
 	ShowApparentSize   bool     `yaml:"show-apparent-size"`
 	ShowRelativeSize   bool     `yaml:"show-relative-size"`
 	ShowVersion        bool     `yaml:"-"`
+	ShowItemCount      bool     `yaml:"show-item-count"`
 	NoColor            bool     `yaml:"no-color"`
 	NoMouse            bool     `yaml:"no-mouse"`
 	NonInteractive     bool     `yaml:"non-interactive"`
@@ -266,6 +267,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.ChangeCwd != false {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetChangeCwdFn(os.Chdir)
+			})
+		}
+		if a.Flags.ShowItemCount {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetShowItemCount()
 			})
 		}
 
