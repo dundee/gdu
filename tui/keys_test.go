@@ -400,6 +400,36 @@ func TestDelete(t *testing.T) {
 	assert.NoDirExists(t, "test_dir/nested")
 }
 
+func TestDeleteWithNoDelete(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.SetNoDelete()
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
+
+	assert.DirExists(t, "test_dir/nested")
+}
+
 func TestDeleteMarked(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
