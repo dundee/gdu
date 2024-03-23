@@ -63,6 +63,7 @@ type Flags struct {
 	NoProgress         bool     `yaml:"no-progress"`
 	NoCross            bool     `yaml:"no-cross"`
 	NoHidden           bool     `yaml:"no-hidden"`
+	NoDelete           bool     `yaml:"no-delete"`
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
 	ConstGC            bool     `yaml:"const-gc"`
@@ -272,6 +273,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.ShowItemCount {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetShowItemCount()
+			})
+		}
+		if a.Flags.NoDelete {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetNoDelete()
 			})
 		}
 

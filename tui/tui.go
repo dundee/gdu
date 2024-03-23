@@ -2,6 +2,7 @@ package tui
 
 import (
 	"io"
+	"time"
 
 	"golang.org/x/exp/slices"
 
@@ -57,6 +58,7 @@ type UI struct {
 	defaultSortOrder        string
 	markedRows              map[int]struct{}
 	exportName              string
+	noDelete                bool
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -99,6 +101,7 @@ func CreateUI(
 		defaultSortOrder:        "desc",
 		markedRows:              make(map[int]struct{}),
 		exportName:              "export.json",
+		noDelete:                false,
 	}
 	for _, o := range opts {
 		o(ui)
@@ -205,6 +208,10 @@ func (ui *UI) SetShowItemCount() {
 	ui.showItemCount = true
 }
 
+func (ui *UI) SetNoDelete() {
+	ui.noDelete = true
+}
+
 func (ui *UI) resetSorting() {
 	ui.sortBy = ui.defaultSortBy
 	ui.sortOrder = ui.defaultSortOrder
@@ -280,6 +287,21 @@ func (ui *UI) deviceItemSelected(row, column int) {
 }
 
 func (ui *UI) confirmDeletion(shouldEmpty bool) {
+	if ui.noDelete {
+		previousHeaderText := ui.header.GetText(false)
+
+		// show feedback to user
+		ui.header.SetText("Deletion is disabled!")
+
+		go func() {
+			time.Sleep(2 * time.Second)
+			ui.header.Clear()
+			ui.header.SetText(previousHeaderText)
+		}()
+
+		return
+	}
+
 	if len(ui.markedRows) > 0 {
 		ui.confirmDeletionMarked(shouldEmpty)
 	} else {

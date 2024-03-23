@@ -250,19 +250,10 @@ func (ui *UI) showHelp() {
 	text.SetTitle(" gdu help ")
 	text.SetScrollable(true)
 
-	if ui.UseColors {
-		text.SetText(
-			strings.ReplaceAll(
-				strings.ReplaceAll(helpText, "[::b]", "[red]"),
-				"[white:black:-]",
-				"[white]",
-			),
-		)
-	} else {
-		text.SetText(helpText)
-	}
+	formattedHelpText := formatHelpTextFor(ui)
+	text.SetText(formattedHelpText)
 
-	maxHeight := strings.Count(helpText, "\n") + 7
+	maxHeight := strings.Count(formattedHelpText, "\n") + 7
 	_, height := ui.screen.Size()
 	if height > maxHeight {
 		height = maxHeight
@@ -279,4 +270,25 @@ func (ui *UI) showHelp() {
 	ui.help = flex
 	ui.pages.AddPage("help", flex, true, true)
 	ui.app.SetFocus(text)
+}
+
+func formatHelpTextFor(ui *UI) string {
+	lines := strings.Split(helpText, "\n")
+
+	for i, line := range lines {
+		if ui.UseColors {
+			lines[i] = strings.ReplaceAll(
+				strings.ReplaceAll(line, "[::b]", "[red]"),
+				"[white:black:-]",
+				"[white]",
+			)
+		}
+
+		if ui.noDelete && (strings.Contains(line, "Empty file or directory") ||
+			strings.Contains(line, "Delete file or directory")) {
+			lines[i] += " (Disabled)"
+		}
+	}
+
+	return strings.Join(lines, "\n")
 }
