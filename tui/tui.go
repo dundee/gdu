@@ -291,12 +291,14 @@ func (ui *UI) confirmDeletion(shouldEmpty bool) {
 		previousHeaderText := ui.header.GetText(false)
 
 		// show feedback to user
-		ui.header.SetText("Deletion is disabled!")
+		ui.header.SetText(" Deletion is disabled!")
 
 		go func() {
 			time.Sleep(2 * time.Second)
-			ui.header.Clear()
-			ui.header.SetText(previousHeaderText)
+			ui.app.QueueUpdateDraw(func() {
+				ui.header.Clear()
+				ui.header.SetText(previousHeaderText)
+			})
 		}()
 
 		return

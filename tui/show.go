@@ -250,7 +250,7 @@ func (ui *UI) showHelp() {
 	text.SetTitle(" gdu help ")
 	text.SetScrollable(true)
 
-	formattedHelpText := formatHelpTextFor(ui)
+	formattedHelpText := ui.formatHelpTextFor()
 	text.SetText(formattedHelpText)
 
 	maxHeight := strings.Count(formattedHelpText, "\n") + 7
@@ -272,7 +272,7 @@ func (ui *UI) showHelp() {
 	ui.app.SetFocus(text)
 }
 
-func formatHelpTextFor(ui *UI) string {
+func (ui *UI) formatHelpTextFor() string {
 	lines := strings.Split(helpText, "\n")
 
 	for i, line := range lines {
@@ -286,7 +286,7 @@ func formatHelpTextFor(ui *UI) string {
 
 		if ui.noDelete && (strings.Contains(line, "Empty file or directory") ||
 			strings.Contains(line, "Delete file or directory")) {
-			lines[i] += " (Disabled)"
+			lines[i] += " (disabled)"
 		}
 	}
 
