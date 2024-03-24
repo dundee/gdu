@@ -73,7 +73,7 @@ func init() {
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
 	flags.BoolVar(&af.NoMouse, "no-mouse", false, "Do not use mouse")
-	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allowe deletions")
+	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allow deletions")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 
 	initConfig()
