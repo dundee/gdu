@@ -221,8 +221,10 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.pages.RemovePage(acting)
+			x, y := ui.table.GetOffset()
 			ui.showDir()
 			ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
+			ui.table.SetOffset(min(x, ui.table.GetRowCount()-1), y)
 		})
 
 		if ui.done != nil {

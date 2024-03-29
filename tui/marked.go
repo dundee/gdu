@@ -93,8 +93,10 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 		ui.app.QueueUpdateDraw(func() {
 			ui.pages.RemovePage(acting)
 			ui.markedRows = make(map[int]struct{})
+			x, y := ui.table.GetOffset()
 			ui.showDir()
 			ui.table.Select(min(currentRow, ui.table.GetRowCount()-1), 0)
+			ui.table.SetOffset(min(x, ui.table.GetRowCount()-1), y)
 		})
 
 		if ui.done != nil {
