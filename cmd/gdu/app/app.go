@@ -75,6 +75,7 @@ type Flags struct {
 	NoPrefix           bool     `yaml:"no-prefix"`
 	WriteConfig        bool     `yaml:"-"`
 	ChangeCwd          bool     `yaml:"change-cwd"`
+	DeleteInBackground bool     `yaml:"delete-in-background"`
 	Style              Style    `yaml:"style"`
 	Sorting            Sorting  `yaml:"sorting"`
 }
@@ -278,6 +279,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.NoDelete {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetNoDelete()
+			})
+		}
+		if a.Flags.DeleteInBackground {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetDeleteInBackground()
 			})
 		}
 

@@ -2,6 +2,8 @@ package tui
 
 import (
 	"io"
+	"runtime"
+	"sync"
 	"time"
 
 	"golang.org/x/exp/slices"
@@ -22,12 +24,14 @@ type UI struct {
 	app                     common.TermApplication
 	screen                  tcell.Screen
 	output                  io.Writer
+	grid                    *tview.Grid
 	header                  *tview.TextView
 	footer                  *tview.Flex
 	footerLabel             *tview.TextView
 	currentDirLabel         *tview.TextView
 	pages                   *tview.Pages
 	progress                *tview.TextView
+	status                  *tview.TextView
 	help                    *tview.Flex
 	table                   *tview.Table
 	filteringInput          *tview.InputField
@@ -59,6 +63,16 @@ type UI struct {
 	markedRows              map[int]struct{}
 	exportName              string
 	noDelete                bool
+	deleteInBackground      bool
+	deleteQueue             chan deleteQueueItem
+	activeWorkers           int
+	workersMut              sync.Mutex
+	statusMut               sync.RWMutex
+}
+
+type deleteQueueItem struct {
+	item        fs.Item
+	shouldEmpty bool
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -102,6 +116,7 @@ func CreateUI(
 		markedRows:              make(map[int]struct{}),
 		exportName:              "export.json",
 		noDelete:                false,
+		deleteQueue:             make(chan deleteQueueItem, 1000),
 	}
 	for _, o := range opts {
 		o(ui)
@@ -157,14 +172,14 @@ func CreateUI(
 	ui.footer = tview.NewFlex()
 	ui.footer.AddItem(ui.footerLabel, 0, 1, false)
 
-	grid := tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
-	grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
+	ui.grid = tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
+	ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
 		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
 		AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
 		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
 
 	ui.pages = tview.NewPages().
-		AddPage("background", grid, true, true)
+		AddPage("background", ui.grid, true, true)
 	ui.pages.SetBackgroundColor(tcell.ColorDefault)
 
 	ui.app.SetRoot(ui.pages, true)
@@ -204,12 +219,24 @@ func (ui *UI) StartUILoop() error {
 	return ui.app.Run()
 }
 
+// SetShowItemCount sets the flag to show number of items in directory
 func (ui *UI) SetShowItemCount() {
 	ui.showItemCount = true
 }
 
+// SetNoDelete disables all write operations
 func (ui *UI) SetNoDelete() {
 	ui.noDelete = true
+}
+
+// SetDeleteInBackground sets the flag to delete files in background
+func (ui *UI) SetDeleteInBackground() {
+	ui.deleteInBackground = true
+
+	for i := 0; i < 3*runtime.GOMAXPROCS(0); i++ {
+		go ui.deleteWorker()
+	}
+	go ui.updateStatusWorker()
 }
 
 func (ui *UI) resetSorting() {

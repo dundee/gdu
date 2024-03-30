@@ -169,6 +169,11 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	row, column := ui.table.GetSelection()
 	selectedItem := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
+	if ui.deleteInBackground {
+		ui.queueForDeletion([]fs.Item{selectedItem}, shouldEmpty)
+		return
+	}
+
 	var action, acting string
 	if shouldEmpty {
 		action = "empty "
