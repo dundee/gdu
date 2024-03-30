@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -328,6 +330,108 @@ func TestDeleteSelected(t *testing.T) {
 	assert.NoDirExists(t, "test_dir/nested")
 }
 
+func TestDeleteSelectedInBackground(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.remover = testanalyze.RemoveItemFromDirWithSleep
+	ui.done = make(chan struct{})
+	ui.SetDeleteInBackground()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.deleteSelected(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestDeleteSelectedInBackgroundBW(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+	ui.SetDeleteInBackground()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.deleteSelected(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestEmptyDirInBackground(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.done = make(chan struct{})
+	ui.SetDeleteInBackground()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.deleteSelected(true)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.NoDirExists(t, "test_dir/nested/subnested")
+}
+
+func TestEmptyFileInBackground(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.done = make(chan struct{})
+	ui.SetDeleteInBackground()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.fileItemSelected(0, 0) // nested
+	ui.table.Select(2, 0)
+
+	ui.deleteSelected(true)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.FileExists(t, "test_dir/nested/file2")
+
+	f, err := os.Open("test_dir/nested/file2")
+	assert.Nil(t, err)
+	info, err := f.Stat()
+	assert.Nil(t, err)
+	assert.Equal(t, int64(0), info.Size())
+}
+
 func TestDeleteSelectedWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -351,11 +455,68 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 	assert.DirExists(t, "test_dir/nested")
 }
 
+func TestDeleteSelectedInBackgroundWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.SetDeleteInBackground()
+	ui.remover = testanalyze.RemoveItemFromDirWithSleepAndErr
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.delete(false)
+
+	<-ui.done
+
+	// change the status
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	// wait for status to be removed
+	time.Sleep(500 * time.Millisecond)
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.True(t, ui.pages.HasPage("error"))
+	assert.DirExists(t, "test_dir/nested")
+}
+
 func TestDeleteMarkedWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.remover = testanalyze.RemoveItemFromDirWithErr
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+	ui.markedRows[0] = struct{}{}
+
+	ui.deleteMarked(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.True(t, ui.pages.HasPage("error"))
+	assert.DirExists(t, "test_dir/nested")
+}
+
+func TestDeleteMarkedInBackgroundWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.SetDeleteInBackground()
 	ui.remover = testanalyze.RemoveItemFromDirWithErr
 
 	assert.Equal(t, 1, ui.table.GetRowCount())

@@ -31,15 +31,20 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 		acting = "deleting"
 	}
 
-	modal := tview.NewModal()
-	ui.pages.AddPage(acting, modal, true, true)
-
 	var currentDir fs.Item
 	var markedItems []fs.Item
 	for row := range ui.markedRows {
 		item := ui.table.GetCell(row, 0).GetReference().(fs.Item)
 		markedItems = append(markedItems, item)
 	}
+
+	if ui.deleteInBackground {
+		ui.queueForDeletion(markedItems, shouldEmpty)
+		return
+	}
+
+	modal := tview.NewModal()
+	ui.pages.AddPage(acting, modal, true, true)
 
 	currentRow, _ := ui.table.GetSelection()
 
