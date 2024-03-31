@@ -51,6 +51,7 @@ Flags:
   -m, --max-cores int                 Set max cores that GDU will use. 8 cores available (default 8)
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
+      --no-delete                     Disable write operations
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
       --no-mouse                      Do not use mouse
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
@@ -61,6 +62,7 @@ Flags:
       --sequential                    Use sequential scanning (intended for rotating HDDs)
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
+  -C, --show-item-count               Show number of items in directory
   -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
       --storage-path string           Path to persistent key-value storage directory (default is /tmp/badger) (default "/tmp/badger")
@@ -85,6 +87,7 @@ In interactive mode:
 
     gdu                                   # analyze current dir
     gdu -a                                # show apparent size instead of disk usage
+    gdu --no-delete                       # prevent write operations
     gdu <some_dir_to_analyze>             # analyze given dir
     gdu -d                                # show all mounted disks
     gdu -l ./gdu.log <some_dir>           # write errors to log file
