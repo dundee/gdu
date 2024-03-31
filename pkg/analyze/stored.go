@@ -373,6 +373,8 @@ func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("m
 func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)       { panic("must not be called") }
 func (p *ParentDir) AddFile(fs.Item)                                  { panic("must not be called") }
 func (p *ParentDir) GetFiles() fs.Files                               { panic("must not be called") }
+func (p *ParentDir) GetFilesLocked() fs.Files                         { panic("must not be called") }
+func (p *ParentDir) RLock() func()                                    { panic("must not be called") }
 func (p *ParentDir) SetFiles(fs.Files)                                { panic("must not be called") }
 func (f *ParentDir) RemoveFile(item fs.Item)                          { panic("must not be called") }
 func (p *ParentDir) GetItemStats(

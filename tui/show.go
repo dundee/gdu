@@ -84,6 +84,9 @@ func (ui *UI) showDir() {
 
 	ui.sortItems()
 
+	unlock := ui.currentDir.RLock()
+	defer unlock()
+
 	if ui.ShowRelativeSize {
 		for _, item := range ui.currentDir.GetFiles() {
 			if item.GetUsage() > maxUsage {

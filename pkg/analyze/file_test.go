@@ -412,6 +412,30 @@ func TestGetFiles(t *testing.T) {
 	assert.Equal(t, fs.Files{}, file.GetFiles())
 }
 
+func TestGetFilesLocked(t *testing.T) {
+	file := &File{
+		Name: "xxx",
+		Mli:  5,
+	}
+	dir := &Dir{
+		File: &File{
+			Name:  "root",
+			Size:  5,
+			Usage: 12,
+		},
+		ItemCount: 3,
+		BasePath:  "/",
+		Files:     fs.Files{file},
+	}
+
+	unlock := dir.RLock()
+	defer unlock()
+	files := dir.GetFiles()
+	locked := dir.GetFilesLocked()
+	files = files.Remove(file)
+	assert.NotEqual(t, &files, &locked)
+}
+
 func TestSetFilesPanicsOnFile(t *testing.T) {
 	file := &File{
 		Name: "xxx",

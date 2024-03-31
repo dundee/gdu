@@ -68,6 +68,7 @@ type UI struct {
 	activeWorkers           int
 	workersMut              sync.Mutex
 	statusMut               sync.RWMutex
+	deleteWorkersCount      int
 }
 
 type deleteQueueItem struct {
@@ -117,6 +118,7 @@ func CreateUI(
 		exportName:              "export.json",
 		noDelete:                false,
 		deleteQueue:             make(chan deleteQueueItem, 1000),
+		deleteWorkersCount:      3 * runtime.GOMAXPROCS(0),
 	}
 	for _, o := range opts {
 		o(ui)
@@ -233,7 +235,7 @@ func (ui *UI) SetNoDelete() {
 func (ui *UI) SetDeleteInBackground() {
 	ui.deleteInBackground = true
 
-	for i := 0; i < 3*runtime.GOMAXPROCS(0); i++ {
+	for i := 0; i < ui.deleteWorkersCount; i++ {
 		go ui.deleteWorker()
 	}
 	go ui.updateStatusWorker()

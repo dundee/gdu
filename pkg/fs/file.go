@@ -26,8 +26,10 @@ type Item interface {
 	UpdateStats(linkedItems HardLinkedItems)
 	AddFile(Item)
 	GetFiles() Files
+	GetFilesLocked() Files
 	SetFiles(Files)
 	RemoveFile(Item)
+	RLock() func()
 }
 
 // Files - slice of pointers to File
