@@ -44,7 +44,7 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 	var deleteItems []fs.Item
 	if shouldEmpty && item.IsDir() {
 		parentDir = item.(*analyze.Dir)
-		for _, file := range item.GetFiles() {
+		for _, file := range item.GetFilesLocked() {
 			deleteItems = append(deleteItems, file)
 		}
 	} else {

@@ -3,6 +3,7 @@ package analyze
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -112,6 +113,16 @@ func (f *File) GetFiles() fs.Files {
 	return fs.Files{}
 }
 
+// GetFilesLocked returns all files in directory
+func (f *File) GetFilesLocked() fs.Files {
+	return f.GetFiles()
+}
+
+// RLock panics on file
+func (f *File) RLock() func() {
+	panic("SetFiles should not be called on file")
+}
+
 // SetFiles panics on file
 func (f *File) SetFiles(files fs.Files) {
 	panic("SetFiles should not be called on file")
@@ -133,6 +144,7 @@ type Dir struct {
 	BasePath  string
 	Files     fs.Files
 	ItemCount int
+	m         sync.RWMutex
 }
 
 // AddFile add item fo files
@@ -143,6 +155,14 @@ func (f *Dir) AddFile(item fs.Item) {
 // GetFiles returns all files in directory
 func (f *Dir) GetFiles() fs.Files {
 	return f.Files
+}
+
+// GetFilesLocked returns all files in directory
+// It is safe to call this function from multiple goroutines
+func (f *Dir) GetFilesLocked() fs.Files {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.GetFiles()[:]
 }
 
 // SetFiles sets files in directory
@@ -157,6 +177,8 @@ func (f *Dir) GetType() string {
 
 // GetItemCount returns number of files in dir
 func (f *Dir) GetItemCount() int {
+	f.m.RLock()
+	defer f.m.RUnlock()
 	return f.ItemCount
 }
 
@@ -211,6 +233,9 @@ func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 
 // RemoveFile panics on file
 func (f *Dir) RemoveFile(item fs.Item) {
+	f.m.Lock()
+	defer f.m.Unlock()
+
 	f.SetFiles(f.GetFiles().Remove(item))
 
 	cur := f
@@ -224,6 +249,12 @@ func (f *Dir) RemoveFile(item fs.Item) {
 		}
 		cur = cur.Parent.(*Dir)
 	}
+}
+
+// RLock read locks dir
+func (f *Dir) RLock() func() {
+	f.m.RLock()
+	return f.m.RUnlock
 }
 
 // RemoveItemFromDir removes item from dir

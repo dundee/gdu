@@ -511,6 +511,34 @@ func TestDeleteMarkedWithErr(t *testing.T) {
 	assert.DirExists(t, "test_dir/nested")
 }
 
+func TestDeleteMarkedInBackground(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.SetDeleteInBackground()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.fileItemSelected(0, 0) // nested
+
+	ui.markedRows[1] = struct{}{} // subnested
+	ui.markedRows[2] = struct{}{} // file2
+
+	ui.deleteMarked(false)
+
+	<-ui.done // wait for deletion of subnested
+	<-ui.done // wait for deletion of file2
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.NoDirExists(t, "test_dir/nested/subnested")
+	assert.NoFileExists(t, "test_dir/nested/file2")
+}
+
 func TestDeleteMarkedInBackgroundWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
