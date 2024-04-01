@@ -17,6 +17,13 @@ func (ui *UI) queueForDeletion(items []fs.Item, shouldEmpty bool) {
 }
 
 func (ui *UI) deleteWorker() {
+	defer func() {
+		if r := recover(); r != nil {
+			ui.app.Stop()
+			panic(r)
+		}
+	}()
+
 	for item := range ui.deleteQueue {
 		ui.deleteItem(item.item, item.shouldEmpty)
 	}
