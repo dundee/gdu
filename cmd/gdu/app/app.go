@@ -136,6 +136,9 @@ func (a *App) Run() (err error) {
 	if a.Flags.NoPrefix && a.Flags.UseSIPrefix {
 		return fmt.Errorf("--no-prefix and --si cannot be used at once")
 	}
+	if a.Flags.UseStorage && a.Flags.DeleteInBackground {
+		return fmt.Errorf("--use-storage and --delete-in-background cannot be used together")
+	}
 
 	path := a.getPath()
 	path, _ = filepath.Abs(path)
