@@ -55,7 +55,7 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 			deleteItems = append(deleteItems, file)
 		}
 	} else {
-		parentDir = item.GetParent()
+		parentDir = ui.currentDir
 		deleteItems = append(deleteItems, item)
 	}
 
@@ -73,7 +73,7 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 		}
 	}
 
-	if item.GetParent() == ui.currentDir {
+	if item.GetParent().GetPath() == ui.currentDir.GetPath() {
 		ui.app.QueueUpdateDraw(func() {
 			row, _ := ui.table.GetSelection()
 			x, y := ui.table.GetOffset()

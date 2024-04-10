@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -146,6 +147,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 					BasePath: path,
 				},
 				nil,
+				sync.Mutex{},
 			}
 			dir.AddFile(subdir)
 
@@ -211,6 +213,7 @@ func (a *StoredAnalyzer) updateProgress() {
 type StoredDir struct {
 	*Dir
 	cachedFiles fs.Files
+	dbLock      sync.Mutex
 }
 
 // GetParent returns parent dir
@@ -240,6 +243,8 @@ func (f *StoredDir) GetFiles() fs.Files {
 	}
 
 	if !DefaultStorage.IsOpen() {
+		f.dbLock.Lock()
+		defer f.dbLock.Unlock()
 		closeFn := DefaultStorage.Open()
 		defer closeFn()
 	}
@@ -255,6 +260,7 @@ func (f *StoredDir) GetFiles() fs.Files {
 					BasePath: f.GetPath(),
 				},
 				nil,
+				sync.Mutex{},
 			}
 
 			err := DefaultStorage.LoadDir(dir)
@@ -279,6 +285,8 @@ func (f *StoredDir) SetFiles(files fs.Files) {
 // RemoveFile panics on file
 func (f *StoredDir) RemoveFile(item fs.Item) {
 	if !DefaultStorage.IsOpen() {
+		f.dbLock.Lock()
+		defer f.dbLock.Unlock()
 		closeFn := DefaultStorage.Open()
 		defer closeFn()
 	}

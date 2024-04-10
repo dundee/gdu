@@ -119,6 +119,7 @@ func (s *Storage) GetDirForPath(path string) (fs.Item, error) {
 			BasePath: dirPath,
 		},
 		nil,
+		sync.Mutex{},
 	}
 	err := s.LoadDir(dir)
 	if err != nil {
