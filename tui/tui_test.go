@@ -330,6 +330,29 @@ func TestDeleteSelected(t *testing.T) {
 	assert.NoDirExists(t, "test_dir/nested")
 }
 
+func TestDeleteSelectedInParallel(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+	ui.SetDeleteInParallel()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.deleteSelected(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
 func TestDeleteSelectedInBackground(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -338,6 +361,31 @@ func TestDeleteSelectedInBackground(t *testing.T) {
 	ui.remover = testanalyze.RemoveItemFromDirWithSleep
 	ui.done = make(chan struct{})
 	ui.SetDeleteInBackground()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.table.Select(0, 0)
+
+	ui.deleteSelected(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestDeleteSelectedInBackgroundAndParallel(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.remover = testanalyze.RemoveItemFromDirWithSleep
+	ui.done = make(chan struct{})
+	ui.SetDeleteInBackground()
+	ui.SetDeleteInParallel()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -546,6 +594,36 @@ func TestDeleteMarkedInBackgroundWithStorage(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer("/tmp/badger"))
 	ui.SetDeleteInBackground()
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+
+	ui.fileItemSelected(0, 0) // nested
+
+	ui.markedRows[1] = struct{}{} // subnested
+	ui.markedRows[2] = struct{}{} // file2
+
+	ui.deleteMarked(false)
+
+	<-ui.done // wait for deletion of subnested
+	<-ui.done // wait for deletion of file2
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.DirExists(t, "test_dir/nested")
+	assert.NoDirExists(t, "test_dir/nested/subnested")
+	assert.NoFileExists(t, "test_dir/nested/file2")
+}
+
+func TestDeleteMarkedInBackgroundWithStorageAndParallel(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.SetAnalyzer(analyze.CreateStoredAnalyzer("/tmp/badger"))
+	ui.SetDeleteInBackground()
+	ui.SetDeleteInParallel()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 

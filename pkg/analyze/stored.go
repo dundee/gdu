@@ -282,7 +282,8 @@ func (f *StoredDir) SetFiles(files fs.Files) {
 	f.Files = files
 }
 
-// RemoveFile panics on file
+// RemoveFile removes file from stored directory
+// It also updates size and item count of parent directories
 func (f *StoredDir) RemoveFile(item fs.Item) {
 	if !DefaultStorage.IsOpen() {
 		f.dbLock.Lock()

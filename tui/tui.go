@@ -217,6 +217,11 @@ func (ui *UI) SetChangeCwdFn(fn func(string) error) {
 	ui.changeCwdFn = fn
 }
 
+// SetDeleteInParallel sets the flag to delete files in parallel
+func (ui *UI) SetDeleteInParallel() {
+	ui.remover = remove.RemoveItemFromDirParallel
+}
+
 // StartUILoop starts tview application
 func (ui *UI) StartUILoop() error {
 	return ui.app.Run()
