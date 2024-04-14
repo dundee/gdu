@@ -14,6 +14,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v5/pkg/remove"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -105,8 +106,8 @@ func CreateUI(
 		output:                  output,
 		askBeforeDelete:         true,
 		showItemCount:           false,
-		remover:                 analyze.RemoveItemFromDir,
-		emptier:                 analyze.EmptyFileFromDir,
+		remover:                 remove.RemoveItemFromDir,
+		emptier:                 remove.EmptyFileFromDir,
 		exec:                    Execute,
 		linkedItems:             make(fs.HardLinkedItems, 10),
 		selectedTextColor:       tview.Styles.TitleColor,

@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -255,45 +254,4 @@ func (f *Dir) RemoveFile(item fs.Item) {
 func (f *Dir) RLock() func() {
 	f.m.RLock()
 	return f.m.RUnlock
-}
-
-// RemoveItemFromDir removes item from dir
-func RemoveItemFromDir(dir fs.Item, item fs.Item) error {
-	err := os.RemoveAll(item.GetPath())
-	if err != nil {
-		return err
-	}
-
-	dir.RemoveFile(item)
-	return nil
-}
-
-// EmptyFileFromDir empty file from dir
-func EmptyFileFromDir(dir fs.Item, file fs.Item) error {
-	err := os.Truncate(file.GetPath(), 0)
-	if err != nil {
-		return err
-	}
-
-	cur := dir.(*Dir)
-	for {
-		cur.Size -= file.GetSize()
-		cur.Usage -= file.GetUsage()
-
-		if cur.Parent == nil {
-			break
-		}
-		cur = cur.Parent.(*Dir)
-	}
-
-	dir.SetFiles(dir.GetFiles().Remove(file))
-	newFile := &File{
-		Name:   file.GetName(),
-		Flag:   file.GetFlag(),
-		Size:   0,
-		Parent: dir,
-	}
-	dir.AddFile(newFile)
-
-	return nil
 }

@@ -1,13 +1,14 @@
 //go:build linux
 // +build linux
 
-package analyze
+package remove
 
 import (
 	"os"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,15 +23,15 @@ func TestRemoveFileWithErr(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	dir := &Dir{
-		File: &File{
+	dir := &analyze.Dir{
+		File: &analyze.File{
 			Name: "test_dir",
 		},
 		BasePath: ".",
 	}
 
-	subdir := &Dir{
-		File: &File{
+	subdir := &analyze.Dir{
+		File: &analyze.File{
 			Name:   "nested",
 			Parent: dir,
 		},
