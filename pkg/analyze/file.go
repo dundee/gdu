@@ -230,7 +230,7 @@ func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	f.Usage = totalUsage
 }
 
-// RemoveFile panics on file
+// RemoveFile removes item from dir, updates size and item count
 func (f *Dir) RemoveFile(item fs.Item) {
 	f.m.Lock()
 	defer f.m.Unlock()

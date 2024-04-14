@@ -76,6 +76,7 @@ type Flags struct {
 	WriteConfig        bool     `yaml:"-"`
 	ChangeCwd          bool     `yaml:"change-cwd"`
 	DeleteInBackground bool     `yaml:"delete-in-background"`
+	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
 	Style              Style    `yaml:"style"`
 	Sorting            Sorting  `yaml:"sorting"`
 }
@@ -284,6 +285,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.DeleteInBackground {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetDeleteInBackground()
+			})
+		}
+		if a.Flags.DeleteInParallel {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetDeleteInParallel()
 			})
 		}
 

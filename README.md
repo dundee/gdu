@@ -180,6 +180,22 @@ style:
         background-color: "#ff0000"
 ```
 
+## Deletion in background and in parallel (experimental)
+
+Gdu can delete items in the background, thus not blocking the UI for additional work.
+To enable:
+
+```
+echo "delete-in-background: true" >> ~/.gdu.yaml
+```
+
+Directory items can be also deleted in parallel, which can increase the speed of deletion.
+To enable:
+
+```
+echo "delete-in-parallel: true" >> ~/.gdu.yaml
+```
+
 ## Memory usage
 
 ### Automatic balancing
