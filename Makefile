@@ -130,6 +130,13 @@ benchmark:
 		'gdu -npc ~' 'gdu -gnpc ~' 'gdu -npc --use-storage ~'
 	sudo cpupower frequency-set -g schedutil
 
+benchmark-deletion:
+	hyperfine \
+		--export-markdown=bench-delete.md \
+		--prepare 'cd test; git init . ; fallocate -l 1G .git/info/file ; dd if=/dev/urandom of=.git/refs/file bs=64M count=8 iflag=fullblock ; dd if=/dev/urandom of=.git/objects/file bs=64M count=8 iflag=fullblock ; cd ..' \
+		'go run ./cmd/deleter/main.go ./test/.git' \
+		'go run ./cmd/deleter/main.go --parallel ./test/.git'
+
 clean:
 	go mod tidy
 	-rm coverage.txt
