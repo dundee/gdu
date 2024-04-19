@@ -20,6 +20,10 @@ func RemoveItemFromDirParallel(dir fs.Item, item fs.Item) error {
 
 	// remove all files in the directory in parallel
 	for _, file := range item.GetFilesLocked() {
+		if !file.IsDir() {
+			continue
+		}
+
 		wait.Add(1)
 		go func(itemPath string) {
 			concurrencyLimit <- struct{}{}
