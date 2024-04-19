@@ -110,6 +110,10 @@ pgo:
 	go tool pprof -proto cpu.pprof default.pgo > merged.pprof
 	mv merged.pprof default.pgo
 
+trace:
+	wget -O trace.out http://localhost:6060/debug/pprof/trace?seconds=30
+	gotraceui ./trace.out
+
 benchmark:
 	sudo cpupower frequency-set -g performance
 	hyperfine --export-markdown=bench-cold.md \
@@ -146,5 +150,6 @@ release:
 install-dev-dependencies:
 	go install gotest.tools/gotestsum@latest
 	go install github.com/mitchellh/gox@latest
+	go install honnef.co/go/gotraceui/cmd/gotraceui@master
 
 .PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release
