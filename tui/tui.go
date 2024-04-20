@@ -61,6 +61,7 @@ type UI struct {
 	useOldSizeBar           bool
 	defaultSortBy           string
 	defaultSortOrder        string
+	ignoredRows             map[int]struct{}
 	markedRows              map[int]struct{}
 	exportName              string
 	noDelete                bool
@@ -115,6 +116,7 @@ func CreateUI(
 		currentItemNameMaxLen:   70,
 		defaultSortBy:           "size",
 		defaultSortOrder:        "desc",
+		ignoredRows:             make(map[int]struct{}),
 		markedRows:              make(map[int]struct{}),
 		exportName:              "export.json",
 		noDelete:                false,
@@ -282,6 +284,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.currentDir = selectedDir
 	ui.hideFilterInput()
 	ui.markedRows = make(map[int]struct{})
+	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()
 
 	if origDir.GetParent() != nil && selectedDir.GetName() == origDir.GetParent().GetName() {
