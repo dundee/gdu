@@ -9,10 +9,12 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked bool) string {
+func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked, ignored bool) string {
 	var part int
 
-	if ui.ShowApparentSize {
+	if ignored {
+		part = 0
+	} else if ui.ShowApparentSize {
 		part = int(float64(item.GetSize()) / float64(maxSize) * 100.0)
 	} else {
 		part = int(float64(item.GetUsage()) / float64(maxUsage) * 100.0)
@@ -20,7 +22,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked 
 
 	row := string(item.GetFlag())
 
-	if ui.UseColors && !marked {
+	if ui.UseColors && !marked && !ignored {
 		row += "[#e67100::b]"
 	} else {
 		row += "[::b]"
@@ -39,7 +41,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked 
 	}
 
 	if ui.showItemCount {
-		if ui.UseColors && !marked {
+		if ui.UseColors && !marked && !ignored {
 			row += "[#e67100::b]"
 		} else {
 			row += "[::b]"
@@ -48,7 +50,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked 
 	}
 
 	if ui.showMtime {
-		if ui.UseColors && !marked {
+		if ui.UseColors && !marked && !ignored {
 			row += "[#e67100::b]"
 		} else {
 			row += "[::b]"
@@ -69,7 +71,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked 
 	}
 
 	if item.IsDir() {
-		if ui.UseColors && !marked {
+		if ui.UseColors && !marked && !ignored {
 			row += "[#3498db::b]/"
 		} else {
 			row += "[::b]/"

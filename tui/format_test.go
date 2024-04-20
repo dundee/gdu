@@ -75,7 +75,7 @@ func TestEscapeName(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false), "Aaa [red[] bbb")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "Aaa [red[] bbb")
 }
 
 func TestMarked(t *testing.T) {
@@ -99,8 +99,33 @@ func TestMarked(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), true), "✓ Aaa")
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false), "[##########]   Aaa")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), true, false), "✓ Aaa")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "[##########]   Aaa")
+}
+
+func TestIgnored(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui.ignoredRows[0] = struct{}{}
+	ui.useOldSizeBar = true
+
+	dir := &analyze.Dir{
+		File: &analyze.File{
+			Usage: 10,
+		},
+	}
+
+	file := &analyze.File{
+		Name:   "Aaa",
+		Parent: dir,
+		Usage:  10,
+	}
+
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, true), "[          ] Aaa")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "[##########] Aaa")
 }
 
 func TestSizeBar(t *testing.T) {
@@ -122,7 +147,7 @@ func TestSizeBar(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false), "██████████▏Aaa")
+	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "██████████▏Aaa")
 }
 
 func TestOldSizeBar(t *testing.T) {
@@ -146,5 +171,5 @@ func TestOldSizeBar(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, dir.GetUsage(), dir.GetSize(), false), "[#####     ]   Aaa")
+	assert.Contains(t, ui.formatFileRow(file, dir.GetUsage(), dir.GetSize(), false, false), "[#####     ]   Aaa")
 }

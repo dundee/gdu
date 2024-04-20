@@ -31,6 +31,7 @@ Item under cursor:
                [::b]d     [white:black:-]Delete file or directory
                [::b]e     [white:black:-]Empty file or directory
 			   [::b]space [white:black:-]Mark file or directory for deletion
+			   [::b]I     [white:black:-]Ignore file or directory
                [::b]v     [white:black:-]Show content of file
                [::b]o     [white:black:-]Open file or directory in external program
                [::b]i     [white:black:-]Show info about item
@@ -87,18 +88,27 @@ func (ui *UI) showDir() {
 	unlock := ui.currentDir.RLock()
 	defer unlock()
 
-	if ui.ShowRelativeSize {
-		for _, item := range ui.currentDir.GetFiles() {
+	i := rowIndex
+	maxUsage = 0
+	maxSize = 0
+	for _, item := range ui.currentDir.GetFiles() {
+		if _, ignored := ui.ignoredRows[i]; ignored {
+			i++
+			continue
+		}
+
+		if ui.ShowRelativeSize {
 			if item.GetUsage() > maxUsage {
 				maxUsage = item.GetUsage()
 			}
 			if item.GetSize() > maxSize {
 				maxSize = item.GetSize()
 			}
+		} else {
+			maxSize += item.GetSize()
+			maxUsage += item.GetUsage()
 		}
-	} else {
-		maxUsage = ui.currentDir.GetUsage()
-		maxSize = ui.currentDir.GetSize()
+		i++
 	}
 
 	for i, item := range ui.currentDir.GetFiles() {
@@ -109,15 +119,21 @@ func (ui *UI) showDir() {
 			continue
 		}
 
-		totalUsage += item.GetUsage()
-		totalSize += item.GetSize()
-		itemCount += item.GetItemCount()
+		_, ignored := ui.ignoredRows[rowIndex]
+
+		if !ignored {
+			totalUsage += item.GetUsage()
+			totalSize += item.GetSize()
+			itemCount += item.GetItemCount()
+		}
 
 		_, marked := ui.markedRows[rowIndex]
-		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked))
+		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
 		cell.SetReference(ui.currentDir.GetFiles()[i])
 
-		if marked {
+		if ignored {
+			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.SecondaryTextColor))
+		} else if marked {
 			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.PrimaryTextColor))
 			cell.SetBackgroundColor(tview.Styles.ContrastBackgroundColor)
 		} else {

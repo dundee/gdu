@@ -260,6 +260,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case ' ':
 		ui.handleMark()
+	case 'I':
+		ui.ignoreItem()
 	}
 	return key
 }
@@ -323,4 +325,25 @@ func (ui *UI) handleMark() {
 	}
 
 	ui.fileItemMarked(row)
+}
+
+func (ui *UI) ignoreItem() {
+	if ui.currentDir == nil {
+		return
+	}
+	// do not allow ignoring parent dir
+	row, column := ui.table.GetSelection()
+	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
+	if !ok || selectedFile == ui.currentDir.GetParent() {
+		return
+	}
+
+	if _, ok := ui.ignoredRows[row]; ok {
+		delete(ui.ignoredRows, row)
+	} else {
+		ui.ignoredRows[row] = struct{}{}
+	}
+	ui.showDir()
+	// select next row if possible
+	ui.table.Select(min(row+1, ui.table.GetRowCount()-1), 0)
 }
