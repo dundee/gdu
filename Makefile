@@ -74,8 +74,8 @@ build-all:
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
 	CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
 
-	#cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_* gdu_android_*; do tar czf $$file.tgz $$file; done
-	#cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
+	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_* gdu_android_*; do tar czf $$file.tgz $$file; done
+	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
 
 gdu.1: gdu.1.md
 	sed 's/{{date}}/$(DATE)/g' gdu.1.md > gdu.1.date.md
