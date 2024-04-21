@@ -20,7 +20,7 @@ Pretty fast disk usage analyzer written in Go.
 %global debug_package %{nil}
 
 %prep
-%autosetup -n %{name}
+%autosetup -n %{name}-%{version}
 
 %build
 GO111MODULE=on CGO_ENABLED=0 go build \
