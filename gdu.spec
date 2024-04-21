@@ -23,27 +23,17 @@ Pretty fast disk usage analyzer written in Go.
 %autosetup -n %{name}
 
 %build
-GO111MODULE=on CGO_ENABLED=0 go build \
+GO111MODULE=on CGO_ENABLED=1 go build \
 -trimpath \
 -buildmode=pie \
 -mod=readonly \
 -modcacherw \
 -ldflags \
-%if 0%{?fedora} || 0%{?amzn} 
-"-linkmode=external \
 -s -w \
 -X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
 -X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
 -X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
 -o %{name} github.com/dundee/gdu/v5/cmd/gdu
-%endif
-%if 0%{?rhel}
-"-s -w \
--X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
--X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
--X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
--o %{name} github.com/dundee/gdu/v5/cmd/gdu
-%endif
 
 
 %install
