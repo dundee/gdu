@@ -51,7 +51,7 @@ Flags:
   -m, --max-cores int                 Set max cores that GDU will use. 8 cores available (default 8)
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
-      --no-delete                     Disable write operations
+      --no-delete                     Do not allow deletions
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
       --no-mouse                      Do not use mouse
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
@@ -71,16 +71,17 @@ Flags:
   -v, --version                       Print version
       --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
 
-In interactive mode:
+Basic list of actions in interactive mode (show help modal for more):
   ↑ or k                              Move cursor up
   ↓ or j                              Move cursor down
-  → or Enter                          Go to highlighted directory
+  → or Enter or l                     Go to highlighted directory
   ← or h                              Go to parent directory
   d                                   Delete the selected file or directory
   e                                   Empty the selected directory
   n                                   Sort by name
   s                                   Sort by size
   c                                   Show number of items in directory
+  ?                                   Show help modal
 ```
 
 ## Examples
@@ -189,7 +190,7 @@ To enable:
 echo "delete-in-background: true" >> ~/.gdu.yaml
 ```
 
-Directory items can be also deleted in parallel, which can increase the speed of deletion.
+Directory items can be also deleted in parallel, which might increase the speed of deletion.
 To enable:
 
 ```

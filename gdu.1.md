@@ -56,15 +56,19 @@ non-interactive mode
 
 **-a**, **\--show-apparent-size**\[=false\] Show apparent size
 
+**-C**, **\--show-item-count**\[=false\] Show number of items in directory
+
 **\--si**\[=false\] Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
 
 **\--no-prefix**\[=false\] Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
 
 **\--no-mouse**\[=false\] Do not use mouse
 
-**-f**, **\----input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
+**\--no-delete**\[=false\] Do not allow deletions
 
-**-o**, **\----output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
+**-f**, **\--input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
+
+**-o**, **\--output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
 
 **\--config-file**=\"$HOME/.gdu.yaml\"             Read config from file
 
@@ -73,6 +77,10 @@ non-interactive mode
 **-g**, **\--const-gc**\[=false\] Enable memory garbage collection during analysis with constant level set by GOGC
 
 **\--enable-profiling**\[=false\] Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
+
+**\--use-storage**\[=false\] Use persistent key-value storage for analysis data (experimental)
+
+**-r**, **\--read-from-storage**\[=false\] Read analysis data from persistent key-value storage
 
 **-v**, **\--version**\[=false\] Print version
 
