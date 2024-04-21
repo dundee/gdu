@@ -6,7 +6,7 @@ Summary:        Pretty fast disk usage analyzer written in Go
 License:        MIT
 URL:            https://github.com/dundee/gdu
 
-Source0:        https://github.com/dundee/gdu/archive/refs/tags/%{version}.tar.gz
+Source0:        https://github.com/dundee/gdu/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  golang
 BuildRequires:  systemd-rpm-macros
