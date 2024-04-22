@@ -296,3 +296,7 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 * [duc](https://duc.zevv.nl/) - Collection of tools with many possibilities for inspecting and visualising disk usage
 * [dust](https://github.com/bootandy/dust) - Tool written in `Rust` showing tree like structures of disk usage
 * [pdu](https://github.com/KSXGitHub/parallel-disk-usage) - Tool written in `Rust` showing tree like structures of disk usage
+
+## Notes
+
+[HDD icon created by Nikita Golubev - Flaticon](https://www.flaticon.com/free-icons/hdd)
