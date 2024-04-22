@@ -2,8 +2,11 @@ package tui
 
 import (
 	"io"
+	"os"
+	"os/signal"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
 
 	"golang.org/x/exp/slices"
@@ -226,6 +229,26 @@ func (ui *UI) SetDeleteInParallel() {
 
 // StartUILoop starts tview application
 func (ui *UI) StartUILoop() error {
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(
+			c,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+			syscall.SIGQUIT,
+			syscall.SIGILL,
+			syscall.SIGTRAP,
+			syscall.SIGABRT,
+			syscall.SIGPIPE,
+			syscall.SIGTERM,
+		)
+		s := <-c
+		log.Printf("Got signal: %s", s)
+		ui.app.QueueUpdateDraw(func() {
+			ui.app.Stop()
+		})
+	}()
+
 	return ui.app.Run()
 }
 
