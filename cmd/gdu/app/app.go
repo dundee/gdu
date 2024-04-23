@@ -57,6 +57,7 @@ type Flags struct {
 	ShowRelativeSize   bool     `yaml:"show-relative-size"`
 	ShowVersion        bool     `yaml:"-"`
 	ShowItemCount      bool     `yaml:"show-item-count"`
+	ShowMTime          bool     `yaml:"show-mtime"`
 	NoColor            bool     `yaml:"no-color"`
 	NoMouse            bool     `yaml:"no-mouse"`
 	NonInteractive     bool     `yaml:"non-interactive"`
@@ -275,6 +276,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.ShowItemCount {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetShowItemCount()
+			})
+		}
+		if a.Flags.ShowMTime {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetShowMTime()
 			})
 		}
 		if a.Flags.NoDelete {

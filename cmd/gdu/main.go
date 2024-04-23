@@ -67,6 +67,7 @@ func init() {
 	flags.BoolVarP(&af.ShowRelativeSize, "show-relative-size", "B", false, "Show relative size")
 	flags.BoolVarP(&af.NoColor, "no-color", "c", false, "Do not use colorized output")
 	flags.BoolVarP(&af.ShowItemCount, "show-item-count", "C", false, "Show number of items in directory")
+	flags.BoolVarP(&af.ShowMTime, "show-mtime", "M", false, "Show latest mtime of items in directory")
 	flags.BoolVarP(&af.NonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")
 	flags.BoolVarP(&af.NoProgress, "no-progress", "p", false, "Do not show progress in non-interactive mode")
 	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")
