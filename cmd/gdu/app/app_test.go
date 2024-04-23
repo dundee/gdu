@@ -47,6 +47,21 @@ func TestAnalyzePath(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestSequentialScanning(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", SequentialScanning: true},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+}
+
 func TestFollowSymlinks(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -140,6 +155,66 @@ func TestAnalyzePathWithGui(t *testing.T) {
 
 	out, err := runApp(
 		&Flags{LogFile: "/dev/null"},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
+func TestAnalyzePathWithGuiNoColor(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", NoColor: true},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
+func TestGuiShowMTimeAndItemCount(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", ShowItemCount: true, ShowMTime: true},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
+func TestGuiNoDelete(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", NoDelete: true},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
+func TestGuiDeleteInParallel(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", DeleteInParallel: true},
 		[]string{"test_dir"},
 		true,
 		testdev.DevicesInfoGetterMock{},
