@@ -760,6 +760,18 @@ func TestSetShowItemCount(t *testing.T) {
 	assert.Equal(t, ui.showItemCount, true)
 }
 
+func TestSetShowMTime(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+
+	ui.SetShowMTime()
+
+	assert.Equal(t, ui.showMtime, true)
+}
+
 func TestNoDelete(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()

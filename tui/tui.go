@@ -257,6 +257,11 @@ func (ui *UI) SetShowItemCount() {
 	ui.showItemCount = true
 }
 
+// SetShowMTime sets the flag to show last modification time of items in directory
+func (ui *UI) SetShowMTime() {
+	ui.showMtime = true
+}
+
 // SetNoDelete disables all write operations
 func (ui *UI) SetNoDelete() {
 	ui.noDelete = true

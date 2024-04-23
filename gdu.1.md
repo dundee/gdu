@@ -58,6 +58,8 @@ non-interactive mode
 
 **-C**, **\--show-item-count**\[=false\] Show number of items in directory
 
+**-M**, **\--show-mtime**\[=false\] Show latest mtime of items in directory
+
 **\--si**\[=false\] Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
 
 **\--no-prefix**\[=false\] Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode

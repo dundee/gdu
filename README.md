@@ -65,6 +65,7 @@ Flags:
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
   -C, --show-item-count               Show number of items in directory
+  -M, --show-mtime                    Show latest mtime of items in directory
   -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
       --storage-path string           Path to persistent key-value storage directory (default is /tmp/badger) (default "/tmp/badger")
