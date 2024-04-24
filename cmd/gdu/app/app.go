@@ -268,7 +268,7 @@ func (a *App) createUI() (UI, error) {
 				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
 			})
 		}
-		if a.Flags.ChangeCwd != false {
+		if a.Flags.ChangeCwd {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetChangeCwdFn(os.Chdir)
 			})
