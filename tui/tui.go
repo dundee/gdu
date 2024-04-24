@@ -207,8 +207,8 @@ func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 
 // SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item
 // to be shown in the progress modal
-func (ui *UI) SetCurrentItemNameMaxLen(len int) {
-	ui.currentItemNameMaxLen = len
+func (ui *UI) SetCurrentItemNameMaxLen(maxLen int) {
+	ui.currentItemNameMaxLen = maxLen
 }
 
 // UseOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)

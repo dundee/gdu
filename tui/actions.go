@@ -300,14 +300,8 @@ func (ui *UI) showFile() *tview.TextView {
 			return event
 		}
 
-		switch {
-		case event.Rune() == 'j':
-			fallthrough
-		case event.Rune() == 'G':
-			fallthrough
-		case event.Key() == tcell.KeyDown:
-			fallthrough
-		case event.Key() == tcell.KeyPgDn:
+		if event.Rune() == 'j' || event.Rune() == 'G' ||
+			event.Key() == tcell.KeyDown || event.Key() == tcell.KeyPgDn {
 			_, _, _, height := file.GetInnerRect()
 			row, _ := file.GetScrollOffset()
 			if height+row > totalLines-linesTreshold {
@@ -339,9 +333,9 @@ func (ui *UI) showInfo() {
 	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
 	if ui.UseColors {
-		numberColor = "[#e67100::b]"
+		numberColor = orangeBold
 	} else {
-		numberColor = "[::b]"
+		numberColor = defaultColorBold
 	}
 
 	linesCount := 12

@@ -9,23 +9,36 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked, ignored bool) string {
+const (
+	blackOnWhite = "[black:white:-]"
+	blackOnBlue  = "[#000000:#2479d0:-]"
+	whiteOnBlack = "[white:black:-]"
+
+	orangeBold = "[#e67100::b]"
+	blueBold   = "[#3498db::b]"
+
+	defaultColor     = "[-::]"
+	defaultColorBold = "[::b]"
+)
+
+func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignored bool) string {
 	var part int
 
-	if ignored {
+	switch {
+	case ignored:
 		part = 0
-	} else if ui.ShowApparentSize {
+	case ui.ShowApparentSize:
 		part = int(float64(item.GetSize()) / float64(maxSize) * 100.0)
-	} else {
+	default:
 		part = int(float64(item.GetUsage()) / float64(maxUsage) * 100.0)
 	}
 
 	row := string(item.GetFlag())
 
 	if ui.UseColors && !marked && !ignored {
-		row += "[#e67100::b]"
+		row += orangeBold
 	} else {
-		row += "[::b]"
+		row += defaultColorBold
 	}
 
 	if ui.ShowApparentSize {
@@ -42,21 +55,21 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked,
 
 	if ui.showItemCount {
 		if ui.UseColors && !marked && !ignored {
-			row += "[#e67100::b]"
+			row += orangeBold
 		} else {
-			row += "[::b]"
+			row += defaultColorBold
 		}
 		row += fmt.Sprintf("%11s ", ui.formatCount(item.GetItemCount()))
 	}
 
 	if ui.showMtime {
 		if ui.UseColors && !marked && !ignored {
-			row += "[#e67100::b]"
+			row += orangeBold
 		} else {
-			row += "[::b]"
+			row += defaultColorBold
 		}
 		row += fmt.Sprintf(
-			"%s [-::]",
+			"%s "+defaultColor,
 			item.GetMtime().Format("2006-01-02 15:04:05"),
 		)
 	}
@@ -72,28 +85,28 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked,
 
 	if item.IsDir() {
 		if ui.UseColors && !marked && !ignored {
-			row += "[#3498db::b]/"
+			row += blueBold + "/"
 		} else {
-			row += "[::b]/"
+			row += defaultColorBold + "/"
 		}
 	}
 	row += tview.Escape(item.GetName())
 	return row
 }
 
-func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) string {
+func (ui *UI) formatSize(size int64, reverseColor, transparentBg bool) string {
 	var color string
 	if reverseColor {
 		if ui.UseColors {
-			color = "[#000000:#2479d0:-]"
+			color = blackOnBlue
 		} else {
-			color = "[black:white:-]"
+			color = blackOnWhite
 		}
 	} else {
 		if transparentBg {
-			color = "[-::]"
+			color = defaultColor
 		} else {
-			color = "[white:black:-]"
+			color = whiteOnBlack
 		}
 	}
 
@@ -105,7 +118,7 @@ func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) stri
 
 func (ui *UI) formatCount(count int) string {
 	row := ""
-	color := "[-::]"
+	color := defaultColor
 	count64 := float64(count)
 
 	switch {

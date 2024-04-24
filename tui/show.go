@@ -131,12 +131,13 @@ func (ui *UI) showDir() {
 		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
 		cell.SetReference(ui.currentDir.GetFiles()[i])
 
-		if ignored {
+		switch {
+		case ignored:
 			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.SecondaryTextColor))
-		} else if marked {
+		case marked:
 			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.PrimaryTextColor))
 			cell.SetBackgroundColor(tview.Styles.ContrastBackgroundColor)
-		} else {
+		default:
 			cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		}
 
@@ -147,10 +148,10 @@ func (ui *UI) showDir() {
 	var footerNumberColor, footerTextColor string
 	if ui.UseColors {
 		footerNumberColor = "[#ffffff:#2479d0:b]"
-		footerTextColor = "[#000000:#2479d0:-]"
+		footerTextColor = blackOnBlue
 	} else {
 		footerNumberColor = "[black:white:b]"
-		footerTextColor = "[black:white:-]"
+		footerTextColor = blackOnWhite
 	}
 
 	selected := ""
@@ -214,10 +215,10 @@ func (ui *UI) showDevices() {
 	var footerNumberColor, footerTextColor string
 	if ui.UseColors {
 		footerNumberColor = "[#ffffff:#2479d0:b]"
-		footerTextColor = "[#000000:#2479d0:-]"
+		footerTextColor = blackOnBlue
 	} else {
 		footerNumberColor = "[black:white:b]"
-		footerTextColor = "[black:white:-]"
+		footerTextColor = blackOnWhite
 	}
 
 	ui.footerLabel.SetText(
@@ -297,8 +298,8 @@ func (ui *UI) formatHelpTextFor() string {
 	for i, line := range lines {
 		if ui.UseColors {
 			lines[i] = strings.ReplaceAll(
-				strings.ReplaceAll(line, "[::b]", "[red]"),
-				"[white:black:-]",
+				strings.ReplaceAll(line, defaultColorBold, "[red]"),
+				whiteOnBlack,
 				"[white]",
 			)
 		}
