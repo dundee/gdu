@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"net/http"
-	"net/http/pprof"
 
 	log "github.com/sirupsen/logrus"
 
@@ -215,7 +214,7 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.OutputFile == "-" {
 			output = os.Stdout
 		} else {
-			output, err = os.OpenFile(a.Flags.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+			output, err = os.OpenFile(a.Flags.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 			if err != nil {
 				return nil, fmt.Errorf("opening output file: %w", err)
 			}
@@ -357,7 +356,7 @@ func (a *App) runAction(ui UI, path string) error {
 		if a.Flags.InputFile == "-" {
 			input = os.Stdin
 		} else {
-			input, err = os.OpenFile(a.Flags.InputFile, os.O_RDONLY, 0600)
+			input, err = os.OpenFile(a.Flags.InputFile, os.O_RDONLY, 0o600)
 			if err != nil {
 				return fmt.Errorf("opening input file: %w", err)
 			}

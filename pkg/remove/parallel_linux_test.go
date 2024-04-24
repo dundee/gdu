@@ -20,7 +20,7 @@ func TestRemoveItemFromDirParallelWithErr(t *testing.T) {
 	err := os.Chmod("test_dir/nested", 0)
 	assert.Nil(t, err)
 	defer func() {
-		err = os.Chmod("test_dir/nested", 0755)
+		err = os.Chmod("test_dir/nested", 0o755)
 		assert.Nil(t, err)
 	}()
 
@@ -49,7 +49,7 @@ func TestRemoveItemFromDirParallelWithErr2(t *testing.T) {
 	err := os.Chmod("test_dir/nested/subnested", 0)
 	assert.Nil(t, err)
 	defer func() {
-		err = os.Chmod("test_dir/nested/subnested", 0755)
+		err = os.Chmod("test_dir/nested/subnested", 0o755)
 		assert.Nil(t, err)
 	}()
 

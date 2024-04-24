@@ -117,6 +117,7 @@ func TestParentDirGetNamePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetName()
 }
+
 func TestParentDirGetFlagPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -126,6 +127,7 @@ func TestParentDirGetFlagPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetFlag()
 }
+
 func TestParentDirIsDirPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -135,6 +137,7 @@ func TestParentDirIsDirPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.IsDir()
 }
+
 func TestParentDirGetSizePanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -144,6 +147,7 @@ func TestParentDirGetSizePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetSize()
 }
+
 func TestParentDirGetTypePanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -153,6 +157,7 @@ func TestParentDirGetTypePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetType()
 }
+
 func TestParentDirGetUsagePanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -162,6 +167,7 @@ func TestParentDirGetUsagePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetUsage()
 }
+
 func TestParentDirGetMtimePanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -171,6 +177,7 @@ func TestParentDirGetMtimePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetMtime()
 }
+
 func TestParentDirGetItemCountPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -180,6 +187,7 @@ func TestParentDirGetItemCountPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetItemCount()
 }
+
 func TestParentDirGetParentPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -189,6 +197,7 @@ func TestParentDirGetParentPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetParent()
 }
+
 func TestParentDirSetParentPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -198,6 +207,7 @@ func TestParentDirSetParentPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.SetParent(nil)
 }
+
 func TestParentDirGetMultiLinkedInodePanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -207,6 +217,7 @@ func TestParentDirGetMultiLinkedInodePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetMultiLinkedInode()
 }
+
 func TestParentDirEncodeJSONPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -217,6 +228,7 @@ func TestParentDirEncodeJSONPanics(t *testing.T) {
 	err := dir.EncodeJSON(nil, false)
 	assert.NoError(t, err)
 }
+
 func TestParentDirUpdateStatsPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -226,6 +238,7 @@ func TestParentDirUpdateStatsPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.UpdateStats(nil)
 }
+
 func TestParentDirAddFilePanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -235,6 +248,7 @@ func TestParentDirAddFilePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.AddFile(nil)
 }
+
 func TestParentDirGetFilesPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -244,6 +258,7 @@ func TestParentDirGetFilesPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetFiles()
 }
+
 func TestParentDirGetFilesLockedPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -253,6 +268,7 @@ func TestParentDirGetFilesLockedPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.GetFilesLocked()
 }
+
 func TestParentDirRLockPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -262,6 +278,7 @@ func TestParentDirRLockPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.RLock()
 }
+
 func TestParentDirSetFilesPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -271,6 +288,7 @@ func TestParentDirSetFilesPanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.SetFiles(nil)
 }
+
 func TestParentDirRemoveFilePanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -280,6 +298,7 @@ func TestParentDirRemoveFilePanics(t *testing.T) {
 	dir := &ParentDir{}
 	dir.RemoveFile(nil)
 }
+
 func TestParentDirGetItemStatsPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
