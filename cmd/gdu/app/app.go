@@ -122,14 +122,14 @@ func init() {
 }
 
 // Run starts gdu main logic
-func (a *App) Run() (err error) {
+func (a *App) Run() error {
 	var ui UI
 
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
 		fmt.Fprintln(a.Writer, "Built time:\t", build.Time)
 		fmt.Fprintln(a.Writer, "Built user:\t", build.User)
-		return
+		return nil
 	}
 
 	log.Printf("Runtime flags: %+v", *a.Flags)
@@ -139,11 +139,14 @@ func (a *App) Run() (err error) {
 	}
 
 	path := a.getPath()
-	path, _ = filepath.Abs(path)
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
 
 	ui, err = a.createUI()
 	if err != nil {
-		return
+		return err
 	}
 
 	if a.Flags.UseStorage {
@@ -155,21 +158,21 @@ func (a *App) Run() (err error) {
 	if a.Flags.FollowSymlinks {
 		ui.SetFollowSymlinks(true)
 	}
-	if err = a.setNoCross(path); err != nil {
-		return
+	if err := a.setNoCross(path); err != nil {
+		return err
 	}
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
 
 	if len(a.Flags.IgnoreDirPatterns) > 0 {
-		if err = ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
-			return
+		if err := ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
+			return err
 		}
 	}
 
 	if a.Flags.IgnoreFromFile != "" {
-		if err = ui.SetIgnoreFromFile(a.Flags.IgnoreFromFile); err != nil {
-			return
+		if err := ui.SetIgnoreFromFile(a.Flags.IgnoreFromFile); err != nil {
+			return err
 		}
 	}
 
@@ -179,12 +182,11 @@ func (a *App) Run() (err error) {
 
 	a.setMaxProcs()
 
-	if err = a.runAction(ui, path); err != nil {
-		return
+	if err := a.runAction(ui, path); err != nil {
+		return err
 	}
 
-	err = ui.StartUILoop()
-	return
+	return ui.StartUILoop()
 }
 
 func (a *App) getPath() string {
