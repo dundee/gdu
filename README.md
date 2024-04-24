@@ -243,11 +243,6 @@ gdu -r /                          # reads just saved data, does not run analysis
     make install-dev-dependencies
     make test
 
-## Benchmarks
-
-Benchmarks were performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
-See `benchmark` target in [Makefile](Makefile) for more info.
-
 ## Profiling
 
 Gdu can collect profiling data when the `--enable-profiling` flag is set.
@@ -255,6 +250,11 @@ The data are provided via embedded http server on URL `http://localhost:6060/deb
 
 You can then use e.g. `go tool pprof -web http://localhost:6060/debug/pprof/heap`
 to open the heap profile as SVG image in your web browser.
+
+## Benchmarks
+
+Benchmarks were performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
+See `benchmark` target in [Makefile](Makefile) for more info.
 
 ### Cold cache
 
