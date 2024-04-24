@@ -192,7 +192,7 @@ func TestDirSelected(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui := getAnalyzedPathMockedApp(t, true, false, false)
 	ui.done = make(chan struct{})
 
 	ui.fileItemSelected(0, 0)
@@ -814,7 +814,7 @@ func getDevicesInfoMock() device.DevicesInfoGetter {
 	return mock
 }
 
-func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize bool, mockedAnalyzer bool) *UI {
+func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize, mockedAnalyzer bool) *UI {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 

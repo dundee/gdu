@@ -52,7 +52,6 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 
 	go func() {
 		for _, one := range markedItems {
-
 			ui.app.QueueUpdateDraw(func() {
 				modal.SetText(
 					// nolint: staticcheck // Why: fixed string

@@ -21,7 +21,7 @@ const (
 	defaultColorBold = "[::b]"
 )
 
-func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked, ignored bool) string {
+func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignored bool) string {
 	var part int
 
 	switch {
@@ -94,7 +94,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked,
 	return row
 }
 
-func (ui *UI) formatSize(size int64, reverseColor bool, transparentBg bool) string {
+func (ui *UI) formatSize(size int64, reverseColor, transparentBg bool) string {
 	var color string
 	if reverseColor {
 		if ui.UseColors {
