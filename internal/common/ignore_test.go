@@ -57,7 +57,7 @@ func TestIgnoreByPattern(t *testing.T) {
 }
 
 func TestIgnoreFromFile(t *testing.T) {
-	file, err := os.OpenFile("ignore", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := os.OpenFile("ignore", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		panic(err)
 	}

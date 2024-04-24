@@ -48,7 +48,6 @@ func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
 	log.Printf("Reading ignoring dir patterns from file '%s'", ignoreFile)
 
 	file, err := os.Open(ignoreFile)
-
 	if err != nil {
 		return err
 	}

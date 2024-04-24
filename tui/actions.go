@@ -22,8 +22,10 @@ import (
 	"github.com/rivo/tview"
 )
 
-const defaultLinesCount = 500
-const linesTreshold = 20
+const (
+	defaultLinesCount = 500
+	linesTreshold     = 20
+)
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {

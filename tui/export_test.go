@@ -175,7 +175,7 @@ func TestExportAnalysisWithoutRights(t *testing.T) {
 	err = os.Chmod("export.json", 0)
 	assert.NoError(t, err)
 	defer func() {
-		err = os.Chmod("export.json", 0755)
+		err = os.Chmod("export.json", 0o755)
 		assert.Nil(t, err)
 		err = os.Remove("export.json")
 		assert.NoError(t, err)
