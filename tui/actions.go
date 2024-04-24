@@ -339,9 +339,9 @@ func (ui *UI) showInfo() {
 	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
 	if ui.UseColors {
-		numberColor = "[#e67100::b]"
+		numberColor = orangeBold
 	} else {
-		numberColor = "[::b]"
+		numberColor = defaultColorBold
 	}
 
 	linesCount := 12
