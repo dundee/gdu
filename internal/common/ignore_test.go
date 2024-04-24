@@ -18,7 +18,7 @@ func TestCreateIgnorePattern(t *testing.T) {
 	re, err := common.CreateIgnorePattern([]string{"[abc]+"})
 
 	assert.Nil(t, err)
-	assert.True(t, re.Match([]byte("aa")))
+	assert.True(t, re.MatchString("aa"))
 }
 
 func TestCreateIgnorePatternWithErr(t *testing.T) {
@@ -63,13 +63,13 @@ func TestIgnoreFromFile(t *testing.T) {
 	}
 	defer file.Close()
 
-	if _, err := file.Write([]byte("/aaa\n")); err != nil {
+	if _, err := file.WriteString("/aaa\n"); err != nil {
 		panic(err)
 	}
-	if _, err := file.Write([]byte("/aaabc\n")); err != nil {
+	if _, err := file.WriteString("/aaabc\n"); err != nil {
 		panic(err)
 	}
-	if _, err := file.Write([]byte("/[abd]+\n")); err != nil {
+	if _, err := file.WriteString("/[abd]+\n"); err != nil {
 		panic(err)
 	}
 
