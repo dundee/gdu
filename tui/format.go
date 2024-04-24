@@ -24,11 +24,12 @@ const (
 func (ui *UI) formatFileRow(item fs.Item, maxUsage int64, maxSize int64, marked, ignored bool) string {
 	var part int
 
-	if ignored {
+	switch {
+	case ignored:
 		part = 0
-	} else if ui.ShowApparentSize {
+	case ui.ShowApparentSize:
 		part = int(float64(item.GetSize()) / float64(maxSize) * 100.0)
-	} else {
+	default:
 		part = int(float64(item.GetUsage()) / float64(maxUsage) * 100.0)
 	}
 

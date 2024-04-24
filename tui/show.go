@@ -131,12 +131,13 @@ func (ui *UI) showDir() {
 		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
 		cell.SetReference(ui.currentDir.GetFiles()[i])
 
-		if ignored {
+		switch {
+		case ignored:
 			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.SecondaryTextColor))
-		} else if marked {
+		case marked:
 			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.PrimaryTextColor))
 			cell.SetBackgroundColor(tview.Styles.ContrastBackgroundColor)
-		} else {
+		default:
 			cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		}
 

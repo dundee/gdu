@@ -210,7 +210,8 @@ func (a *App) setMaxProcs() {
 func (a *App) createUI() (UI, error) {
 	var ui UI
 
-	if a.Flags.OutputFile != "" {
+	switch {
+	case a.Flags.OutputFile != "":
 		var output io.Writer
 		var err error
 		if a.Flags.OutputFile == "-" {
@@ -229,7 +230,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
-	} else if a.Flags.NonInteractive || !a.Istty {
+	case a.Flags.NonInteractive || !a.Istty:
 		ui = stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
@@ -241,7 +242,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
 		)
-	} else {
+	default:
 		var opts []tui.Option
 
 		if a.Flags.Style.SelectedRow.TextColor != "" {
@@ -348,11 +349,12 @@ func (a *App) runAction(ui UI, path string) error {
 		}()
 	}
 
-	if a.Flags.ShowDisks {
+	switch {
+	case a.Flags.ShowDisks:
 		if err := ui.ListDevices(a.Getter); err != nil {
 			return fmt.Errorf("loading mount points: %w", err)
 		}
-	} else if a.Flags.InputFile != "" {
+	case a.Flags.InputFile != "":
 		var input io.Reader
 		var err error
 		if a.Flags.InputFile == "-" {
@@ -367,12 +369,12 @@ func (a *App) runAction(ui UI, path string) error {
 		if err := ui.ReadAnalysis(input); err != nil {
 			return fmt.Errorf("reading analysis: %w", err)
 		}
-	} else if a.Flags.ReadFromStorage {
+	case a.Flags.ReadFromStorage:
 		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
 		if err := ui.ReadFromStorage(a.Flags.StoragePath, path); err != nil {
 			return fmt.Errorf("reading from storage (%s): %w", a.Flags.StoragePath, err)
 		}
-	} else {
+	default:
 		if build.RootPathPrefix != "" {
 			path = build.RootPathPrefix + path
 		}
