@@ -33,9 +33,7 @@ func (ui *UI) onMouse(event *tcell.EventMouse, action tview.MouseAction) (*tcell
 			}
 		}
 		return nil, action
-	case tview.MouseScrollUp:
-		fallthrough
-	case tview.MouseScrollDown:
+	case tview.MouseScrollUp, tview.MouseScrollDown:
 		row, column := ui.table.GetSelection()
 		if action == tview.MouseScrollUp && row > 0 {
 			row--
