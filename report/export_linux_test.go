@@ -17,7 +17,7 @@ func TestReadFromStorage(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	const storagePath = "/tmp/badger-test"
+	const storagePath = "/tmp/badger-test2"
 	defer func() {
 		err := os.RemoveAll(storagePath)
 		if err != nil {
@@ -43,7 +43,7 @@ func TestReadFromStorageWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	const storagePath = "/tmp/badger-test"
+	const storagePath = "/tmp/badger-test3"
 
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))

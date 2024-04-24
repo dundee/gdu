@@ -58,15 +58,16 @@ func TestUseStorage(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
+	const storagePath = "/tmp/badger-test"
 	defer func() {
-		err := os.RemoveAll("/tmp/badger-test")
+		err := os.RemoveAll(storagePath)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
 	out, err := runApp(
-		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: "/tmp/badger-test"},
+		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: storagePath},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
@@ -80,15 +81,16 @@ func TestReadFromStorage(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
+	storagePath := "/tmp/badger-test4"
 	defer func() {
-		err := os.RemoveAll("/tmp/badger-test")
+		err := os.RemoveAll(storagePath)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
 	out, err := runApp(
-		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: "/tmp/badger-test"},
+		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: storagePath},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
@@ -97,7 +99,7 @@ func TestReadFromStorage(t *testing.T) {
 	assert.Nil(t, err)
 
 	out, err = runApp(
-		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: "/tmp/badger-test"},
+		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: storagePath},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
@@ -111,7 +113,7 @@ func TestReadFromStorageWithErr(t *testing.T) {
 	defer fin()
 
 	_, err := runApp(
-		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: "/tmp/badger-test"},
+		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: "/tmp/badger-xxx"},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
