@@ -66,8 +66,7 @@ func (f *File) GetMtime() time.Time {
 
 // GetType returns name type of item
 func (f *File) GetType() string {
-	switch f.Flag {
-	case '@':
+	if f.Flag == '@' {
 		return "Other"
 	}
 	return "File"
