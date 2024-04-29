@@ -25,6 +25,12 @@ import (
 const (
 	defaultLinesCount = 500
 	linesTreshold     = 20
+
+	actionEmpty  = "empty"
+	actionDelete = "delete"
+
+	actingEmpty  = "emptying"
+	actingDelete = "deleting"
 )
 
 // ListDevices lists mounted devices and shows their disk usage
@@ -178,11 +184,11 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 
 	var action, acting string
 	if shouldEmpty {
-		action = "empty "
-		acting = "emptying"
+		action = actionEmpty
+		acting = actingEmpty
 	} else {
-		action = "delete "
-		acting = "deleting"
+		action = actionDelete
+		acting = actingDelete
 	}
 	modal := tview.NewModal().SetText(
 		// nolint: staticcheck // Why: fixed string
@@ -214,7 +220,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	go func() {
 		for _, item := range deleteItems {
 			if err := deleteFun(currentDir, item); err != nil {
-				msg := "Can't " + action + tview.Escape(selectedItem.GetName())
+				msg := "Can't " + action + " " + tview.Escape(selectedItem.GetName())
 				ui.app.QueueUpdateDraw(func() {
 					ui.pages.RemovePage(acting)
 					ui.showErr(msg, err)
