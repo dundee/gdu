@@ -150,8 +150,7 @@ func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 		return err
 	}
 
-	switch f := ui.exportOutput.(type) {
-	case *os.File:
+	if f, ok := ui.exportOutput.(*os.File); ok {
 		err = f.Close()
 		if err != nil {
 			return err
