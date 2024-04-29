@@ -85,18 +85,18 @@ func (a *MockedAnalyzer) ResetProgress() {}
 func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {}
 
 // RemoveItemFromDirWithErr returns error
-func RemoveItemFromDirWithErr(dir fs.Item, file fs.Item) error {
+func RemoveItemFromDirWithErr(dir, file fs.Item) error {
 	return errors.New("Failed")
 }
 
 // RemoveItemFromDirWithSleep returns error
-func RemoveItemFromDirWithSleep(dir fs.Item, file fs.Item) error {
+func RemoveItemFromDirWithSleep(dir, file fs.Item) error {
 	time.Sleep(time.Millisecond * 600)
 	return remove.RemoveItemFromDir(dir, file)
 }
 
 // RemoveItemFromDirWithSleepAndErr returns error
-func RemoveItemFromDirWithSleepAndErr(dir fs.Item, file fs.Item) error {
+func RemoveItemFromDirWithSleepAndErr(dir, file fs.Item) error {
 	time.Sleep(time.Millisecond * 600)
 	return errors.New("Failed")
 }

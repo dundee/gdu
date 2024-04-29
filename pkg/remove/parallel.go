@@ -11,7 +11,7 @@ import (
 var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // RemoveItemFromDirParallel removes item from dir
-func RemoveItemFromDirParallel(dir fs.Item, item fs.Item) error {
+func RemoveItemFromDirParallel(dir, item fs.Item) error {
 	if !item.IsDir() {
 		return RemoveItemFromDir(dir, item)
 	}

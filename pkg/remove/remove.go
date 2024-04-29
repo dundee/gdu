@@ -8,7 +8,7 @@ import (
 )
 
 // RemoveItemFromDir removes item from dir
-func RemoveItemFromDir(dir fs.Item, item fs.Item) error {
+func RemoveItemFromDir(dir, item fs.Item) error {
 	err := os.RemoveAll(item.GetPath())
 	if err != nil {
 		return err
@@ -19,7 +19,7 @@ func RemoveItemFromDir(dir fs.Item, item fs.Item) error {
 }
 
 // EmptyFileFromDir empty file from dir
-func EmptyFileFromDir(dir fs.Item, file fs.Item) error {
+func EmptyFileFromDir(dir, file fs.Item) error {
 	err := os.Truncate(file.GetPath(), 0)
 	if err != nil {
 		return err
