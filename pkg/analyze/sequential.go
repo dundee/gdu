@@ -127,11 +127,14 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				continue
 			}
 			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-				err = followSymlink(entryPath, &info)
+				infoF, err := followSymlink(entryPath)
 				if err != nil {
 					log.Print(err.Error())
 					dir.Flag = '!'
 					continue
+				}
+				if infoF != nil {
+					info = infoF
 				}
 			}
 
