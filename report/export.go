@@ -140,7 +140,7 @@ func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 	buff.Write([]byte(strconv.FormatInt(time.Now().Unix(), 10)))
 	buff.Write([]byte("},\n"))
 
-	if err = dir.EncodeJSON(&buff, true); err != nil {
+	if err := dir.EncodeJSON(&buff, true); err != nil {
 		return err
 	}
 	if _, err = buff.Write([]byte("]\n")); err != nil {
