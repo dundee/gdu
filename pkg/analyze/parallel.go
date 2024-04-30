@@ -211,14 +211,10 @@ func getDirFlag(err error, items int) rune {
 }
 
 func getFlag(f os.FileInfo) rune {
-	switch {
-	case f.Mode()&os.ModeSymlink != 0:
-		fallthrough
-	case f.Mode()&os.ModeSocket != 0:
+	if f.Mode()&os.ModeSymlink != 0 || f.Mode()&os.ModeSocket != 0 {
 		return '@'
-	default:
-		return ' '
 	}
+	return ' '
 }
 
 func followSymlink(path string, f *os.FileInfo) error {
