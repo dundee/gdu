@@ -130,6 +130,9 @@ benchmark:
 		'gdu -npc ~' 'gdu -gnpc ~' 'gdu -npc --use-storage ~'
 	sudo cpupower frequency-set -g schedutil
 
+lint:
+	golangci-lint run -c .golangci.yml
+
 clean:
 	go mod tidy
 	-rm coverage.txt
@@ -151,5 +154,6 @@ install-dev-dependencies:
 	go install gotest.tools/gotestsum@latest
 	go install github.com/mitchellh/gox@latest
 	go install honnef.co/go/gotraceui/cmd/gotraceui@master
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 .PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release

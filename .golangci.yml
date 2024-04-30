@@ -1,0 +1,122 @@
+linters-settings:
+  errcheck:
+    check-blank: true
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unreachable-code
+      - name: redefines-builtin-id
+      # While we agree with this rule, right now it would break too many
+      # projects. So, we disable it by default.
+      - name: unused-parameter
+        disabled: true
+  gocyclo:
+    min-complexity: 25
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  lll:
+    line-length: 160
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - whyNoLint
+  funlen:
+    lines: 500
+    statements: 50
+  govet:
+    enable:
+      - shadow
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - dogsled
+    - errcheck
+    - errorlint
+    - exhaustive
+    - exportloopref
+    - funlen
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - revive
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - nakedret
+    - staticcheck
+    - typecheck
+    - unparam
+    - unused
+    - whitespace
+
+issues:
+  exclude:
+    # We allow error shadowing
+    - 'declaration of "err" shadows declaration at'
+
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - gosec
+        - funlen
+        - gocritic
+        - gochecknoglobals # Globals in test files are tolerated.
+        - goconst # Repeated consts in test files are tolerated.
+    # This rule is buggy and breaks on our `///Block` lines.  Disable for now.
+    - linters:
+        - gocritic
+      text: "commentFormatting: put a space"
+    # This rule incorrectly flags nil references after assert.Assert(t, x != nil)
+    - path: _test\.go
+      text: "SA5011"
+      linters:
+        - staticcheck
+    - linters:
+        - lll
+      source: "^//go:generate "
+    - linters:
+        - lll
+        - gocritic
+      path: \.resolvers\.go
+      source: '^func \(r \*[a-zA-Z]+Resolvers\) '
+
+output:
+  formats:
+    - format: colored-line-number
+  sort-results: true
