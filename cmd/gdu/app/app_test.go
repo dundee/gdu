@@ -500,6 +500,7 @@ func TestMaxCoresLowEdge(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// nolint: unparam // Why: it's used in linux tests
 func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (string, error) {
 	buff := bytes.NewBufferString("")
 
