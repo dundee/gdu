@@ -96,7 +96,7 @@ func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
 }
 
 // GetItemStats returns 1 as count of items, apparent usage and real usage of this file
-func (f *File) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
+func (f *File) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size, usage int64) {
 	if f.alreadyCounted(linkedItems) {
 		return 1, 0, 0
 	}
@@ -197,7 +197,7 @@ func (f *Dir) GetPath() string {
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
+func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size, usage int64) {
 	f.UpdateStats(linkedItems)
 	return f.ItemCount, f.GetSize(), f.GetUsage()
 }
