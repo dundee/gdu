@@ -42,6 +42,7 @@ Sort by (twice toggles asc/desc):
                [::b]C     [white:black:-]Sort by file count (asc/desc)
                [::b]M     [white:black:-]Sort by mtime (asc/desc)`
 
+// nolint: funlen // Why: complex function
 func (ui *UI) showDir() {
 	var (
 		totalUsage int64
