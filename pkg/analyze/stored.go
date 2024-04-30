@@ -385,7 +385,7 @@ func (p *ParentDir) GetFiles() fs.Files                               { panic("m
 func (p *ParentDir) GetFilesLocked() fs.Files                         { panic("must not be called") }
 func (p *ParentDir) RLock() func()                                    { panic("must not be called") }
 func (p *ParentDir) SetFiles(fs.Files)                                { panic("must not be called") }
-func (f *ParentDir) RemoveFile(item fs.Item)                          { panic("must not be called") }
+func (p *ParentDir) RemoveFile(item fs.Item)                          { panic("must not be called") }
 func (p *ParentDir) GetItemStats(
 	linkedItems fs.HardLinkedItems,
 ) (int, int64, int64) {
