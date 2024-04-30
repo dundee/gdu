@@ -10,10 +10,10 @@ import (
 
 var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
-// RemoveItemFromDirParallel removes item from dir
-func RemoveItemFromDirParallel(dir, item fs.Item) error {
+// ItemFromDirParallel removes item from dir
+func ItemFromDirParallel(dir, item fs.Item) error {
 	if !item.IsDir() {
-		return RemoveItemFromDir(dir, item)
+		return ItemFromDir(dir, item)
 	}
 	errChan := make(chan error, 1) // we show only first error
 	var wait sync.WaitGroup

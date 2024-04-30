@@ -7,8 +7,8 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-// RemoveItemFromDir removes item from dir
-func RemoveItemFromDir(dir, item fs.Item) error {
+// ItemFromDir removes item from dir
+func ItemFromDir(dir, item fs.Item) error {
 	err := os.RemoveAll(item.GetPath())
 	if err != nil {
 		return err

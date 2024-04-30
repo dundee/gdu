@@ -37,6 +37,6 @@ func TestRemoveFileWithErr(t *testing.T) {
 		},
 	}
 
-	err = RemoveItemFromDir(dir, subdir)
+	err = ItemFromDir(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }

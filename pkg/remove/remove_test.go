@@ -83,7 +83,7 @@ func TestRemoveFile(t *testing.T) {
 	dir.Files = fs.Files{subdir}
 	subdir.Files = fs.Files{file}
 
-	err := RemoveItemFromDir(subdir, file)
+	err := ItemFromDir(subdir, file)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 0, len(subdir.Files))

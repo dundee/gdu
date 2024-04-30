@@ -110,7 +110,7 @@ func CreateUI(
 		output:                  output,
 		askBeforeDelete:         true,
 		showItemCount:           false,
-		remover:                 remove.RemoveItemFromDir,
+		remover:                 remove.ItemFromDir,
 		emptier:                 remove.EmptyFileFromDir,
 		exec:                    Execute,
 		linkedItems:             make(fs.HardLinkedItems, 10),
@@ -224,7 +224,7 @@ func (ui *UI) SetChangeCwdFn(fn func(string) error) {
 
 // SetDeleteInParallel sets the flag to delete files in parallel
 func (ui *UI) SetDeleteInParallel() {
-	ui.remover = remove.RemoveItemFromDirParallel
+	ui.remover = remove.ItemFromDirParallel
 }
 
 // StartUILoop starts tview application

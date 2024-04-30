@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRemoveItemFromDirParallelWithErr(t *testing.T) {
+func TestItemFromDirParallelWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
@@ -38,11 +38,11 @@ func TestRemoveItemFromDirParallelWithErr(t *testing.T) {
 		},
 	}
 
-	err = RemoveItemFromDirParallel(dir, subdir)
+	err = ItemFromDirParallel(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }
 
-func TestRemoveItemFromDirParallelWithErr2(t *testing.T) {
+func TestItemFromDirParallelWithErr2(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
@@ -62,6 +62,6 @@ func TestRemoveItemFromDirParallelWithErr2(t *testing.T) {
 
 	subdir := dir.Files[0].(*analyze.Dir)
 
-	err = RemoveItemFromDirParallel(dir, subdir)
+	err = ItemFromDirParallel(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }
