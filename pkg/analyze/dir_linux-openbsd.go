@@ -12,8 +12,7 @@ import (
 const devBSize = 512
 
 func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
-	switch stat := f.Sys().(type) {
-	case *syscall.Stat_t:
+	if stat, ok := f.Sys().(*syscall.Stat_t); ok {
 		file.Usage = stat.Blocks * devBSize
 		file.Mtime = time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec))
 
