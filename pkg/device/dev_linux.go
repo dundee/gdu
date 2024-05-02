@@ -28,7 +28,7 @@ func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
 	devices, err := readMountsFile(file)
 	if err != nil {
 		if cerr := file.Close(); cerr != nil {
-			return nil, fmt.Errorf("%w; %w", err, cerr)
+			return nil, fmt.Errorf("%w; %s", err, cerr.Error())
 		}
 		return nil, err
 	}
