@@ -39,7 +39,7 @@ func TestRemoveFileParallel(t *testing.T) {
 	dir.Files = fs.Files{subdir}
 	subdir.Files = fs.Files{file}
 
-	err := RemoveItemFromDirParallel(subdir, file)
+	err := ItemFromDirParallel(subdir, file)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 0, len(subdir.Files))
@@ -64,6 +64,6 @@ func TestRemoveDirParallel(t *testing.T) {
 
 	subdir := dir.Files[0].(*analyze.Dir)
 
-	err := RemoveItemFromDirParallel(dir, subdir)
+	err := ItemFromDirParallel(dir, subdir)
 	assert.Nil(t, err)
 }

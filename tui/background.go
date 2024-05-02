@@ -35,9 +35,9 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 
 	var action, acting string
 	if shouldEmpty {
-		action = "empty "
+		action = actionEmpty
 	} else {
-		action = "delete "
+		action = actionDelete
 	}
 
 	var deleteFun func(fs.Item, fs.Item) error
@@ -61,7 +61,7 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 
 	for _, toDelete := range deleteItems {
 		if err := deleteFun(parentDir, toDelete); err != nil {
-			msg := "Can't " + action + tview.Escape(toDelete.GetName())
+			msg := "Can't " + action + " " + tview.Escape(toDelete.GetName())
 			ui.app.QueueUpdateDraw(func() {
 				ui.pages.RemovePage(acting)
 				ui.showErr(msg, err)

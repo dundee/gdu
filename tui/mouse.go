@@ -19,6 +19,7 @@ func (ui *UI) onMouse(event *tcell.EventMouse, action tview.MouseAction) (*tcell
 		return nil, action
 	}
 
+	// nolint: exhaustive // Why: we don't need to handle all mouse events
 	switch action {
 	case tview.MouseLeftDoubleClick:
 		row, column := ui.table.GetSelection()

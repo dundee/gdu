@@ -200,6 +200,7 @@ func (ui *UI) handleFiltering(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
+// nolint: funlen // Why: there's a lot of options to handle
 func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	switch key.Rune() {
 	case 'd':

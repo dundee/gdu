@@ -24,11 +24,11 @@ func (ui *UI) fileItemMarked(row int) {
 func (ui *UI) deleteMarked(shouldEmpty bool) {
 	var action, acting string
 	if shouldEmpty {
-		action = "empty "
-		acting = "emptying"
+		action = actionEmpty
+		acting = actingEmpty
 	} else {
-		action = "delete "
-		acting = "deleting"
+		action = actionDelete
+		acting = actingDelete
 	}
 
 	var currentDir fs.Item
@@ -81,7 +81,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 
 			for _, item := range deleteItems {
 				if err := deleteFun(currentDir, item); err != nil {
-					msg := "Can't " + action + tview.Escape(one.GetName())
+					msg := "Can't " + action + " " + tview.Escape(one.GetName())
 					ui.app.QueueUpdateDraw(func() {
 						ui.pages.RemovePage(acting)
 						ui.showErr(msg, err)
@@ -112,9 +112,9 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 func (ui *UI) confirmDeletionMarked(shouldEmpty bool) {
 	var action string
 	if shouldEmpty {
-		action = "empty"
+		action = actionEmpty
 	} else {
-		action = "delete"
+		action = actionDelete
 	}
 
 	modal := tview.NewModal().

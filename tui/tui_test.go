@@ -358,7 +358,7 @@ func TestDeleteSelectedInBackground(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
-	ui.remover = testanalyze.RemoveItemFromDirWithSleep
+	ui.remover = testanalyze.ItemFromDirWithSleep
 	ui.done = make(chan struct{})
 	ui.SetDeleteInBackground()
 
@@ -382,7 +382,7 @@ func TestDeleteSelectedInBackgroundAndParallel(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
-	ui.remover = testanalyze.RemoveItemFromDirWithSleep
+	ui.remover = testanalyze.ItemFromDirWithSleep
 	ui.done = make(chan struct{})
 	ui.SetDeleteInBackground()
 	ui.SetDeleteInParallel()
@@ -485,7 +485,7 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.remover = testanalyze.RemoveItemFromDirWithErr
+	ui.remover = testanalyze.ItemFromDirWithErr
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -509,7 +509,7 @@ func TestDeleteSelectedInBackgroundWithErr(t *testing.T) {
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
 	ui.SetDeleteInBackground()
-	ui.remover = testanalyze.RemoveItemFromDirWithSleepAndErr
+	ui.remover = testanalyze.ItemFromDirWithSleepAndErr
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -540,7 +540,7 @@ func TestDeleteMarkedWithErr(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.remover = testanalyze.RemoveItemFromDirWithErr
+	ui.remover = testanalyze.ItemFromDirWithErr
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -652,7 +652,7 @@ func TestDeleteMarkedInBackgroundWithErr(t *testing.T) {
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
 	ui.SetDeleteInBackground()
-	ui.remover = testanalyze.RemoveItemFromDirWithErr
+	ui.remover = testanalyze.ItemFromDirWithErr
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 

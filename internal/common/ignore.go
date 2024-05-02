@@ -100,6 +100,7 @@ func (ui *UI) IsHiddenDir(name, path string) bool {
 }
 
 // CreateIgnoreFunc returns function for detecting if dir should be ignored
+// nolint: gocyclo // Why: This function is a switch statement that is not too complex
 func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
 	switch {
 	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns == nil && !ui.IgnoreHidden:

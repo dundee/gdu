@@ -440,7 +440,7 @@ func maxLength(list []*device.Device, keyGetter func(*device.Device) string) int
 	return maxLen
 }
 
-func maxInt(x int, y int) int {
+func maxInt(x, y int) int {
 	if x > y {
 		return x
 	}
