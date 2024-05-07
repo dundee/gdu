@@ -22,8 +22,16 @@ import (
 	"github.com/rivo/tview"
 )
 
-const defaultLinesCount = 500
-const linesTreshold = 20
+const (
+	defaultLinesCount = 500
+	linesTreshold     = 20
+
+	actionEmpty  = "empty"
+	actionDelete = "delete"
+
+	actingEmpty  = "emptying"
+	actingDelete = "deleting"
+)
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
@@ -176,11 +184,11 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 
 	var action, acting string
 	if shouldEmpty {
-		action = "empty "
-		acting = "emptying"
+		action = actionEmpty
+		acting = actingEmpty
 	} else {
-		action = "delete "
-		acting = "deleting"
+		action = actionDelete
+		acting = actingDelete
 	}
 	modal := tview.NewModal().SetText(
 		// nolint: staticcheck // Why: fixed string
@@ -212,7 +220,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	go func() {
 		for _, item := range deleteItems {
 			if err := deleteFun(currentDir, item); err != nil {
-				msg := "Can't " + action + tview.Escape(selectedItem.GetName())
+				msg := "Can't " + action + " " + tview.Escape(selectedItem.GetName())
 				ui.app.QueueUpdateDraw(func() {
 					ui.pages.RemovePage(acting)
 					ui.showErr(msg, err)
@@ -298,14 +306,8 @@ func (ui *UI) showFile() *tview.TextView {
 			return event
 		}
 
-		switch {
-		case event.Rune() == 'j':
-			fallthrough
-		case event.Rune() == 'G':
-			fallthrough
-		case event.Key() == tcell.KeyDown:
-			fallthrough
-		case event.Key() == tcell.KeyPgDn:
+		if event.Rune() == 'j' || event.Rune() == 'G' ||
+			event.Key() == tcell.KeyDown || event.Key() == tcell.KeyPgDn {
 			_, _, _, height := file.GetInnerRect()
 			row, _ := file.GetScrollOffset()
 			if height+row > totalLines-linesTreshold {
@@ -337,9 +339,9 @@ func (ui *UI) showInfo() {
 	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
 	if ui.UseColors {
-		numberColor = "[#e67100::b]"
+		numberColor = orangeBold
 	} else {
-		numberColor = "[::b]"
+		numberColor = defaultColorBold
 	}
 
 	linesCount := 12

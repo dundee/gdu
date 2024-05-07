@@ -110,7 +110,7 @@ func CreateUI(
 		output:                  output,
 		askBeforeDelete:         true,
 		showItemCount:           false,
-		remover:                 remove.RemoveItemFromDir,
+		remover:                 remove.ItemFromDir,
 		emptier:                 remove.EmptyFileFromDir,
 		exec:                    Execute,
 		linkedItems:             make(fs.HardLinkedItems, 10),
@@ -207,8 +207,8 @@ func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 
 // SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item
 // to be shown in the progress modal
-func (ui *UI) SetCurrentItemNameMaxLen(len int) {
-	ui.currentItemNameMaxLen = len
+func (ui *UI) SetCurrentItemNameMaxLen(maxLen int) {
+	ui.currentItemNameMaxLen = maxLen
 }
 
 // UseOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)
@@ -224,7 +224,7 @@ func (ui *UI) SetChangeCwdFn(fn func(string) error) {
 
 // SetDeleteInParallel sets the flag to delete files in parallel
 func (ui *UI) SetDeleteInParallel() {
-	ui.remover = remove.RemoveItemFromDirParallel
+	ui.remover = remove.ItemFromDirParallel
 }
 
 // StartUILoop starts tview application
@@ -255,6 +255,11 @@ func (ui *UI) StartUILoop() error {
 // SetShowItemCount sets the flag to show number of items in directory
 func (ui *UI) SetShowItemCount() {
 	ui.showItemCount = true
+}
+
+// SetShowMTime sets the flag to show last modification time of items in directory
+func (ui *UI) SetShowMTime() {
+	ui.showMtime = true
 }
 
 // SetNoDelete disables all write operations

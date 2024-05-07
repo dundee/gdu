@@ -152,7 +152,7 @@ func TestReadAnalysis(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
-	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0o644)
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
@@ -175,7 +175,7 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
-	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0644)
+	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0o644)
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)

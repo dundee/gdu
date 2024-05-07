@@ -15,7 +15,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
-	golang.org/x/sys v0.17.0
+	golang.org/x/sys v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -42,7 +42,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.22.5 // indirect
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/term v0.17.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )

@@ -19,8 +19,10 @@ import (
 	"github.com/dundee/gdu/v5/pkg/device"
 )
 
-var af *app.Flags
-var configErr error
+var (
+	af        *app.Flags
+	configErr error
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "gdu [directory_to_scan]",
@@ -67,6 +69,7 @@ func init() {
 	flags.BoolVarP(&af.ShowRelativeSize, "show-relative-size", "B", false, "Show relative size")
 	flags.BoolVarP(&af.NoColor, "no-color", "c", false, "Do not use colorized output")
 	flags.BoolVarP(&af.ShowItemCount, "show-item-count", "C", false, "Show number of items in directory")
+	flags.BoolVarP(&af.ShowMTime, "show-mtime", "M", false, "Show latest mtime of items in directory")
 	flags.BoolVarP(&af.NonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")
 	flags.BoolVarP(&af.NoProgress, "no-progress", "p", false, "Do not show progress in non-interactive mode")
 	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")
@@ -135,7 +138,7 @@ func runE(command *cobra.Command, args []string) error {
 		if af.CfgFile == "" {
 			setDefaultConfigFilePath()
 		}
-		err = os.WriteFile(af.CfgFile, data, 0600)
+		err = os.WriteFile(af.CfgFile, data, 0o600)
 		if err != nil {
 			return fmt.Errorf("Error writing config file %s: %w", af.CfgFile, err)
 		}
@@ -149,7 +152,7 @@ func runE(command *cobra.Command, args []string) error {
 	if af.LogFile == "-" {
 		f = os.Stdout
 	} else {
-		f, err = os.OpenFile(af.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		f, err = os.OpenFile(af.LogFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
 			return fmt.Errorf("opening log file: %w", err)
 		}

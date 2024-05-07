@@ -107,3 +107,204 @@ func TestRemoveStoredFile(t *testing.T) {
 	assert.Equal(t, "file", file.GetName())
 	assert.Equal(t, "test_dir/nested/subnested", file.GetParent().GetPath())
 }
+
+func TestParentDirGetNamePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetName()
+}
+
+func TestParentDirGetFlagPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetFlag()
+}
+
+func TestParentDirIsDirPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.IsDir()
+}
+
+func TestParentDirGetSizePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetSize()
+}
+
+func TestParentDirGetTypePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetType()
+}
+
+func TestParentDirGetUsagePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetUsage()
+}
+
+func TestParentDirGetMtimePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetMtime()
+}
+
+func TestParentDirGetItemCountPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetItemCount()
+}
+
+func TestParentDirGetParentPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetParent()
+}
+
+func TestParentDirSetParentPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.SetParent(nil)
+}
+
+func TestParentDirGetMultiLinkedInodePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetMultiLinkedInode()
+}
+
+func TestParentDirEncodeJSONPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	err := dir.EncodeJSON(nil, false)
+	assert.NoError(t, err)
+}
+
+func TestParentDirUpdateStatsPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.UpdateStats(nil)
+}
+
+func TestParentDirAddFilePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.AddFile(nil)
+}
+
+func TestParentDirGetFilesPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetFiles()
+}
+
+func TestParentDirGetFilesLockedPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetFilesLocked()
+}
+
+func TestParentDirRLockPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.RLock()
+}
+
+func TestParentDirSetFilesPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.SetFiles(nil)
+}
+
+func TestParentDirRemoveFilePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.RemoveFile(nil)
+}
+
+func TestParentDirGetItemStatsPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, "must not be called", r)
+		}
+	}()
+	dir := &ParentDir{}
+	dir.GetItemStats(nil)
+}

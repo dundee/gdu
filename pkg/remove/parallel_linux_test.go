@@ -13,14 +13,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRemoveItemFromDirParallelWithErr(t *testing.T) {
+func TestItemFromDirParallelWithErr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	err := os.Chmod("test_dir/nested", 0)
 	assert.Nil(t, err)
 	defer func() {
-		err = os.Chmod("test_dir/nested", 0755)
+		err = os.Chmod("test_dir/nested", 0o755)
 		assert.Nil(t, err)
 	}()
 
@@ -38,18 +38,18 @@ func TestRemoveItemFromDirParallelWithErr(t *testing.T) {
 		},
 	}
 
-	err = RemoveItemFromDirParallel(dir, subdir)
+	err = ItemFromDirParallel(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }
 
-func TestRemoveItemFromDirParallelWithErr2(t *testing.T) {
+func TestItemFromDirParallelWithErr2(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	err := os.Chmod("test_dir/nested/subnested", 0)
 	assert.Nil(t, err)
 	defer func() {
-		err = os.Chmod("test_dir/nested/subnested", 0755)
+		err = os.Chmod("test_dir/nested/subnested", 0o755)
 		assert.Nil(t, err)
 	}()
 
@@ -62,6 +62,6 @@ func TestRemoveItemFromDirParallelWithErr2(t *testing.T) {
 
 	subdir := dir.Files[0].(*analyze.Dir)
 
-	err = RemoveItemFromDirParallel(dir, subdir)
+	err = ItemFromDirParallel(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }

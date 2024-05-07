@@ -217,7 +217,7 @@ func TestSpawnShell(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
 	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
-	var called = false
+	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
 		return nil
@@ -247,7 +247,7 @@ func TestSpawnShellWithoutDir(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
 	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
-	var called = false
+	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
 		return nil
@@ -269,7 +269,7 @@ func TestSpawnShellWithWrongDir(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
 	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
-	var called = false
+	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
 		return nil
@@ -294,7 +294,7 @@ func TestSpawnShellWithError(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
 	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
-	var called = false
+	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
 		return errors.New("wrong shell")

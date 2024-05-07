@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"net/http"
-	"net/http/pprof"
 
 	log "github.com/sirupsen/logrus"
 
@@ -57,6 +56,7 @@ type Flags struct {
 	ShowRelativeSize   bool     `yaml:"show-relative-size"`
 	ShowVersion        bool     `yaml:"-"`
 	ShowItemCount      bool     `yaml:"show-item-count"`
+	ShowMTime          bool     `yaml:"show-mtime"`
 	NoColor            bool     `yaml:"no-color"`
 	NoMouse            bool     `yaml:"no-mouse"`
 	NonInteractive     bool     `yaml:"non-interactive"`
@@ -122,14 +122,14 @@ func init() {
 }
 
 // Run starts gdu main logic
-func (a *App) Run() (err error) {
+func (a *App) Run() error {
 	var ui UI
 
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
 		fmt.Fprintln(a.Writer, "Built time:\t", build.Time)
 		fmt.Fprintln(a.Writer, "Built user:\t", build.User)
-		return
+		return nil
 	}
 
 	log.Printf("Runtime flags: %+v", *a.Flags)
@@ -139,11 +139,14 @@ func (a *App) Run() (err error) {
 	}
 
 	path := a.getPath()
-	path, _ = filepath.Abs(path)
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
 
 	ui, err = a.createUI()
 	if err != nil {
-		return
+		return err
 	}
 
 	if a.Flags.UseStorage {
@@ -155,21 +158,21 @@ func (a *App) Run() (err error) {
 	if a.Flags.FollowSymlinks {
 		ui.SetFollowSymlinks(true)
 	}
-	if err = a.setNoCross(path); err != nil {
-		return
+	if err := a.setNoCross(path); err != nil {
+		return err
 	}
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
 
 	if len(a.Flags.IgnoreDirPatterns) > 0 {
-		if err = ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
-			return
+		if err := ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
+			return err
 		}
 	}
 
 	if a.Flags.IgnoreFromFile != "" {
-		if err = ui.SetIgnoreFromFile(a.Flags.IgnoreFromFile); err != nil {
-			return
+		if err := ui.SetIgnoreFromFile(a.Flags.IgnoreFromFile); err != nil {
+			return err
 		}
 	}
 
@@ -179,12 +182,11 @@ func (a *App) Run() (err error) {
 
 	a.setMaxProcs()
 
-	if err = a.runAction(ui, path); err != nil {
-		return
+	if err := a.runAction(ui, path); err != nil {
+		return err
 	}
 
-	err = ui.StartUILoop()
-	return
+	return ui.StartUILoop()
 }
 
 func (a *App) getPath() string {
@@ -208,13 +210,14 @@ func (a *App) setMaxProcs() {
 func (a *App) createUI() (UI, error) {
 	var ui UI
 
-	if a.Flags.OutputFile != "" {
+	switch {
+	case a.Flags.OutputFile != "":
 		var output io.Writer
 		var err error
 		if a.Flags.OutputFile == "-" {
 			output = os.Stdout
 		} else {
-			output, err = os.OpenFile(a.Flags.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+			output, err = os.OpenFile(a.Flags.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 			if err != nil {
 				return nil, fmt.Errorf("opening output file: %w", err)
 			}
@@ -227,7 +230,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
-	} else if a.Flags.NonInteractive || !a.Istty {
+	case a.Flags.NonInteractive || !a.Istty:
 		ui = stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
@@ -239,7 +242,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
 		)
-	} else {
+	default:
 		var opts []tui.Option
 
 		if a.Flags.Style.SelectedRow.TextColor != "" {
@@ -267,7 +270,7 @@ func (a *App) createUI() (UI, error) {
 				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
 			})
 		}
-		if a.Flags.ChangeCwd != false {
+		if a.Flags.ChangeCwd {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetChangeCwdFn(os.Chdir)
 			})
@@ -275,6 +278,11 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.ShowItemCount {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetShowItemCount()
+			})
+		}
+		if a.Flags.ShowMTime {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetShowMTime()
 			})
 		}
 		if a.Flags.NoDelete {
@@ -341,17 +349,18 @@ func (a *App) runAction(ui UI, path string) error {
 		}()
 	}
 
-	if a.Flags.ShowDisks {
+	switch {
+	case a.Flags.ShowDisks:
 		if err := ui.ListDevices(a.Getter); err != nil {
 			return fmt.Errorf("loading mount points: %w", err)
 		}
-	} else if a.Flags.InputFile != "" {
+	case a.Flags.InputFile != "":
 		var input io.Reader
 		var err error
 		if a.Flags.InputFile == "-" {
 			input = os.Stdin
 		} else {
-			input, err = os.OpenFile(a.Flags.InputFile, os.O_RDONLY, 0600)
+			input, err = os.OpenFile(a.Flags.InputFile, os.O_RDONLY, 0o600)
 			if err != nil {
 				return fmt.Errorf("opening input file: %w", err)
 			}
@@ -360,12 +369,12 @@ func (a *App) runAction(ui UI, path string) error {
 		if err := ui.ReadAnalysis(input); err != nil {
 			return fmt.Errorf("reading analysis: %w", err)
 		}
-	} else if a.Flags.ReadFromStorage {
+	case a.Flags.ReadFromStorage:
 		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
 		if err := ui.ReadFromStorage(a.Flags.StoragePath, path); err != nil {
 			return fmt.Errorf("reading from storage (%s): %w", a.Flags.StoragePath, err)
 		}
-	} else {
+	default:
 		if build.RootPathPrefix != "" {
 			path = build.RootPathPrefix + path
 		}

@@ -4,6 +4,7 @@
 package app
 
 import (
+	"os"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testdev"
@@ -51,4 +52,72 @@ func TestOutputFileError(t *testing.T) {
 
 	assert.Empty(t, out)
 	assert.Contains(t, err.Error(), "permission denied")
+}
+
+func TestUseStorage(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	const storagePath = "/tmp/badger-test"
+	defer func() {
+		err := os.RemoveAll(storagePath)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: storagePath},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+}
+
+func TestReadFromStorage(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	storagePath := "/tmp/badger-test4"
+	defer func() {
+		err := os.RemoveAll(storagePath)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: storagePath},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+
+	out, err = runApp(
+		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: storagePath},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+}
+
+func TestReadFromStorageWithErr(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	_, err := runApp(
+		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: "/tmp/badger-xxx"},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.ErrorContains(t, err, "Key not found")
 }

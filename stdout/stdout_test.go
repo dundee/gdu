@@ -149,7 +149,7 @@ func TestShowDevicesWithColor(t *testing.T) {
 }
 
 func TestReadAnalysisWithColor(t *testing.T) {
-	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0o644)
 	assert.Nil(t, err)
 
 	output := bytes.NewBuffer(make([]byte, 10))
@@ -162,7 +162,7 @@ func TestReadAnalysisWithColor(t *testing.T) {
 }
 
 func TestReadAnalysisBw(t *testing.T) {
-	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0o644)
 	assert.Nil(t, err)
 
 	output := bytes.NewBuffer(make([]byte, 10))
@@ -175,7 +175,7 @@ func TestReadAnalysisBw(t *testing.T) {
 }
 
 func TestReadAnalysisWithWrongFile(t *testing.T) {
-	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0644)
+	input, err := os.OpenFile("../internal/testdata/wrong.json", os.O_RDONLY, 0o644)
 	assert.Nil(t, err)
 
 	output := bytes.NewBuffer(make([]byte, 10))
@@ -187,7 +187,7 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 }
 
 func TestReadAnalysisWithSummarize(t *testing.T) {
-	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0644)
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0o644)
 	assert.Nil(t, err)
 
 	output := bytes.NewBuffer(make([]byte, 10))

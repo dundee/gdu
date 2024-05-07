@@ -19,7 +19,7 @@ func TestRemoveFileWithErr(t *testing.T) {
 	err := os.Chmod("test_dir/nested", 0)
 	assert.Nil(t, err)
 	defer func() {
-		err = os.Chmod("test_dir/nested", 0755)
+		err = os.Chmod("test_dir/nested", 0o755)
 		assert.Nil(t, err)
 	}()
 
@@ -37,6 +37,6 @@ func TestRemoveFileWithErr(t *testing.T) {
 		},
 	}
 
-	err = RemoveItemFromDir(dir, subdir)
+	err = ItemFromDir(dir, subdir)
 	assert.Contains(t, err.Error(), "permission denied")
 }

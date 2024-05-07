@@ -52,7 +52,7 @@ func readMountOutput(rdr io.Reader) (Devices, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		re := regexp.MustCompile("^(.*) on (/.*) \\(([^)]+)\\)$")
+		re := regexp.MustCompile(`^(.*) on (/.*) \(([^)]+)\)$`)
 		parts := re.FindAllStringSubmatch(line, -1)
 
 		if len(parts) < 1 {
@@ -80,18 +80,20 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 	devices := Devices{}
 
 	for _, mount := range mounts {
-		if strings.HasPrefix(mount.Name, "/dev") || mount.Fstype == "zfs" {
-			info := &unix.Statfs_t{}
-			err := unix.Statfs(mount.MountPoint, info)
-			if err != nil && !ignoreErrors {
-				return nil, err
-			}
-
-			mount.Size = int64(info.Bsize) * int64(info.Blocks)
-			mount.Free = int64(info.Bsize) * int64(info.Bavail)
-
-			devices = append(devices, mount)
+		if !strings.HasPrefix(mount.Name, "/dev") && mount.Fstype != "zfs" {
+			continue
 		}
+
+		info := &unix.Statfs_t{}
+		err := unix.Statfs(mount.MountPoint, info)
+		if err != nil && !ignoreErrors {
+			return nil, err
+		}
+
+		mount.Size = int64(info.Bsize) * int64(info.Blocks)
+		mount.Free = int64(info.Bsize) * int64(info.Bavail)
+
+		devices = append(devices, mount)
 	}
 
 	return devices, nil

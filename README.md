@@ -1,5 +1,7 @@
 # go DiskUsage()
 
+<img src="./gdu.png" alt="Gdu " width="200" align="right">
+
 [![Codecov](https://codecov.io/gh/dundee/gdu/branch/master/graph/badge.svg)](https://codecov.io/gh/dundee/gdu)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dundee/gdu)](https://goreportcard.com/report/github.com/dundee/gdu)
 [![Maintainability](https://api.codeclimate.com/v1/badges/30d793274607f599e658/maintainability)](https://codeclimate.com/github/dundee/gdu/maintainability)
@@ -63,6 +65,7 @@ Flags:
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
   -C, --show-item-count               Show number of items in directory
+  -M, --show-mtime                    Show latest mtime of items in directory
   -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
       --storage-path string           Path to persistent key-value storage directory (default is /tmp/badger) (default "/tmp/badger")
@@ -240,11 +243,6 @@ gdu -r /                          # reads just saved data, does not run analysis
     make install-dev-dependencies
     make test
 
-## Benchmarks
-
-Benchmarks were performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
-See `benchmark` target in [Makefile](Makefile) for more info.
-
 ## Profiling
 
 Gdu can collect profiling data when the `--enable-profiling` flag is set.
@@ -252,6 +250,11 @@ The data are provided via embedded http server on URL `http://localhost:6060/deb
 
 You can then use e.g. `go tool pprof -web http://localhost:6060/debug/pprof/heap`
 to open the heap profile as SVG image in your web browser.
+
+## Benchmarks
+
+Benchmarks were performed on 50G directory (100k directories, 400k files) on 500 GB SSD using [hyperfine](https://github.com/sharkdp/hyperfine).
+See `benchmark` target in [Makefile](Makefile) for more info.
 
 ### Cold cache
 
@@ -294,3 +297,7 @@ Filesystem cache was cleared using `sync; echo 3 | sudo tee /proc/sys/vm/drop_ca
 * [duc](https://duc.zevv.nl/) - Collection of tools with many possibilities for inspecting and visualising disk usage
 * [dust](https://github.com/bootandy/dust) - Tool written in `Rust` showing tree like structures of disk usage
 * [pdu](https://github.com/KSXGitHub/parallel-disk-usage) - Tool written in `Rust` showing tree like structures of disk usage
+
+## Notes
+
+[HDD icon created by Nikita Golubev - Flaticon](https://www.flaticon.com/free-icons/hdd)

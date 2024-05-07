@@ -83,7 +83,7 @@ func TestFlagsSeq(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	err := os.Mkdir("test_dir/empty", 0644)
+	err := os.Mkdir("test_dir/empty", 0o644)
 	assert.Nil(t, err)
 
 	err = os.Symlink("test_dir/nested/file2", "test_dir/nested/file3")
@@ -137,7 +137,7 @@ func TestFollowSymlinkSeq(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	err := os.Mkdir("test_dir/empty", 0644)
+	err := os.Mkdir("test_dir/empty", 0o644)
 	assert.Nil(t, err)
 
 	err = os.Symlink("./file2", "test_dir/nested/file3")
@@ -169,7 +169,7 @@ func TestBrokenSymlinkSkippedSeq(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	err := os.Mkdir("test_dir/empty", 0644)
+	err := os.Mkdir("test_dir/empty", 0o644)
 	assert.Nil(t, err)
 
 	err = os.Symlink("xxx", "test_dir/nested/file3")

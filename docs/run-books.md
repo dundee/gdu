@@ -9,4 +9,5 @@
 1. `git push --tags`
 1. `git push`
 1. `make release`
+1. update `gdu.spec`
 1. Release snapcraft, AUR, ...

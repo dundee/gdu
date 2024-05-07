@@ -47,7 +47,7 @@ func getUsageGraph(part int) string {
 }
 
 func getUsageGraphOld(part int) string {
-	part = part / 10
+	part /= 10
 	graph := "["
 	for i := 0; i < 10; i++ {
 		if part > i {
