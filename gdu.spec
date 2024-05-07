@@ -1,12 +1,12 @@
 Name:           gdu
-Version:        5.27.0
-Release:        1
+Version:        5.28.0
+Release:        2
 Summary:        Pretty fast disk usage analyzer written in Go
 
 License:        MIT
 URL:            https://github.com/dundee/gdu
 
-Source0:        https://github.com/dundee/gdu/archive/refs/tags/%{version}.tar.gz
+Source0:        https://github.com/dundee/gdu/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  golang
 BuildRequires:  systemd-rpm-macros
@@ -20,21 +20,20 @@ Pretty fast disk usage analyzer written in Go.
 %global debug_package %{nil}
 
 %prep
-%autosetup -n %{name}
+%autosetup -n %{name}-%{version}
 
 %build
-GO111MODULE=on CGO_ENABLED=1 go build \
+GO111MODULE=on CGO_ENABLED=0 go build \
 -trimpath \
 -buildmode=pie \
 -mod=readonly \
 -modcacherw \
 -ldflags \
--s -w \
--X 'github.com/dundee/gdu/v5/build.Version=$(git describe)' \
+"-s -w \
+-X 'github.com/dundee/gdu/v5/build.Version=v%{version}' \
 -X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
 -X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
 -o %{name} github.com/dundee/gdu/v5/cmd/gdu
-
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -52,6 +51,13 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Sun Apr 21 2024 Danie de Jager - 5.28.0-1
+- feat: delete/empty items in background by @dundee in #336
+- feat: add --show-item-count (-C) option by @ramgp in #332
+- feat: add --no-delete option by @ramgp in #333
+- feat: ignore item by pressing I by @dundee in #345
+- feat: delete directory items in parallel by @dundee in #340
+- feat: add --sequential option for sequential scanning by @dundee in #322
 * Sun Feb 18 2024 Danie de Jager - 5.27.0-1
 - feat: export in interactive mode by @kadogo in #298
 - feat: handle vim-style navigation in confirmation by @samihda in #283
