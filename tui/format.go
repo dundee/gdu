@@ -22,15 +22,17 @@ const (
 )
 
 func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignored bool) string {
-	var part int
-
-	switch {
-	case ignored:
-		part = 0
-	case ui.ShowApparentSize:
-		part = int(float64(item.GetSize()) / float64(maxSize) * 100.0)
-	default:
-		part = int(float64(item.GetUsage()) / float64(maxUsage) * 100.0)
+	part := 0
+	if !ignored {
+		if ui.ShowApparentSize {
+			if size := item.GetSize(); size > 0 {
+				part = int(float64(size) / float64(maxSize) * 100.0)
+			}
+		} else {
+			if usage := item.GetUsage(); usage > 0 {
+				part = int(float64(usage) / float64(maxUsage) * 100.0)
+			}
+		}
 	}
 
 	row := string(item.GetFlag())
