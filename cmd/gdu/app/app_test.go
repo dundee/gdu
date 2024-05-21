@@ -287,6 +287,24 @@ func TestAnalyzePathWithStyle(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAnalyzePathNoUnicode(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile:   "/dev/null",
+			NoUnicode: true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+}
+
 func TestAnalyzePathWithExport(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

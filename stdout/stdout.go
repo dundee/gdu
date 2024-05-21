@@ -28,7 +28,11 @@ type UI struct {
 	noPrefix  bool
 }
 
-var progressRunes = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
+var (
+	progressRunes      = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
+	progressRunesOld   = []rune(`-\\|/`)
+	progressRunesCount = len(progressRunes)
+)
 
 // CreateStdoutUI creates UI for stdout
 func CreateStdoutUI(
@@ -66,6 +70,11 @@ func CreateStdoutUI(
 	}
 
 	return ui
+}
+
+func (ui *UI) UseOldProgressRunes() {
+	progressRunes = progressRunesOld
+	progressRunesCount = len(progressRunes)
 }
 
 // StartUILoop stub
@@ -321,7 +330,7 @@ func (ui *UI) showReadingProgress(doneChan chan struct{}) {
 
 		time.Sleep(100 * time.Millisecond)
 		i++
-		i %= 10
+		i %= progressRunesCount
 	}
 }
 
@@ -349,7 +358,7 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 				fmt.Fprint(ui.output, "Calculating disk usage...")
 				time.Sleep(100 * time.Millisecond)
 				i++
-				i %= 10
+				i %= progressRunesCount
 
 				select {
 				case <-updateStatsDone:
@@ -370,7 +379,7 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 
 		time.Sleep(100 * time.Millisecond)
 		i++
-		i %= 10
+		i %= progressRunesCount
 	}
 }
 
