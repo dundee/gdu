@@ -61,6 +61,7 @@ type Flags struct {
 	NoMouse            bool     `yaml:"no-mouse"`
 	NonInteractive     bool     `yaml:"non-interactive"`
 	NoProgress         bool     `yaml:"no-progress"`
+	NoUnicode          bool     `yaml:"no-unicode"`
 	NoCross            bool     `yaml:"no-cross"`
 	NoHidden           bool     `yaml:"no-hidden"`
 	NoDelete           bool     `yaml:"no-delete"`
@@ -231,7 +232,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.UseSIPrefix,
 		)
 	case a.Flags.NonInteractive || !a.Istty:
-		ui = stdout.CreateStdoutUI(
+		stdoutUI := stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
@@ -242,6 +243,10 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
 		)
+		if a.Flags.NoUnicode {
+			stdoutUI.UseOldProgressRunes()
+		}
+		ui = stdoutUI
 	default:
 		var opts []tui.Option
 
@@ -260,7 +265,7 @@ func (a *App) createUI() (UI, error) {
 				ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
 			})
 		}
-		if a.Flags.Style.UseOldSizeBar {
+		if a.Flags.Style.UseOldSizeBar || a.Flags.NoUnicode {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.UseOldSizeBar()
 			})

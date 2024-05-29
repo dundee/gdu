@@ -101,6 +101,21 @@ func TestAnalyzePathWithColors(t *testing.T) {
 	assert.Contains(t, output.String(), "subnested")
 }
 
+func TestAnalyzePathWoUnicode(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, false)
+	ui.UseOldProgressRunes()
+	err := ui.AnalyzePath("test_dir/nested", nil)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "subnested")
+}
+
 func TestItemRows(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
