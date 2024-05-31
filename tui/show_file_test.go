@@ -9,6 +9,12 @@ import (
 	"github.com/ulikunitz/xz"
 )
 
+func TestGetScannerForEmptyString(t *testing.T) {
+	r := bytes.NewReader([]byte{})
+	_, err := getScanner(r)
+	assert.ErrorContains(t, err, "EOF")
+}
+
 func TestGetScannerForPlainString(t *testing.T) {
 	r := bytes.NewReader([]byte("hello"))
 	s, err := getScanner(r)
