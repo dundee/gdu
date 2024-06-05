@@ -6,6 +6,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/fatih/color v1.16.0
 	github.com/gdamore/tcell/v2 v2.7.1
+	github.com/h2non/filetype v1.1.3
 	github.com/maruel/natural v1.1.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -14,6 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
+	github.com/ulikunitz/xz v0.5.12
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
 	golang.org/x/sys v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
