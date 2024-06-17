@@ -58,6 +58,7 @@ Flags:
       --no-mouse                      Do not use mouse
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
+  -u, --no-unicode                    Do not use Unicode symbols (for size bar)
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
   -r, --read-from-storage             Read analysis data from persistent key-value storage

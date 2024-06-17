@@ -50,6 +50,8 @@ size of the file to which symlink points to (symlinks to directories are not fol
 **-p**, **\--no-progress**\[=false\] Do not show progress in
 non-interactive mode
 
+**-u**, **\--no-unicode**\[=false\] Do not use Unicode symbols (for size bar)
+
 **-s**, **\--summarize**\[=false\] Show only a total in non-interactive mode
 
 **-d**, **\--show-disks**\[=false\] Show all mounted disks
