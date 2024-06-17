@@ -1,6 +1,6 @@
 Name:           gdu
-Version:        5.28.0
-Release:        2
+Version:        5.29.0
+Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
 
 License:        MIT
@@ -51,6 +51,11 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Mon Jun 17 2024 Daniel Milde - 5.29.0-1
+- feat: support for reading gzip, bzip2 and xz files by @dundee in #363
+- feat: add --show-mtime (-M) option by @dundee in #350
+- feat: add option --no-unicode to disable unicode symbols by @dundee in #362
+- fix: division by zero error in formatFileRow by @xroberx in #359
 * Sun Apr 21 2024 Danie de Jager - 5.28.0-1
 - feat: delete/empty items in background by @dundee in #336
 - feat: add --show-item-count (-C) option by @ramgp in #332
