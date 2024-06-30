@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
-	github.com/fatih/color v1.16.0
+	github.com/fatih/color v1.17.0
 	github.com/gdamore/tcell/v2 v2.7.1
 	github.com/h2non/filetype v1.1.3
 	github.com/maruel/natural v1.1.0
