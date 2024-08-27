@@ -51,6 +51,10 @@ You can either run it as `gdu_windows_amd64.exe` or
 
     scoop install gdu
 
+[X-cmd](https://www.x-cmd.com/start/)
+
+    x env use gdu
+
 ## [COPR builds](https://copr.fedorainfracloud.org/coprs/faramirza/gdu/)
 COPR Builds exist for the the following Linux Distros.
 
