@@ -47,6 +47,8 @@ You can either run it as `gdu_windows_amd64.exe` or
 * add an alias with `Doskey`.
 * add `alias gdu="gdu_windows_amd64.exe"` to your `~/.bashrc` file if using Git Bash to run it as `gdu`.
 
+You might need to restart your terminal.
+
 [Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/gdu.json):
 
     scoop install gdu
