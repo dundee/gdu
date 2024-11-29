@@ -973,6 +973,11 @@ func TestSorting(t *testing.T) {
 
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
+	ui.table.Select(1, 0)
+	// mark the item for deletion
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
+	assert.Equal(t, 1, len(ui.markedRows))
+
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 's', 0))
 	assert.Equal(t, "size", ui.sortBy)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'C', 0))
@@ -981,6 +986,9 @@ func TestSorting(t *testing.T) {
 	assert.Equal(t, "name", ui.sortBy)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'M', 0))
 	assert.Equal(t, "mtime", ui.sortBy)
+
+	// marking should be dropped after sorting
+	assert.Equal(t, 0, len(ui.markedRows))
 }
 
 func TestShowFile(t *testing.T) {
