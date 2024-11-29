@@ -1,5 +1,5 @@
 ---
-date: {{date}}
+date: 2024-11-29
 section: 1
 title: gdu
 ---
