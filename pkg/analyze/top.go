@@ -25,14 +25,12 @@ func (tl *TopList) Add(file fs.Item) {
 		if file.GetSize() > tl.MinSize {
 			tl.MinSize = file.GetSize()
 		}
-	} else {
-		if file.GetSize() > tl.MinSize {
-			tl.Items = append(tl.Items, file)
-			tl.MinSize = file.GetSize()
-			if len(tl.Items) > tl.Count {
-				sort.Sort(fs.ByApparentSize(tl.Items))
-				tl.Items = tl.Items[1:]
-			}
+	} else if file.GetSize() > tl.MinSize {
+		tl.Items = append(tl.Items, file)
+		tl.MinSize = file.GetSize()
+		if len(tl.Items) > tl.Count {
+			sort.Sort(fs.ByApparentSize(tl.Items))
+			tl.Items = tl.Items[1:]
 		}
 	}
 }

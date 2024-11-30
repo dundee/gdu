@@ -170,11 +170,12 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 
 	wait.Wait()
 
-	if ui.top > 0 {
+	switch {
+	case ui.top > 0:
 		ui.printTopFiles(dir)
-	} else if ui.summarize {
+	case ui.summarize:
 		ui.printTotalItem(dir)
-	} else {
+	default:
 		ui.showDir(dir)
 	}
 
@@ -192,11 +193,12 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 		return err
 	}
 
-	if ui.top > 0 {
+	switch {
+	case ui.top > 0:
 		ui.printTopFiles(dir)
-	} else if ui.summarize {
+	case ui.summarize:
 		ui.printTotalItem(dir)
-	} else {
+	default:
 		ui.showDir(dir)
 	}
 	return nil
