@@ -26,6 +26,7 @@ type UI struct {
 	blue      *color.Color
 	summarize bool
 	noPrefix  bool
+	top       int
 }
 
 var (
@@ -45,6 +46,7 @@ func CreateStdoutUI(
 	constGC bool,
 	useSIPrefix bool,
 	noPrefix bool,
+	top int,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -59,6 +61,7 @@ func CreateStdoutUI(
 		output:    output,
 		summarize: summarize,
 		noPrefix:  noPrefix,
+		top:       top,
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -167,7 +170,9 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 
 	wait.Wait()
 
-	if ui.summarize {
+	if ui.top > 0 {
+		ui.printTopFiles(dir)
+	} else if ui.summarize {
 		ui.printTotalItem(dir)
 	} else {
 		ui.showDir(dir)
@@ -187,7 +192,9 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 		return err
 	}
 
-	if ui.summarize {
+	if ui.top > 0 {
+		ui.printTopFiles(dir)
+	} else if ui.summarize {
 		ui.printTotalItem(dir)
 	} else {
 		ui.showDir(dir)
@@ -200,6 +207,13 @@ func (ui *UI) showDir(dir fs.Item) {
 
 	for _, file := range dir.GetFiles() {
 		ui.printItem(file)
+	}
+}
+
+func (ui *UI) printTopFiles(file fs.Item) {
+	collected := analyze.CollectTopFiles(file, ui.top)
+	for _, file := range collected {
+		ui.printItemPath(file)
 	}
 }
 
@@ -254,6 +268,27 @@ func (ui *UI) printItem(file fs.Item) {
 			ui.formatSize(size),
 			file.GetName())
 	}
+}
+
+func (ui *UI) printItemPath(file fs.Item) {
+	var lineFormat string
+	if ui.UseColors {
+		lineFormat = "%20s %s\n"
+	} else {
+		lineFormat = "%9s %s\n"
+	}
+
+	var size int64
+	if ui.ShowApparentSize {
+		size = file.GetSize()
+	} else {
+		size = file.GetUsage()
+	}
+
+	fmt.Fprintf(ui.output,
+		lineFormat,
+		ui.formatSize(size),
+		file.GetPath())
 }
 
 // ReadAnalysis reads analysis report from JSON file

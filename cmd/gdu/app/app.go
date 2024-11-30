@@ -72,6 +72,7 @@ type Flags struct {
 	StoragePath        string   `yaml:"storage-path"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
 	Summarize          bool     `yaml:"summarize"`
+	Top                int      `yaml:"top"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
 	WriteConfig        bool     `yaml:"-"`
@@ -242,6 +243,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
+			a.Flags.Top,
 		)
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()
