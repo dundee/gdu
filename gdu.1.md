@@ -54,6 +54,8 @@ non-interactive mode
 
 **-s**, **\--summarize**\[=false\] Show only a total in non-interactive mode
 
+**-t**, **\--top**\[=0\] Show only top X largest files in non-interactive mode
+
 **-d**, **\--show-disks**\[=false\] Show all mounted disks
 
 **-a**, **\--show-apparent-size**\[=false\] Show apparent size
