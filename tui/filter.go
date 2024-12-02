@@ -20,6 +20,8 @@ func (ui *UI) showFilterInput() {
 	}
 
 	if ui.filteringInput == nil {
+		ui.markedRows = make(map[int]struct{})
+
 		ui.filteringInput = tview.NewInputField()
 
 		if !ui.UseColors {

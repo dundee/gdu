@@ -50,7 +50,7 @@ Flags:
   -X, --ignore-from string            Read absolute path patterns to ignore from file
   -f, --input-file string             Import analysis from JSON file
   -l, --log-file string               Path to a logfile (default "/dev/null")
-  -m, --max-cores int                 Set max cores that GDU will use. 8 cores available (default 8)
+  -m, --max-cores int                 Set max cores that Gdu will use. 12 cores available (default 12)
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
       --no-delete                     Do not allow deletions
@@ -69,8 +69,9 @@ Flags:
   -M, --show-mtime                    Show latest mtime of items in directory
   -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
-      --storage-path string           Path to persistent key-value storage directory (default is /tmp/badger) (default "/tmp/badger")
+      --storage-path string           Path to persistent key-value storage directory (default "/tmp/badger")
   -s, --summarize                     Show only a total in non-interactive mode
+  -t, --top int                       Show only top X largest files in non-interactive mode
       --use-storage                   Use persistent key-value storage for analysis data (experimental)
   -v, --version                       Print version
       --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
@@ -104,6 +105,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -n /                              # only print stats, do not start interactive mode
     gdu -np /                             # do not show progress, useful when using its output in a script
     gdu -nps /some/dir                    # show only total usage for given dir
+    gdu -nt 10 /                          # show top 10 largest files
     gdu / > file                          # write stats to file, do not start interactive mode
 
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
@@ -142,6 +144,8 @@ flag with following meaning:
 Gdu can read (and write) YAML configuration file.
 
 `$HOME/.config/gdu/gdu.yaml` and `$HOME/.gdu.yaml` are checked for the presense of the config file by default.
+
+See the [full list of all configuration options](configuration).
 
 ### Examples
 

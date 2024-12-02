@@ -44,7 +44,7 @@ func init() {
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
-	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that GDU will use. %d cores available", runtime.NumCPU()))
+	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
 
@@ -61,7 +61,7 @@ func init() {
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
 
 	flags.BoolVar(&af.UseStorage, "use-storage", false, "Use persistent key-value storage for analysis data (experimental)")
-	flags.StringVar(&af.StoragePath, "storage-path", "/tmp/badger", "Path to persistent key-value storage directory (default is /tmp/badger)")
+	flags.StringVar(&af.StoragePath, "storage-path", "/tmp/badger", "Path to persistent key-value storage directory")
 	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Read analysis data from persistent key-value storage")
 
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
@@ -74,6 +74,7 @@ func init() {
 	flags.BoolVarP(&af.NoProgress, "no-progress", "p", false, "Do not show progress in non-interactive mode")
 	flags.BoolVarP(&af.NoUnicode, "no-unicode", "u", false, "Do not use Unicode symbols (for size bar)")
 	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")
+	flags.IntVarP(&af.Top, "top", "t", 0, "Show only top X largest files in non-interactive mode")
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
 	flags.BoolVar(&af.NoMouse, "no-mouse", false, "Do not use mouse")

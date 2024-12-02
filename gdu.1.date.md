@@ -1,5 +1,5 @@
 ---
-date: {{date}}
+date: 2024-11-29
 section: 1
 title: gdu
 ---
@@ -53,8 +53,6 @@ non-interactive mode
 **-u**, **\--no-unicode**\[=false\] Do not use Unicode symbols (for size bar)
 
 **-s**, **\--summarize**\[=false\] Show only a total in non-interactive mode
-
-**-t**, **\--top**\[=0\] Show only top X largest files in non-interactive mode
 
 **-d**, **\--show-disks**\[=false\] Show all mounted disks
 
