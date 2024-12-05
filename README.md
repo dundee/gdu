@@ -145,7 +145,7 @@ Gdu can read (and write) YAML configuration file.
 
 `$HOME/.config/gdu/gdu.yaml` and `$HOME/.gdu.yaml` are checked for the presense of the config file by default.
 
-See the [full list of all configuration options](configuration).
+See the [full list of all configuration options](configuration.md).
 
 ### Examples
 
