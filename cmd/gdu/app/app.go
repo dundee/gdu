@@ -89,6 +89,7 @@ type Style struct {
 	ProgressModal ProgressModalOpts `yaml:"progress-modal"`
 	UseOldSizeBar bool              `yaml:"use-old-size-bar"`
 	Footer        FooterColorStyle  `yaml:"footer"`
+	Header        HeaderColorStyle  `yaml:"header"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -102,11 +103,18 @@ type ColorStyle struct {
 	BackgroundColor string `yaml:"background-color"`
 }
 
-// ColorStyle defines styling of some item
+// FooterColorStyle defines styling of footer
 type FooterColorStyle struct {
 	TextColor       string `yaml:"text-color"`
 	BackgroundColor string `yaml:"background-color"`
 	NumberColor     string `yaml:"number-color"`
+}
+
+// HeaderColorStyle defines styling of header
+type HeaderColorStyle struct {
+	TextColor       string `yaml:"text-color"`
+	BackgroundColor string `yaml:"background-color"`
+	Hidden          bool   `yaml:"hidden"`
 }
 
 // Sorting defines default sorting of items
@@ -283,6 +291,21 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Style.Footer.NumberColor != "" {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetFooterNumberColor(a.Flags.Style.Footer.NumberColor)
+			})
+		}
+		if a.Flags.Style.Header.TextColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetHeaderTextColor(a.Flags.Style.Header.TextColor)
+			})
+		}
+		if a.Flags.Style.Header.BackgroundColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetHeaderBackgroundColor(a.Flags.Style.Header.BackgroundColor)
+			})
+		}
+		if a.Flags.Style.Header.Hidden {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetHeaderHidden()
 			})
 		}
 		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {

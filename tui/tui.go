@@ -63,6 +63,9 @@ type UI struct {
 	footerTextColor         string
 	footerBackgroundColor   string
 	footerNumberColor       string
+	headerTextColor         string
+	headerBackgroundColor   string
+	headerHidden            bool
 	currentItemNameMaxLen   int
 	useOldSizeBar           bool
 	defaultSortBy           string
@@ -143,19 +146,10 @@ func CreateUI(
 	ui.app.SetInputCapture(ui.keyPressed)
 	ui.app.SetMouseCapture(ui.onMouse)
 
-	var textColor, textBgColor tcell.Color
-	if ui.UseColors {
-		textColor = tcell.NewRGBColor(0, 0, 0)
-		textBgColor = tcell.NewRGBColor(36, 121, 208)
-	} else {
-		textColor = tcell.NewRGBColor(0, 0, 0)
-		textBgColor = tcell.NewRGBColor(255, 255, 255)
-	}
-
 	ui.header = tview.NewTextView()
 	ui.header.SetText(" gdu ~ Use arrow keys to navigate, press ? for help ")
-	ui.header.SetTextColor(textColor)
-	ui.header.SetBackgroundColor(textBgColor)
+	ui.header.SetTextColor(tcell.GetColor(ui.headerTextColor))
+	ui.header.SetBackgroundColor(tcell.GetColor(ui.headerBackgroundColor))
 
 	ui.currentDirLabel = tview.NewTextView()
 	ui.currentDirLabel.SetTextColor(tcell.ColorDefault)
@@ -183,11 +177,18 @@ func CreateUI(
 	ui.footer = tview.NewFlex()
 	ui.footer.AddItem(ui.footerLabel, 0, 1, false)
 
-	ui.grid = tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
-	ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
-		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
-		AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
-		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+	if ui.headerHidden {
+		ui.grid = tview.NewGrid().SetRows(1, 0, 1).SetColumns(0)
+		ui.grid.AddItem(ui.currentDirLabel, 0, 0, 1, 1, 0, 0, false).
+			AddItem(ui.table, 1, 0, 1, 1, 0, 0, true).
+			AddItem(ui.footer, 2, 0, 1, 1, 0, 0, false)
+	} else {
+		ui.grid = tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
+		ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
+			AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
+			AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
+			AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+	}
 
 	ui.pages = tview.NewPages().
 		AddPage("background", ui.grid, true, true)
@@ -221,6 +222,21 @@ func (ui *UI) SetFooterBackgroundColor(color string) {
 // SetFooterNumberColor sets the color for the footer number
 func (ui *UI) SetFooterNumberColor(color string) {
 	ui.footerNumberColor = color
+}
+
+// SetHeaderTextColor sets the color for the header text
+func (ui *UI) SetHeaderTextColor(color string) {
+	ui.headerTextColor = color
+}
+
+// SetHeaderBackgroundColor sets the color for the header background
+func (ui *UI) SetHeaderBackgroundColor(color string) {
+	ui.headerBackgroundColor = color
+}
+
+// SetHeaderHidden sets the flag to hide the header
+func (ui *UI) SetHeaderHidden() {
+	ui.headerHidden = true
 }
 
 // SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item

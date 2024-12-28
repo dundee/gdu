@@ -103,6 +103,12 @@ func initConfig() {
 	if af.Style.Footer.NumberColor == "" {
 		af.Style.Footer.NumberColor = "#FFFFFF"
 	}
+	if af.Style.Header.BackgroundColor == "" {
+		af.Style.Header.BackgroundColor = "#2479D0"
+	}
+	if af.Style.Header.TextColor == "" {
+		af.Style.Header.TextColor = "#000000"
+	}
 }
 
 func setConfigFilePath() {
