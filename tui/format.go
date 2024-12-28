@@ -11,7 +11,6 @@ import (
 
 const (
 	blackOnWhite = "[black:white:-]"
-	blackOnBlue  = "[#000000:#2479d0:-]"
 	whiteOnBlack = "[white:black:-]"
 
 	orangeBold = "[#e67100::b]"

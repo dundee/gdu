@@ -224,8 +224,16 @@ func (ui *UI) showDevices() {
 
 	var footerNumberColor, footerTextColor string
 	if ui.UseColors {
-		footerNumberColor = "[#ffffff:#2479d0:b]"
-		footerTextColor = blackOnBlue
+		footerNumberColor = fmt.Sprintf(
+			"[%s:%s:b]",
+			ui.footerNumberColor,
+			ui.footerBackgroundColor,
+		)
+		footerTextColor = fmt.Sprintf(
+			"[%s:%s:-]",
+			ui.footerTextColor,
+			ui.footerBackgroundColor,
+		)
 	} else {
 		footerNumberColor = "[black:white:b]"
 		footerTextColor = blackOnWhite
