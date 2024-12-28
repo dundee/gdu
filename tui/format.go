@@ -100,7 +100,11 @@ func (ui *UI) formatSize(size int64, reverseColor, transparentBg bool) string {
 	var color string
 	if reverseColor {
 		if ui.UseColors {
-			color = blackOnBlue
+			color = fmt.Sprintf(
+				"[%s:%s:-]",
+				ui.footerTextColor,
+				ui.footerBackgroundColor,
+			)
 		} else {
 			color = blackOnWhite
 		}

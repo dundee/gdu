@@ -93,6 +93,16 @@ func initConfig() {
 	}
 
 	configErr = yaml.Unmarshal(data, &af)
+
+	if af.Style.Footer.BackgroundColor == "" {
+		af.Style.Footer.BackgroundColor = "#2479D0"
+	}
+	if af.Style.Footer.TextColor == "" {
+		af.Style.Footer.TextColor = "#000000"
+	}
+	if af.Style.Footer.NumberColor == "" {
+		af.Style.Footer.NumberColor = "#FFFFFF"
+	}
 }
 
 func setConfigFilePath() {

@@ -88,6 +88,7 @@ type Style struct {
 	SelectedRow   ColorStyle        `yaml:"selected-row"`
 	ProgressModal ProgressModalOpts `yaml:"progress-modal"`
 	UseOldSizeBar bool              `yaml:"use-old-size-bar"`
+	Footer        FooterColorStyle  `yaml:"footer"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -99,6 +100,13 @@ type ProgressModalOpts struct {
 type ColorStyle struct {
 	TextColor       string `yaml:"text-color"`
 	BackgroundColor string `yaml:"background-color"`
+}
+
+// ColorStyle defines styling of some item
+type FooterColorStyle struct {
+	TextColor       string `yaml:"text-color"`
+	BackgroundColor string `yaml:"background-color"`
+	NumberColor     string `yaml:"number-color"`
 }
 
 // Sorting defines default sorting of items
@@ -260,6 +268,21 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Style.SelectedRow.BackgroundColor != "" {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
+			})
+		}
+		if a.Flags.Style.Footer.TextColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetFooterTextColor(a.Flags.Style.Footer.TextColor)
+			})
+		}
+		if a.Flags.Style.Footer.BackgroundColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetFooterBackgroundColor(a.Flags.Style.Footer.BackgroundColor)
+			})
+		}
+		if a.Flags.Style.Footer.NumberColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetFooterNumberColor(a.Flags.Style.Footer.NumberColor)
 			})
 		}
 		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {

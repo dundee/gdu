@@ -60,6 +60,9 @@ type UI struct {
 	linkedItems             fs.HardLinkedItems
 	selectedTextColor       tcell.Color
 	selectedBackgroundColor tcell.Color
+	footerTextColor         string
+	footerBackgroundColor   string
+	footerNumberColor       string
 	currentItemNameMaxLen   int
 	useOldSizeBar           bool
 	defaultSortBy           string
@@ -173,8 +176,8 @@ func CreateUI(
 	}
 
 	ui.footerLabel = tview.NewTextView().SetDynamicColors(true)
-	ui.footerLabel.SetTextColor(textColor)
-	ui.footerLabel.SetBackgroundColor(textBgColor)
+	ui.footerLabel.SetTextColor(tcell.GetColor(ui.footerTextColor))
+	ui.footerLabel.SetBackgroundColor(tcell.GetColor(ui.footerBackgroundColor))
 	ui.footerLabel.SetText(" No items to display. ")
 
 	ui.footer = tview.NewFlex()
@@ -203,6 +206,21 @@ func (ui *UI) SetSelectedTextColor(color tcell.Color) {
 // SetSelectedBackgroundColor sets the color for the highighted selected text
 func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 	ui.selectedBackgroundColor = color
+}
+
+// SetFooterTextColor sets the color for the footer text
+func (ui *UI) SetFooterTextColor(color string) {
+	ui.footerTextColor = color
+}
+
+// SetFooterBackgroundColor sets the color for the footer background
+func (ui *UI) SetFooterBackgroundColor(color string) {
+	ui.footerBackgroundColor = color
+}
+
+// SetFooterNumberColor sets the color for the footer number
+func (ui *UI) SetFooterNumberColor(color string) {
+	ui.footerNumberColor = color
 }
 
 // SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item
