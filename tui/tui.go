@@ -66,6 +66,7 @@ type UI struct {
 	headerTextColor         string
 	headerBackgroundColor   string
 	headerHidden            bool
+	resultRow               ResultRow
 	currentItemNameMaxLen   int
 	useOldSizeBar           bool
 	defaultSortBy           string
@@ -85,6 +86,12 @@ type UI struct {
 type deleteQueueItem struct {
 	item        fs.Item
 	shouldEmpty bool
+}
+
+// ResultRow is a struct for a row in the result table
+type ResultRow struct {
+	NumberColor    string
+	DirectoryColor string
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -237,6 +244,16 @@ func (ui *UI) SetHeaderBackgroundColor(color string) {
 // SetHeaderHidden sets the flag to hide the header
 func (ui *UI) SetHeaderHidden() {
 	ui.headerHidden = true
+}
+
+// SetResultRowDirectoryColor sets the color for the result row directory
+func (ui *UI) SetResultRowDirectoryColor(color string) {
+	ui.resultRow.DirectoryColor = color
+}
+
+// SetResultRowNumberColor sets the color for the result row number
+func (ui *UI) SetResultRowNumberColor(color string) {
+	ui.resultRow.NumberColor = color
 }
 
 // SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item

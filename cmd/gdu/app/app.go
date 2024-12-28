@@ -85,11 +85,12 @@ type Flags struct {
 
 // Style define style config
 type Style struct {
-	SelectedRow   ColorStyle        `yaml:"selected-row"`
-	ProgressModal ProgressModalOpts `yaml:"progress-modal"`
-	UseOldSizeBar bool              `yaml:"use-old-size-bar"`
-	Footer        FooterColorStyle  `yaml:"footer"`
-	Header        HeaderColorStyle  `yaml:"header"`
+	SelectedRow   ColorStyle          `yaml:"selected-row"`
+	ProgressModal ProgressModalOpts   `yaml:"progress-modal"`
+	UseOldSizeBar bool                `yaml:"use-old-size-bar"`
+	Footer        FooterColorStyle    `yaml:"footer"`
+	Header        HeaderColorStyle    `yaml:"header"`
+	ResultRow     ResultRowColorStyle `yaml:"result-row"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -115,6 +116,12 @@ type HeaderColorStyle struct {
 	TextColor       string `yaml:"text-color"`
 	BackgroundColor string `yaml:"background-color"`
 	Hidden          bool   `yaml:"hidden"`
+}
+
+// ResultRowColorStyle defines styling of result row
+type ResultRowColorStyle struct {
+	NumberColor    string `yaml:"number-color"`
+	DirectoryColor string `yaml:"directory-color"`
 }
 
 // Sorting defines default sorting of items
@@ -306,6 +313,16 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.Style.Header.Hidden {
 			opts = append(opts, func(ui *tui.UI) {
 				ui.SetHeaderHidden()
+			})
+		}
+		if a.Flags.Style.ResultRow.NumberColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetResultRowNumberColor(a.Flags.Style.ResultRow.NumberColor)
+			})
+		}
+		if a.Flags.Style.ResultRow.DirectoryColor != "" {
+			opts = append(opts, func(ui *tui.UI) {
+				ui.SetResultRowDirectoryColor(a.Flags.Style.ResultRow.DirectoryColor)
 			})
 		}
 		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {

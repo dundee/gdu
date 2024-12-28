@@ -109,6 +109,12 @@ func initConfig() {
 	if af.Style.Header.TextColor == "" {
 		af.Style.Header.TextColor = "#000000"
 	}
+	if af.Style.ResultRow.NumberColor == "" {
+		af.Style.ResultRow.NumberColor = "#e67100"
+	}
+	if af.Style.ResultRow.DirectoryColor == "" {
+		af.Style.ResultRow.DirectoryColor = "#3498db"
+	}
 }
 
 func setConfigFilePath() {

@@ -13,9 +13,6 @@ const (
 	blackOnWhite = "[black:white:-]"
 	whiteOnBlack = "[white:black:-]"
 
-	orangeBold = "[#e67100::b]"
-	blueBold   = "[#3498db::b]"
-
 	defaultColor     = "[-::]"
 	defaultColorBold = "[::b]"
 )
@@ -36,8 +33,13 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 
 	row := string(item.GetFlag())
 
+	numberColor := fmt.Sprintf(
+		"[%s::b]",
+		ui.resultRow.NumberColor,
+	)
+
 	if ui.UseColors && !marked && !ignored {
-		row += orangeBold
+		row += numberColor
 	} else {
 		row += defaultColorBold
 	}
@@ -56,7 +58,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 
 	if ui.showItemCount {
 		if ui.UseColors && !marked && !ignored {
-			row += orangeBold
+			row += numberColor
 		} else {
 			row += defaultColorBold
 		}
@@ -65,7 +67,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 
 	if ui.showMtime {
 		if ui.UseColors && !marked && !ignored {
-			row += orangeBold
+			row += numberColor
 		} else {
 			row += defaultColorBold
 		}
@@ -86,7 +88,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 
 	if item.IsDir() {
 		if ui.UseColors && !marked && !ignored {
-			row += blueBold + "/"
+			row += fmt.Sprintf("[%s::b]/", ui.resultRow.DirectoryColor)
 		} else {
 			row += defaultColorBold + "/"
 		}
