@@ -184,6 +184,19 @@ func CreateUI(
 	ui.footer = tview.NewFlex()
 	ui.footer.AddItem(ui.footerLabel, 0, 1, false)
 
+	ui.createGrid()
+
+	ui.pages = tview.NewPages().
+		AddPage("background", ui.grid, true, true)
+	ui.pages.SetBackgroundColor(tcell.ColorDefault)
+
+	ui.app.SetRoot(ui.pages, true)
+
+	return ui
+}
+
+// createGrid creates the main grid layout
+func (ui *UI) createGrid() {
 	if ui.headerHidden {
 		ui.grid = tview.NewGrid().SetRows(1, 0, 1).SetColumns(0)
 		ui.grid.AddItem(ui.currentDirLabel, 0, 0, 1, 1, 0, 0, false).
@@ -196,14 +209,6 @@ func CreateUI(
 			AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
 			AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
 	}
-
-	ui.pages = tview.NewPages().
-		AddPage("background", ui.grid, true, true)
-	ui.pages.SetBackgroundColor(tcell.ColorDefault)
-
-	ui.app.SetRoot(ui.pages, true)
-
-	return ui
 }
 
 // SetSelectedTextColor sets the color for the highighted selected text
