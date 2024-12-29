@@ -256,7 +256,10 @@ func (ui *UI) showInfo() {
 	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
 	if ui.UseColors {
-		numberColor = orangeBold
+		numberColor = fmt.Sprintf(
+			"[%s::b]",
+			ui.resultRow.NumberColor,
+		)
 	} else {
 		numberColor = defaultColorBold
 	}

@@ -60,6 +60,13 @@ type UI struct {
 	linkedItems             fs.HardLinkedItems
 	selectedTextColor       tcell.Color
 	selectedBackgroundColor tcell.Color
+	footerTextColor         string
+	footerBackgroundColor   string
+	footerNumberColor       string
+	headerTextColor         string
+	headerBackgroundColor   string
+	headerHidden            bool
+	resultRow               ResultRow
 	currentItemNameMaxLen   int
 	useOldSizeBar           bool
 	defaultSortBy           string
@@ -79,6 +86,12 @@ type UI struct {
 type deleteQueueItem struct {
 	item        fs.Item
 	shouldEmpty bool
+}
+
+// ResultRow is a struct for a row in the result table
+type ResultRow struct {
+	NumberColor    string
+	DirectoryColor string
 }
 
 // Option is optional function customizing the bahaviour of UI
@@ -140,19 +153,10 @@ func CreateUI(
 	ui.app.SetInputCapture(ui.keyPressed)
 	ui.app.SetMouseCapture(ui.onMouse)
 
-	var textColor, textBgColor tcell.Color
-	if ui.UseColors {
-		textColor = tcell.NewRGBColor(0, 0, 0)
-		textBgColor = tcell.NewRGBColor(36, 121, 208)
-	} else {
-		textColor = tcell.NewRGBColor(0, 0, 0)
-		textBgColor = tcell.NewRGBColor(255, 255, 255)
-	}
-
 	ui.header = tview.NewTextView()
 	ui.header.SetText(" gdu ~ Use arrow keys to navigate, press ? for help ")
-	ui.header.SetTextColor(textColor)
-	ui.header.SetBackgroundColor(textBgColor)
+	ui.header.SetTextColor(tcell.GetColor(ui.headerTextColor))
+	ui.header.SetBackgroundColor(tcell.GetColor(ui.headerBackgroundColor))
 
 	ui.currentDirLabel = tview.NewTextView()
 	ui.currentDirLabel.SetTextColor(tcell.ColorDefault)
@@ -173,18 +177,14 @@ func CreateUI(
 	}
 
 	ui.footerLabel = tview.NewTextView().SetDynamicColors(true)
-	ui.footerLabel.SetTextColor(textColor)
-	ui.footerLabel.SetBackgroundColor(textBgColor)
+	ui.footerLabel.SetTextColor(tcell.GetColor(ui.footerTextColor))
+	ui.footerLabel.SetBackgroundColor(tcell.GetColor(ui.footerBackgroundColor))
 	ui.footerLabel.SetText(" No items to display. ")
 
 	ui.footer = tview.NewFlex()
 	ui.footer.AddItem(ui.footerLabel, 0, 1, false)
 
-	ui.grid = tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
-	ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
-		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
-		AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
-		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+	ui.createGrid()
 
 	ui.pages = tview.NewPages().
 		AddPage("background", ui.grid, true, true)
@@ -195,6 +195,22 @@ func CreateUI(
 	return ui
 }
 
+// createGrid creates the main grid layout
+func (ui *UI) createGrid() {
+	if ui.headerHidden {
+		ui.grid = tview.NewGrid().SetRows(1, 0, 1).SetColumns(0)
+		ui.grid.AddItem(ui.currentDirLabel, 0, 0, 1, 1, 0, 0, false).
+			AddItem(ui.table, 1, 0, 1, 1, 0, 0, true).
+			AddItem(ui.footer, 2, 0, 1, 1, 0, 0, false)
+	} else {
+		ui.grid = tview.NewGrid().SetRows(1, 1, 0, 1).SetColumns(0)
+		ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
+			AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
+			AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
+			AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+	}
+}
+
 // SetSelectedTextColor sets the color for the highighted selected text
 func (ui *UI) SetSelectedTextColor(color tcell.Color) {
 	ui.selectedTextColor = color
@@ -203,6 +219,46 @@ func (ui *UI) SetSelectedTextColor(color tcell.Color) {
 // SetSelectedBackgroundColor sets the color for the highighted selected text
 func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 	ui.selectedBackgroundColor = color
+}
+
+// SetFooterTextColor sets the color for the footer text
+func (ui *UI) SetFooterTextColor(color string) {
+	ui.footerTextColor = color
+}
+
+// SetFooterBackgroundColor sets the color for the footer background
+func (ui *UI) SetFooterBackgroundColor(color string) {
+	ui.footerBackgroundColor = color
+}
+
+// SetFooterNumberColor sets the color for the footer number
+func (ui *UI) SetFooterNumberColor(color string) {
+	ui.footerNumberColor = color
+}
+
+// SetHeaderTextColor sets the color for the header text
+func (ui *UI) SetHeaderTextColor(color string) {
+	ui.headerTextColor = color
+}
+
+// SetHeaderBackgroundColor sets the color for the header background
+func (ui *UI) SetHeaderBackgroundColor(color string) {
+	ui.headerBackgroundColor = color
+}
+
+// SetHeaderHidden sets the flag to hide the header
+func (ui *UI) SetHeaderHidden() {
+	ui.headerHidden = true
+}
+
+// SetResultRowDirectoryColor sets the color for the result row directory
+func (ui *UI) SetResultRowDirectoryColor(color string) {
+	ui.resultRow.DirectoryColor = color
+}
+
+// SetResultRowNumberColor sets the color for the result row number
+func (ui *UI) SetResultRowNumberColor(color string) {
+	ui.resultRow.NumberColor = color
 }
 
 // SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item

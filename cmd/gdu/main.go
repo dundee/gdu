@@ -93,6 +93,28 @@ func initConfig() {
 	}
 
 	configErr = yaml.Unmarshal(data, &af)
+
+	if af.Style.Footer.BackgroundColor == "" {
+		af.Style.Footer.BackgroundColor = "#2479D0"
+	}
+	if af.Style.Footer.TextColor == "" {
+		af.Style.Footer.TextColor = "#000000"
+	}
+	if af.Style.Footer.NumberColor == "" {
+		af.Style.Footer.NumberColor = "#FFFFFF"
+	}
+	if af.Style.Header.BackgroundColor == "" {
+		af.Style.Header.BackgroundColor = "#2479D0"
+	}
+	if af.Style.Header.TextColor == "" {
+		af.Style.Header.TextColor = "#000000"
+	}
+	if af.Style.ResultRow.NumberColor == "" {
+		af.Style.ResultRow.NumberColor = "#e67100"
+	}
+	if af.Style.ResultRow.DirectoryColor == "" {
+		af.Style.ResultRow.DirectoryColor = "#3498db"
+	}
 }
 
 func setConfigFilePath() {

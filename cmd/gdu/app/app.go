@@ -85,9 +85,12 @@ type Flags struct {
 
 // Style define style config
 type Style struct {
-	SelectedRow   ColorStyle        `yaml:"selected-row"`
-	ProgressModal ProgressModalOpts `yaml:"progress-modal"`
-	UseOldSizeBar bool              `yaml:"use-old-size-bar"`
+	SelectedRow   ColorStyle          `yaml:"selected-row"`
+	ProgressModal ProgressModalOpts   `yaml:"progress-modal"`
+	UseOldSizeBar bool                `yaml:"use-old-size-bar"`
+	Footer        FooterColorStyle    `yaml:"footer"`
+	Header        HeaderColorStyle    `yaml:"header"`
+	ResultRow     ResultRowColorStyle `yaml:"result-row"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -99,6 +102,26 @@ type ProgressModalOpts struct {
 type ColorStyle struct {
 	TextColor       string `yaml:"text-color"`
 	BackgroundColor string `yaml:"background-color"`
+}
+
+// FooterColorStyle defines styling of footer
+type FooterColorStyle struct {
+	TextColor       string `yaml:"text-color"`
+	BackgroundColor string `yaml:"background-color"`
+	NumberColor     string `yaml:"number-color"`
+}
+
+// HeaderColorStyle defines styling of header
+type HeaderColorStyle struct {
+	TextColor       string `yaml:"text-color"`
+	BackgroundColor string `yaml:"background-color"`
+	Hidden          bool   `yaml:"hidden"`
+}
+
+// ResultRowColorStyle defines styling of result row
+type ResultRowColorStyle struct {
+	NumberColor    string `yaml:"number-color"`
+	DirectoryColor string `yaml:"directory-color"`
 }
 
 // Sorting defines default sorting of items
@@ -250,63 +273,7 @@ func (a *App) createUI() (UI, error) {
 		}
 		ui = stdoutUI
 	default:
-		var opts []tui.Option
-
-		if a.Flags.Style.SelectedRow.TextColor != "" {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetSelectedTextColor(tcell.GetColor(a.Flags.Style.SelectedRow.TextColor))
-			})
-		}
-		if a.Flags.Style.SelectedRow.BackgroundColor != "" {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
-			})
-		}
-		if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
-			})
-		}
-		if a.Flags.Style.UseOldSizeBar || a.Flags.NoUnicode {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.UseOldSizeBar()
-			})
-		}
-		if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
-			})
-		}
-		if a.Flags.ChangeCwd {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetChangeCwdFn(os.Chdir)
-			})
-		}
-		if a.Flags.ShowItemCount {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetShowItemCount()
-			})
-		}
-		if a.Flags.ShowMTime {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetShowMTime()
-			})
-		}
-		if a.Flags.NoDelete {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetNoDelete()
-			})
-		}
-		if a.Flags.DeleteInBackground {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetDeleteInBackground()
-			})
-		}
-		if a.Flags.DeleteInParallel {
-			opts = append(opts, func(ui *tui.UI) {
-				ui.SetDeleteInParallel()
-			})
-		}
+		opts := a.getOptions()
 
 		ui = tui.CreateUI(
 			a.TermApp,
@@ -329,6 +296,107 @@ func (a *App) createUI() (UI, error) {
 	}
 
 	return ui, nil
+}
+
+func (a *App) getOptions() []tui.Option {
+	var opts []tui.Option
+
+	if a.Flags.Style.SelectedRow.TextColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetSelectedTextColor(tcell.GetColor(a.Flags.Style.SelectedRow.TextColor))
+		})
+	}
+	if a.Flags.Style.SelectedRow.BackgroundColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
+		})
+	}
+	if a.Flags.Style.Footer.TextColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetFooterTextColor(a.Flags.Style.Footer.TextColor)
+		})
+	}
+	if a.Flags.Style.Footer.BackgroundColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetFooterBackgroundColor(a.Flags.Style.Footer.BackgroundColor)
+		})
+	}
+	if a.Flags.Style.Footer.NumberColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetFooterNumberColor(a.Flags.Style.Footer.NumberColor)
+		})
+	}
+	if a.Flags.Style.Header.TextColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetHeaderTextColor(a.Flags.Style.Header.TextColor)
+		})
+	}
+	if a.Flags.Style.Header.BackgroundColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetHeaderBackgroundColor(a.Flags.Style.Header.BackgroundColor)
+		})
+	}
+	if a.Flags.Style.Header.Hidden {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetHeaderHidden()
+		})
+	}
+	if a.Flags.Style.ResultRow.NumberColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetResultRowNumberColor(a.Flags.Style.ResultRow.NumberColor)
+		})
+	}
+	if a.Flags.Style.ResultRow.DirectoryColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetResultRowDirectoryColor(a.Flags.Style.ResultRow.DirectoryColor)
+		})
+	}
+	if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
+		})
+	}
+	if a.Flags.Style.UseOldSizeBar || a.Flags.NoUnicode {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.UseOldSizeBar()
+		})
+	}
+	if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
+		})
+	}
+	if a.Flags.ChangeCwd {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetChangeCwdFn(os.Chdir)
+		})
+	}
+	if a.Flags.ShowItemCount {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetShowItemCount()
+		})
+	}
+	if a.Flags.ShowMTime {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetShowMTime()
+		})
+	}
+	if a.Flags.NoDelete {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetNoDelete()
+		})
+	}
+	if a.Flags.DeleteInBackground {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetDeleteInBackground()
+		})
+	}
+	if a.Flags.DeleteInParallel {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetDeleteInParallel()
+		})
+	}
+	return opts
 }
 
 func (a *App) setNoCross(path string) error {

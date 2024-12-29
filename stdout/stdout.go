@@ -262,7 +262,7 @@ func (ui *UI) printItem(file fs.Item) {
 			lineFormat,
 			string(file.GetFlag()),
 			ui.formatSize(size),
-			ui.blue.Sprintf("/"+file.GetName()))
+			ui.blue.Sprint("/"+file.GetName()))
 	} else {
 		fmt.Fprintf(ui.output,
 			lineFormat,

@@ -60,13 +60,6 @@ func getUsageGraphOld(part int) string {
 	return graph
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func modal(p tview.Primitive, width, height int) tview.Primitive {
 	return tview.NewFlex().
 		AddItem(nil, 0, 1, false).

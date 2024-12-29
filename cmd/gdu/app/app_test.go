@@ -275,6 +275,20 @@ func TestAnalyzePathWithStyle(t *testing.T) {
 				ProgressModal: ProgressModalOpts{
 					CurrentItemNameMaxLen: 10,
 				},
+				Footer: FooterColorStyle{
+					TextColor:       "black",
+					BackgroundColor: "red",
+					NumberColor:     "white",
+				},
+				Header: HeaderColorStyle{
+					TextColor:       "black",
+					BackgroundColor: "red",
+					Hidden:          true,
+				},
+				ResultRow: ResultRowColorStyle{
+					NumberColor:    "orange",
+					DirectoryColor: "blue",
+				},
 				UseOldSizeBar: true,
 			},
 		},

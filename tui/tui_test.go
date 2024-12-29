@@ -700,28 +700,38 @@ func TestMin(t *testing.T) {
 	assert.Equal(t, 3, min(4, 3))
 }
 
-func TestSetSelectedBackgroundColor(t *testing.T) {
+func TestSetStyles(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
+	opts := []Option{}
+	opts = append(opts, func(ui *UI) {
+		ui.SetHeaderHidden()
+	})
+
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false, opts...)
 
 	ui.SetSelectedBackgroundColor(tcell.ColorRed)
+	ui.SetSelectedTextColor(tcell.ColorRed)
+	ui.SetFooterTextColor("red")
+	ui.SetFooterBackgroundColor("red")
+	ui.SetFooterNumberColor("red")
+	ui.SetHeaderTextColor("red")
+	ui.SetHeaderBackgroundColor("red")
+	ui.SetResultRowDirectoryColor("red")
+	ui.SetResultRowNumberColor("red")
 
 	assert.Equal(t, ui.selectedBackgroundColor, tcell.ColorRed)
-}
-
-func TestSetSelectedTextColor(t *testing.T) {
-	simScreen := testapp.CreateSimScreen()
-	defer simScreen.Fini()
-
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
-
-	ui.SetSelectedTextColor(tcell.ColorRed)
-
 	assert.Equal(t, ui.selectedTextColor, tcell.ColorRed)
+	assert.Equal(t, ui.footerTextColor, "red")
+	assert.Equal(t, ui.footerBackgroundColor, "red")
+	assert.Equal(t, ui.footerNumberColor, "red")
+	assert.Equal(t, ui.headerTextColor, "red")
+	assert.Equal(t, ui.headerBackgroundColor, "red")
+	assert.Equal(t, ui.headerHidden, true)
+	assert.Equal(t, ui.resultRow.DirectoryColor, "red")
+	assert.Equal(t, ui.resultRow.NumberColor, "red")
 }
 
 func TestSetCurrentItemNameMaxLen(t *testing.T) {
