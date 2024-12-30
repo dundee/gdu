@@ -1,4 +1,3 @@
-
 # YAML file configuration options
 
 Gdu provides an additional set of configuration options to the usual command line options.
@@ -139,7 +138,7 @@ Color of text for the selected row
 
 #### `style.selected-row.background-color`
 
-Color of background for the selected row
+Background color for the selected row
 
 #### `style.progress-modal.current-item-path-max-len`
 
@@ -149,6 +148,38 @@ When the length is reached, the path is shortened with "/.../".
 #### `style.use-old-size-bar`
 
 Show size bar without Unicode symbols.
+
+#### `style.footer.text-color`
+
+Color of text for footer bar
+
+#### `style.footer.background-color`
+
+Background color for footer bar
+
+#### `style.footer.number-color`
+
+Color of numbers displayed in the footer
+
+#### `style.header.text-color`
+
+Color of text for header bar
+
+#### `style.header.background-color`
+
+Background color for header bar
+
+#### `style.header.hidden`
+
+Hide the header bar
+
+#### `style.result-row.number-color`
+
+Color of numbers in result rows
+
+#### `style.result-row.directory-color`
+
+Color of directory names in result rows
 
 #### `sorting.by`
 
