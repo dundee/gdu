@@ -82,6 +82,7 @@ func init() {
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 
 	initConfig()
+	setDefaults()
 }
 
 func initConfig() {
@@ -93,7 +94,9 @@ func initConfig() {
 	}
 
 	configErr = yaml.Unmarshal(data, &af)
+}
 
+func setDefaults() {
 	if af.Style.Footer.BackgroundColor == "" {
 		af.Style.Footer.BackgroundColor = "#2479D0"
 	}
