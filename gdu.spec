@@ -1,5 +1,5 @@
 Name:           gdu
-Version:        5.29.0
+Version:        5.30.0
 Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
 
@@ -51,6 +51,9 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Mon Dec 30 2024 Daniel Milde - 5.30.0-1
+- feat: show top largest files using -t or --top option in #391
+- feat: introduce more style options in #396
 * Mon Jun 17 2024 Daniel Milde - 5.29.0-1
 - feat: support for reading gzip, bzip2 and xz files by @dundee in #363
 - feat: add --show-mtime (-M) option by @dundee in #350
