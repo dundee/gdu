@@ -92,7 +92,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 		return err
 	}
 
-	maxDeviceNameLenght := maxInt(maxLength(
+	maxDeviceNameLength := maxInt(maxLength(
 		devices,
 		func(device *device.Device) string { return device.Name },
 	), len("Devices"))
@@ -108,7 +108,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 
 	lineFormat := fmt.Sprintf(
 		"%%%ds %%%ds %%%ds %%%ds %%%ds %%s\n",
-		maxDeviceNameLenght,
+		maxDeviceNameLength,
 		sizeLength,
 		sizeLength,
 		sizeLength,
@@ -117,7 +117,7 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 
 	fmt.Fprintf(
 		ui.output,
-		fmt.Sprintf("%%%ds %%9s %%9s %%9s %%5s %%s\n", maxDeviceNameLenght),
+		fmt.Sprintf("%%%ds %%9s %%9s %%9s %%5s %%s\n", maxDeviceNameLength),
 		"Device",
 		"Size",
 		"Used",
