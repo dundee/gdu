@@ -94,7 +94,7 @@ type ResultRow struct {
 	DirectoryColor string
 }
 
-// Option is optional function customizing the bahaviour of UI
+// Option is optional function customizing the behaviour of UI
 type Option func(ui *UI)
 
 // CreateUI creates the whole UI app
@@ -211,12 +211,12 @@ func (ui *UI) createGrid() {
 	}
 }
 
-// SetSelectedTextColor sets the color for the highighted selected text
+// SetSelectedTextColor sets the color for the highlighted selected text
 func (ui *UI) SetSelectedTextColor(color tcell.Color) {
 	ui.selectedTextColor = color
 }
 
-// SetSelectedBackgroundColor sets the color for the highighted selected text
+// SetSelectedBackgroundColor sets the color for the highlighted selected text
 func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 	ui.selectedBackgroundColor = color
 }

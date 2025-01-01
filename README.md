@@ -143,7 +143,7 @@ flag with following meaning:
 
 Gdu can read (and write) YAML configuration file.
 
-`$HOME/.config/gdu/gdu.yaml` and `$HOME/.gdu.yaml` are checked for the presense of the config file by default.
+`$HOME/.config/gdu/gdu.yaml` and `$HOME/.gdu.yaml` are checked for the presence of the config file by default.
 
 See the [full list of all configuration options](configuration).
 
@@ -177,8 +177,8 @@ gdu --write-config
 
 ## Styling
 
-There are wast ways how terminals can be colored.
-Some gdu primitives (like basic text) addapt to different color schemas, but the selected/highlighted row does not.
+There are wide options for how terminals can be colored.
+Some gdu primitives (like basic text) adapt to different color schemas, but the selected/highlighted row does not.
 
 If the default look is not sufficient, it can be changed in configuration file, e.g.:
 

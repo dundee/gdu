@@ -10,7 +10,7 @@ func ShortenPath(path string, maxLen int) string {
 
 	res := ""
 	parts := strings.SplitAfter(path, "/")
-	curLen := len(parts[len(parts)-1]) // count lenght of last part for start
+	curLen := len(parts[len(parts)-1]) // count length of last part for start
 
 	for _, part := range parts[:len(parts)-1] {
 		curLen += len(part)

@@ -88,7 +88,7 @@ func (ui *UI) showFile() *tview.TextView {
 			event.Key() == tcell.KeyDown || event.Key() == tcell.KeyPgDn {
 			_, _, _, height := file.GetInnerRect()
 			row, _ := file.GetScrollOffset()
-			if height+row > totalLines-linesTreshold {
+			if height+row > totalLines-linesThreshold {
 				totalLines += readNextPart(defaultLinesCount)
 			}
 		}

@@ -88,7 +88,7 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 - feat: add ctrl+z for job control by @yurenchen000 in #250
 - feat: upgrade dependencies by @dundee in #252
 * Thu May 11 2023 Danie de Jager - 5.23.0-2
-- Compiled wiht golang 1.19.9
+- Compiled with golang 1.19.9
 * Tue Apr 11 2023 Danie de Jager - 5.23.0-1
 - feat: added configuration option to change CWD when browsing directories by @leapfog in #230
 - fix: do not show help modal when confirm modal is already opened by @dundee in #237
