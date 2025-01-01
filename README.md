@@ -177,7 +177,7 @@ gdu --write-config
 
 ## Styling
 
-There are waste ways how terminals can be colored.
+There are wide options for how terminals can be colored.
 Some gdu primitives (like basic text) adapt to different color schemas, but the selected/highlighted row does not.
 
 If the default look is not sufficient, it can be changed in configuration file, e.g.:
