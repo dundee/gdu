@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -27,9 +28,18 @@ func CreateIgnorePattern(paths []string) (*regexp.Regexp, error) {
 // SetIgnoreDirPaths sets paths to ignore
 func (ui *UI) SetIgnoreDirPaths(paths []string) {
 	log.Printf("Ignoring dirs %s", strings.Join(paths, ", "))
-	ui.IgnoreDirPaths = make(map[string]struct{}, len(paths))
+	ui.IgnoreDirPaths = make(map[string]struct{}, len(paths)*2)
 	for _, path := range paths {
 		ui.IgnoreDirPaths[path] = struct{}{}
+		if !filepath.IsAbs(path) {
+			if absPath, err := filepath.Abs(path); err == nil {
+				ui.IgnoreDirPaths[absPath] = struct{}{}
+			}
+		} else {
+			if relPath, err := filepath.Rel("/", path); err == nil {
+				ui.IgnoreDirPaths[relPath] = struct{}{}
+			}
+		}
 	}
 }
 
@@ -74,11 +84,28 @@ func (ui *UI) SetIgnoreHidden(value bool) {
 
 // ShouldDirBeIgnored returns true if given path should be ignored
 func (ui *UI) ShouldDirBeIgnored(name, path string) bool {
-	_, shouldIgnore := ui.IgnoreDirPaths[path]
-	if shouldIgnore {
+	if _, shouldIgnore := ui.IgnoreDirPaths[path]; shouldIgnore {
 		log.Printf("Directory %s ignored", path)
+		return true
 	}
-	return shouldIgnore
+
+	if filepath.IsAbs(path) {
+		if relPath, err := filepath.Rel("/", path); err == nil {
+			if _, shouldIgnore := ui.IgnoreDirPaths[relPath]; shouldIgnore {
+				log.Printf("Directory %s ignored (matched relative path %s)", path, relPath)
+				return true
+			}
+		}
+	} else {
+		if absPath, err := filepath.Abs(path); err == nil {
+			if _, shouldIgnore := ui.IgnoreDirPaths[absPath]; shouldIgnore {
+				log.Printf("Directory %s ignored (matched absolute path %s)", path, absPath)
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // ShouldDirBeIgnoredUsingPattern returns true if given path should be ignored

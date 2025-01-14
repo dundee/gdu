@@ -45,9 +45,9 @@ Flags:
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -L, --follow-symlinks               Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
   -h, --help                          help for gdu
-  -i, --ignore-dirs strings           Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
-  -I, --ignore-dirs-pattern strings   Absolute path patterns to ignore (separated by comma)
-  -X, --ignore-from string            Read absolute path patterns to ignore from file
+  -i, --ignore-dirs strings           Paths to ignore (separated by comma). Can be absolute or relative to current directory (default [/proc,/dev,/sys,/run])
+  -I, --ignore-dirs-pattern strings   Path patterns to ignore (separated by comma)
+  -X, --ignore-from string            Read path patterns to ignore from file
   -f, --input-file string             Import analysis from JSON file
   -l, --log-file string               Path to a logfile (default "/dev/null")
   -m, --max-cores int                 Set max cores that Gdu will use. 12 cores available (default 12)

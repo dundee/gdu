@@ -2,6 +2,7 @@ package common_test
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -151,4 +152,28 @@ func TestIgnoreByAll(t *testing.T) {
 	assert.True(t, shouldBeIgnored(".git", "/aaa/.git"))
 	assert.True(t, shouldBeIgnored(".bbb", "/aaa/.bbb"))
 	assert.False(t, shouldBeIgnored("xxx", "/xxx"))
+}
+
+func TestIgnoreByRelativePath(t *testing.T) {
+	ui := &common.UI{}
+	ui.SetIgnoreDirPaths([]string{"test_dir/abc"})
+	shouldBeIgnored := ui.CreateIgnoreFunc()
+
+	assert.True(t, shouldBeIgnored("abc", "test_dir/abc"))
+	absPath, err := filepath.Abs("test_dir/abc")
+	assert.Nil(t, err)
+	assert.True(t, shouldBeIgnored("abc", absPath))
+	assert.False(t, shouldBeIgnored("xxx", "test_dir/xxx"))
+}
+
+func TestIgnoreByAbsPathWithRelativeMatch(t *testing.T) {
+	ui := &common.UI{}
+	absPath, err := filepath.Abs("test_dir/abc")
+	assert.Nil(t, err)
+	ui.SetIgnoreDirPaths([]string{absPath})
+	shouldBeIgnored := ui.CreateIgnoreFunc()
+
+	assert.True(t, shouldBeIgnored("abc", absPath))
+	assert.True(t, shouldBeIgnored("abc", "test_dir/abc"))
+	assert.False(t, shouldBeIgnored("xxx", "test_dir/xxx"))
 }

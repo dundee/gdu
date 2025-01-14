@@ -26,11 +26,11 @@ Export all info into file as JSON
 
 #### `ignore-dirs`
 
-Absolute paths to ignore (separated by comma) (default [/proc,/dev,/sys,/run])
+Paths to ignore (separated by comma). Can be absolute (like `/proc`) or relative to the current working directory (like `node_modules`). Default values are [/proc,/dev,/sys,/run].
 
 #### `ignore-dir-patterns`
 
-Absolute path regex patterns to ignore (separated by comma)
+Path patterns to ignore (separated by comma). Patterns can be absolute or relative to the current working directory.
 
 #### `ignore-from-file`
 
@@ -91,7 +91,6 @@ Follow symlinks for files, i.e. show the size of the file to which symlink point
 #### `profiling`
 
 Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
-
 #### `const-gc`
 
 Enable memory garbage collection during analysis with constant level set by GOGC
