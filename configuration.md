@@ -34,7 +34,7 @@ Path patterns to ignore (separated by comma). Patterns can be absolute or relati
 
 #### `ignore-from-file`
 
-Read absolute path regex patterns to ignore from file
+Read path patterns to ignore from file. Patterns can be absolute or relative to the current working directory.
 
 #### `max-cores`
 

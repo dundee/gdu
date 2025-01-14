@@ -18,6 +18,17 @@ func CreateIgnorePattern(paths []string) (*regexp.Regexp, error) {
 		if _, err = regexp.Compile(path); err != nil {
 			return nil, err
 		}
+		if !filepath.IsAbs(path) {
+			absPath, err := filepath.Abs(path)
+			if err == nil {
+				paths = append(paths, absPath)
+			}
+		} else {
+			relPath, err := filepath.Rel("/", path)
+			if err == nil {
+				paths = append(paths, relPath)
+			}
+		}
 		paths[i] = "(" + path + ")"
 	}
 

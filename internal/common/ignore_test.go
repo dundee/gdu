@@ -177,3 +177,42 @@ func TestIgnoreByAbsPathWithRelativeMatch(t *testing.T) {
 	assert.True(t, shouldBeIgnored("abc", "test_dir/abc"))
 	assert.False(t, shouldBeIgnored("xxx", "test_dir/xxx"))
 }
+
+func TestIgnoreByRelativePattern(t *testing.T) {
+	ui := &common.UI{}
+	err := ui.SetIgnoreDirPatterns([]string{"test_dir/[abc]+"})
+	assert.Nil(t, err)
+	shouldBeIgnored := ui.CreateIgnoreFunc()
+
+	assert.True(t, shouldBeIgnored("abc", "test_dir/abc"))
+	absPath, err := filepath.Abs("test_dir/abc")
+	assert.Nil(t, err)
+	assert.True(t, shouldBeIgnored("abc", absPath))
+	assert.False(t, shouldBeIgnored("xxx", "test_dir/xxx"))
+}
+
+func TestIgnoreFromFileWithRelativePaths(t *testing.T) {
+	file, err := os.OpenFile("ignore", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString("test_dir/aaa\n"); err != nil {
+		panic(err)
+	}
+	if _, err := file.WriteString("node_modules/[^/]+\n"); err != nil {
+		panic(err)
+	}
+
+	ui := &common.UI{}
+	err = ui.SetIgnoreFromFile("ignore")
+	assert.Nil(t, err)
+	shouldBeIgnored := ui.CreateIgnoreFunc()
+
+	assert.True(t, shouldBeIgnored("aaa", "test_dir/aaa"))
+	absPath, err := filepath.Abs("test_dir/aaa")
+	assert.Nil(t, err)
+	assert.True(t, shouldBeIgnored("aaa", absPath))
+	assert.False(t, shouldBeIgnored("xxx", "test_dir/xxx"))
+}
