@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -17,6 +18,17 @@ func CreateIgnorePattern(paths []string) (*regexp.Regexp, error) {
 		if _, err = regexp.Compile(path); err != nil {
 			return nil, err
 		}
+		if !filepath.IsAbs(path) {
+			absPath, err := filepath.Abs(path)
+			if err == nil {
+				paths = append(paths, absPath)
+			}
+		} else {
+			relPath, err := filepath.Rel("/", path)
+			if err == nil {
+				paths = append(paths, relPath)
+			}
+		}
 		paths[i] = "(" + path + ")"
 	}
 
@@ -27,9 +39,18 @@ func CreateIgnorePattern(paths []string) (*regexp.Regexp, error) {
 // SetIgnoreDirPaths sets paths to ignore
 func (ui *UI) SetIgnoreDirPaths(paths []string) {
 	log.Printf("Ignoring dirs %s", strings.Join(paths, ", "))
-	ui.IgnoreDirPaths = make(map[string]struct{}, len(paths))
+	ui.IgnoreDirPaths = make(map[string]struct{}, len(paths)*2)
 	for _, path := range paths {
 		ui.IgnoreDirPaths[path] = struct{}{}
+		if !filepath.IsAbs(path) {
+			if absPath, err := filepath.Abs(path); err == nil {
+				ui.IgnoreDirPaths[absPath] = struct{}{}
+			}
+		} else {
+			if relPath, err := filepath.Rel("/", path); err == nil {
+				ui.IgnoreDirPaths[relPath] = struct{}{}
+			}
+		}
 	}
 }
 

@@ -24,13 +24,17 @@ is not so huge.
 
 **-h**, **\--help**\[=false\] help for gdu
 
-**-i**, **\--ignore-dirs**=\[/proc,/dev,/sys,/run\] Absolute paths to
-ignore (separated by comma)
+**-i**, **\--ignore-dirs**=\[/proc,/dev,/sys,/run\]
+    Paths to ignore (separated by comma).
+    Supports both absolute and relative paths.
 
-**-I**, **\--ignore-dirs-pattern** Absolute path patterns to
-ignore (separated by comma)
+**-I**, **\--ignore-dirs-pattern**
+    Path patterns to ignore (separated by comma).
+    Supports both absolute and relative path patterns.
 
-**-X**, **\--ignore-from** Read absolute path patterns to ignore from file
+**-X**, **\--ignore-from**
+    Read path patterns to ignore from file.
+    Supports both absolute and relative path patterns.
 
 **-l**, **\--log-file**=\"/dev/null\" Path to a logfile
 
