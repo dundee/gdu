@@ -166,18 +166,6 @@ func TestIgnoreByRelativePath(t *testing.T) {
 	assert.False(t, shouldBeIgnored("xxx", "test_dir/xxx"))
 }
 
-func TestIgnoreByAbsPathWithRelativeMatch(t *testing.T) {
-	ui := &common.UI{}
-	absPath, err := filepath.Abs("test_dir/abc")
-	assert.Nil(t, err)
-	ui.SetIgnoreDirPaths([]string{absPath})
-	shouldBeIgnored := ui.CreateIgnoreFunc()
-
-	assert.True(t, shouldBeIgnored("abc", absPath))
-	assert.True(t, shouldBeIgnored("abc", "test_dir/abc"))
-	assert.False(t, shouldBeIgnored("xxx", "test_dir/xxx"))
-}
-
 func TestIgnoreByRelativePattern(t *testing.T) {
 	ui := &common.UI{}
 	err := ui.SetIgnoreDirPatterns([]string{"test_dir/[abc]+"})

@@ -95,28 +95,11 @@ func (ui *UI) SetIgnoreHidden(value bool) {
 
 // ShouldDirBeIgnored returns true if given path should be ignored
 func (ui *UI) ShouldDirBeIgnored(name, path string) bool {
-	if _, shouldIgnore := ui.IgnoreDirPaths[path]; shouldIgnore {
+	_, shouldIgnore := ui.IgnoreDirPaths[path]
+	if shouldIgnore {
 		log.Printf("Directory %s ignored", path)
-		return true
 	}
-
-	if filepath.IsAbs(path) {
-		if relPath, err := filepath.Rel("/", path); err == nil {
-			if _, shouldIgnore := ui.IgnoreDirPaths[relPath]; shouldIgnore {
-				log.Printf("Directory %s ignored (matched relative path %s)", path, relPath)
-				return true
-			}
-		}
-	} else {
-		if absPath, err := filepath.Abs(path); err == nil {
-			if _, shouldIgnore := ui.IgnoreDirPaths[absPath]; shouldIgnore {
-				log.Printf("Directory %s ignored (matched absolute path %s)", path, absPath)
-				return true
-			}
-		}
-	}
-
-	return false
+	return shouldIgnore
 }
 
 // ShouldDirBeIgnoredUsingPattern returns true if given path should be ignored
