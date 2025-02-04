@@ -1,6 +1,6 @@
 Name:           gdu
 Version:        5.30.1
-Release:        1
+Release:        2
 Summary:        Pretty fast disk usage analyzer written in Go
 
 License:        MIT
@@ -23,6 +23,7 @@ Pretty fast disk usage analyzer written in Go.
 %autosetup -n %{name}-%{version}
 
 %build
+export GOINSECURE=go.opencensus.io
 GO111MODULE=on CGO_ENABLED=0 go build \
 -trimpath \
 -buildmode=pie \
@@ -51,6 +52,8 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Tue Feb 4 2025 - Danie de Jager - 5.30.1-2
+- fix: set "GOINSECURE=go.opencensus.io"
 * Mon Dec 30 2024 Daniel Milde - 5.30.1-1
 - fix: set default colors when config file does not exist
 * Mon Dec 30 2024 Daniel Milde - 5.30.0-1
