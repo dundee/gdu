@@ -29,6 +29,11 @@ func (ui *UI) SetFollowSymlinks(v bool) {
 	ui.Analyzer.SetFollowSymlinks(v)
 }
 
+// SetShowAnnexedSize sets whether to use annexed size of git-annex files
+func (ui *UI) SetShowAnnexedSize(v bool) {
+	ui.Analyzer.SetShowAnnexedSize(v)
+}
+
 // binary multiplies prefixes (IEC)
 const (
 	_ float64 = 1 << (10 * iota)

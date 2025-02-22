@@ -59,6 +59,10 @@ func init() {
 		&af.FollowSymlinks, "follow-symlinks", "L", false,
 		"Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)",
 	)
+	flags.BoolVarP(
+		&af.ShowAnnexedSize, "show-annexed-size", "A", false,
+		"Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)",
+	)
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 	flags.BoolVarP(&af.ConstGC, "const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")

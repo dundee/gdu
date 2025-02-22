@@ -23,6 +23,7 @@ type ParallelAnalyzer struct {
 	wait             *WaitGroup
 	ignoreDir        common.ShouldDirBeIgnored
 	followSymlinks   bool
+	gitAnnexedSize   bool
 }
 
 // CreateAnalyzer returns Analyzer
@@ -43,6 +44,11 @@ func CreateAnalyzer() *ParallelAnalyzer {
 // SetFollowSymlinks sets whether symlink to files should be followed
 func (a *ParallelAnalyzer) SetFollowSymlinks(v bool) {
 	a.followSymlinks = v
+}
+
+// SetShowAnnexedSize sets whether to use annexed size of git-annex files
+func (a *ParallelAnalyzer) SetShowAnnexedSize(v bool) {
+	a.gitAnnexedSize = v
 }
 
 // GetProgressChan returns channel for getting progress
@@ -140,7 +146,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				continue
 			}
 			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-				infoF, err := followSymlink(entryPath)
+				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
 					log.Print(err.Error())
 					dir.Flag = '!'
@@ -218,19 +224,4 @@ func getFlag(f os.FileInfo) rune {
 		return '@'
 	}
 	return ' '
-}
-
-func followSymlink(path string) (os.FileInfo, error) {
-	target, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		return nil, err
-	}
-	tInfo, err := os.Lstat(target)
-	if err != nil {
-		return nil, err
-	}
-	if !tInfo.IsDir() {
-		return tInfo, nil
-	}
-	return nil, nil
 }

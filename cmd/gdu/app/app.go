@@ -36,6 +36,7 @@ type UI interface {
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreHidden(value bool)
 	SetFollowSymlinks(value bool)
+	SetShowAnnexedSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
 	StartUILoop() error
 }
@@ -54,6 +55,7 @@ type Flags struct {
 	ShowDisks          bool     `yaml:"-"`
 	ShowApparentSize   bool     `yaml:"show-apparent-size"`
 	ShowRelativeSize   bool     `yaml:"show-relative-size"`
+	ShowAnnexedSize    bool     `yaml:"show-annexed-size"`
 	ShowVersion        bool     `yaml:"-"`
 	ShowItemCount      bool     `yaml:"show-item-count"`
 	ShowMTime          bool     `yaml:"show-mtime"`
@@ -182,6 +184,9 @@ func (a *App) Run() error {
 	}
 	if a.Flags.FollowSymlinks {
 		ui.SetFollowSymlinks(true)
+	}
+	if a.Flags.ShowAnnexedSize {
+		ui.SetShowAnnexedSize(true)
 	}
 	if err := a.setNoCross(path); err != nil {
 		return err
