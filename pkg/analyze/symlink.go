@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,9 +9,8 @@ import (
 )
 
 func followSymlink(path string, gitAnnexedSize bool) (tInfo os.FileInfo, err error) {
-	target, err := os.Readlink(path)
+	target, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		fmt.Println(path, err)
 		return nil, err
 	}
 
