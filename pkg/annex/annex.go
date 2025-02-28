@@ -19,7 +19,7 @@ func SizeFromKey(name string) (int64, error) {
 	}
 
 	for _, p := range backendKVParts[1:] {
-		if len(p) == 0 || p[0] != 's' {
+		if p == "" || p[0] != 's' {
 			continue
 		}
 
