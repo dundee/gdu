@@ -11,12 +11,11 @@ import (
 func followSymlink(path string, gitAnnexedSize bool) (tInfo os.FileInfo, err error) {
 	target, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return nil, err
-	}
-
-	tInfo, err = os.Lstat(target)
-	if err != nil {
-		if os.IsNotExist(err) && gitAnnexedSize && strings.Contains(target, ".git/annex/objects") {
+		target, err := os.Readlink(path)
+		if err != nil {
+			return nil, err
+		}
+		if gitAnnexedSize && strings.Contains(target, ".git/annex/objects") {
 			tInfo, err = os.Lstat(path)
 			if err != nil {
 				return nil, err
@@ -24,9 +23,13 @@ func followSymlink(path string, gitAnnexedSize bool) (tInfo os.FileInfo, err err
 
 			name := filepath.Base(target)
 			tInfo = annex.AnnexedFileInfo(tInfo, name)
-		} else {
-			return nil, err
+			return tInfo, nil
 		}
+	}
+
+	tInfo, err = os.Lstat(target)
+	if err != nil {
+		return nil, err
 	}
 
 	if tInfo.IsDir() {
