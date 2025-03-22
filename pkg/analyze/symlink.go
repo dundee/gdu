@@ -11,7 +11,7 @@ import (
 func followSymlink(path string, gitAnnexedSize bool) (tInfo os.FileInfo, err error) {
 	target, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		target, err := os.Readlink(path)
+		target, err = os.Readlink(path)
 		if err != nil {
 			return nil, err
 		}
