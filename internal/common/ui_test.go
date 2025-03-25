@@ -21,8 +21,18 @@ func TestSetFollowSymlinks(t *testing.T) {
 	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).FollowSymlinks)
 }
 
+func TestSetShowAnnexedSize(t *testing.T) {
+	ui := UI{
+		Analyzer: &MockedAnalyzer{},
+	}
+	ui.SetShowAnnexedSize(true)
+
+	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ShowAnnexedSize)
+}
+
 type MockedAnalyzer struct {
-	FollowSymlinks bool
+	FollowSymlinks  bool
+	ShowAnnexedSize bool
 }
 
 // AnalyzeDir returns dir with files with different size exponents
@@ -50,4 +60,9 @@ func (a *MockedAnalyzer) ResetProgress() {}
 // SetFollowSymlinks does nothing
 func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {
 	a.FollowSymlinks = v
+}
+
+// SetShowAnnexedSize does nothing
+func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {
+	a.ShowAnnexedSize = v
 }

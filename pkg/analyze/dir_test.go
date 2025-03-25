@@ -165,6 +165,43 @@ func TestFollowSymlink(t *testing.T) {
 	assert.Equal(t, 'e', dir.Files[1].GetFlag())
 }
 
+func TestGitAnnexSymlink(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	err := os.Mkdir("test_dir/empty", 0o644)
+	assert.Nil(t, err)
+
+	err = os.Symlink(
+		".git/annex/objects/qx/qX/SHA256E-s967858083--"+
+			"3e54803fded8dc3a9ea68b106f7b51e04e33c79b4a7b32a860f0b22d89af5c65.mp4/SHA256E-s967858083--"+
+			"3e54803fded8dc3a9ea68b106f7b51e04e33c79b4a7b32a860f0b22d89af5c65.mp4",
+		"test_dir/nested/file3")
+	assert.Nil(t, err)
+
+	analyzer := CreateAnalyzer()
+	analyzer.SetFollowSymlinks(true)
+	analyzer.SetShowAnnexedSize(true)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*Dir)
+	analyzer.GetDone().Wait()
+	dir.UpdateStats(make(fs.HardLinkedItems))
+
+	sort.Sort(sort.Reverse(dir.Files))
+
+	assert.Equal(t, int64(967858083+7+4096*4), dir.Size)
+	assert.Equal(t, 7, dir.ItemCount)
+
+	// test file3
+	assert.Equal(t, "nested", dir.Files[0].GetName())
+	assert.Equal(t, "file3", dir.Files[0].(*Dir).Files[1].GetName())
+	assert.Equal(t, int64(967858083), dir.Files[0].(*Dir).Files[1].GetSize())
+	assert.Equal(t, '@', dir.Files[0].(*Dir).Files[1].GetFlag())
+
+	assert.Equal(t, 'e', dir.Files[1].GetFlag())
+}
+
 func TestBrokenSymlinkSkipped(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

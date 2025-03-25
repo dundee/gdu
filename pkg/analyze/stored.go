@@ -25,6 +25,7 @@ type StoredAnalyzer struct {
 	wait             *WaitGroup
 	ignoreDir        common.ShouldDirBeIgnored
 	followSymlinks   bool
+	gitAnnexedSize   bool
 }
 
 // CreateStoredAnalyzer returns Analyzer
@@ -55,6 +56,10 @@ func (a *StoredAnalyzer) GetDone() common.SignalGroup {
 
 func (a *StoredAnalyzer) SetFollowSymlinks(v bool) {
 	a.followSymlinks = v
+}
+
+func (a *StoredAnalyzer) SetShowAnnexedSize(v bool) {
+	a.gitAnnexedSize = v
 }
 
 // ResetProgress returns progress
