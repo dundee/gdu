@@ -36,7 +36,7 @@ func TestFollowSymlinkErr(t *testing.T) {
 	_, err = followSymlink("test_dir/nested/file3", true)
 	assert.NoError(t, err)
 
-	res, err := followSymlink("some_dir", true)
+	res, err := followSymlink("test_dir/some_dir", true)
 	assert.Equal(t, nil, res)
 	assert.NoError(t, err)
 }
