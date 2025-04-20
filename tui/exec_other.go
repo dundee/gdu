@@ -5,6 +5,7 @@ package tui
 
 import (
 	"os"
+	"os/signal"
 	"syscall"
 )
 
@@ -34,5 +35,14 @@ func (ui *UI) spawnShell() {
 }
 
 func stopProcess() error {
-	return syscall.Kill(syscall.Getpid(), syscall.SIGTSTP)
+	// chan for signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGCONT)
+	defer signal.Stop(sigChan)
+
+	err := syscall.Kill(syscall.Getpid(), syscall.SIGTSTP)
+	// wait continue
+	<-sigChan
+
+	return err
 }
