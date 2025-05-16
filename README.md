@@ -37,7 +37,7 @@ Or you can use Gdu directly via Docker:
 ## Usage
 
 ```
-  gdu [flags] [directory_to_scan]
+  gdu [directory_to_scan] [flags]
 
 Flags:
       --config-file string            Read config from file (default is $HOME/.gdu.yaml)
@@ -63,6 +63,7 @@ Flags:
   -o, --output-file string            Export all info into file as JSON
   -r, --read-from-storage             Read analysis data from persistent key-value storage
       --sequential                    Use sequential scanning (intended for rotating HDDs)
+  -A, --show-annexed-size             Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
   -C, --show-item-count               Show number of items in directory
