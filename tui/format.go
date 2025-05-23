@@ -62,7 +62,12 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 		} else {
 			row += defaultColorBold
 		}
-		row += fmt.Sprintf("%11s ", ui.formatCount(item.GetItemCount()))
+		
+		countToDisplay := item.GetItemCount()
+		if item.IsDir() {
+			countToDisplay--
+		}
+		row += fmt.Sprintf("%11s ", ui.formatCount(countToDisplay))
 	}
 
 	if ui.showMtime {
