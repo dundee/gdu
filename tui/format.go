@@ -62,7 +62,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 		} else {
 			row += defaultColorBold
 		}
-		
+
 		countToDisplay := item.GetItemCount()
 		if item.IsDir() {
 			countToDisplay--
