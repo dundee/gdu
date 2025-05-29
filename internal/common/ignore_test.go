@@ -185,6 +185,7 @@ func TestIgnoreFromFileWithRelativePaths(t *testing.T) {
 		panic(err)
 	}
 	defer file.Close()
+	defer os.Remove("ignore")
 
 	if _, err := file.WriteString("test_dir/aaa\n"); err != nil {
 		panic(err)
