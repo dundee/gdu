@@ -3,4 +3,5 @@
 /coverage.txt
 /dist
 /test_dir
+/tui/test_dir
 /vendor

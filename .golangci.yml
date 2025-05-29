@@ -58,11 +58,11 @@ linters:
   disable-all: true
   enable:
     - bodyclose
+    - copyloopvar
     - dogsled
     - errcheck
     - errorlint
     - exhaustive
-    - exportloopref
     - funlen
     - goconst
     - gocritic
