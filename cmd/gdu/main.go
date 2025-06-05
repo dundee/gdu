@@ -210,7 +210,7 @@ func runE(command *cobra.Command, args []string) error {
 		af.ShowApparentSize = true
 	}
 
-	if !af.ShouldRunInNonInteractiveMode() {
+	if !af.ShouldRunInNonInteractiveMode(istty) {
 		screen, err = tcell.NewScreen()
 		if err != nil {
 			return fmt.Errorf("error creating screen: %w", err)

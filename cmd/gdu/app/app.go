@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-isatty"
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 
@@ -88,8 +87,8 @@ type Flags struct {
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
 // based on the flags set.
-func (f *Flags) ShouldRunInNonInteractiveMode() bool {
-	return !isatty.IsTerminal(os.Stdout.Fd()) ||
+func (f *Flags) ShouldRunInNonInteractiveMode(istty bool) bool {
+	return !istty ||
 		f.ShowVersion ||
 		f.NonInteractive ||
 		f.OutputFile != "" ||
@@ -274,7 +273,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
-	case a.Flags.ShouldRunInNonInteractiveMode():
+	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
 		stdoutUI := stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
