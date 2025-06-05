@@ -104,9 +104,9 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -c /                              # use only white/gray/black colors
 
     gdu -n /                              # only print stats, do not start interactive mode
-    gdu -np /                             # do not show progress, useful when using its output in a script
-    gdu -nps /some/dir                    # show only total usage for given dir
-    gdu -nt 10 /                          # show top 10 largest files
+    gdu -p /                              # do not show progress, useful when using its output in a script
+    gdu -ps /some/dir                     # show only total usage for given dir
+    gdu -t 10 /                           # show top 10 largest files
     gdu / > file                          # write stats to file, do not start interactive mode
 
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis

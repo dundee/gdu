@@ -167,14 +167,14 @@ func runE(command *cobra.Command, args []string) error {
 	if af.WriteConfig {
 		data, err := yaml.Marshal(af)
 		if err != nil {
-			return fmt.Errorf("Error marshaling config file: %w", err)
+			return fmt.Errorf("error marshaling config file: %w", err)
 		}
 		if af.CfgFile == "" {
 			setDefaultConfigFilePath()
 		}
 		err = os.WriteFile(af.CfgFile, data, 0o600)
 		if err != nil {
-			return fmt.Errorf("Error writing config file %s: %w", af.CfgFile, err)
+			return fmt.Errorf("error writing config file %s: %w", af.CfgFile, err)
 		}
 	}
 
@@ -210,10 +210,10 @@ func runE(command *cobra.Command, args []string) error {
 		af.ShowApparentSize = true
 	}
 
-	if !af.ShowVersion && !af.NonInteractive && istty && af.OutputFile == "" {
+	if !af.ShouldRunInNonInteractiveMode(istty) {
 		screen, err = tcell.NewScreen()
 		if err != nil {
-			return fmt.Errorf("Error creating screen: %w", err)
+			return fmt.Errorf("error creating screen: %w", err)
 		}
 		defer screen.Clear()
 		defer screen.Fini()

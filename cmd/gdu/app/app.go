@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
@@ -21,8 +23,6 @@ import (
 	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 )
 
 // UI is common interface for both terminal UI and text output
@@ -83,6 +83,19 @@ type Flags struct {
 	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
 	Style              Style    `yaml:"style"`
 	Sorting            Sorting  `yaml:"sorting"`
+}
+
+// ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
+// based on the flags set.
+func (f *Flags) ShouldRunInNonInteractiveMode(istty bool) bool {
+	return !istty ||
+		f.ShowVersion ||
+		f.NonInteractive ||
+		f.OutputFile != "" ||
+		f.NoPrefix ||
+		f.NoProgress ||
+		f.Summarize ||
+		f.Top > 0
 }
 
 // Style define style config
@@ -260,7 +273,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
-	case a.Flags.NonInteractive || !a.Istty:
+	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
 		stdoutUI := stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
