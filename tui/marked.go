@@ -55,7 +55,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 			ui.app.QueueUpdateDraw(func() {
 				modal.SetText(
 					// nolint: staticcheck // Why: fixed string
-					strings.Title(acting) +
+					strings.Title(acting) + //lint:ignore SA1019 we love using "Title"
 						" " +
 						tview.Escape(one.GetName()) +
 						"...",

@@ -192,7 +192,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	}
 	modal := tview.NewModal().SetText(
 		// nolint: staticcheck // Why: fixed string
-		strings.Title(acting) +
+		strings.Title(acting) + //lint:ignore SA1019 we love using "Title"
 			" " +
 			tview.Escape(selectedItem.GetName()) +
 			"...",
