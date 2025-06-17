@@ -72,7 +72,7 @@ non-interactive mode
 
 **\--no-prefix**\[=false\] Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
 
-**\--no-mouse**\[=false\] Do not use mouse
+**\--mouse**\[=false\] Use mouse
 
 **\--no-delete**\[=false\] Do not allow deletions
 
