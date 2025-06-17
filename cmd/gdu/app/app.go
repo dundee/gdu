@@ -60,7 +60,7 @@ type Flags struct {
 	ShowItemCount      bool     `yaml:"show-item-count"`
 	ShowMTime          bool     `yaml:"show-mtime"`
 	NoColor            bool     `yaml:"no-color"`
-	NoMouse            bool     `yaml:"no-mouse"`
+	Mouse              bool     `yaml:"mouse"`
 	NonInteractive     bool     `yaml:"non-interactive"`
 	NoProgress         bool     `yaml:"no-progress"`
 	NoUnicode          bool     `yaml:"no-unicode"`
