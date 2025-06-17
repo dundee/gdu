@@ -55,7 +55,7 @@ Flags:
   -x, --no-cross                      Do not cross filesystem boundaries
       --no-delete                     Do not allow deletions
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
-      --no-mouse                      Do not use mouse
+      --mouse                         Use mouse
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
   -u, --no-unicode                    Do not use Unicode symbols (for size bar)

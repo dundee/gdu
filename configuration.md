@@ -60,9 +60,9 @@ Show number of items in directory
 
 Do not use colorized output
 
-#### `no-mouse`
+#### `mouse`
 
-Do not use mouse
+Use mouse
 
 #### `non-interactive`
 

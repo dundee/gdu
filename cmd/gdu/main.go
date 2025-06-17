@@ -84,7 +84,7 @@ func init() {
 	flags.IntVarP(&af.Top, "top", "t", 0, "Show only top X largest files in non-interactive mode")
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
-	flags.BoolVar(&af.NoMouse, "no-mouse", false, "Do not use mouse")
+	flags.BoolVar(&af.Mouse, "mouse", false, "Use mouse")
 	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allow deletions")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 
@@ -221,7 +221,7 @@ func runE(command *cobra.Command, args []string) error {
 		termApp = tview.NewApplication()
 		termApp.SetScreen(screen)
 
-		if !af.NoMouse {
+		if af.Mouse {
 			termApp.EnableMouse(true)
 		}
 	}
