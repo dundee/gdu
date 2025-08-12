@@ -16,10 +16,10 @@ type TimeBound struct {
 
 // TimeFilter represents multiple time filtering criteria
 type TimeFilter struct {
-	since   *TimeBound
-	until   *TimeBound
-	maxAge  *time.Duration
-	minAge  *time.Duration
+	since  *TimeBound
+	until  *TimeBound
+	maxAge *time.Duration
+	minAge *time.Duration
 }
 
 // SinceBound represents a parsed --since value that can be either an instant or a date-only value
@@ -180,14 +180,14 @@ func IncludeByTimeBound(mtime time.Time, tb TimeBound, loc *time.Location, isUnt
 	if tb.dateOnly != nil {
 		// For date-only comparisons, adjust the bound to cover the whole day.
 		boundDate := tb.dateOnly.In(loc)
-		
+
 		if isUntil {
 			// For `until`, we want to include the entire day.
 			// So the upper bound is the beginning of the *next* day.
 			upperBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1)
 			return mtime.Before(upperBound)
 		}
-		
+
 		// For `since`, we want to include the entire day.
 		// So the lower bound is the beginning of that day.
 		lowerBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc)
@@ -257,7 +257,7 @@ func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
 	}
 
 	var parts []string
-	
+
 	if tf.since != nil {
 		if tf.since.instant != nil {
 			parts = append(parts, "since="+tf.since.instant.In(loc).Format(time.RFC3339))
@@ -265,7 +265,7 @@ func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
 			parts = append(parts, "since="+tf.since.dateOnly.Format("2006-01-02")+" (date-only)")
 		}
 	}
-	
+
 	if tf.until != nil {
 		if tf.until.instant != nil {
 			parts = append(parts, "until="+tf.until.instant.In(loc).Format(time.RFC3339))
@@ -273,11 +273,11 @@ func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
 			parts = append(parts, "until="+tf.until.dateOnly.Format("2006-01-02")+" (date-only)")
 		}
 	}
-	
+
 	if tf.maxAge != nil {
 		parts = append(parts, "max-age="+tf.maxAge.String())
 	}
-	
+
 	if tf.minAge != nil {
 		parts = append(parts, "min-age="+tf.minAge.String())
 	}
@@ -286,5 +286,5 @@ func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
 		return ""
 	}
 
-	return " • Filtered by: time=mtime; " + strings.Join(parts, "; ")
+	return " Filtered by: time=mtime; " + strings.Join(parts, "; ")
 }

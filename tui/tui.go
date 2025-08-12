@@ -23,7 +23,6 @@ import (
 	"github.com/rivo/tview"
 )
 
-
 // UI struct
 type UI struct {
 	*common.UI
@@ -85,6 +84,7 @@ type UI struct {
 	deleteWorkersCount      int
 	timeFilter              *timefilter.TimeFilter
 	timeFilterLoc           *time.Location
+	noDeleteWithFilter      bool
 }
 
 type deleteQueueItem struct {
@@ -327,6 +327,11 @@ func (ui *UI) SetNoDelete() {
 	ui.noDelete = true
 }
 
+// SetNoDelete disables delete when time filters are active
+func (ui *UI) SetNoDeleteWithFilter() {
+	ui.noDeleteWithFilter = true
+}
+
 // SetDeleteInBackground sets the flag to delete files in background
 func (ui *UI) SetDeleteInBackground() {
 	ui.deleteInBackground = true
@@ -431,9 +436,10 @@ func (ui *UI) confirmDeletion(shouldEmpty bool) {
 	}
 
 	// Check if deletion is allowed with active time filters
-	if !ui.isDeleteAllowedWithFilter() {
+	if ui.noDeleteWithFilter {
 		modal := tview.NewModal().
-			SetText("Deletion is disabled when a time filter is active.\n\nTo override, set GDU_ALLOW_DELETE_WITH_FILTER=1").
+			SetText("Deletion is disabled when a time filter is active.\n\n" +
+				"To override, set GDU_ALLOW_DELETE_WITH_FILTER=1").
 			AddButtons([]string{"OK"}).
 			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 				ui.pages.RemovePage("confirm")
@@ -495,13 +501,16 @@ func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
 func (ui *UI) SetTimeFilterWithInfo(tf *timefilter.TimeFilter, loc *time.Location) {
 	ui.timeFilter = tf
 	ui.timeFilterLoc = loc
-	
+
 	if tf != nil && !tf.IsEmpty() {
 		now := time.Now()
 		timeFilterFunc := func(mtime time.Time) bool {
 			return tf.IncludeByTimeFilter(mtime, now, loc)
 		}
 		ui.SetTimeFilter(timeFilterFunc)
+		if !ui.isDeleteAllowedWithFilter() {
+			ui.SetNoDeleteWithFilter()
+		}
 	}
 }
 
@@ -515,7 +524,7 @@ func (ui *UI) formatTimeFilterInfo() string {
 	if !ui.hasActiveTimeFilter() {
 		return ""
 	}
-	
+
 	return ui.timeFilter.FormatForDisplay(ui.timeFilterLoc)
 }
 
@@ -524,11 +533,11 @@ func (ui *UI) isDeleteAllowedWithFilter() bool {
 	if !ui.hasActiveTimeFilter() {
 		return true
 	}
-	
+
 	// Check environment variable override
 	if os.Getenv("GDU_ALLOW_DELETE_WITH_FILTER") == "1" {
 		return true
 	}
-	
+
 	return false
 }

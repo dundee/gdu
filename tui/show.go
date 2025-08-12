@@ -171,7 +171,7 @@ func (ui *UI) showDir() {
 	}
 
 	timeFilterText := ui.formatTimeFilterInfo()
-	
+
 	ui.footerLabel.SetText(
 		selected + footerTextColor +
 			" Total disk usage: " +
@@ -325,12 +325,13 @@ func (ui *UI) formatHelpTextFor() string {
 			)
 		}
 
-		if ui.noDelete && (strings.Contains(line, "Empty file or directory") ||
-			strings.Contains(line, "Delete file or directory")) {
+		isFound := (strings.Contains(line, "Empty file or directory") ||
+			strings.Contains(line, "Delete file or directory"))
+
+		if ui.noDelete && isFound {
 			lines[i] += " (disabled)"
-		} else if !ui.isDeleteAllowedWithFilter() && (strings.Contains(line, "Empty file or directory") ||
-			strings.Contains(line, "Delete file or directory")) {
-			lines[i] += " (disabled - active time filter)"
+		} else if ui.noDeleteWithFilter && isFound {
+			lines[i] += " (disabled/filter)"
 		}
 	}
 
