@@ -170,6 +170,8 @@ func (ui *UI) showDir() {
 			strconv.Itoa(len(ui.markedRows)) + footerTextColor
 	}
 
+	timeFilterText := ui.formatTimeFilterInfo()
+
 	ui.footerLabel.SetText(
 		selected + footerTextColor +
 			" Total disk usage: " +
@@ -180,7 +182,8 @@ func (ui *UI) showDir() {
 			ui.formatSize(totalSize, true, false) +
 			" Items: " + footerNumberColor + strconv.Itoa(itemCount) +
 			footerTextColor +
-			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
+			" Sorting by: " + ui.sortBy + " " + ui.sortOrder +
+			timeFilterText)
 
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
@@ -322,9 +325,13 @@ func (ui *UI) formatHelpTextFor() string {
 			)
 		}
 
-		if ui.noDelete && (strings.Contains(line, "Empty file or directory") ||
-			strings.Contains(line, "Delete file or directory")) {
+		isFound := (strings.Contains(line, "Empty file or directory") ||
+			strings.Contains(line, "Delete file or directory"))
+
+		if ui.noDelete && isFound {
 			lines[i] += " (disabled)"
+		} else if ui.noDeleteWithFilter && isFound {
+			lines[i] += " (disabled/filter)"
 		}
 
 		if ui.noSpawnShell && (strings.Contains(line, "Spawn shell in current directory") ||
