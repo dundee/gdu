@@ -178,26 +178,20 @@ func IncludeByTimeBound(mtime time.Time, tb TimeBound, loc *time.Location, isUnt
 	}
 
 	if tb.dateOnly != nil {
-		// Compare local date parts only
-		y1, m1, d1 := mtime.In(loc).Date()
-		y2, m2, d2 := tb.dateOnly.In(loc).Date()
+		// For date-only comparisons, adjust the bound to cover the whole day.
+		boundDate := tb.dateOnly.In(loc)
 		
-		if y1 != y2 {
-			if isUntil {
-				return y1 < y2 || (y1 == y2)
-			}
-			return y1 > y2
-		}
-		if m1 != m2 {
-			if isUntil {
-				return m1 < m2 || (m1 == m2)
-			}
-			return m1 > m2
-		}
 		if isUntil {
-			return d1 <= d2
+			// For `until`, we want to include the entire day.
+			// So the upper bound is the beginning of the *next* day.
+			upperBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1)
+			return mtime.Before(upperBound)
 		}
-		return d1 >= d2
+		
+		// For `since`, we want to include the entire day.
+		// So the lower bound is the beginning of that day.
+		lowerBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc)
+		return !mtime.Before(lowerBound) // inclusive (>=)
 	}
 
 	return true

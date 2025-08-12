@@ -432,19 +432,16 @@ func (ui *UI) confirmDeletion(shouldEmpty bool) {
 
 	// Check if deletion is allowed with active time filters
 	if !ui.isDeleteAllowedWithFilter() {
-		previousHeaderText := ui.header.GetText(false)
-
-		// show feedback to user
-		ui.header.SetText(" Delete disabled (active time filter)")
-
-		go func() {
-			time.Sleep(2 * time.Second)
-			ui.app.QueueUpdateDraw(func() {
-				ui.header.Clear()
-				ui.header.SetText(previousHeaderText)
+		modal := tview.NewModal().
+			SetText("Deletion is disabled when a time filter is active.\n\nTo override, set GDU_ALLOW_DELETE_WITH_FILTER=1").
+			AddButtons([]string{"OK"}).
+			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				ui.pages.RemovePage("confirm")
 			})
-		}()
-
+		if !ui.UseColors {
+			modal.SetBackgroundColor(tcell.ColorGray)
+		}
+		ui.pages.AddPage("confirm", modal, true, true)
 		return
 	}
 

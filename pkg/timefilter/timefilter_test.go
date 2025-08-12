@@ -577,6 +577,34 @@ func TestTimeFilterIncludeByTimeFilter(t *testing.T) {
 			fileMtime:     "2025-08-10T12:00:00-07:00", // 1 day ago
 			expectInclude: false,
 		},
+		{
+			name:          "date-only since and max-age - fail",
+			since:         "2025-08-10",
+			maxAge:        "3d",
+			fileMtime:     "2025-08-09T12:00:00-07:00", // 2 days old, but before since date
+			expectInclude: false,
+		},
+		{
+			name:          "date-only since and max-age - pass",
+			since:         "2025-08-10",
+			maxAge:        "3d",
+			fileMtime:     "2025-08-10T12:00:00-07:00", // 1 day old, and on since date
+			expectInclude: true,
+		},
+		{
+			name:          "date-only until and min-age - fail",
+			until:         "2025-08-10",
+			minAge:        "1d",
+			fileMtime:     "2025-08-10T12:00:00-07:00", // 1 day old, but not old enough to be excluded by until
+			expectInclude: true,
+		},
+		{
+			name:          "date-only until and min-age - pass",
+			until:         "2025-08-10",
+			minAge:        "2d",
+			fileMtime:     "2025-08-08T12:00:00-07:00", // 3 days old, and before until date
+			expectInclude: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -658,30 +686,58 @@ func TestIncludeByTimeBound(t *testing.T) {
 			expectInclude: true,
 		},
 		{
-			name:          "since date - file on same day",
+			name:          "since date - file just before day",
 			boundArg:      "2025-08-11",
-			fileMtime:     "2025-08-11T15:30:00-07:00",
-			isUntil:       false,
-			expectInclude: true,
-		},
-		{
-			name:          "since date - file on previous day",
-			boundArg:      "2025-08-11",
-			fileMtime:     "2025-08-10T23:59:00-07:00",
+			fileMtime:     "2025-08-10T23:59:59-07:00",
 			isUntil:       false,
 			expectInclude: false,
 		},
 		{
-			name:          "until date - file on same day",
+			name:          "since date - file at start of day",
 			boundArg:      "2025-08-11",
-			fileMtime:     "2025-08-11T15:30:00-07:00",
+			fileMtime:     "2025-08-11T00:00:00-07:00",
+			isUntil:       false,
+			expectInclude: true,
+		},
+		{
+			name:          "since date - file at end of day",
+			boundArg:      "2025-08-11",
+			fileMtime:     "2025-08-11T23:59:59-07:00",
+			isUntil:       false,
+			expectInclude: true,
+		},
+		{
+			name:          "since date - file on next day",
+			boundArg:      "2025-08-11",
+			fileMtime:     "2025-08-12T00:00:00-07:00",
+			isUntil:       false,
+			expectInclude: true,
+		},
+		{
+			name:          "until date - file on previous day",
+			boundArg:      "2025-08-11",
+			fileMtime:     "2025-08-10T23:59:59-07:00",
 			isUntil:       true,
 			expectInclude: true,
 		},
 		{
-			name:          "until date - file on next day",
+			name:          "until date - file at start of day",
 			boundArg:      "2025-08-11",
-			fileMtime:     "2025-08-12T00:01:00-07:00",
+			fileMtime:     "2025-08-11T00:00:00-07:00",
+			isUntil:       true,
+			expectInclude: true,
+		},
+		{
+			name:          "until date - file at end of day",
+			boundArg:      "2025-08-11",
+			fileMtime:     "2025-08-11T23:59:59-07:00",
+			isUntil:       true,
+			expectInclude: true,
+		},
+		{
+			name:          "until date - file just after day",
+			boundArg:      "2025-08-11",
+			fileMtime:     "2025-08-12T00:00:00-07:00",
 			isUntil:       true,
 			expectInclude: false,
 		},
