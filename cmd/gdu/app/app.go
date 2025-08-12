@@ -87,6 +87,9 @@ type Flags struct {
 	Style              Style    `yaml:"style"`
 	Sorting            Sorting  `yaml:"sorting"`
 	Since              string   `yaml:"since"`
+	Until              string   `yaml:"until"`
+	MaxAge             string   `yaml:"max-age"`
+	MinAge             string   `yaml:"min-age"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -206,17 +209,26 @@ func (a *App) Run() error {
 		ui.SetShowAnnexedSize(true)
 	}
 
-	// Set up time filter if --since is provided
-	if a.Flags.Since != "" {
+	// Set up time filter if any time flags are provided
+	if a.Flags.Since != "" || a.Flags.Until != "" || a.Flags.MaxAge != "" || a.Flags.MinAge != "" {
 		loc := time.Local
-		sinceBound, err := timefilter.ParseSince(a.Flags.Since, loc)
+		now := time.Now()
+		
+		timeFilter, err := timefilter.NewTimeFilter(
+			a.Flags.Since,
+			a.Flags.Until,
+			a.Flags.MaxAge,
+			a.Flags.MinAge,
+			now,
+			loc,
+		)
 		if err != nil {
-			return fmt.Errorf("invalid --since value: %w", err)
+			return fmt.Errorf("invalid time filter: %w", err)
 		}
 
-		if !sinceBound.IsEmpty() {
+		if !timeFilter.IsEmpty() {
 			timeFilterFunc := func(mtime time.Time) bool {
-				return timefilter.IncludeBySince(mtime, sinceBound, loc)
+				return timeFilter.IncludeByTimeFilter(mtime, now, loc)
 			}
 			ui.SetTimeFilter(timeFilterFunc)
 		}
