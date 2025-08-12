@@ -184,20 +184,20 @@ func IncludeByTimeBound(mtime time.Time, tb TimeBound, loc *time.Location, isUnt
 		
 		if y1 != y2 {
 			if isUntil {
-				return y1 < y2 || (y1 == y2) // <=
+				return y1 < y2 || (y1 == y2)
 			}
-			return y1 > y2 // >=
+			return y1 > y2
 		}
 		if m1 != m2 {
 			if isUntil {
-				return m1 < m2 || (m1 == m2) // <=
+				return m1 < m2 || (m1 == m2)
 			}
-			return m1 > m2 // >=
+			return m1 > m2
 		}
 		if isUntil {
-			return d1 <= d2 // <=
+			return d1 <= d2
 		}
-		return d1 >= d2 // >=
+		return d1 >= d2
 	}
 
 	return true
@@ -253,4 +253,44 @@ func (tf *TimeFilter) IsEmpty() bool {
 // IsEmpty returns true if the TimeBound has no filter criteria
 func (tb TimeBound) IsEmpty() bool {
 	return tb.instant == nil && tb.dateOnly == nil
+}
+
+// FormatForDisplay returns a formatted string showing the active time filters
+// This shows what the program actually parsed and is acting on
+func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
+	if tf.IsEmpty() {
+		return ""
+	}
+
+	var parts []string
+	
+	if tf.since != nil {
+		if tf.since.instant != nil {
+			parts = append(parts, "since="+tf.since.instant.In(loc).Format(time.RFC3339))
+		} else if tf.since.dateOnly != nil {
+			parts = append(parts, "since="+tf.since.dateOnly.Format("2006-01-02")+" (date-only)")
+		}
+	}
+	
+	if tf.until != nil {
+		if tf.until.instant != nil {
+			parts = append(parts, "until="+tf.until.instant.In(loc).Format(time.RFC3339))
+		} else if tf.until.dateOnly != nil {
+			parts = append(parts, "until="+tf.until.dateOnly.Format("2006-01-02")+" (date-only)")
+		}
+	}
+	
+	if tf.maxAge != nil {
+		parts = append(parts, "max-age="+tf.maxAge.String())
+	}
+	
+	if tf.minAge != nil {
+		parts = append(parts, "min-age="+tf.minAge.String())
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return " • Filtered by: time=mtime; " + strings.Join(parts, "; ")
 }

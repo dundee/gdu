@@ -170,6 +170,8 @@ func (ui *UI) showDir() {
 			strconv.Itoa(len(ui.markedRows)) + footerTextColor
 	}
 
+	timeFilterText := ui.formatTimeFilterInfo()
+	
 	ui.footerLabel.SetText(
 		selected + footerTextColor +
 			" Total disk usage: " +
@@ -180,7 +182,8 @@ func (ui *UI) showDir() {
 			ui.formatSize(totalSize, true, false) +
 			" Items: " + footerNumberColor + strconv.Itoa(itemCount) +
 			footerTextColor +
-			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
+			" Sorting by: " + ui.sortBy + " " + ui.sortOrder +
+			timeFilterText)
 
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
@@ -325,6 +328,9 @@ func (ui *UI) formatHelpTextFor() string {
 		if ui.noDelete && (strings.Contains(line, "Empty file or directory") ||
 			strings.Contains(line, "Delete file or directory")) {
 			lines[i] += " (disabled)"
+		} else if !ui.isDeleteAllowedWithFilter() && (strings.Contains(line, "Empty file or directory") ||
+			strings.Contains(line, "Delete file or directory")) {
+			lines[i] += " (disabled - active time filter)"
 		}
 	}
 

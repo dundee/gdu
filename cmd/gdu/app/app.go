@@ -231,6 +231,11 @@ func (a *App) Run() error {
 				return timeFilter.IncludeByTimeFilter(mtime, now, loc)
 			}
 			ui.SetTimeFilter(timeFilterFunc)
+			
+			// If this is a TUI, also set the filter info for display
+			if tuiUI, ok := ui.(*tui.UI); ok {
+				tuiUI.SetTimeFilterWithInfo(timeFilter, loc)
+			}
 		}
 	}
 	if err := a.setNoCross(path); err != nil {
