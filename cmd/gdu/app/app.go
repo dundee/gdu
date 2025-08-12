@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -20,6 +21,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v5/pkg/timefilter"
 	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
@@ -38,6 +40,7 @@ type UI interface {
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
+	SetTimeFilter(timeFilter common.TimeFilter)
 	StartUILoop() error
 }
 
@@ -83,6 +86,7 @@ type Flags struct {
 	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
 	Style              Style    `yaml:"style"`
 	Sorting            Sorting  `yaml:"sorting"`
+	Since              string   `yaml:"since"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -200,6 +204,22 @@ func (a *App) Run() error {
 	}
 	if a.Flags.ShowAnnexedSize {
 		ui.SetShowAnnexedSize(true)
+	}
+
+	// Set up time filter if --since is provided
+	if a.Flags.Since != "" {
+		loc := time.Local
+		sinceBound, err := timefilter.ParseSince(a.Flags.Since, loc)
+		if err != nil {
+			return fmt.Errorf("invalid --since value: %w", err)
+		}
+
+		if !sinceBound.IsEmpty() {
+			timeFilterFunc := func(mtime time.Time) bool {
+				return timefilter.IncludeBySince(mtime, sinceBound, loc)
+			}
+			ui.SetTimeFilter(timeFilterFunc)
+		}
 	}
 	if err := a.setNoCross(path); err != nil {
 		return err

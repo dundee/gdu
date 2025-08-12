@@ -87,6 +87,7 @@ func init() {
 	flags.BoolVar(&af.Mouse, "mouse", false, "Use mouse")
 	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allow deletions")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
+	flags.StringVar(&af.Since, "since", "", "Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)")
 
 	initConfig()
 	setDefaults()
