@@ -114,7 +114,7 @@ func TestAnalyzePathWithIgnoring(t *testing.T) {
 	out, err := runApp(
 		&Flags{
 			LogFile:           "/dev/null",
-			IgnoreDirPatterns: []string{"/[abc]+"},
+			IgnoreDirPatterns: []string{"/(abc)+"},
 			NoHidden:          true,
 		},
 		[]string{"test_dir"},
