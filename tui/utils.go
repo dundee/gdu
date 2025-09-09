@@ -73,11 +73,13 @@ func modal(p tview.Primitive, width, height int) tview.Primitive {
 		AddItem(nil, 0, 1, false)
 }
 
-// CollapsedPath represents a collapsed directory path
+// CollapsedPath represents a directory chain that can be collapsed into a single display entry.
+// For example, if directory "a" contains only directory "b", and "b" contains only "c",
+// this represents the collapsed path "a/b/c" that allows direct navigation to the deepest directory.
 type CollapsedPath struct {
-	DisplayName string
-	DeepestDir  fs.Item
-	Segments    []string
+	DisplayName string   // The display name shown in the UI (e.g., "a/b/c")
+	DeepestDir  fs.Item  // The actual deepest directory item
+	Segments    []string // Individual path segments of the collapsed chain
 }
 
 // findCollapsiblePath checks if the given directory item has a single subdirectory chain

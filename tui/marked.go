@@ -2,7 +2,9 @@ package tui
 
 import (
 	"strconv"
-	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -54,8 +56,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 		for _, one := range markedItems {
 			ui.app.QueueUpdateDraw(func() {
 				modal.SetText(
-					// nolint: staticcheck // Why: fixed string
-					strings.Title(acting) +
+					cases.Title(language.English).String(acting) +
 						" " +
 						tview.Escape(one.GetName()) +
 						"...",

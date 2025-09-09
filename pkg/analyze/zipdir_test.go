@@ -156,7 +156,8 @@ func createTestZipFile(t *testing.T, zipPath string) {
 	assert.NoError(t, err)
 
 	// Add subdirectory files
-	writer, err = zipWriter.Create("subdir/")
+	// We don't need to use the writer for the directory entry, avoid SA4006
+	_, err = zipWriter.Create("subdir/")
 	assert.NoError(t, err)
 
 	writer, err = zipWriter.Create("subdir/nested.txt")

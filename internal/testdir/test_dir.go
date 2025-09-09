@@ -25,6 +25,6 @@ func CreateTestDir() func() {
 }
 
 // MockedPathChecker is mocked os.Stat, returns (nil, nil)
-func MockedPathChecker(path string) (fs.FileInfo, error) {
+func MockedPathChecker(path string) (info fs.FileInfo, err error) {
 	return nil, nil
 }
