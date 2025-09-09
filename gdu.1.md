@@ -68,11 +68,11 @@ non-interactive mode
 
 **-M**, **\--show-mtime**\[=false\] Show latest mtime of items in directory
 
+**\--mouse**\[=false\] Use mouse
+
 **\--si**\[=false\] Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
 
 **\--no-prefix**\[=false\] Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
-
-**\--mouse**\[=false\] Use mouse
 
 **\--no-delete**\[=false\] Do not allow deletions
 
