@@ -83,7 +83,7 @@ type CollapsedPath struct {
 // findCollapsiblePath checks if the given directory item has a single subdirectory chain
 // and returns a CollapsedPath if it can be collapsed
 func findCollapsiblePath(item fs.Item) *CollapsedPath {
-	if !item.IsDir() {
+	if item == nil || !item.IsDir() {
 		return nil
 	}
 
@@ -129,8 +129,11 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 // findCollapsedParent checks if the current directory is the deepest directory
 // in a collapsed path, and returns the appropriate parent to navigate to
 func findCollapsedParent(currentDir fs.Item) fs.Item {
-	if currentDir == nil || currentDir.GetParent() == nil {
-		return currentDir.GetParent()
+	if currentDir == nil {
+		return nil
+	}
+	if currentDir.GetParent() == nil {
+		return nil
 	}
 
 	// Check if current directory is part of a single-child chain going up
