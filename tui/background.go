@@ -14,6 +14,7 @@ func (ui *UI) queueForDeletion(items []fs.Item, shouldEmpty bool) {
 	}()
 
 	ui.markedRows = make(map[int]struct{})
+	ui.collapsedPaths = make(map[int]*CollapsedPath)
 }
 
 func (ui *UI) deleteWorker() {
