@@ -96,7 +96,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 
 func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
-		file       *File
+		file       fs.Item
 		err        error
 		totalSize  int64
 		info       os.FileInfo
@@ -157,17 +157,45 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
-			file = &File{
-				Name:   name,
-				Flag:   getFlag(info),
-				Size:   info.Size(),
-				Parent: dir,
+			// Check if it's a zip or jar file
+			if isZipFile(name) {
+				zipDir, err := processZipFile(entryPath, info)
+				if err != nil {
+					// If unable to process zip file, treat as regular file
+					log.Printf("Failed to process zip file %s: %v", entryPath, err)
+					file = &File{
+						Name:   name,
+						Flag:   getFlag(info),
+						Size:   info.Size(),
+						Parent: dir,
+					}
+				} else {
+					// Successfully processed zip file, use zip content size
+					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
+					if err == nil {
+						zipDir.Size = uncompressedSize
+						zipDir.Usage = compressedSize
+					}
+					zipDir.Parent = dir
+					file = zipDir
+				}
+			} else {
+				file = &File{
+					Name:   name,
+					Flag:   getFlag(info),
+					Size:   info.Size(),
+					Parent: dir,
+				}
 			}
-			setPlatformSpecificAttrs(file, info)
 
-			totalSize += info.Size()
-
-			dir.AddFile(file)
+			if file != nil {
+				// Only set platform-specific attributes for regular files
+				if regularFile, ok := file.(*File); ok {
+					setPlatformSpecificAttrs(regularFile, info)
+				}
+				totalSize += file.GetSize()
+				dir.AddFile(file)
+			}
 		}
 	}
 
