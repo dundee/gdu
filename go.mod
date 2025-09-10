@@ -9,6 +9,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/maruel/natural v1.1.0
 	github.com/mattn/go-isatty v0.0.20
+	github.com/mithrandie/go-file/v2 v2.1.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.0.0-20240204151237-861aa94d61c8
