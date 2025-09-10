@@ -19,7 +19,7 @@ func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
 	if _, err = buff.ReadFrom(input); err != nil {
 		return nil, err
 	}
-	if err = json.Unmarshal(buff.Bytes(), &data); err != nil {
+	if err := json.Unmarshal(buff.Bytes(), &data); err != nil {
 		return nil, err
 	}
 

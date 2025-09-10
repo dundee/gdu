@@ -107,21 +107,21 @@ func TestStoredDirUpdateStatsWithFlagUpdate(t *testing.T) {
 	// Test UpdateStats with flag updates
 	fin := testdir.CreateTestDir()
 	defer fin()
-	
+
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, false,
 	).(*StoredDir)
-	
+
 	analyzer.GetDone().Wait()
-	
+
 	// Create a file with error flag
 	file := &File{
 		Name: "errorfile",
 		Flag: '!',
 	}
 	dir.AddFile(file)
-	
+
 	dir.UpdateStats(make(fs.HardLinkedItems))
 	// Just test that UpdateStats runs without error
 	// The flag behavior depends on the specific implementation
