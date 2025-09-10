@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -191,8 +194,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 		acting = actingDelete
 	}
 	modal := tview.NewModal().SetText(
-		// nolint: staticcheck // Why: fixed string
-		strings.Title(acting) +
+		cases.Title(language.English).String(acting) +
 			" " +
 			tview.Escape(selectedItem.GetName()) +
 			"...",

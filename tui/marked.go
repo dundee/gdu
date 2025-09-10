@@ -2,7 +2,9 @@ package tui
 
 import (
 	"strconv"
-	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -54,8 +56,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 		for _, one := range markedItems {
 			ui.app.QueueUpdateDraw(func() {
 				modal.SetText(
-					// nolint: staticcheck // Why: fixed string
-					strings.Title(acting) +
+					cases.Title(language.English).String(acting) +
 						" " +
 						tview.Escape(one.GetName()) +
 						"...",
@@ -97,6 +98,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 		ui.app.QueueUpdateDraw(func() {
 			ui.pages.RemovePage(acting)
 			ui.markedRows = make(map[int]struct{})
+			ui.collapsedPaths = make(map[int]*CollapsedPath)
 			x, y := ui.table.GetOffset()
 			ui.showDir()
 			ui.table.Select(min(currentRow, ui.table.GetRowCount()-1), 0)

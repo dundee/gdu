@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
@@ -79,7 +80,9 @@ func (ui *UI) showDir() {
 		}
 
 		cell := tview.NewTableCell(prefix + "[::b]/..")
-		cell.SetReference(ui.currentDir.GetParent())
+		// Use the collapsed parent logic to handle navigation back through collapsed paths
+		collapsedParent := findCollapsedParent(ui.currentDir)
+		cell.SetReference(collapsedParent)
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		ui.table.SetCell(0, 0, cell)
 		rowIndex++
@@ -113,7 +116,7 @@ func (ui *UI) showDir() {
 		i++
 	}
 
-	for i, item := range ui.currentDir.GetFiles() {
+	for _, item := range ui.currentDir.GetFiles() {
 		if ui.filterValue != "" && !strings.Contains(
 			strings.ToLower(item.GetName()),
 			strings.ToLower(ui.filterValue),
@@ -130,8 +133,31 @@ func (ui *UI) showDir() {
 		}
 
 		_, marked := ui.markedRows[rowIndex]
-		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
-		cell.SetReference(ui.currentDir.GetFiles()[i])
+
+		var cell *tview.TableCell
+		var reference fs.Item
+
+		// Check if this directory can be collapsed
+		if item.IsDir() {
+			if collapsedPath := findCollapsiblePath(item); collapsedPath != nil {
+				// Store the collapsed path information
+				ui.collapsedPaths[rowIndex] = collapsedPath
+				// Format as collapsed path
+				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxUsage, maxSize, marked, ignored))
+				// Reference should point to the deepest directory for navigation
+				reference = collapsedPath.DeepestDir
+			} else {
+				// Regular directory formatting
+				cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+				reference = item
+			}
+		} else {
+			// Regular file formatting
+			cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+			reference = item
+		}
+
+		cell.SetReference(reference)
 
 		switch {
 		case ignored:

@@ -16,9 +16,9 @@ func CreateSimScreen() tcell.SimulationScreen {
 }
 
 // CreateTestAppWithSimScreen returns app with simulation screen for tests
-func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.SimulationScreen) {
-	app := tview.NewApplication()
-	screen := CreateSimScreen()
+func CreateTestAppWithSimScreen(width, height int) (app *tview.Application, screen tcell.SimulationScreen) {
+	app = tview.NewApplication()
+	screen = CreateSimScreen()
 	app.SetScreen(screen)
 	screen.SetSize(width, height)
 	return app, screen

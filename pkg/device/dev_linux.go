@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mithrandie/go-file/v2"
 	"golang.org/x/sys/unix"
 )
 
@@ -19,28 +20,28 @@ type LinuxDevicesInfoGetter struct {
 var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
 
 // GetMounts returns all mounted filesystems from /proc/mounts
-func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
-	file, err := os.Open(t.MountsPath)
+func (t LinuxDevicesInfoGetter) GetMounts() (devices Devices, err error) {
+	file, err = os.Open(t.MountsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	devices, err := readMountsFile(file)
+	devices, err = readMountsFile(file)
 	if err != nil {
 		if cerr := file.Close(); cerr != nil {
 			return nil, fmt.Errorf("%w; %s", err, cerr.Error())
 		}
 		return nil, err
 	}
-	if err := file.Close(); err != nil {
+	if err = file.Close(); err != nil {
 		return nil, err
 	}
 	return devices, nil
 }
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
-func (t LinuxDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
-	mounts, err := t.GetMounts()
+func (t LinuxDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
+	mounts, err = t.GetMounts()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +49,7 @@ func (t LinuxDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 	return processMounts(mounts, false)
 }
 
-func readMountsFile(file io.Reader) (Devices, error) {
+func readMountsFile(file io.Reader) (mounts Devices, err error) {
 	mounts := Devices{}
 
 	scanner := bufio.NewScanner(file)
@@ -64,14 +65,14 @@ func readMountsFile(file io.Reader) (Devices, error) {
 		mounts = append(mounts, device)
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		return nil, err
 	}
 
 	return mounts, nil
 }
 
-func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
+func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
 	devices := Devices{}
 
 	for _, mount := range mounts {
@@ -84,7 +85,7 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 			mount.Fstype == "nfs" ||
 			mount.Fstype == "nfs4" {
 			info := &unix.Statfs_t{}
-			err := unix.Statfs(mount.MountPoint, info)
+			err = unix.Statfs(mount.MountPoint, info)
 			if err != nil && !ignoreErrors {
 				return nil, err
 			}
