@@ -548,7 +548,7 @@ func TestMaxCoresLowEdge(t *testing.T) {
 }
 
 // nolint: unparam // Why: it's used in linux tests
-func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (string, error) {
+func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (output string, err error) {
 	buff := bytes.NewBufferString("")
 
 	app := App{
@@ -560,7 +560,7 @@ func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGe
 		Getter:      getter,
 		PathChecker: testdir.MockedPathChecker,
 	}
-	err := app.Run()
+	err = app.Run()
 
 	return strings.TrimSpace(buff.String()), err
 }

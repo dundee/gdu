@@ -10,13 +10,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
+func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
 	devices := Devices{}
 
 	for _, mount := range mounts {
 		if strings.HasPrefix(mount.Name, "/dev") || mount.Fstype == "zfs" {
 			info := &unix.Statfs_t{}
-			err := unix.Statfs(mount.MountPoint, info)
+			err = unix.Statfs(mount.MountPoint, info)
 			if err != nil && !ignoreErrors {
 				return nil, fmt.Errorf("getting stats for mount point: \"%s\", %w", mount.MountPoint, err)
 			}

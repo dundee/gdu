@@ -250,13 +250,11 @@ func (a *App) setMaxProcs() {
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
-func (a *App) createUI() (UI, error) {
-	var ui UI
+func (a *App) createUI() (ui UI, err error) {
 
 	switch {
 	case a.Flags.OutputFile != "":
 		var output io.Writer
-		var err error
 		if a.Flags.OutputFile == "-" {
 			output = os.Stdout
 		} else {

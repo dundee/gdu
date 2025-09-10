@@ -71,7 +71,7 @@ func isZipFile(filename string) bool {
 }
 
 // processZipFile processes a zip file and returns a ZipDir representing its contents
-func processZipFile(zipPath string, info os.FileInfo) (*ZipDir, error) {
+func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error) {
 	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func processZipFile(zipPath string, info os.FileInfo) (*ZipDir, error) {
 	defer reader.Close()
 
 	// Create root directory
-	zipDir := &ZipDir{
+	zipDir = &ZipDir{
 		Dir: &Dir{
 			File: &File{
 				Name:  filepath.Base(zipPath),
@@ -177,7 +177,7 @@ func ensureZipDirExists(dirMap map[string]*ZipDir, path, zipPath string, rootDir
 }
 
 // getZipFileSize gets the total uncompressed size of a zip file
-func getZipFileSize(zipPath string) (int64, int64, error) {
+func getZipFileSize(zipPath string) (uncompressed, compressed int64, err error) {
 	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return 0, 0, err

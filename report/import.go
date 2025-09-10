@@ -39,8 +39,8 @@ func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
 	return processDir(items)
 }
 
-func processDir(items []interface{}) (*analyze.Dir, error) {
-	dir := &analyze.Dir{
+func processDir(items []interface{}) (dir *analyze.Dir, err error) {
+	dir = &analyze.Dir{
 		File: &analyze.File{
 			Flag: ' ',
 		},
