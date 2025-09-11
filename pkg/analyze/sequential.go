@@ -21,6 +21,7 @@ type SequentialAnalyzer struct {
 	ignoreDir        common.ShouldDirBeIgnored
 	followSymlinks   bool
 	gitAnnexedSize   bool
+	timeFilter       common.TimeFilter
 }
 
 // CreateSeqAnalyzer returns Analyzer
@@ -46,6 +47,11 @@ func (a *SequentialAnalyzer) SetFollowSymlinks(v bool) {
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (a *SequentialAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
+}
+
+// SetTimeFilter sets the time filter function for file inclusion
+func (a *SequentialAnalyzer) SetTimeFilter(timeFilter common.TimeFilter) {
+	a.timeFilter = timeFilter
 }
 
 // GetProgressChan returns channel for getting progress
@@ -151,6 +157,11 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				Parent: dir,
 			}
 			setPlatformSpecificAttrs(file, info)
+
+			// Apply time filter if set
+			if a.timeFilter != nil && !a.timeFilter(info.ModTime()) {
+				continue // Skip this file
+			}
 
 			totalSize += info.Size()
 
