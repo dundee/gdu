@@ -20,13 +20,14 @@ import (
 // UI struct
 type UI struct {
 	*common.UI
-	output    io.Writer
-	red       *color.Color
-	orange    *color.Color
-	blue      *color.Color
-	summarize bool
-	noPrefix  bool
-	top       int
+	output      io.Writer
+	red         *color.Color
+	orange      *color.Color
+	blue        *color.Color
+	summarize   bool
+	noPrefix    bool
+	top         int
+	reverseSort bool
 }
 
 var (
@@ -47,6 +48,7 @@ func CreateStdoutUI(
 	useSIPrefix bool,
 	noPrefix bool,
 	top int,
+	reverseSort bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -58,10 +60,11 @@ func CreateStdoutUI(
 			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
-		output:    output,
-		summarize: summarize,
-		noPrefix:  noPrefix,
-		top:       top,
+		output:      output,
+		summarize:   summarize,
+		noPrefix:    noPrefix,
+		top:         top,
+		reverseSort: reverseSort,
 	}
 
 	ui.red = color.New(color.FgRed).Add(color.Bold)
@@ -205,7 +208,11 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 }
 
 func (ui *UI) showDir(dir fs.Item) {
-	sort.Sort(sort.Reverse(dir.GetFiles()))
+	if ui.reverseSort {
+		sort.Sort(dir.GetFiles())
+	} else {
+		sort.Sort(sort.Reverse(dir.GetFiles()))
+	}
 
 	for _, file := range dir.GetFiles() {
 		ui.printItem(file)
