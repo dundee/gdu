@@ -949,3 +949,47 @@ func TestSaferConfirmationPreventDataLoss(t *testing.T) {
 	assert.DirExists(t, "test_dir/nested")
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
+
+func TestConfirmDeletionSelectedCase1(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+	ui.table.Select(0, 0)
+
+	// Test case 1 branch (yes button at index 1) by directly calling deleteSelected
+	ui.deleteSelected(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestConfirmDeletionMarkedCase1(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+
+	ui.fileItemSelected(0, 0)     // nested
+	ui.markedRows[1] = struct{}{} // subnested
+
+	// Test case 1 branch (yes button at index 1) by directly calling deleteMarked
+	ui.deleteMarked(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested/subnested")
+}
