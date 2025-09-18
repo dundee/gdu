@@ -78,6 +78,7 @@ type Flags struct {
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
 	WriteConfig        bool     `yaml:"-"`
+	ReverseSort        bool     `yaml:"reverse-sort"`
 	ChangeCwd          bool     `yaml:"change-cwd"`
 	DeleteInBackground bool     `yaml:"delete-in-background"`
 	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
@@ -285,6 +286,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
 			a.Flags.Top,
+			a.Flags.ReverseSort,
 		)
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()

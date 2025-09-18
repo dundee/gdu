@@ -62,6 +62,7 @@ Flags:
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
   -r, --read-from-storage             Read analysis data from persistent key-value storage
+      --reverse-sort                  Reverse sorting order (smallest to largest) in non-interactive mode
       --sequential                    Use sequential scanning (intended for rotating HDDs)
   -A, --show-annexed-size             Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size            Show apparent size
@@ -107,6 +108,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -p /                              # do not show progress, useful when using its output in a script
     gdu -ps /some/dir                     # show only total usage for given dir
     gdu -t 10 /                           # show top 10 largest files
+    gdu --reverse-sort -n /               # show files sorted from smallest to largest in non-interactive mode
     gdu / > file                          # write stats to file, do not start interactive mode
 
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
