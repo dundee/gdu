@@ -450,13 +450,13 @@ func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
 				tview.Escape(selectedFile.GetName()) +
 				"\"?",
 		).
-		AddButtons([]string{"yes", "no", "don't ask me again"}).
+		AddButtons([]string{"no", "yes", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {
 			case 2:
 				ui.askBeforeDelete = false
 				fallthrough
-			case 0:
+			case 1:
 				ui.deleteSelected(shouldEmpty)
 			}
 			ui.pages.RemovePage("confirm")

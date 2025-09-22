@@ -2,12 +2,13 @@ package tui
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func (ui *UI) fileItemMarked(row int) {
@@ -54,8 +55,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 		for _, one := range markedItems {
 			ui.app.QueueUpdateDraw(func() {
 				modal.SetText(
-					// nolint: staticcheck // Why: fixed string
-					strings.Title(acting) +
+					cases.Title(language.English).String(acting) +
 						" " +
 						tview.Escape(one.GetName()) +
 						"...",
@@ -124,13 +124,13 @@ func (ui *UI) confirmDeletionMarked(shouldEmpty bool) {
 				strconv.Itoa(len(ui.markedRows)) +
 				"[::-] items?",
 		).
-		AddButtons([]string{"yes", "no", "don't ask me again"}).
+		AddButtons([]string{"no", "yes", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {
 			case 2:
 				ui.askBeforeDelete = false
 				fallthrough
-			case 0:
+			case 1:
 				ui.deleteMarked(shouldEmpty)
 			}
 			ui.pages.RemovePage("confirm")
