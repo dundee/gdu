@@ -224,6 +224,21 @@ func TestGuiNoDelete(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGuiNoSpawnShell(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", NoSpawnShell: true},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
 func TestGuiDeleteInParallel(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
