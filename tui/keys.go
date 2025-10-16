@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
@@ -172,6 +173,22 @@ func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {
 
 func (ui *UI) handleShell(key *tcell.EventKey) *tcell.EventKey {
 	if key.Rune() == 'b' {
+		if ui.noSpawnShell {
+			previousHeaderText := ui.header.GetText(false)
+
+			// show feedback to user
+			ui.header.SetText(" Shell spawning is disabled!")
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				ui.app.QueueUpdateDraw(func() {
+					ui.header.Clear()
+					ui.header.SetText(previousHeaderText)
+				})
+			}()
+
+			return nil
+		}
 		ui.spawnShell()
 		return nil
 	}
@@ -210,6 +227,21 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	case 'v':
 		ui.showFile()
 	case 'o':
+		if ui.noSpawnShell {
+			previousHeaderText := ui.header.GetText(false)
+
+			// show feedback to user
+			ui.header.SetText(" Opening items is disabled!")
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				ui.app.QueueUpdateDraw(func() {
+					ui.header.Clear()
+					ui.header.SetText(previousHeaderText)
+				})
+			}()
+			return nil
+		}
 		ui.openItem()
 	case 'i':
 		ui.showInfo()

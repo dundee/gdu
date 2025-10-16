@@ -326,6 +326,11 @@ func (ui *UI) formatHelpTextFor() string {
 			strings.Contains(line, "Delete file or directory")) {
 			lines[i] += " (disabled)"
 		}
+
+		if ui.noSpawnShell && (strings.Contains(line, "Spawn shell in current directory") ||
+			strings.Contains(line, "Open file or directory in external program")) {
+			lines[i] += " (disabled)"
+		}
 	}
 
 	return strings.Join(lines, "\n")

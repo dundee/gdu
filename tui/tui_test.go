@@ -794,6 +794,18 @@ func TestNoDelete(t *testing.T) {
 	assert.Equal(t, ui.noDelete, true)
 }
 
+func TestNoSpawnShell(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+
+	ui.SetNoSpawnShell()
+
+	assert.Equal(t, ui.noSpawnShell, true)
+}
+
 // nolint: deadcode,unused // Why: for debugging
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()

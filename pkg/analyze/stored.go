@@ -186,13 +186,13 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 		log.Print(err.Error())
 	}
 
-	a.wait.Done()
-
 	a.progressChan <- common.CurrentProgress{
 		CurrentItemName: path,
 		ItemCount:       len(files),
 		TotalSize:       totalSize,
 	}
+
+	a.wait.Done()
 	return dir
 }
 

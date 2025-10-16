@@ -75,6 +75,7 @@ type UI struct {
 	markedRows              map[int]struct{}
 	exportName              string
 	noDelete                bool
+	noSpawnShell            bool
 	deleteInBackground      bool
 	deleteQueue             chan deleteQueueItem
 	activeWorkers           int
@@ -136,6 +137,7 @@ func CreateUI(
 		markedRows:              make(map[int]struct{}),
 		exportName:              "export.json",
 		noDelete:                false,
+		noSpawnShell:            false,
 		deleteQueue:             make(chan deleteQueueItem, 1000),
 		deleteWorkersCount:      3 * runtime.GOMAXPROCS(0),
 	}
@@ -321,6 +323,11 @@ func (ui *UI) SetShowMTime() {
 // SetNoDelete disables all write operations
 func (ui *UI) SetNoDelete() {
 	ui.noDelete = true
+}
+
+// SetNoSpawnShell disables shell spawning
+func (ui *UI) SetNoSpawnShell() {
+	ui.noSpawnShell = true
 }
 
 // SetDeleteInBackground sets the flag to delete files in background
