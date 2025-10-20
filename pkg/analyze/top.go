@@ -8,8 +8,8 @@ import (
 
 // TopList is a list of top largest files
 type TopList struct {
-	Count   int
 	Items   fs.Files
+	Count   int
 	MinSize int64
 }
 

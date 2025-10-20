@@ -26,10 +26,10 @@ func CreateTestAppWithSimScreen(width, height int) (*tview.Application, tcell.Si
 
 // MockedApp is tview.Application with mocked methods
 type MockedApp struct {
-	FailRun     bool
+	mutex       *sync.Mutex
 	updateDraws []func()
 	BeforeDraws []func(screen tcell.Screen) bool
-	mutex       *sync.Mutex
+	FailRun     bool
 }
 
 // CreateMockedApp returns app with simulation screen for tests

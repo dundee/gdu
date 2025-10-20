@@ -16,7 +16,6 @@ import (
 // StoredAnalyzer implements Analyzer
 type StoredAnalyzer struct {
 	storage          *Storage
-	storagePath      string
 	progress         *common.CurrentProgress
 	progressChan     chan common.CurrentProgress
 	progressOutChan  chan common.CurrentProgress
@@ -24,6 +23,7 @@ type StoredAnalyzer struct {
 	doneChan         common.SignalGroup
 	wait             *WaitGroup
 	ignoreDir        common.ShouldDirBeIgnored
+	storagePath      string
 	followSymlinks   bool
 	gitAnnexedSize   bool
 }

@@ -19,14 +19,14 @@ import (
 
 // UI struct
 type UI struct {
+	output io.Writer
 	*common.UI
-	output      io.Writer
 	red         *color.Color
 	orange      *color.Color
 	blue        *color.Color
+	top         int
 	summarize   bool
 	noPrefix    bool
-	top         int
 	reverseSort bool
 }
 
