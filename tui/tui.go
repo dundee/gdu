@@ -24,10 +24,13 @@ import (
 
 // UI struct
 type UI struct {
+	app        common.TermApplication
+	screen     tcell.Screen
+	output     io.Writer
+	currentDir fs.Item
+	topDir     fs.Item
+	getter     device.DevicesInfoGetter
 	*common.UI
-	app                     common.TermApplication
-	screen                  tcell.Screen
-	output                  io.Writer
 	grid                    *tview.Grid
 	header                  *tview.TextView
 	footer                  *tview.Flex
@@ -39,49 +42,46 @@ type UI struct {
 	help                    *tview.Flex
 	table                   *tview.Table
 	filteringInput          *tview.InputField
-	currentDir              fs.Item
-	devices                 []*device.Device
-	topDir                  fs.Item
-	topDirPath              string
-	currentDirPath          string
-	askBeforeDelete         bool
-	showItemCount           bool
-	showMtime               bool
-	filtering               bool
-	filterValue             string
-	sortBy                  string
-	sortOrder               string
 	done                    chan struct{}
 	remover                 func(fs.Item, fs.Item) error
 	emptier                 func(fs.Item, fs.Item) error
-	getter                  device.DevicesInfoGetter
 	exec                    func(argv0 string, argv []string, envv []string) error
 	changeCwdFn             func(string) error
 	linkedItems             fs.HardLinkedItems
-	selectedTextColor       tcell.Color
-	selectedBackgroundColor tcell.Color
+	ignoredRows             map[int]struct{}
+	markedRows              map[int]struct{}
+	deleteQueue             chan deleteQueueItem
+	resultRow               ResultRow
+	topDirPath              string
+	currentDirPath          string
+	filterValue             string
+	sortBy                  string
+	sortOrder               string
 	footerTextColor         string
 	footerBackgroundColor   string
 	footerNumberColor       string
 	headerTextColor         string
 	headerBackgroundColor   string
-	headerHidden            bool
-	resultRow               ResultRow
-	currentItemNameMaxLen   int
-	useOldSizeBar           bool
 	defaultSortBy           string
 	defaultSortOrder        string
-	ignoredRows             map[int]struct{}
-	markedRows              map[int]struct{}
 	exportName              string
+	devices                 []*device.Device
+	selectedTextColor       tcell.Color
+	selectedBackgroundColor tcell.Color
+	currentItemNameMaxLen   int
+	activeWorkers           int
+	deleteWorkersCount      int
+	statusMut               sync.RWMutex
+	workersMut              sync.Mutex
+	askBeforeDelete         bool
+	showItemCount           bool
+	showMtime               bool
+	filtering               bool
+	headerHidden            bool
+	useOldSizeBar           bool
 	noDelete                bool
 	noSpawnShell            bool
 	deleteInBackground      bool
-	deleteQueue             chan deleteQueueItem
-	activeWorkers           int
-	workersMut              sync.Mutex
-	statusMut               sync.RWMutex
-	deleteWorkersCount      int
 }
 
 type deleteQueueItem struct {
