@@ -95,13 +95,18 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 }
 
 func (a *ParallelAnalyzer) processDir(path string) *Dir {
+	type indexedItem struct {
+		index int
+		item  fs.Item
+	}
+
 	var (
-		file       *File
-		err        error
-		totalSize  int64
-		info       os.FileInfo
-		subDirChan = make(chan *Dir)
-		dirCount   int
+		file      *File
+		err       error
+		totalSize int64
+		info      os.FileInfo
+		itemCount int
+		dirCount  int
 	)
 
 	a.wait.Add(1)
@@ -121,6 +126,9 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	}
 	setDirPlatformSpecificAttrs(dir, path)
 
+	// Buffer channel to prevent deadlock when sending files synchronously
+	itemChan := make(chan indexedItem, len(files))
+
 	for _, f := range files {
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
@@ -128,16 +136,18 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			if a.ignoreDir(name, entryPath) {
 				continue
 			}
+			currentIndex := itemCount
+			itemCount++
 			dirCount++
 
-			go func(entryPath string) {
+			go func(entryPath string, idx int) {
 				concurrencyLimit <- struct{}{}
 				subdir := a.processDir(entryPath)
 				subdir.Parent = dir
 
-				subDirChan <- subdir
+				itemChan <- indexedItem{idx, subdir}
 				<-concurrencyLimit
-			}(entryPath)
+			}(entryPath, currentIndex)
 		} else {
 			info, err = f.Info()
 			if err != nil {
@@ -167,16 +177,24 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 
 			totalSize += info.Size()
 
-			dir.AddFile(file)
+			// Send file to channel with its index
+			itemChan <- indexedItem{itemCount, file}
+			itemCount++
 		}
 	}
 
 	go func() {
-		var sub *Dir
+		items := make([]indexedItem, itemCount)
 
-		for i := 0; i < dirCount; i++ {
-			sub = <-subDirChan
-			dir.AddFile(sub)
+		// Collect all items (both files and subdirs)
+		for i := 0; i < itemCount; i++ {
+			indexed := <-itemChan
+			items[indexed.index] = indexed
+		}
+
+		// Add all items in their original order
+		for i := 0; i < itemCount; i++ {
+			dir.AddFile(items[i].item)
 		}
 
 		a.wait.Done()
