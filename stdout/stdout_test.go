@@ -106,6 +106,43 @@ func TestShowTopBw(t *testing.T) {
 	assert.Contains(t, output.String(), "test_dir/nested/file2")
 }
 
+func TestShowDepth(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, false, 0, false, 2)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+	assert.Contains(t, output.String(), "test_dir/nested")
+	assert.Contains(t, output.String(), "test_dir/nested/subnested")
+}
+
+func TestShowDepthWithColors(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, true, false, false, false, false, false, false, false, 0, false, 2)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+	assert.Contains(t, output.String(), "test_dir/nested")
+}
+
 func TestAnalyzeSubdir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
