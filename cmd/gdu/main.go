@@ -82,6 +82,7 @@ func init() {
 	flags.BoolVarP(&af.NoUnicode, "no-unicode", "u", false, "Do not use Unicode symbols (for size bar)")
 	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")
 	flags.IntVarP(&af.Top, "top", "t", 0, "Show only top X largest files in non-interactive mode")
+	flags.IntVar(&af.Depth, "depth", 0, "Show directory structure up to specified depth in non-interactive mode (0 means unlimited)")
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
 	flags.BoolVar(&af.ReverseSort, "reverse-sort", false, "Reverse sorting order (smallest to largest) in non-interactive mode")

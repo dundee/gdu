@@ -55,6 +55,7 @@ type Flags struct {
 	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
 	MaxCores           int      `yaml:"max-cores"`
 	Top                int      `yaml:"top"`
+	Depth              int      `yaml:"depth"`
 	SequentialScanning bool     `yaml:"sequential-scanning"`
 	ShowDisks          bool     `yaml:"-"`
 	ShowApparentSize   bool     `yaml:"show-apparent-size"`
@@ -288,6 +289,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.NoPrefix,
 			a.Flags.Top,
 			a.Flags.ReverseSort,
+			a.Flags.Depth,
 		)
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()
