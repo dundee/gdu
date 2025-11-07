@@ -306,25 +306,8 @@ func (ui *UI) printItemPath(file fs.Item) {
 }
 
 func (ui *UI) printDirWithDepth(dir fs.Item, currentDepth int) {
-	var lineFormat string
-	if ui.UseColors {
-		lineFormat = "%20s %s\n"
-	} else {
-		lineFormat = "%9s %s\n"
-	}
-
-	var size int64
-	if ui.ShowApparentSize {
-		size = dir.GetSize()
-	} else {
-		size = dir.GetUsage()
-	}
-
 	// Print current directory
-	fmt.Fprintf(ui.output,
-		lineFormat,
-		ui.formatSize(size),
-		dir.GetPath())
+	ui.printItemPath(dir)
 
 	// If we haven't reached the max depth, print subdirectories
 	if currentDepth < ui.depth && dir.IsDir() {
