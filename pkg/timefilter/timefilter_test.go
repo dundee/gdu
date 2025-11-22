@@ -368,6 +368,8 @@ func TestNewTimeFilter(t *testing.T) {
 		t.Fatalf("Failed to load timezone: %v", err)
 	}
 
+	now := time.Date(2025, 8, 11, 12, 0, 0, 0, loc)
+
 	tests := []struct {
 		name        string
 		since       string
@@ -438,7 +440,7 @@ func TestNewTimeFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			filter, err := NewTimeFilter(tt.since, tt.until, tt.maxAge, tt.minAge, loc)
+			filter, err := NewTimeFilter(tt.since, tt.until, tt.maxAge, tt.minAge, now, loc)
 
 			if tt.expectError {
 				if err == nil {
@@ -614,13 +616,13 @@ func TestTimeFilterIncludeByTimeFilter(t *testing.T) {
 			}
 
 			// Create time filter
-			filter, err := NewTimeFilter(tt.since, tt.until, tt.maxAge, tt.minAge, loc)
+			filter, err := NewTimeFilter(tt.since, tt.until, tt.maxAge, tt.minAge, now, loc)
 			if err != nil {
 				t.Fatalf("Failed to create time filter: %v", err)
 			}
 
 			// Test inclusion
-			result := filter.IncludeByTimeFilter(fileMtime, now, loc)
+			result := filter.IncludeByTimeFilter(fileMtime, loc)
 			if result != tt.expectInclude {
 				t.Errorf("Expected include=%v, got include=%v", tt.expectInclude, result)
 			}
@@ -628,7 +630,7 @@ func TestTimeFilterIncludeByTimeFilter(t *testing.T) {
 	}
 }
 
-func TestincludeByTimeBound(t *testing.T) {
+func TestIncludeByTimeBound(t *testing.T) {
 	loc, err := time.LoadLocation("America/Vancouver")
 	if err != nil {
 		t.Fatalf("Failed to load timezone: %v", err)

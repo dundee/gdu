@@ -510,9 +510,8 @@ func (ui *UI) SetTimeFilterWithInfo(tf *timefilter.TimeFilter, loc *time.Locatio
 	ui.timeFilterLoc = loc
 
 	if tf != nil && !tf.IsEmpty() {
-		now := time.Now()
 		timeFilterFunc := func(mtime time.Time) bool {
-			return tf.IncludeByTimeFilter(mtime, now, loc)
+			return tf.IncludeByTimeFilter(mtime, loc)
 		}
 		ui.SetTimeFilter(timeFilterFunc)
 		if !ui.isDeleteAllowedWithFilter() {

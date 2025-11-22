@@ -221,6 +221,7 @@ func (a *App) Run() error {
 			a.Flags.Until,
 			a.Flags.MaxAge,
 			a.Flags.MinAge,
+			now,
 			loc,
 		)
 		if err != nil {
@@ -229,7 +230,7 @@ func (a *App) Run() error {
 
 		if !timeFilter.IsEmpty() {
 			timeFilterFunc := func(mtime time.Time) bool {
-				return timeFilter.IncludeByTimeFilter(mtime, now, loc)
+				return timeFilter.IncludeByTimeFilter(mtime, loc)
 			}
 			ui.SetTimeFilter(timeFilterFunc)
 
