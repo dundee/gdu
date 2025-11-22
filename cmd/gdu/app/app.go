@@ -213,31 +213,8 @@ func (a *App) Run() error {
 
 	// Set up time filter if any time flags are provided
 	if a.Flags.Since != "" || a.Flags.Until != "" || a.Flags.MaxAge != "" || a.Flags.MinAge != "" {
-		loc := time.Local
-		now := time.Now()
-
-		timeFilter, err := timefilter.NewTimeFilter(
-			a.Flags.Since,
-			a.Flags.Until,
-			a.Flags.MaxAge,
-			a.Flags.MinAge,
-			now,
-			loc,
-		)
-		if err != nil {
-			return fmt.Errorf("invalid time filter: %w", err)
-		}
-
-		if !timeFilter.IsEmpty() {
-			timeFilterFunc := func(mtime time.Time) bool {
-				return timeFilter.IncludeByTimeFilter(mtime, loc)
-			}
-			ui.SetTimeFilter(timeFilterFunc)
-
-			// If this is a TUI, also set the filter info for display
-			if tuiUI, ok := ui.(*tui.UI); ok {
-				tuiUI.SetTimeFilterWithInfo(timeFilter, loc)
-			}
+		if err := a.setTimeFilters(ui); err != nil {
+			return err
 		}
 	}
 	if err := a.setNoCross(path); err != nil {
@@ -287,6 +264,36 @@ func (a *App) setMaxProcs() {
 
 	// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
+}
+
+func (a *App) setTimeFilters(ui UI) error {
+	loc := time.Local
+	now := time.Now()
+
+	timeFilter, err := timefilter.NewTimeFilter(
+		a.Flags.Since,
+		a.Flags.Until,
+		a.Flags.MaxAge,
+		a.Flags.MinAge,
+		now,
+		loc,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid time filter: %w", err)
+	}
+
+	if !timeFilter.IsEmpty() {
+		timeFilterFunc := func(mtime time.Time) bool {
+			return timeFilter.IncludeByTimeFilter(mtime, loc)
+		}
+		ui.SetTimeFilter(timeFilterFunc)
+
+		// If this is a TUI, also set the filter info for display
+		if tuiUI, ok := ui.(*tui.UI); ok {
+			tuiUI.SetTimeFilterWithInfo(timeFilter, loc)
+		}
+	}
+	return nil
 }
 
 func (a *App) createUI() (UI, error) {
