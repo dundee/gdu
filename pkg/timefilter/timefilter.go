@@ -26,10 +26,10 @@ type TimeFilter struct {
 // Deprecated: Use TimeBound instead
 type SinceBound = TimeBound
 
-// ParseDuration parses a duration string with support for extended units
+// parseDuration parses a duration string with support for extended units
 // Supports: s, m, h, d (=24h), w (=7d), mo (=30d), y (=365d)
 // Examples: "90m", "2h30m", "7d", "6w", "1y2mo"
-func ParseDuration(input string) (time.Duration, error) {
+func parseDuration(input string) (time.Duration, error) {
 	if input == "" {
 		return 0, fmt.Errorf("empty duration")
 	}
@@ -89,8 +89,8 @@ func ParseDuration(input string) (time.Duration, error) {
 	return total, nil
 }
 
-// ParseTimeValue parses a time value into either a timestamp instant or a date-only value
-func ParseTimeValue(arg string, loc *time.Location) (TimeBound, error) {
+// parseTimeValue parses a time value into either a timestamp instant or a date-only value
+func parseTimeValue(arg string, loc *time.Location) (TimeBound, error) {
 	if arg == "" {
 		return TimeBound{}, nil
 	}
@@ -112,9 +112,9 @@ func ParseTimeValue(arg string, loc *time.Location) (TimeBound, error) {
 	return TimeBound{}, fmt.Errorf("invalid time value %q. Use RFC3339 timestamp or YYYY-MM-DD", arg)
 }
 
-// ParseSince parses --since into either a timestamp Instant or a DateOnly value.
-func ParseSince(arg string, loc *time.Location) (SinceBound, error) {
-	return ParseTimeValue(arg, loc)
+// parseSince parses --since into either a timestamp Instant or a DateOnly value.
+func parseSince(arg string, loc *time.Location) (SinceBound, error) {
+	return parseTimeValue(arg, loc)
 }
 
 // NewTimeFilter creates a new TimeFilter with the given parameters
@@ -123,7 +123,7 @@ func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, lo
 
 	// Parse since
 	if since != "" {
-		sinceBound, err := ParseTimeValue(since, loc)
+		sinceBound, err := parseTimeValue(since, loc)
 		if err != nil {
 			return nil, fmt.Errorf("invalid --since value: %w", err)
 		}
@@ -134,7 +134,7 @@ func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, lo
 
 	// Parse until
 	if until != "" {
-		untilBound, err := ParseTimeValue(until, loc)
+		untilBound, err := parseTimeValue(until, loc)
 		if err != nil {
 			return nil, fmt.Errorf("invalid --until value: %w", err)
 		}
@@ -145,7 +145,7 @@ func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, lo
 
 	// Parse max-age (convert to since)
 	if maxAge != "" {
-		duration, err := ParseDuration(maxAge)
+		duration, err := parseDuration(maxAge)
 		if err != nil {
 			return nil, fmt.Errorf("invalid --max-age value: %w", err)
 		}
@@ -154,7 +154,7 @@ func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, lo
 
 	// Parse min-age (convert to until)
 	if minAge != "" {
-		duration, err := ParseDuration(minAge)
+		duration, err := parseDuration(minAge)
 		if err != nil {
 			return nil, fmt.Errorf("invalid --min-age value: %w", err)
 		}

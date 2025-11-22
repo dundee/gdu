@@ -76,7 +76,7 @@ func TestParseSince(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseSince(tt.input, loc)
+			result, err := parseSince(tt.input, loc)
 
 			if tt.expectError {
 				if err == nil {
@@ -123,57 +123,57 @@ func TestIncludeBySince(t *testing.T) {
 
 	// Test cases from the MVP document
 	tests := []struct {
-		name         string
-		fileMtime    string // local time
-		sinceArg     string
+		name          string
+		fileMtime     string // local time
+		sinceArg      string
 		expectInclude bool
 	}{
 		{
-			name:         "file before date boundary",
-			fileMtime:    "2025-08-10T23:59:00-07:00",
-			sinceArg:     "2025-08-11",
+			name:          "file before date boundary",
+			fileMtime:     "2025-08-10T23:59:00-07:00",
+			sinceArg:      "2025-08-11",
 			expectInclude: false,
 		},
 		{
-			name:         "file at start of date",
-			fileMtime:    "2025-08-11T00:00:00-07:00",
-			sinceArg:     "2025-08-11",
+			name:          "file at start of date",
+			fileMtime:     "2025-08-11T00:00:00-07:00",
+			sinceArg:      "2025-08-11",
 			expectInclude: true,
 		},
 		{
-			name:         "file during date",
-			fileMtime:    "2025-08-11T01:00:00-07:00",
-			sinceArg:     "2025-08-11",
+			name:          "file during date",
+			fileMtime:     "2025-08-11T01:00:00-07:00",
+			sinceArg:      "2025-08-11",
 			expectInclude: true,
 		},
 		{
-			name:         "file at end of date",
-			fileMtime:    "2025-08-11T23:59:00-07:00",
-			sinceArg:     "2025-08-11",
+			name:          "file at end of date",
+			fileMtime:     "2025-08-11T23:59:00-07:00",
+			sinceArg:      "2025-08-11",
 			expectInclude: true,
 		},
 		{
-			name:         "file after date",
-			fileMtime:    "2025-08-12T00:00:00-07:00",
-			sinceArg:     "2025-08-11",
+			name:          "file after date",
+			fileMtime:     "2025-08-12T00:00:00-07:00",
+			sinceArg:      "2025-08-11",
 			expectInclude: true,
 		},
 		{
-			name:         "instant mode - file before",
-			fileMtime:    "2025-08-11T01:00:00-07:00",
-			sinceArg:     "2025-08-11T02:00:00-07:00",
+			name:          "instant mode - file before",
+			fileMtime:     "2025-08-11T01:00:00-07:00",
+			sinceArg:      "2025-08-11T02:00:00-07:00",
 			expectInclude: false,
 		},
 		{
-			name:         "instant mode - file after",
-			fileMtime:    "2025-08-11T03:00:00-07:00",
-			sinceArg:     "2025-08-11T02:00:00-07:00",
+			name:          "instant mode - file after",
+			fileMtime:     "2025-08-11T03:00:00-07:00",
+			sinceArg:      "2025-08-11T02:00:00-07:00",
 			expectInclude: true,
 		},
 		{
-			name:         "instant mode - file exactly at boundary",
-			fileMtime:    "2025-08-11T02:00:00-07:00",
-			sinceArg:     "2025-08-11T02:00:00-07:00",
+			name:          "instant mode - file exactly at boundary",
+			fileMtime:     "2025-08-11T02:00:00-07:00",
+			sinceArg:      "2025-08-11T02:00:00-07:00",
 			expectInclude: true,
 		},
 	}
@@ -187,7 +187,7 @@ func TestIncludeBySince(t *testing.T) {
 			}
 
 			// Parse since bound
-			sinceBound, err := ParseSince(tt.sinceArg, loc)
+			sinceBound, err := parseSince(tt.sinceArg, loc)
 			if err != nil {
 				t.Fatalf("Failed to parse since arg: %v", err)
 			}
@@ -341,7 +341,7 @@ func TestParseDuration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseDuration(tt.input)
+			result, err := parseDuration(tt.input)
 
 			if tt.expectError {
 				if err == nil {
@@ -746,7 +746,7 @@ func TestIncludeByTimeBound(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Parse time bound
-			bound, err := ParseTimeValue(tt.boundArg, loc)
+			bound, err := parseTimeValue(tt.boundArg, loc)
 			if err != nil {
 				t.Fatalf("Failed to parse time bound: %v", err)
 			}
