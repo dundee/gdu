@@ -50,7 +50,7 @@ Flags:
   -X, --ignore-from string            Read path patterns to ignore from file
   -f, --input-file string             Import analysis from JSON file
   -l, --log-file string               Path to a logfile (default "/dev/null")
-  -m, --max-cores int                 Set max cores that Gdu will use. 12 cores available (default 12)
+  -m, --max-cores int                 Set max cores that Gdu will use
       --mouse                         Use mouse
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
@@ -58,6 +58,7 @@ Flags:
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
+      --no-spawn-shell                Do not allow spawning shell
   -u, --no-unicode                    Do not use Unicode symbols (for size bar)
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
