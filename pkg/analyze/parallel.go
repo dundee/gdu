@@ -15,15 +15,16 @@ var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
-	progress         *common.CurrentProgress
-	progressChan     chan common.CurrentProgress
-	progressOutChan  chan common.CurrentProgress
-	progressDoneChan chan struct{}
-	doneChan         common.SignalGroup
-	wait             *WaitGroup
-	ignoreDir        common.ShouldDirBeIgnored
-	followSymlinks   bool
-	gitAnnexedSize   bool
+	progress            *common.CurrentProgress
+	progressChan        chan common.CurrentProgress
+	progressOutChan     chan common.CurrentProgress
+	progressDoneChan    chan struct{}
+	doneChan            common.SignalGroup
+	wait                *WaitGroup
+	ignoreDir           common.ShouldDirBeIgnored
+	followSymlinks      bool
+	gitAnnexedSize      bool
+	matchesTimeFilterFn common.TimeFilter
 }
 
 // CreateAnalyzer returns Analyzer
@@ -49,6 +50,11 @@ func (a *ParallelAnalyzer) SetFollowSymlinks(v bool) {
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (a *ParallelAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
+}
+
+// SetTimeFilter sets the time filter function for file inclusion
+func (a *ParallelAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
+	a.matchesTimeFilterFn = matchesTimeFilterFn
 }
 
 // GetProgressChan returns channel for getting progress
@@ -164,6 +170,11 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				Parent: dir,
 			}
 			setPlatformSpecificAttrs(file, info)
+
+			// Apply time filter if set
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
 
 			totalSize += info.Size()
 

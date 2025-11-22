@@ -18,6 +18,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/remove"
+	"github.com/dundee/gdu/v5/pkg/timefilter"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -82,6 +83,9 @@ type UI struct {
 	noDelete                bool
 	noSpawnShell            bool
 	deleteInBackground      bool
+	timeFilter              *timefilter.TimeFilter
+	timeFilterLoc           *time.Location
+	noDeleteWithFilter      bool
 }
 
 type deleteQueueItem struct {
@@ -330,6 +334,11 @@ func (ui *UI) SetNoSpawnShell() {
 	ui.noSpawnShell = true
 }
 
+// SetNoDelete disables delete when time filters are active
+func (ui *UI) SetNoDeleteWithFilter() {
+	ui.noDeleteWithFilter = true
+}
+
 // SetDeleteInBackground sets the flag to delete files in background
 func (ui *UI) SetDeleteInBackground() {
 	ui.deleteInBackground = true
@@ -433,6 +442,22 @@ func (ui *UI) confirmDeletion(shouldEmpty bool) {
 		return
 	}
 
+	// Check if deletion is allowed with active time filters
+	if ui.noDeleteWithFilter {
+		modal := tview.NewModal().
+			SetText("Deletion is disabled when a time filter is active.\n\n" +
+				"To override, set GDU_ALLOW_DELETE_WITH_FILTER=1").
+			AddButtons([]string{"OK"}).
+			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				ui.pages.RemovePage("confirm")
+			})
+		if !ui.UseColors {
+			modal.SetBackgroundColor(tcell.ColorGray)
+		}
+		ui.pages.AddPage("confirm", modal, true, true)
+		return
+	}
+
 	if len(ui.markedRows) > 0 {
 		ui.confirmDeletionMarked(shouldEmpty)
 	} else {
@@ -477,4 +502,48 @@ func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
 	modal.SetBorderColor(tcell.ColorDefault)
 
 	ui.pages.AddPage("confirm", modal, true, true)
+}
+
+// SetTimeFilterWithInfo sets both the time filter function and stores the filter info for display
+func (ui *UI) SetTimeFilterWithInfo(tf *timefilter.TimeFilter, loc *time.Location) {
+	ui.timeFilter = tf
+	ui.timeFilterLoc = loc
+
+	if tf != nil && !tf.IsEmpty() {
+		timeFilterFunc := func(mtime time.Time) bool {
+			return tf.IncludeByTimeFilter(mtime, loc)
+		}
+		ui.SetTimeFilter(timeFilterFunc)
+		if !ui.isDeleteAllowedWithFilter() {
+			ui.SetNoDeleteWithFilter()
+		}
+	}
+}
+
+// hasActiveTimeFilter returns true if any time filter is active
+func (ui *UI) hasActiveTimeFilter() bool {
+	return ui.timeFilter != nil && !ui.timeFilter.IsEmpty()
+}
+
+// formatTimeFilterInfo formats the time filter information for display
+func (ui *UI) formatTimeFilterInfo() string {
+	if !ui.hasActiveTimeFilter() {
+		return ""
+	}
+
+	return ui.timeFilter.FormatForDisplay(ui.timeFilterLoc)
+}
+
+// isDeleteAllowedWithFilter checks if deletion is allowed when filters are active
+func (ui *UI) isDeleteAllowedWithFilter() bool {
+	if !ui.hasActiveTimeFilter() {
+		return true
+	}
+
+	// Check environment variable override
+	if os.Getenv("GDU_ALLOW_DELETE_WITH_FILTER") == "1" {
+		return true
+	}
+
+	return false
 }

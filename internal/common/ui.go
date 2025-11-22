@@ -34,6 +34,11 @@ func (ui *UI) SetShowAnnexedSize(v bool) {
 	ui.Analyzer.SetShowAnnexedSize(v)
 }
 
+// SetTimeFilter sets the time filter function for file inclusion
+func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
+	ui.Analyzer.SetTimeFilter(timeFilter)
+}
+
 // binary multiplies prefixes (IEC)
 const (
 	_ float64 = 1 << (10 * iota)
