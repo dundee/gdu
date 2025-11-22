@@ -28,7 +28,7 @@ type TimeFilter struct {
 }
 
 // NewTimeFilter creates a new TimeFilter with the given parameters
-func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, loc *time.Location) (*TimeFilter, error) {
+func NewTimeFilter(since, until string, maxAge, minAge string, loc *time.Location) (*TimeFilter, error) {
 	tf := &TimeFilter{}
 
 	// Parse since

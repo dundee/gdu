@@ -221,7 +221,6 @@ func (a *App) Run() error {
 			a.Flags.Until,
 			a.Flags.MaxAge,
 			a.Flags.MinAge,
-			now,
 			loc,
 		)
 		if err != nil {
