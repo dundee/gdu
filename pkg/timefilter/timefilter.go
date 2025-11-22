@@ -96,7 +96,7 @@ func ParseTimeValue(arg string, loc *time.Location) (TimeBound, error) {
 	}
 
 	// 1) Try RFC3339 instant
-	if t, err := time.Parse(time.RFC3339Nano, arg); err == nil {
+	if t, err := time.Parse(time.RFC3339, arg); err == nil {
 		u := t.UTC()
 		return TimeBound{instant: &u}, nil
 	}
