@@ -12,16 +12,16 @@ import (
 
 // SequentialAnalyzer implements Analyzer
 type SequentialAnalyzer struct {
-	progress         *common.CurrentProgress
-	progressChan     chan common.CurrentProgress
-	progressOutChan  chan common.CurrentProgress
-	progressDoneChan chan struct{}
-	doneChan         common.SignalGroup
-	wait             *WaitGroup
-	ignoreDir        common.ShouldDirBeIgnored
-	followSymlinks   bool
-	gitAnnexedSize   bool
-	timeFilter       common.TimeFilter
+	progress            *common.CurrentProgress
+	progressChan        chan common.CurrentProgress
+	progressOutChan     chan common.CurrentProgress
+	progressDoneChan    chan struct{}
+	doneChan            common.SignalGroup
+	wait                *WaitGroup
+	ignoreDir           common.ShouldDirBeIgnored
+	followSymlinks      bool
+	gitAnnexedSize      bool
+	matchesTimeFilterFn common.TimeFilter
 }
 
 // CreateSeqAnalyzer returns Analyzer
@@ -50,8 +50,8 @@ func (a *SequentialAnalyzer) SetShowAnnexedSize(v bool) {
 }
 
 // SetTimeFilter sets the time filter function for file inclusion
-func (a *SequentialAnalyzer) SetTimeFilter(timeFilter common.TimeFilter) {
-	a.timeFilter = timeFilter
+func (a *SequentialAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
+	a.matchesTimeFilterFn = matchesTimeFilterFn
 }
 
 // GetProgressChan returns channel for getting progress
@@ -159,7 +159,7 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 			setPlatformSpecificAttrs(file, info)
 
 			// Apply time filter if set
-			if a.timeFilter != nil && !a.timeFilter(info.ModTime()) {
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
