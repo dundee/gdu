@@ -67,12 +67,12 @@ func (ui *UI) StartUILoop() error {
 
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
-	return errors.New("Exporting devices list is not supported")
+	return errors.New("exporting devices list is not supported")
 }
 
 // ReadAnalysis reads analysis report from JSON file
 func (ui *UI) ReadAnalysis(input io.Reader) error {
-	return errors.New("Reading analysis is not possible while exporting")
+	return errors.New("reading analysis is not possible while exporting")
 }
 
 // ReadFromStorage reads analysis data from persistent key-value storage

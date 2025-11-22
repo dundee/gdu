@@ -28,12 +28,12 @@ func ReadAnalysis(input io.Reader) (*analyze.Dir, error) {
 		return nil, errors.New("JSON file does not contain top level array")
 	}
 	if len(dataArray) < 4 {
-		return nil, errors.New("Top level array must have at least 4 items")
+		return nil, errors.New("top level array must have at least 4 items")
 	}
 
 	items, ok := dataArray[3].([]interface{})
 	if !ok {
-		return nil, errors.New("Array of maps not found in the top level array on 4th position")
+		return nil, errors.New("array of maps not found in the top level array on 4th position")
 	}
 
 	return processDir(items)
@@ -47,11 +47,11 @@ func processDir(items []interface{}) (*analyze.Dir, error) {
 	}
 	dirMap, ok := items[0].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("Directory item is not a map")
+		return nil, errors.New("directory item is not a map")
 	}
 	name, ok := dirMap["name"].(string)
 	if !ok {
-		return nil, errors.New("Directory name is not a string")
+		return nil, errors.New("directory name is not a string")
 	}
 	if mtime, ok := dirMap["mtime"].(float64); ok {
 		dir.Mtime = time.Unix(int64(mtime), 0)
