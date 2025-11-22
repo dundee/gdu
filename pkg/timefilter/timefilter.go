@@ -14,12 +14,179 @@ type TimeBound struct {
 	dateOnly *time.Time // at local midnight; only YYYY-MM-DD will set this
 }
 
+// IsEmpty returns true if the TimeBound has no filter criteria
+func (tb TimeBound) IsEmpty() bool {
+	return tb.instant == nil && tb.dateOnly == nil
+}
+
 // TimeFilter represents multiple time filtering criteria
 type TimeFilter struct {
 	since  *TimeBound
 	until  *TimeBound
 	maxAge *time.Duration
 	minAge *time.Duration
+}
+
+// NewTimeFilter creates a new TimeFilter with the given parameters
+func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, loc *time.Location) (*TimeFilter, error) {
+	tf := &TimeFilter{}
+
+	// Parse since
+	if since != "" {
+		sinceBound, err := parseTimeValue(since, loc)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --since value: %w", err)
+		}
+		if !sinceBound.IsEmpty() {
+			tf.since = &sinceBound
+		}
+	}
+
+	// Parse until
+	if until != "" {
+		untilBound, err := parseTimeValue(until, loc)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --until value: %w", err)
+		}
+		if !untilBound.IsEmpty() {
+			tf.until = &untilBound
+		}
+	}
+
+	// Parse max-age (convert to since)
+	if maxAge != "" {
+		duration, err := parseDuration(maxAge)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --max-age value: %w", err)
+		}
+		tf.maxAge = &duration
+	}
+
+	// Parse min-age (convert to until)
+	if minAge != "" {
+		duration, err := parseDuration(minAge)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --min-age value: %w", err)
+		}
+		tf.minAge = &duration
+	}
+
+	return tf, nil
+}
+
+// IncludeByTimeFilter determines if a file should be included based on the complete time filter
+func (tf *TimeFilter) IncludeByTimeFilter(mtime time.Time, now time.Time, loc *time.Location) bool {
+	// Check since bound
+	if tf.since != nil {
+		if !includeByTimeBound(mtime, *tf.since, loc, false) {
+			return false
+		}
+	}
+
+	// Check until bound
+	if tf.until != nil {
+		if !includeByTimeBound(mtime, *tf.until, loc, true) {
+			return false
+		}
+	}
+
+	// Check max-age (convert to since)
+	if tf.maxAge != nil {
+		sinceTime := now.Add(-*tf.maxAge).UTC()
+		sinceBound := TimeBound{instant: &sinceTime}
+		if !includeByTimeBound(mtime, sinceBound, loc, false) {
+			return false
+		}
+	}
+
+	// Check min-age (convert to until)
+	if tf.minAge != nil {
+		untilTime := now.Add(-*tf.minAge).UTC()
+		untilBound := TimeBound{instant: &untilTime}
+		if !includeByTimeBound(mtime, untilBound, loc, true) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// IsEmpty returns true if the TimeFilter has no filter criteria
+func (tf *TimeFilter) IsEmpty() bool {
+	return tf.since == nil && tf.until == nil && tf.maxAge == nil && tf.minAge == nil
+}
+
+// FormatForDisplay returns a formatted string showing the active time filters
+// This shows what the program actually parsed and is acting on
+func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
+	if tf.IsEmpty() {
+		return ""
+	}
+
+	var parts []string
+
+	if tf.since != nil {
+		if tf.since.instant != nil {
+			parts = append(parts, "since="+tf.since.instant.In(loc).Format(time.RFC3339))
+		} else if tf.since.dateOnly != nil {
+			parts = append(parts, "since="+tf.since.dateOnly.Format("2006-01-02")+" (date-only)")
+		}
+	}
+
+	if tf.until != nil {
+		if tf.until.instant != nil {
+			parts = append(parts, "until="+tf.until.instant.In(loc).Format(time.RFC3339))
+		} else if tf.until.dateOnly != nil {
+			parts = append(parts, "until="+tf.until.dateOnly.Format("2006-01-02")+" (date-only)")
+		}
+	}
+
+	if tf.maxAge != nil {
+		parts = append(parts, "max-age="+tf.maxAge.String())
+	}
+
+	if tf.minAge != nil {
+		parts = append(parts, "min-age="+tf.minAge.String())
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return " Filtered by: time=mtime; " + strings.Join(parts, "; ")
+}
+
+// includeByTimeBound determines if a file should be included based on its mtime and the time bound
+func includeByTimeBound(mtime time.Time, tb TimeBound, loc *time.Location, isUntil bool) bool {
+	if tb.instant == nil && tb.dateOnly == nil {
+		return true // no filter applied
+	}
+
+	if tb.instant != nil {
+		if isUntil {
+			return !mtime.After(*tb.instant) // inclusive (<=)
+		}
+		return !mtime.Before(*tb.instant) // inclusive (>=)
+	}
+
+	if tb.dateOnly != nil {
+		// For date-only comparisons, adjust the bound to cover the whole day.
+		boundDate := tb.dateOnly.In(loc)
+
+		if isUntil {
+			// For `until`, we want to include the entire day.
+			// So the upper bound is the beginning of the *next* day.
+			upperBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1)
+			return mtime.Before(upperBound)
+		}
+
+		// For `since`, we want to include the entire day.
+		// So the lower bound is the beginning of that day.
+		lowerBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc)
+		return !mtime.Before(lowerBound) // inclusive (>=)
+	}
+
+	return true
 }
 
 // parseDuration parses a duration string with support for extended units
@@ -106,171 +273,4 @@ func parseTimeValue(arg string, loc *time.Location) (TimeBound, error) {
 	}
 
 	return TimeBound{}, fmt.Errorf("invalid time value %q. Use RFC3339 timestamp or YYYY-MM-DD", arg)
-}
-
-// NewTimeFilter creates a new TimeFilter with the given parameters
-func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, loc *time.Location) (*TimeFilter, error) {
-	tf := &TimeFilter{}
-
-	// Parse since
-	if since != "" {
-		sinceBound, err := parseTimeValue(since, loc)
-		if err != nil {
-			return nil, fmt.Errorf("invalid --since value: %w", err)
-		}
-		if !sinceBound.IsEmpty() {
-			tf.since = &sinceBound
-		}
-	}
-
-	// Parse until
-	if until != "" {
-		untilBound, err := parseTimeValue(until, loc)
-		if err != nil {
-			return nil, fmt.Errorf("invalid --until value: %w", err)
-		}
-		if !untilBound.IsEmpty() {
-			tf.until = &untilBound
-		}
-	}
-
-	// Parse max-age (convert to since)
-	if maxAge != "" {
-		duration, err := parseDuration(maxAge)
-		if err != nil {
-			return nil, fmt.Errorf("invalid --max-age value: %w", err)
-		}
-		tf.maxAge = &duration
-	}
-
-	// Parse min-age (convert to until)
-	if minAge != "" {
-		duration, err := parseDuration(minAge)
-		if err != nil {
-			return nil, fmt.Errorf("invalid --min-age value: %w", err)
-		}
-		tf.minAge = &duration
-	}
-
-	return tf, nil
-}
-
-// IncludeByTimeBound determines if a file should be included based on its mtime and the time bound
-func IncludeByTimeBound(mtime time.Time, tb TimeBound, loc *time.Location, isUntil bool) bool {
-	if tb.instant == nil && tb.dateOnly == nil {
-		return true // no filter applied
-	}
-
-	if tb.instant != nil {
-		if isUntil {
-			return !mtime.After(*tb.instant) // inclusive (<=)
-		}
-		return !mtime.Before(*tb.instant) // inclusive (>=)
-	}
-
-	if tb.dateOnly != nil {
-		// For date-only comparisons, adjust the bound to cover the whole day.
-		boundDate := tb.dateOnly.In(loc)
-
-		if isUntil {
-			// For `until`, we want to include the entire day.
-			// So the upper bound is the beginning of the *next* day.
-			upperBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1)
-			return mtime.Before(upperBound)
-		}
-
-		// For `since`, we want to include the entire day.
-		// So the lower bound is the beginning of that day.
-		lowerBound := time.Date(boundDate.Year(), boundDate.Month(), boundDate.Day(), 0, 0, 0, 0, loc)
-		return !mtime.Before(lowerBound) // inclusive (>=)
-	}
-
-	return true
-}
-
-// IncludeByTimeFilter determines if a file should be included based on the complete time filter
-func (tf *TimeFilter) IncludeByTimeFilter(mtime time.Time, now time.Time, loc *time.Location) bool {
-	// Check since bound
-	if tf.since != nil {
-		if !IncludeByTimeBound(mtime, *tf.since, loc, false) {
-			return false
-		}
-	}
-
-	// Check until bound
-	if tf.until != nil {
-		if !IncludeByTimeBound(mtime, *tf.until, loc, true) {
-			return false
-		}
-	}
-
-	// Check max-age (convert to since)
-	if tf.maxAge != nil {
-		sinceTime := now.Add(-*tf.maxAge).UTC()
-		sinceBound := TimeBound{instant: &sinceTime}
-		if !IncludeByTimeBound(mtime, sinceBound, loc, false) {
-			return false
-		}
-	}
-
-	// Check min-age (convert to until)
-	if tf.minAge != nil {
-		untilTime := now.Add(-*tf.minAge).UTC()
-		untilBound := TimeBound{instant: &untilTime}
-		if !IncludeByTimeBound(mtime, untilBound, loc, true) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// IsEmpty returns true if the TimeFilter has no filter criteria
-func (tf *TimeFilter) IsEmpty() bool {
-	return tf.since == nil && tf.until == nil && tf.maxAge == nil && tf.minAge == nil
-}
-
-// IsEmpty returns true if the TimeBound has no filter criteria
-func (tb TimeBound) IsEmpty() bool {
-	return tb.instant == nil && tb.dateOnly == nil
-}
-
-// FormatForDisplay returns a formatted string showing the active time filters
-// This shows what the program actually parsed and is acting on
-func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
-	if tf.IsEmpty() {
-		return ""
-	}
-
-	var parts []string
-
-	if tf.since != nil {
-		if tf.since.instant != nil {
-			parts = append(parts, "since="+tf.since.instant.In(loc).Format(time.RFC3339))
-		} else if tf.since.dateOnly != nil {
-			parts = append(parts, "since="+tf.since.dateOnly.Format("2006-01-02")+" (date-only)")
-		}
-	}
-
-	if tf.until != nil {
-		if tf.until.instant != nil {
-			parts = append(parts, "until="+tf.until.instant.In(loc).Format(time.RFC3339))
-		} else if tf.until.dateOnly != nil {
-			parts = append(parts, "until="+tf.until.dateOnly.Format("2006-01-02")+" (date-only)")
-		}
-	}
-
-	if tf.maxAge != nil {
-		parts = append(parts, "max-age="+tf.maxAge.String())
-	}
-
-	if tf.minAge != nil {
-		parts = append(parts, "min-age="+tf.minAge.String())
-	}
-
-	if len(parts) == 0 {
-		return ""
-	}
-
-	return " Filtered by: time=mtime; " + strings.Join(parts, "; ")
 }

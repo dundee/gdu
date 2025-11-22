@@ -193,7 +193,7 @@ func TestIncludeBySince(t *testing.T) {
 			}
 
 			// Test inclusion
-			result := IncludeByTimeBound(fileMtime, sinceBound, loc, false)
+			result := includeByTimeBound(fileMtime, sinceBound, loc, false)
 			if result != tt.expectInclude {
 				t.Errorf("Expected include=%v, got include=%v", tt.expectInclude, result)
 			}
@@ -211,7 +211,7 @@ func TestIncludeBySinceEmpty(t *testing.T) {
 	emptySince := TimeBound{}
 	testTime := time.Now()
 
-	result := IncludeByTimeBound(testTime, emptySince, loc, false)
+	result := includeByTimeBound(testTime, emptySince, loc, false)
 	if !result {
 		t.Errorf("Expected true for empty since bound, got false")
 	}
@@ -630,7 +630,7 @@ func TestTimeFilterIncludeByTimeFilter(t *testing.T) {
 	}
 }
 
-func TestIncludeByTimeBound(t *testing.T) {
+func TestincludeByTimeBound(t *testing.T) {
 	loc, err := time.LoadLocation("America/Vancouver")
 	if err != nil {
 		t.Fatalf("Failed to load timezone: %v", err)
@@ -758,7 +758,7 @@ func TestIncludeByTimeBound(t *testing.T) {
 			}
 
 			// Test inclusion
-			result := IncludeByTimeBound(fileMtime, bound, loc, tt.isUntil)
+			result := includeByTimeBound(fileMtime, bound, loc, tt.isUntil)
 			if result != tt.expectInclude {
 				t.Errorf("Expected include=%v, got include=%v", tt.expectInclude, result)
 			}
