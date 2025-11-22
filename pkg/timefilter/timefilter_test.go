@@ -76,7 +76,7 @@ func TestParseSince(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseSince(tt.input, loc)
+			result, err := parseTimeValue(tt.input, loc)
 
 			if tt.expectError {
 				if err == nil {
@@ -187,13 +187,13 @@ func TestIncludeBySince(t *testing.T) {
 			}
 
 			// Parse since bound
-			sinceBound, err := parseSince(tt.sinceArg, loc)
+			sinceBound, err := parseTimeValue(tt.sinceArg, loc)
 			if err != nil {
 				t.Fatalf("Failed to parse since arg: %v", err)
 			}
 
 			// Test inclusion
-			result := IncludeBySince(fileMtime, sinceBound, loc)
+			result := IncludeByTimeBound(fileMtime, sinceBound, loc, false)
 			if result != tt.expectInclude {
 				t.Errorf("Expected include=%v, got include=%v", tt.expectInclude, result)
 			}
@@ -208,34 +208,34 @@ func TestIncludeBySinceEmpty(t *testing.T) {
 	}
 
 	// Test with empty since bound (no filter)
-	emptySince := SinceBound{}
+	emptySince := TimeBound{}
 	testTime := time.Now()
 
-	result := IncludeBySince(testTime, emptySince, loc)
+	result := IncludeByTimeBound(testTime, emptySince, loc, false)
 	if !result {
 		t.Errorf("Expected true for empty since bound, got false")
 	}
 }
 
-func TestSinceBoundIsEmpty(t *testing.T) {
+func TestTimeBoundIsEmpty(t *testing.T) {
 	tests := []struct {
 		name     string
-		bound    SinceBound
+		bound    TimeBound
 		expected bool
 	}{
 		{
 			name:     "empty bound",
-			bound:    SinceBound{},
+			bound:    TimeBound{},
 			expected: true,
 		},
 		{
 			name:     "instant bound",
-			bound:    SinceBound{instant: &time.Time{}},
+			bound:    TimeBound{instant: &time.Time{}},
 			expected: false,
 		},
 		{
 			name:     "dateOnly bound",
-			bound:    SinceBound{dateOnly: &time.Time{}},
+			bound:    TimeBound{dateOnly: &time.Time{}},
 			expected: false,
 		},
 	}

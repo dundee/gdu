@@ -22,10 +22,6 @@ type TimeFilter struct {
 	minAge *time.Duration
 }
 
-// SinceBound represents a parsed --since value that can be either an instant or a date-only value
-// Deprecated: Use TimeBound instead
-type SinceBound = TimeBound
-
 // parseDuration parses a duration string with support for extended units
 // Supports: s, m, h, d (=24h), w (=7d), mo (=30d), y (=365d)
 // Examples: "90m", "2h30m", "7d", "6w", "1y2mo"
@@ -112,11 +108,6 @@ func parseTimeValue(arg string, loc *time.Location) (TimeBound, error) {
 	return TimeBound{}, fmt.Errorf("invalid time value %q. Use RFC3339 timestamp or YYYY-MM-DD", arg)
 }
 
-// parseSince parses --since into either a timestamp Instant or a DateOnly value.
-func parseSince(arg string, loc *time.Location) (SinceBound, error) {
-	return parseTimeValue(arg, loc)
-}
-
 // NewTimeFilter creates a new TimeFilter with the given parameters
 func NewTimeFilter(since, until string, maxAge, minAge string, now time.Time, loc *time.Location) (*TimeFilter, error) {
 	tf := &TimeFilter{}
@@ -195,11 +186,6 @@ func IncludeByTimeBound(mtime time.Time, tb TimeBound, loc *time.Location, isUnt
 	}
 
 	return true
-}
-
-// IncludeBySince determines if a file should be included based on its mtime and the since bound
-func IncludeBySince(mtime time.Time, sb SinceBound, loc *time.Location) bool {
-	return IncludeByTimeBound(mtime, sb, loc, false)
 }
 
 // IncludeByTimeFilter determines if a file should be included based on the complete time filter
