@@ -242,25 +242,14 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 	dir.UpdateStats(make(fs.HardLinkedItems))
 }
 
-// getFileNames recursively collects file names from a directory tree
-func getFileNames(item fs.Item) []string {
-	names := []string{item.GetName()}
-	if item.IsDir() {
-		for _, child := range item.GetFiles() {
-			names = append(names, getFileNames(child)...)
-		}
-	}
-	return names
-}
-
-func TestParallelAnalyzerDeterminism(t *testing.T) {
+func TestParallelStableOrderAnalyzerDeterminism(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	// Run parallel analyzer multiple times and verify results are identical
 	var results [][]string
 	for i := 0; i < 5; i++ {
-		analyzer := CreateAnalyzer()
+		analyzer := CreateStableOrderAnalyzer()
 		dir := analyzer.AnalyzeDir(
 			"test_dir", func(_, _ string) bool { return false }, false,
 		)
@@ -292,7 +281,7 @@ func TestParallelVsSequentialConsistency(t *testing.T) {
 	seqNames := getFileNames(seqDir)
 
 	// Run parallel analyzer
-	parAnalyzer := CreateAnalyzer()
+	parAnalyzer := CreateStableOrderAnalyzer()
 	parDir := parAnalyzer.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, false,
 	)
@@ -325,7 +314,7 @@ func TestFileDirectoryInterleaving(t *testing.T) {
 	seqAnalyzer.GetDone().Wait()
 
 	// Run parallel analyzer
-	parAnalyzer := CreateAnalyzer()
+	parAnalyzer := CreateStableOrderAnalyzer()
 	parDir := parAnalyzer.AnalyzeDir(
 		"test_interleave", func(_, _ string) bool { return false }, false,
 	).(*Dir)
@@ -351,4 +340,15 @@ func TestFileDirectoryInterleaving(t *testing.T) {
 	assert.Equal(t, "bbb_file", seqOrder[1])
 	assert.Equal(t, "ccc_dir", seqOrder[2])
 	assert.Equal(t, "ddd_file", seqOrder[3])
+}
+
+// getFileNames recursively collects file names from a directory tree
+func getFileNames(item fs.Item) []string {
+	names := []string{item.GetName()}
+	if item.IsDir() {
+		for _, child := range item.GetFiles() {
+			names = append(names, getFileNames(child)...)
+		}
+	}
+	return names
 }

@@ -3,7 +3,6 @@ package analyze
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"runtime/debug"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -11,10 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
-
-// ParallelAnalyzer implements Analyzer
-type ParallelAnalyzer struct {
+// ParallelStableOrderAnalyzer implements Analyzer
+type ParallelStableOrderAnalyzer struct {
 	progress         *common.CurrentProgress
 	progressChan     chan common.CurrentProgress
 	progressOutChan  chan common.CurrentProgress
@@ -26,9 +23,9 @@ type ParallelAnalyzer struct {
 	gitAnnexedSize   bool
 }
 
-// CreateAnalyzer returns Analyzer
-func CreateAnalyzer() *ParallelAnalyzer {
-	return &ParallelAnalyzer{
+// CreateStableOrderAnalyzer returns parallel Analyzer which keeps stable order of files
+func CreateStableOrderAnalyzer() *ParallelStableOrderAnalyzer {
+	return &ParallelStableOrderAnalyzer{
 		progress: &common.CurrentProgress{
 			ItemCount: 0,
 			TotalSize: int64(0),
@@ -42,27 +39,27 @@ func CreateAnalyzer() *ParallelAnalyzer {
 }
 
 // SetFollowSymlinks sets whether symlink to files should be followed
-func (a *ParallelAnalyzer) SetFollowSymlinks(v bool) {
+func (a *ParallelStableOrderAnalyzer) SetFollowSymlinks(v bool) {
 	a.followSymlinks = v
 }
 
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
-func (a *ParallelAnalyzer) SetShowAnnexedSize(v bool) {
+func (a *ParallelStableOrderAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
 }
 
 // GetProgressChan returns channel for getting progress
-func (a *ParallelAnalyzer) GetProgressChan() chan common.CurrentProgress {
+func (a *ParallelStableOrderAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
 }
 
 // GetDone returns channel for checking when analysis is done
-func (a *ParallelAnalyzer) GetDone() common.SignalGroup {
+func (a *ParallelStableOrderAnalyzer) GetDone() common.SignalGroup {
 	return a.doneChan
 }
 
 // ResetProgress returns progress
-func (a *ParallelAnalyzer) ResetProgress() {
+func (a *ParallelStableOrderAnalyzer) ResetProgress() {
 	a.progress = &common.CurrentProgress{}
 	a.progressChan = make(chan common.CurrentProgress, 1)
 	a.progressOutChan = make(chan common.CurrentProgress, 1)
@@ -72,7 +69,7 @@ func (a *ParallelAnalyzer) ResetProgress() {
 }
 
 // AnalyzeDir analyzes given path
-func (a *ParallelAnalyzer) AnalyzeDir(
+func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
 	path string, ignore common.ShouldDirBeIgnored, constGC bool,
 ) fs.Item {
 	if !constGC {
@@ -94,14 +91,19 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	return dir
 }
 
-func (a *ParallelAnalyzer) processDir(path string) *Dir {
+func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
+	type indexedItem struct {
+		index int
+		item  fs.Item
+	}
+
 	var (
-		file       *File
-		err        error
-		totalSize  int64
-		info       os.FileInfo
-		subDirChan = make(chan *Dir)
-		dirCount   int
+		file      *File
+		err       error
+		totalSize int64
+		info      os.FileInfo
+		itemCount int
+		dirCount  int
 	)
 
 	a.wait.Add(1)
@@ -121,6 +123,9 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	}
 	setDirPlatformSpecificAttrs(dir, path)
 
+	// Buffer channel to prevent deadlock when sending files synchronously
+	itemChan := make(chan indexedItem, len(files))
+
 	for _, f := range files {
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
@@ -128,16 +133,18 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			if a.ignoreDir(name, entryPath) {
 				continue
 			}
+			currentIndex := itemCount
+			itemCount++
 			dirCount++
 
-			go func(entryPath string) {
+			go func(entryPath string, idx int) {
 				concurrencyLimit <- struct{}{}
 				subdir := a.processDir(entryPath)
 				subdir.Parent = dir
 
-				subDirChan <- subdir
+				itemChan <- indexedItem{idx, subdir}
 				<-concurrencyLimit
-			}(entryPath)
+			}(entryPath, currentIndex)
 		} else {
 			info, err = f.Info()
 			if err != nil {
@@ -167,16 +174,24 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 
 			totalSize += info.Size()
 
-			dir.AddFile(file)
+			// Send file to channel with its index
+			itemChan <- indexedItem{itemCount, file}
+			itemCount++
 		}
 	}
 
 	go func() {
-		var sub *Dir
+		items := make([]indexedItem, itemCount)
 
-		for i := 0; i < dirCount; i++ {
-			sub = <-subDirChan
-			dir.AddFile(sub)
+		// Collect all items (both files and subdirs)
+		for i := 0; i < itemCount; i++ {
+			indexed := <-itemChan
+			items[indexed.index] = indexed
+		}
+
+		// Add all items in their original order
+		for i := 0; i < itemCount; i++ {
+			dir.AddFile(items[i].item)
 		}
 
 		a.wait.Done()
@@ -190,7 +205,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	return dir
 }
 
-func (a *ParallelAnalyzer) updateProgress() {
+func (a *ParallelStableOrderAnalyzer) updateProgress() {
 	for {
 		select {
 		case <-a.progressDoneChan:
@@ -206,22 +221,4 @@ func (a *ParallelAnalyzer) updateProgress() {
 		default:
 		}
 	}
-}
-
-func getDirFlag(err error, items int) rune {
-	switch {
-	case err != nil:
-		return '!'
-	case items == 0:
-		return 'e'
-	default:
-		return ' '
-	}
-}
-
-func getFlag(f os.FileInfo) rune {
-	if f.Mode()&os.ModeSymlink != 0 || f.Mode()&os.ModeSocket != 0 {
-		return '@'
-	}
-	return ' '
 }
