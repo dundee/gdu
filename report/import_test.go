@@ -69,7 +69,7 @@ func TestReadAnalysisWithEmptyArray(t *testing.T) {
 
 	_, err := ReadAnalysis(buff)
 
-	assert.Equal(t, "Top level array must have at least 4 items", err.Error())
+	assert.Equal(t, "top level array must have at least 4 items", err.Error())
 }
 
 func TestReadAnalysisWithWrongContent(t *testing.T) {
@@ -77,7 +77,7 @@ func TestReadAnalysisWithWrongContent(t *testing.T) {
 
 	_, err := ReadAnalysis(buff)
 
-	assert.Equal(t, "Array of maps not found in the top level array on 4th position", err.Error())
+	assert.Equal(t, "array of maps not found in the top level array on 4th position", err.Error())
 }
 
 func TestReadAnalysisWithEmptyDirContent(t *testing.T) {
@@ -85,7 +85,7 @@ func TestReadAnalysisWithEmptyDirContent(t *testing.T) {
 
 	_, err := ReadAnalysis(buff)
 
-	assert.Equal(t, "Directory name is not a string", err.Error())
+	assert.Equal(t, "directory name is not a string", err.Error())
 }
 
 func TestReadAnalysisWithWrongDirItem(t *testing.T) {
@@ -93,7 +93,7 @@ func TestReadAnalysisWithWrongDirItem(t *testing.T) {
 
 	_, err := ReadAnalysis(buff)
 
-	assert.Equal(t, "Directory item is not a map", err.Error())
+	assert.Equal(t, "directory item is not a map", err.Error())
 }
 
 func TestReadAnalysisWithWrongSubdirItem(t *testing.T) {
@@ -101,7 +101,7 @@ func TestReadAnalysisWithWrongSubdirItem(t *testing.T) {
 
 	_, err := ReadAnalysis(buff)
 
-	assert.Equal(t, "Directory item is not a map", err.Error())
+	assert.Equal(t, "directory item is not a map", err.Error())
 }
 
 type BrokenInput struct{}

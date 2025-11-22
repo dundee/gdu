@@ -18,9 +18,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Run linters
-      uses: golangci/golangci-lint-action@v5
+      uses: golangci/golangci-lint-action@v9
       with:
-        version: v1.64.8
+        version: v2.6
 
   test:
     strategy:
