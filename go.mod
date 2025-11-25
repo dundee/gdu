@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/dgraph-io/badger/v4 v4.8.0
 	github.com/fatih/color v1.18.0
-	github.com/gdamore/tcell/v2 v2.11.0
+	github.com/gdamore/tcell/v2 v2.12.0
 	github.com/h2non/filetype v1.1.3
 	github.com/maruel/natural v1.2.1
 	github.com/mattn/go-isatty v0.0.20
@@ -35,7 +35,6 @@ require (
 	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
