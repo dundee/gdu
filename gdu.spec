@@ -1,6 +1,6 @@
 Name:           gdu
-Version:        5.30.1
-Release:        2
+Version:        5.32.0
+Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
 
 License:        MIT
@@ -52,6 +52,23 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Sat Nov 22 2025 Daniel Milde - 5.32.0-1
+- feat: Add --no-spawn-shell flag to disable shell access by @ShivamB25 in #440
+- feat: Add --reverse-sort flag for non-interactive mode by @ShivamB25 in #436
+- feat: switch mouse flag name, mimic default ncdu behavior by @shantanugadgil in #420
+- feat: bump version of tcell, drop support for Golang 1.22 by @dundee in #432
+- fix: make 'no' the default button in delete/empty confirmation dialogs by @ShivamB25 in #437
+- fix: reorder --mouse option by @shantanugadgil in #433
+- fix: ulikunitz/xz package update to fix vulnerability by @jullianow in #446
+- ci: use Golang 1.24.4 by @shantanugadgil in #421
+- refactor: struct align by @dundee in #442
+- docs: fix link to configuration.md by @joliss in #392
+* Fri Jun 6 2025 Daniel Milde - 5.31.0-1
+- feat: relative path ignore support by @s0up4200 in #398
+- feat: Add support showing size of absent git-annex'ed files by @stv0g in #404
+- fix: ctrl_z corruption #253 by @yurenchen000 in #406
+- fix: item count for --show-item-count by @dundee in #416
+- fix: automatically run non-interactive when related flag set by @dundee in #418
 * Tue Feb 4 2025 - Danie de Jager - 5.30.1-2
 - fix: set "GOINSECURE=go.opencensus.io"
 * Mon Dec 30 2024 Daniel Milde - 5.30.1-1

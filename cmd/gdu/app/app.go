@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -20,6 +21,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v5/pkg/timefilter"
 	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
@@ -38,19 +40,24 @@ type UI interface {
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
+	SetTimeFilter(timeFilter common.TimeFilter)
 	StartUILoop() error
 }
 
 // Flags define flags accepted by Run
 type Flags struct {
+	Style              Style    `yaml:"style"`
+	Sorting            Sorting  `yaml:"sorting"`
 	CfgFile            string   `yaml:"-"`
 	LogFile            string   `yaml:"log-file"`
 	InputFile          string   `yaml:"input-file"`
 	OutputFile         string   `yaml:"output-file"`
+	IgnoreFromFile     string   `yaml:"ignore-from-file"`
+	StoragePath        string   `yaml:"storage-path"`
 	IgnoreDirs         []string `yaml:"ignore-dirs"`
 	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
-	IgnoreFromFile     string   `yaml:"ignore-from-file"`
 	MaxCores           int      `yaml:"max-cores"`
+	Top                int      `yaml:"top"`
 	SequentialScanning bool     `yaml:"sequential-scanning"`
 	ShowDisks          bool     `yaml:"-"`
 	ShowApparentSize   bool     `yaml:"show-apparent-size"`
@@ -67,22 +74,24 @@ type Flags struct {
 	NoCross            bool     `yaml:"no-cross"`
 	NoHidden           bool     `yaml:"no-hidden"`
 	NoDelete           bool     `yaml:"no-delete"`
+	NoSpawnShell       bool     `yaml:"no-spawn-shell"`
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
 	ConstGC            bool     `yaml:"const-gc"`
 	UseStorage         bool     `yaml:"use-storage"`
-	StoragePath        string   `yaml:"storage-path"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
 	Summarize          bool     `yaml:"summarize"`
-	Top                int      `yaml:"top"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
 	WriteConfig        bool     `yaml:"-"`
+	ReverseSort        bool     `yaml:"reverse-sort"`
 	ChangeCwd          bool     `yaml:"change-cwd"`
 	DeleteInBackground bool     `yaml:"delete-in-background"`
 	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
-	Style              Style    `yaml:"style"`
-	Sorting            Sorting  `yaml:"sorting"`
+	Since              string   `yaml:"since"`
+	Until              string   `yaml:"until"`
+	MaxAge             string   `yaml:"max-age"`
+	MinAge             string   `yaml:"min-age"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -100,12 +109,12 @@ func (f *Flags) ShouldRunInNonInteractiveMode(istty bool) bool {
 
 // Style define style config
 type Style struct {
+	Footer        FooterColorStyle    `yaml:"footer"`
 	SelectedRow   ColorStyle          `yaml:"selected-row"`
+	ResultRow     ResultRowColorStyle `yaml:"result-row"`
+	Header        HeaderColorStyle    `yaml:"header"`
 	ProgressModal ProgressModalOpts   `yaml:"progress-modal"`
 	UseOldSizeBar bool                `yaml:"use-old-size-bar"`
-	Footer        FooterColorStyle    `yaml:"footer"`
-	Header        HeaderColorStyle    `yaml:"header"`
-	ResultRow     ResultRowColorStyle `yaml:"result-row"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -147,14 +156,14 @@ type Sorting struct {
 
 // App defines the main application
 type App struct {
-	Args        []string
-	Flags       *Flags
-	Istty       bool
 	Writer      io.Writer
 	TermApp     common.TermApplication
 	Screen      tcell.Screen
 	Getter      device.DevicesInfoGetter
+	Flags       *Flags
 	PathChecker func(string) (fs.FileInfo, error)
+	Args        []string
+	Istty       bool
 }
 
 func init() {
@@ -200,6 +209,13 @@ func (a *App) Run() error {
 	}
 	if a.Flags.ShowAnnexedSize {
 		ui.SetShowAnnexedSize(true)
+	}
+
+	// Set up time filter if any time flags are provided
+	if a.Flags.Since != "" || a.Flags.Until != "" || a.Flags.MaxAge != "" || a.Flags.MinAge != "" {
+		if err := a.setTimeFilters(ui); err != nil {
+			return err
+		}
 	}
 	if err := a.setNoCross(path); err != nil {
 		return err
@@ -250,7 +266,39 @@ func (a *App) setMaxProcs() {
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
-func (a *App) createUI() (ui UI, err error) {
+func (a *App) setTimeFilters(ui UI) error {
+	loc := time.Local
+	now := time.Now()
+
+	timeFilter, err := timefilter.NewTimeFilter(
+		a.Flags.Since,
+		a.Flags.Until,
+		a.Flags.MaxAge,
+		a.Flags.MinAge,
+		now,
+		loc,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid time filter: %w", err)
+	}
+
+	if !timeFilter.IsEmpty() {
+		timeFilterFunc := func(mtime time.Time) bool {
+			return timeFilter.IncludeByTimeFilter(mtime, loc)
+		}
+		ui.SetTimeFilter(timeFilterFunc)
+
+		// If this is a TUI, also set the filter info for display
+		if tuiUI, ok := ui.(*tui.UI); ok {
+			tuiUI.SetTimeFilterWithInfo(timeFilter, loc)
+		}
+	}
+	return nil
+}
+
+func (a *App) createUI() (UI, error) {
+	var ui UI
+	var err error
 
 	switch {
 	case a.Flags.OutputFile != "":
@@ -283,6 +331,7 @@ func (a *App) createUI() (ui UI, err error) {
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
 			a.Flags.Top,
+			a.Flags.ReverseSort,
 		)
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()
@@ -400,6 +449,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.NoDelete {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetNoDelete()
+		})
+	}
+	if a.Flags.NoSpawnShell {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetNoSpawnShell()
 		})
 	}
 	if a.Flags.DeleteInBackground {

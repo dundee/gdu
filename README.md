@@ -50,7 +50,7 @@ Flags:
   -X, --ignore-from string            Read path patterns to ignore from file
   -f, --input-file string             Import analysis from JSON file
   -l, --log-file string               Path to a logfile (default "/dev/null")
-  -m, --max-cores int                 Set max cores that Gdu will use. 12 cores available (default 12)
+  -m, --max-cores int                 Set max cores that Gdu will use
       --mouse                         Use mouse
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
@@ -58,10 +58,12 @@ Flags:
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
+      --no-spawn-shell                Do not allow spawning shell
   -u, --no-unicode                    Do not use Unicode symbols (for size bar)
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
   -r, --read-from-storage             Read analysis data from persistent key-value storage
+      --reverse-sort                  Reverse sorting order (smallest to largest) in non-interactive mode
       --sequential                    Use sequential scanning (intended for rotating HDDs)
   -A, --show-annexed-size             Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size            Show apparent size
@@ -107,6 +109,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -p /                              # do not show progress, useful when using its output in a script
     gdu -ps /some/dir                     # show only total usage for given dir
     gdu -t 10 /                           # show top 10 largest files
+    gdu --reverse-sort -n /               # show files sorted from smallest to largest in non-interactive mode
     gdu / > file                          # write stats to file, do not start interactive mode
 
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
@@ -146,7 +149,7 @@ Gdu can read (and write) YAML configuration file.
 
 `$HOME/.config/gdu/gdu.yaml` and `$HOME/.gdu.yaml` are checked for the presence of the config file by default.
 
-See the [full list of all configuration options](configuration).
+See the [full list of all configuration options](configuration.md).
 
 ### Examples
 

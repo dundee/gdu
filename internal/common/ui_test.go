@@ -1,3 +1,5 @@
+// Package common contains commong logic and interfaces used across Gdu
+// nolint: revive //Why: this is common package
 package common
 
 import (
@@ -66,3 +68,6 @@ func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {
 func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {
 	a.ShowAnnexedSize = v
 }
+
+// SetTimeFilter does nothing
+func (a *MockedAnalyzer) SetTimeFilter(timeFilter TimeFilter) {}

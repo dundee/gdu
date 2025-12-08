@@ -119,6 +119,10 @@ Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB
 
 Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
 
+#### `reverse-sort`
+
+Reverse sorting order (smallest to largest) in non-interactive mode
+
 #### `change-cwd`
 
 Set CWD variable when browsing directories

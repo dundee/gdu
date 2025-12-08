@@ -224,6 +224,21 @@ func TestGuiNoDelete(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGuiNoSpawnShell(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", NoSpawnShell: true},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
 func TestGuiDeleteInParallel(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -392,7 +407,7 @@ func TestReadWrongAnalysisFromFile(t *testing.T) {
 	)
 
 	assert.Empty(t, out)
-	assert.Contains(t, err.Error(), "Array of maps not found")
+	assert.Contains(t, err.Error(), "array of maps not found")
 }
 
 func TestWrongCombinationOfPrefixes(t *testing.T) {

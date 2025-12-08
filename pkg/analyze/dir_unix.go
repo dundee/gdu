@@ -1,5 +1,4 @@
 //go:build darwin || netbsd || freebsd
-// +build darwin netbsd freebsd
 
 package analyze
 

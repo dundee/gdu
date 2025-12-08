@@ -15,17 +15,18 @@ import (
 
 // StoredAnalyzer implements Analyzer
 type StoredAnalyzer struct {
-	storage          *Storage
-	storagePath      string
-	progress         *common.CurrentProgress
-	progressChan     chan common.CurrentProgress
-	progressOutChan  chan common.CurrentProgress
-	progressDoneChan chan struct{}
-	doneChan         common.SignalGroup
-	wait             *WaitGroup
-	ignoreDir        common.ShouldDirBeIgnored
-	followSymlinks   bool
-	gitAnnexedSize   bool
+	storage             *Storage
+	progress            *common.CurrentProgress
+	progressChan        chan common.CurrentProgress
+	progressOutChan     chan common.CurrentProgress
+	progressDoneChan    chan struct{}
+	doneChan            common.SignalGroup
+	wait                *WaitGroup
+	ignoreDir           common.ShouldDirBeIgnored
+	storagePath         string
+	followSymlinks      bool
+	gitAnnexedSize      bool
+	matchesTimeFilterFn common.TimeFilter
 }
 
 // CreateStoredAnalyzer returns Analyzer
@@ -60,6 +61,11 @@ func (a *StoredAnalyzer) SetFollowSymlinks(v bool) {
 
 func (a *StoredAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
+}
+
+// SetTimeFilter sets the time filter function for file inclusion
+func (a *StoredAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
+	a.matchesTimeFilterFn = matchesTimeFilterFn
 }
 
 // ResetProgress returns progress
@@ -199,6 +205,11 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				}
 			}
 
+			// Apply time filter if set
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
+
 			if file != nil {
 				// Only set platform-specific attributes for regular files
 				if regularFile, ok := file.(*File); ok {
@@ -215,13 +226,13 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 		log.Print(err.Error())
 	}
 
-	a.wait.Done()
-
 	a.progressChan <- common.CurrentProgress{
 		CurrentItemName: path,
 		ItemCount:       len(files),
 		TotalSize:       totalSize,
 	}
+
+	a.wait.Done()
 	return dir
 }
 

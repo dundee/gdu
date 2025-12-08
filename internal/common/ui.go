@@ -1,3 +1,5 @@
+// Package common contains commong logic and interfaces used across Gdu
+// nolint: revive //Why: this is common package
 package common
 
 import (
@@ -32,6 +34,11 @@ func (ui *UI) SetFollowSymlinks(v bool) {
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (ui *UI) SetShowAnnexedSize(v bool) {
 	ui.Analyzer.SetShowAnnexedSize(v)
+}
+
+// SetTimeFilter sets the time filter function for file inclusion
+func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
+	ui.Analyzer.SetTimeFilter(timeFilter)
 }
 
 // binary multiplies prefixes (IEC)

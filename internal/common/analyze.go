@@ -1,6 +1,12 @@
+// Package common contains commong logic and interfaces used across Gdu
+// nolint: revive //Why: this is common package
 package common
 
-import "github.com/dundee/gdu/v5/pkg/fs"
+import (
+	"time"
+
+	"github.com/dundee/gdu/v5/pkg/fs"
+)
 
 // CurrentProgress struct
 type CurrentProgress struct {
@@ -17,7 +23,11 @@ type Analyzer interface {
 	AnalyzeDir(path string, ignore ShouldDirBeIgnored, constGC bool) fs.Item
 	SetFollowSymlinks(bool)
 	SetShowAnnexedSize(bool)
+	SetTimeFilter(timeFilter TimeFilter)
 	GetProgressChan() chan CurrentProgress
 	GetDone() SignalGroup
 	ResetProgress()
 }
+
+// TimeFilter represents a function that determines if a file should be included based on its mtime
+type TimeFilter func(mtime time.Time) bool

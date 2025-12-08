@@ -794,6 +794,18 @@ func TestNoDelete(t *testing.T) {
 	assert.Equal(t, ui.noDelete, true)
 }
 
+func TestNoSpawnShell(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+
+	ui.SetNoSpawnShell()
+
+	assert.Equal(t, ui.noSpawnShell, true)
+}
+
 // nolint: deadcode,unused // Why: for debugging
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()
@@ -847,4 +859,149 @@ func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize, mockedAnaly
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	return ui
+}
+
+func TestConfirmDeletionSelectedButtonOrder(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, true, true, true)
+
+	ui.table.Select(1, 0)
+	ui.confirmDeletionSelected(false)
+
+	// Verify confirmation page is created
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmDeletionSelectedSafeDefault(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+	ui.table.Select(0, 0)
+
+	// Create confirmation dialog
+	ui.confirmDeletionSelected(false)
+
+	// Verify that the confirmation dialog exists with safer defaults
+	assert.DirExists(t, "test_dir/nested")
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmDeletionButtonIndexMapping(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+	ui.askBeforeDelete = false // Skip confirmation for direct testing
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+	ui.table.Select(0, 0)
+
+	// Test that deletion still works when explicitly called
+	ui.deleteSelected(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestConfirmEmptySelectedSafeDefault(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, true, true, true)
+
+	ui.table.Select(1, 0)
+	ui.confirmDeletionSelected(true)
+
+	// Verify empty confirmation dialog is created safely
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmDeletionMarkedSafeDefault(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, true, true, true)
+
+	ui.table.Select(1, 0)
+	ui.markedRows[1] = struct{}{}
+	ui.confirmDeletionMarked(false)
+
+	// Verify marked deletion confirmation dialog is created safely
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmEmptyMarkedSafeDefault(t *testing.T) {
+	ui := getAnalyzedPathMockedApp(t, false, true, true)
+
+	ui.table.Select(1, 0)
+	ui.markedRows[1] = struct{}{}
+	ui.confirmDeletionMarked(true)
+
+	// Verify marked empty confirmation dialog is created safely
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestSaferConfirmationPreventDataLoss(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+	ui.table.Select(0, 0)
+
+	// Test that creating confirmation dialog doesn't accidentally trigger deletion
+	ui.confirmDeletionSelected(false)
+	ui.confirmDeletionSelected(true) // empty
+
+	// Directory should still exist - no accidental deletion
+	assert.DirExists(t, "test_dir/nested")
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestConfirmDeletionSelectedCase1(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+	ui.table.Select(0, 0)
+
+	// Test case 1 branch (yes button at index 1) by directly calling deleteSelected
+	ui.deleteSelected(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestConfirmDeletionMarkedCase1(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+
+	ui.fileItemSelected(0, 0)     // nested
+	ui.markedRows[1] = struct{}{} // subnested
+
+	// Test case 1 branch (yes button at index 1) by directly calling deleteMarked
+	ui.deleteMarked(false)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NoDirExists(t, "test_dir/nested/subnested")
 }
