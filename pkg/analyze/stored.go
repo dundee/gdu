@@ -15,19 +15,19 @@ import (
 
 // StoredAnalyzer implements Analyzer
 type StoredAnalyzer struct {
-	storage               *Storage
-	progress              *common.CurrentProgress
-	progressChan          chan common.CurrentProgress
-	progressOutChan       chan common.CurrentProgress
-	progressDoneChan      chan struct{}
-	doneChan              common.SignalGroup
-	wait                  *WaitGroup
-	ignoreDir             common.ShouldDirBeIgnored
-	storagePath           string
-	followSymlinks        bool
-	gitAnnexedSize        bool
-	matchesTimeFilterFn   common.TimeFilter
-	enableArchiveBrowsing bool
+	storage             *Storage
+	progress            *common.CurrentProgress
+	progressChan        chan common.CurrentProgress
+	progressOutChan     chan common.CurrentProgress
+	progressDoneChan    chan struct{}
+	doneChan            common.SignalGroup
+	wait                *WaitGroup
+	ignoreDir           common.ShouldDirBeIgnored
+	storagePath         string
+	followSymlinks      bool
+	gitAnnexedSize      bool
+	matchesTimeFilterFn common.TimeFilter
+	archiveBrowsing     bool
 }
 
 // CreateStoredAnalyzer returns Analyzer
@@ -69,9 +69,9 @@ func (a *StoredAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
 	a.matchesTimeFilterFn = matchesTimeFilterFn
 }
 
-// SetEnableArchiveBrowsing sets whether browsing of zip/tar.gz/jar archives is enabled
-func (a *StoredAnalyzer) SetEnableArchiveBrowsing(v bool) {
-	a.enableArchiveBrowsing = v
+// SetArchiveBrowsing sets whether browsing of zip/tar.gz/jar archives is enabled
+func (a *StoredAnalyzer) SetArchiveBrowsing(v bool) {
+	a.archiveBrowsing = v
 }
 
 // ResetProgress returns progress
@@ -181,7 +181,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			}
 
 			// Check if it's a zip or jar file
-			if a.enableArchiveBrowsing && isZipFile(name) {
+			if a.archiveBrowsing && isZipFile(name) {
 				zipDir, err := processZipFile(entryPath, info)
 				if err != nil {
 					// If unable to process zip file, treat as regular file

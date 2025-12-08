@@ -12,17 +12,17 @@ import (
 
 // SequentialAnalyzer implements Analyzer
 type SequentialAnalyzer struct {
-	progress              *common.CurrentProgress
-	progressChan          chan common.CurrentProgress
-	progressOutChan       chan common.CurrentProgress
-	progressDoneChan      chan struct{}
-	doneChan              common.SignalGroup
-	wait                  *WaitGroup
-	ignoreDir             common.ShouldDirBeIgnored
-	followSymlinks        bool
-	gitAnnexedSize        bool
-	matchesTimeFilterFn   common.TimeFilter
-	enableArchiveBrowsing bool
+	progress            *common.CurrentProgress
+	progressChan        chan common.CurrentProgress
+	progressOutChan     chan common.CurrentProgress
+	progressDoneChan    chan struct{}
+	doneChan            common.SignalGroup
+	wait                *WaitGroup
+	ignoreDir           common.ShouldDirBeIgnored
+	followSymlinks      bool
+	gitAnnexedSize      bool
+	matchesTimeFilterFn common.TimeFilter
+	archiveBrowsing     bool
 }
 
 // CreateSeqAnalyzer returns Analyzer
@@ -55,9 +55,9 @@ func (a *SequentialAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter
 	a.matchesTimeFilterFn = matchesTimeFilterFn
 }
 
-// SetEnableArchiveBrowsing sets whether browsing of zip/tar.gz/jar archives is enabled
-func (a *SequentialAnalyzer) SetEnableArchiveBrowsing(v bool) {
-	a.enableArchiveBrowsing = v
+// SetArchiveBrowsing sets whether browsing of zip/tar.gz/jar archives is enabled
+func (a *SequentialAnalyzer) SetArchiveBrowsing(v bool) {
+	a.archiveBrowsing = v
 }
 
 // GetProgressChan returns channel for getting progress
@@ -157,7 +157,7 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 			}
 
 			// Check if it's a zip or jar file
-			if a.enableArchiveBrowsing && isZipFile(name) {
+			if a.archiveBrowsing && isZipFile(name) {
 				zipDir, err := processZipFile(entryPath, info)
 				if err != nil {
 					// If unable to process zip file, treat as regular file
