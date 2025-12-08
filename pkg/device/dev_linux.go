@@ -32,7 +32,7 @@ func (t LinuxDevicesInfoGetter) GetMounts() (devices Devices, err error) {
 		}
 		return nil, err
 	}
-	if err = file.Close(); err != nil {
+	if err := file.Close(); err != nil {
 		return nil, err
 	}
 	return devices, nil
@@ -64,7 +64,7 @@ func readMountsFile(file io.Reader) (mounts Devices, err error) {
 		mounts = append(mounts, device)
 	}
 
-	if err = scanner.Err(); err != nil {
+	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 

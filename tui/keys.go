@@ -261,34 +261,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.openItem()
 	case 'i':
 		ui.showInfo()
-	case 'a':
-		ui.ShowApparentSize = !ui.ShowApparentSize
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
-	case 'B':
-		ui.ShowRelativeSize = !ui.ShowRelativeSize
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
-	case 'c':
-		ui.showItemCount = !ui.showItemCount
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
-	case 'm':
-		ui.showMtime = !ui.showMtime
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
+	case 'a', 'B', 'c', 'm':
+		ui.handleToggles(key)
 	case 'r':
 		if ui.currentDir != nil {
 			ui.rescanDir()
@@ -296,14 +270,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	case 'E':
 		ui.confirmExport()
 		return nil
-	case 's':
-		ui.setSorting("size")
-	case 'C':
-		ui.setSorting("itemCount")
-	case 'n':
-		ui.setSorting("name")
-	case 'M':
-		ui.setSorting("mtime")
+	case 's', 'C', 'n', 'M':
+		ui.handleSorting(key)
 	case '/':
 		ui.showFilterInput()
 		return nil
@@ -313,6 +281,37 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.ignoreItem()
 	}
 	return key
+}
+
+func (ui *UI) handleToggles(key *tcell.EventKey) {
+	switch key.Rune() {
+	case 'a':
+		ui.ShowApparentSize = !ui.ShowApparentSize
+	case 'B':
+		ui.ShowRelativeSize = !ui.ShowRelativeSize
+	case 'c':
+		ui.showItemCount = !ui.showItemCount
+	case 'm':
+		ui.showMtime = !ui.showMtime
+	}
+	if ui.currentDir != nil {
+		row, column := ui.table.GetSelection()
+		ui.showDir()
+		ui.table.Select(row, column)
+	}
+}
+
+func (ui *UI) handleSorting(key *tcell.EventKey) {
+	switch key.Rune() {
+	case 's':
+		ui.setSorting("size")
+	case 'C':
+		ui.setSorting("itemCount")
+	case 'n':
+		ui.setSorting("name")
+	case 'M':
+		ui.setSorting("mtime")
+	}
 }
 
 func (ui *UI) handleLeft() {
