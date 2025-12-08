@@ -90,6 +90,9 @@ func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {}
 // SetTimeFilter does nothing
 func (a *MockedAnalyzer) SetTimeFilter(timeFilter common.TimeFilter) {}
 
+// SetEnableArchiveBrowsing does nothing
+func (a *MockedAnalyzer) SetEnableArchiveBrowsing(v bool) {}
+
 // ItemFromDirWithErr returns error
 func ItemFromDirWithErr(dir, file fs.Item) error {
 	return errors.New("Failed")

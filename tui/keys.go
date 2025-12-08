@@ -173,6 +173,10 @@ func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {
 
 func (ui *UI) handleShell(key *tcell.EventKey) *tcell.EventKey {
 	if key.Rune() == 'b' {
+		if ui.isInArchive() {
+			ui.showErr("Spawning shell is not supported in archives", nil)
+			return nil
+		}
 		if ui.noSpawnShell {
 			previousHeaderText := ui.header.GetText(false)
 
@@ -221,10 +225,22 @@ func (ui *UI) handleFiltering(key *tcell.EventKey) *tcell.EventKey {
 func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	switch key.Rune() {
 	case 'd':
+		if ui.isInArchive() {
+			ui.showErr("Deletion is not supported in archives", nil)
+			return nil
+		}
 		ui.handleDelete(false)
 	case 'e':
+		if ui.isInArchive() {
+			ui.showErr("Deletion is not supported in archives", nil)
+			return nil
+		}
 		ui.handleDelete(true)
 	case 'v':
+		if ui.isInArchive() {
+			ui.showErr("Viewing content is not supported in archives", nil)
+			return nil
+		}
 		ui.showFile()
 	case 'o':
 		if ui.noSpawnShell {

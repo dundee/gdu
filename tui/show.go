@@ -289,8 +289,13 @@ func (ui *UI) showDevices() {
 }
 
 func (ui *UI) showErr(msg string, err error) {
+	text := msg
+	if err != nil {
+		text += ": " + err.Error()
+	}
+
 	modal := tview.NewModal().
-		SetText(msg + ": " + err.Error()).
+		SetText(text).
 		AddButtons([]string{"ok"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			ui.pages.RemovePage("error")

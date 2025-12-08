@@ -41,57 +41,59 @@ type UI interface {
 	SetShowAnnexedSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
 	SetTimeFilter(timeFilter common.TimeFilter)
+	SetEnableArchiveBrowsing(value bool)
 	StartUILoop() error
 }
 
 // Flags define flags accepted by Run
 type Flags struct {
-	Style              Style    `yaml:"style"`
-	Sorting            Sorting  `yaml:"sorting"`
-	CfgFile            string   `yaml:"-"`
-	LogFile            string   `yaml:"log-file"`
-	InputFile          string   `yaml:"input-file"`
-	OutputFile         string   `yaml:"output-file"`
-	IgnoreFromFile     string   `yaml:"ignore-from-file"`
-	StoragePath        string   `yaml:"storage-path"`
-	IgnoreDirs         []string `yaml:"ignore-dirs"`
-	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
-	MaxCores           int      `yaml:"max-cores"`
-	Top                int      `yaml:"top"`
-	SequentialScanning bool     `yaml:"sequential-scanning"`
-	ShowDisks          bool     `yaml:"-"`
-	ShowApparentSize   bool     `yaml:"show-apparent-size"`
-	ShowRelativeSize   bool     `yaml:"show-relative-size"`
-	ShowAnnexedSize    bool     `yaml:"show-annexed-size"`
-	ShowVersion        bool     `yaml:"-"`
-	ShowItemCount      bool     `yaml:"show-item-count"`
-	ShowMTime          bool     `yaml:"show-mtime"`
-	NoColor            bool     `yaml:"no-color"`
-	Mouse              bool     `yaml:"mouse"`
-	NonInteractive     bool     `yaml:"non-interactive"`
-	NoProgress         bool     `yaml:"no-progress"`
-	NoUnicode          bool     `yaml:"no-unicode"`
-	NoCross            bool     `yaml:"no-cross"`
-	NoHidden           bool     `yaml:"no-hidden"`
-	NoDelete           bool     `yaml:"no-delete"`
-	NoSpawnShell       bool     `yaml:"no-spawn-shell"`
-	FollowSymlinks     bool     `yaml:"follow-symlinks"`
-	Profiling          bool     `yaml:"profiling"`
-	ConstGC            bool     `yaml:"const-gc"`
-	UseStorage         bool     `yaml:"use-storage"`
-	ReadFromStorage    bool     `yaml:"read-from-storage"`
-	Summarize          bool     `yaml:"summarize"`
-	UseSIPrefix        bool     `yaml:"use-si-prefix"`
-	NoPrefix           bool     `yaml:"no-prefix"`
-	WriteConfig        bool     `yaml:"-"`
-	ReverseSort        bool     `yaml:"reverse-sort"`
-	ChangeCwd          bool     `yaml:"change-cwd"`
-	DeleteInBackground bool     `yaml:"delete-in-background"`
-	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
-	Since              string   `yaml:"since"`
-	Until              string   `yaml:"until"`
-	MaxAge             string   `yaml:"max-age"`
-	MinAge             string   `yaml:"min-age"`
+	Style                 Style    `yaml:"style"`
+	Sorting               Sorting  `yaml:"sorting"`
+	CfgFile               string   `yaml:"-"`
+	LogFile               string   `yaml:"log-file"`
+	InputFile             string   `yaml:"input-file"`
+	OutputFile            string   `yaml:"output-file"`
+	IgnoreFromFile        string   `yaml:"ignore-from-file"`
+	StoragePath           string   `yaml:"storage-path"`
+	IgnoreDirs            []string `yaml:"ignore-dirs"`
+	IgnoreDirPatterns     []string `yaml:"ignore-dir-patterns"`
+	MaxCores              int      `yaml:"max-cores"`
+	Top                   int      `yaml:"top"`
+	SequentialScanning    bool     `yaml:"sequential-scanning"`
+	ShowDisks             bool     `yaml:"-"`
+	ShowApparentSize      bool     `yaml:"show-apparent-size"`
+	ShowRelativeSize      bool     `yaml:"show-relative-size"`
+	ShowAnnexedSize       bool     `yaml:"show-annexed-size"`
+	ShowVersion           bool     `yaml:"-"`
+	ShowItemCount         bool     `yaml:"show-item-count"`
+	ShowMTime             bool     `yaml:"show-mtime"`
+	NoColor               bool     `yaml:"no-color"`
+	Mouse                 bool     `yaml:"mouse"`
+	NonInteractive        bool     `yaml:"non-interactive"`
+	NoProgress            bool     `yaml:"no-progress"`
+	NoUnicode             bool     `yaml:"no-unicode"`
+	NoCross               bool     `yaml:"no-cross"`
+	NoHidden              bool     `yaml:"no-hidden"`
+	NoDelete              bool     `yaml:"no-delete"`
+	NoSpawnShell          bool     `yaml:"no-spawn-shell"`
+	FollowSymlinks        bool     `yaml:"follow-symlinks"`
+	Profiling             bool     `yaml:"profiling"`
+	ConstGC               bool     `yaml:"const-gc"`
+	UseStorage            bool     `yaml:"use-storage"`
+	ReadFromStorage       bool     `yaml:"read-from-storage"`
+	Summarize             bool     `yaml:"summarize"`
+	UseSIPrefix           bool     `yaml:"use-si-prefix"`
+	NoPrefix              bool     `yaml:"no-prefix"`
+	WriteConfig           bool     `yaml:"-"`
+	ReverseSort           bool     `yaml:"reverse-sort"`
+	ChangeCwd             bool     `yaml:"change-cwd"`
+	DeleteInBackground    bool     `yaml:"delete-in-background"`
+	DeleteInParallel      bool     `yaml:"delete-in-parallel"`
+	Since                 string   `yaml:"since"`
+	Until                 string   `yaml:"until"`
+	MaxAge                string   `yaml:"max-age"`
+	MinAge                string   `yaml:"min-age"`
+	EnableArchiveBrowsing bool     `yaml:"enable-archive-browsing"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -209,6 +211,9 @@ func (a *App) Run() error {
 	}
 	if a.Flags.ShowAnnexedSize {
 		ui.SetShowAnnexedSize(true)
+	}
+	if a.Flags.EnableArchiveBrowsing {
+		ui.SetEnableArchiveBrowsing(true)
 	}
 
 	// Set up time filter if any time flags are provided

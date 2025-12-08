@@ -89,6 +89,10 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 		return nil
 	}
 
+	if item.GetFlag() == 'Z' {
+		return nil
+	}
+
 	var segments []string
 	current := item
 

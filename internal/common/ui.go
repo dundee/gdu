@@ -41,6 +41,11 @@ func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
 	ui.Analyzer.SetTimeFilter(timeFilter)
 }
 
+// SetEnableArchiveBrowsing sets whether to enable browsing of zip/tar.gz/jar archives
+func (ui *UI) SetEnableArchiveBrowsing(v bool) {
+	ui.Analyzer.SetEnableArchiveBrowsing(v)
+}
+
 // binary multiplies prefixes (IEC)
 const (
 	_ float64 = 1 << (10 * iota)

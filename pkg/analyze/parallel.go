@@ -15,16 +15,17 @@ var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
-	progress            *common.CurrentProgress
-	progressChan        chan common.CurrentProgress
-	progressOutChan     chan common.CurrentProgress
-	progressDoneChan    chan struct{}
-	doneChan            common.SignalGroup
-	wait                *WaitGroup
-	ignoreDir           common.ShouldDirBeIgnored
-	followSymlinks      bool
-	gitAnnexedSize      bool
-	matchesTimeFilterFn common.TimeFilter
+	progress              *common.CurrentProgress
+	progressChan          chan common.CurrentProgress
+	progressOutChan       chan common.CurrentProgress
+	progressDoneChan      chan struct{}
+	doneChan              common.SignalGroup
+	wait                  *WaitGroup
+	ignoreDir             common.ShouldDirBeIgnored
+	followSymlinks        bool
+	gitAnnexedSize        bool
+	matchesTimeFilterFn   common.TimeFilter
+	enableArchiveBrowsing bool
 }
 
 // CreateAnalyzer returns Analyzer
@@ -55,6 +56,11 @@ func (a *ParallelAnalyzer) SetShowAnnexedSize(v bool) {
 // SetTimeFilter sets the time filter function for file inclusion
 func (a *ParallelAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
 	a.matchesTimeFilterFn = matchesTimeFilterFn
+}
+
+// SetEnableArchiveBrowsing sets whether browsing of zip/tar.gz/jar archives is enabled
+func (a *ParallelAnalyzer) SetEnableArchiveBrowsing(v bool) {
+	a.enableArchiveBrowsing = v
 }
 
 // GetProgressChan returns channel for getting progress
@@ -164,7 +170,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			}
 
 			// Check if it's a zip or jar file
-			if isZipFile(name) {
+			if a.enableArchiveBrowsing && isZipFile(name) {
 				zipDir, err := processZipFile(entryPath, info)
 				if err != nil {
 					// If unable to process zip file, treat as regular file

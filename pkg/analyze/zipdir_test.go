@@ -49,7 +49,7 @@ func TestProcessZipFile(t *testing.T) {
 	assert.NotNil(t, zipDir)
 
 	// Verify zip directory properties
-	assert.Equal(t, "test.zip", zipDir.GetName())
+	assert.Equal(t, "test.zip", zipDir.GetName(), "Name must include extension")
 	assert.Equal(t, rune('Z'), zipDir.GetFlag())
 	assert.True(t, zipDir.IsDir())
 	assert.Equal(t, "ZipDirectory", zipDir.GetType())
