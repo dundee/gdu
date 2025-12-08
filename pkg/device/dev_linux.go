@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mithrandie/go-file/v2"
 	"golang.org/x/sys/unix"
 )
 
@@ -21,7 +20,7 @@ var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"
 
 // GetMounts returns all mounted filesystems from /proc/mounts
 func (t LinuxDevicesInfoGetter) GetMounts() (devices Devices, err error) {
-	file, err = os.Open(t.MountsPath)
+	file, err := os.Open(t.MountsPath)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +40,7 @@ func (t LinuxDevicesInfoGetter) GetMounts() (devices Devices, err error) {
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
 func (t LinuxDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
-	mounts, err = t.GetMounts()
+	mounts, err := t.GetMounts()
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +49,7 @@ func (t LinuxDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
 }
 
 func readMountsFile(file io.Reader) (mounts Devices, err error) {
-	mounts := Devices{}
+	mounts = Devices{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -73,7 +72,7 @@ func readMountsFile(file io.Reader) (mounts Devices, err error) {
 }
 
 func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
-	devices := Devices{}
+	devices = Devices{}
 
 	for _, mount := range mounts {
 		if strings.Contains(mount.MountPoint, "/snap/") {
