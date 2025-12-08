@@ -41,7 +41,7 @@ func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
 	ui.Analyzer.SetTimeFilter(timeFilter)
 }
 
-// SetArchiveBrowsing sets whether browsing of zip/tar.gz/jar archives is enabled
+// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
 func (ui *UI) SetArchiveBrowsing(v bool) {
 	ui.Analyzer.SetArchiveBrowsing(v)
 }

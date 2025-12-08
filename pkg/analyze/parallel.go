@@ -58,7 +58,7 @@ func (a *ParallelAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) 
 	a.matchesTimeFilterFn = matchesTimeFilterFn
 }
 
-// SetArchiveBrowsing sets whether browsing of zip/tar.gz/jar archives is enabled
+// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
 func (a *ParallelAnalyzer) SetArchiveBrowsing(v bool) {
 	a.archiveBrowsing = v
 }
