@@ -390,6 +390,11 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()
 
+	if row != 0 || origDir.GetPath() == ui.topDir.GetPath() {
+		return
+	}
+
+	// we are going up in the directory tree, select the last visited directory
 	if origDir.GetParent() != nil {
 		nestedDir := origDir
 		for nestedDir.GetParent() != nil {
