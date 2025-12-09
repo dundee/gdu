@@ -151,16 +151,8 @@ func findCollapsedParent(currentDir fs.Item) fs.Item {
 	for current.GetParent() != nil {
 		parent := current.GetParent()
 
-		// Count subdirectories in parent
-		var subdirCount int
-		for _, file := range parent.GetFiles() {
-			if file.IsDir() {
-				subdirCount++
-			}
-		}
-
-		// If parent has more than one subdirectory, this is where the collapsed chain starts
-		if subdirCount > 1 {
+		// If parent has more than one item, this is where the collapsed chain starts
+		if len(parent.GetFiles()) > 1 {
 			chainParent = parent
 			break
 		}
