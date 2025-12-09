@@ -58,7 +58,7 @@ func TestFooter(t *testing.T) {
 
 	b, _, _ := simScreen.GetContents()
 
-	printScreen(simScreen)
+	// printScreen(simScreen)
 
 	text := []byte(" Total disk    usage: 4.0 KiB Apparent size: 2 B Items: 1")
 	for i, r := range b {

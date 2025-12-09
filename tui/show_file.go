@@ -25,8 +25,13 @@ func (ui *UI) showFile() *tview.TextView {
 	}
 
 	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	if selectedFile.IsDir() {
+	cell := ui.table.GetCell(row, column)
+	if cell == nil || cell.GetReference() == nil {
+		return nil
+	}
+
+	selectedFile, ok := cell.GetReference().(fs.Item)
+	if !ok || selectedFile == nil || selectedFile.IsDir() {
 		return nil
 	}
 

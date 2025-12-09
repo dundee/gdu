@@ -41,6 +41,8 @@ type UI interface {
 	SetShowAnnexedSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
 	SetTimeFilter(timeFilter common.TimeFilter)
+	SetArchiveBrowsing(value bool)
+	SetCollapsePath(value bool)
 	StartUILoop() error
 }
 
@@ -92,6 +94,8 @@ type Flags struct {
 	Until              string   `yaml:"until"`
 	MaxAge             string   `yaml:"max-age"`
 	MinAge             string   `yaml:"min-age"`
+	ArchiveBrowsing    bool     `yaml:"archive-browsing"`
+	CollapsePath       bool     `yaml:"collapse-path"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -210,6 +214,12 @@ func (a *App) Run() error {
 	if a.Flags.ShowAnnexedSize {
 		ui.SetShowAnnexedSize(true)
 	}
+	if a.Flags.ArchiveBrowsing {
+		ui.SetArchiveBrowsing(true)
+	}
+	if a.Flags.CollapsePath {
+		ui.SetCollapsePath(true)
+	}
 
 	// Set up time filter if any time flags are provided
 	if a.Flags.Since != "" || a.Flags.Until != "" || a.Flags.MaxAge != "" || a.Flags.MinAge != "" {
@@ -298,11 +308,11 @@ func (a *App) setTimeFilters(ui UI) error {
 
 func (a *App) createUI() (UI, error) {
 	var ui UI
+	var err error
 
 	switch {
 	case a.Flags.OutputFile != "":
 		var output io.Writer
-		var err error
 		if a.Flags.OutputFile == "-" {
 			output = os.Stdout
 		} else {

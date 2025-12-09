@@ -86,6 +86,7 @@ type UI struct {
 	timeFilter              *timefilter.TimeFilter
 	timeFilterLoc           *time.Location
 	noDeleteWithFilter      bool
+	collapsePath            bool
 }
 
 type deleteQueueItem struct {
@@ -339,6 +340,11 @@ func (ui *UI) SetNoDeleteWithFilter() {
 	ui.noDeleteWithFilter = true
 }
 
+// SetCollapsePath sets the flag to collapse paths
+func (ui *UI) SetCollapsePath(value bool) {
+	ui.collapsePath = value
+}
+
 // SetDeleteInBackground sets the flag to delete files in background
 func (ui *UI) SetDeleteInBackground() {
 	ui.deleteInBackground = true
@@ -387,17 +393,29 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()
 
-	if origDir.GetParent() != nil && selectedDir.GetName() == origDir.GetParent().GetName() {
-		index := slices.IndexFunc(
-			ui.currentDir.GetFiles(),
-			func(v fs.Item) bool {
-				return v.GetName() == origDir.GetName()
-			},
-		)
-		if ui.currentDir.GetPath() != ui.topDir.GetPath() {
-			index++
+	if row != 0 || origDir.GetPath() == ui.topDir.GetPath() {
+		return
+	}
+
+	// we are going up in the directory tree, select the last visited directory
+	if origDir.GetParent() != nil {
+		nestedDir := origDir
+		for nestedDir.GetParent() != nil {
+			if selectedDir.GetName() == nestedDir.GetParent().GetName() {
+				index := slices.IndexFunc(
+					ui.currentDir.GetFiles(),
+					func(v fs.Item) bool {
+						return v.GetName() == nestedDir.GetName()
+					},
+				)
+				if ui.currentDir.GetPath() != ui.topDir.GetPath() {
+					index++
+				}
+				ui.table.Select(index, 0)
+				break
+			}
+			nestedDir = nestedDir.GetParent()
 		}
-		ui.table.Select(index, 0)
 	}
 }
 

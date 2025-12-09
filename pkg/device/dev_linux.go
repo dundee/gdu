@@ -19,13 +19,13 @@ type LinuxDevicesInfoGetter struct {
 var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
 
 // GetMounts returns all mounted filesystems from /proc/mounts
-func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
+func (t LinuxDevicesInfoGetter) GetMounts() (devices Devices, err error) {
 	file, err := os.Open(t.MountsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	devices, err := readMountsFile(file)
+	devices, err = readMountsFile(file)
 	if err != nil {
 		if cerr := file.Close(); cerr != nil {
 			return nil, fmt.Errorf("%w; %s", err, cerr.Error())
@@ -39,7 +39,7 @@ func (t LinuxDevicesInfoGetter) GetMounts() (Devices, error) {
 }
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
-func (t LinuxDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
+func (t LinuxDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
 	mounts, err := t.GetMounts()
 	if err != nil {
 		return nil, err
@@ -48,8 +48,8 @@ func (t LinuxDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 	return processMounts(mounts, false)
 }
 
-func readMountsFile(file io.Reader) (Devices, error) {
-	mounts := Devices{}
+func readMountsFile(file io.Reader) (mounts Devices, err error) {
+	mounts = Devices{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -71,8 +71,8 @@ func readMountsFile(file io.Reader) (Devices, error) {
 	return mounts, nil
 }
 
-func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
-	devices := Devices{}
+func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
+	devices = Devices{}
 
 	for _, mount := range mounts {
 		if strings.Contains(mount.MountPoint, "/snap/") {
@@ -84,7 +84,7 @@ func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
 			mount.Fstype == "nfs" ||
 			mount.Fstype == "nfs4" {
 			info := &unix.Statfs_t{}
-			err := unix.Statfs(mount.MountPoint, info)
+			err = unix.Statfs(mount.MountPoint, info)
 			if err != nil && !ignoreErrors {
 				return nil, err
 			}

@@ -1110,3 +1110,42 @@ func TestShowInfoAndMoveAround(t *testing.T) {
 
 	assert.False(t, ui.pages.HasPage("info"))
 }
+
+func TestBlockedActionsInArchive(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+
+	// Simulate being in a zip dir
+	zipDir := &analyze.ZipDir{
+		Dir: &analyze.Dir{
+			File: &analyze.File{
+				Name: "test.zip",
+				Flag: 'Z',
+			},
+		},
+	}
+	ui.currentDir = zipDir
+
+	// Test 'd' (delete)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
+	assert.True(t, ui.pages.HasPage("error"))
+	ui.pages.RemovePage("error")
+
+	// Test 'e' (empty)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'e', 0))
+	assert.True(t, ui.pages.HasPage("error"))
+	ui.pages.RemovePage("error")
+
+	// Test 'v' (view)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'v', 0))
+	assert.True(t, ui.pages.HasPage("error"))
+	ui.pages.RemovePage("error")
+
+	// Test 'b' (shell)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'b', 0))
+	assert.True(t, ui.pages.HasPage("error"))
+	ui.pages.RemovePage("error")
+}

@@ -108,7 +108,7 @@ func (s *Storage) LoadDir(dir fs.Item) error {
 }
 
 // GetDirForPath returns Dir for given path
-func (s *Storage) GetDirForPath(path string) (fs.Item, error) {
+func (s *Storage) GetDirForPath(path string) (item fs.Item, err error) {
 	dirPath := filepath.Dir(path)
 	name := filepath.Base(path)
 	dir := &StoredDir{
@@ -121,7 +121,7 @@ func (s *Storage) GetDirForPath(path string) (fs.Item, error) {
 		nil,
 		sync.Mutex{},
 	}
-	err := s.LoadDir(dir)
+	err = s.LoadDir(dir)
 	if err != nil {
 		return nil, err
 	}
