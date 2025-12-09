@@ -13,9 +13,7 @@ import (
 )
 
 // CreateIgnorePattern creates one pattern from all path patterns
-func CreateIgnorePattern(paths []string) (*regexp.Regexp, error) {
-	var err error
-
+func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
 	for i, path := range paths {
 		if _, err = regexp.Compile(path); err != nil {
 			return nil, err

@@ -25,6 +25,7 @@ type ParallelAnalyzer struct {
 	followSymlinks      bool
 	gitAnnexedSize      bool
 	matchesTimeFilterFn common.TimeFilter
+	archiveBrowsing     bool
 }
 
 // CreateAnalyzer returns Analyzer
@@ -55,6 +56,11 @@ func (a *ParallelAnalyzer) SetShowAnnexedSize(v bool) {
 // SetTimeFilter sets the time filter function for file inclusion
 func (a *ParallelAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
 	a.matchesTimeFilterFn = matchesTimeFilterFn
+}
+
+// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
+func (a *ParallelAnalyzer) SetArchiveBrowsing(v bool) {
+	a.archiveBrowsing = v
 }
 
 // GetProgressChan returns channel for getting progress
@@ -102,7 +108,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 
 func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
-		file       *File
+		file       fs.Item
 		err        error
 		totalSize  int64
 		info       os.FileInfo
@@ -163,22 +169,50 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
-			file = &File{
-				Name:   name,
-				Flag:   getFlag(info),
-				Size:   info.Size(),
-				Parent: dir,
+			// Check if it's a zip or jar file
+			if a.archiveBrowsing && isZipFile(name) {
+				zipDir, err := processZipFile(entryPath, info)
+				if err != nil {
+					// If unable to process zip file, treat as regular file
+					log.Printf("Failed to process zip file %s: %v", entryPath, err)
+					file = &File{
+						Name:   name,
+						Flag:   getFlag(info),
+						Size:   info.Size(),
+						Parent: dir,
+					}
+				} else {
+					// Successfully processed zip file, use zip content size
+					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
+					if err == nil {
+						zipDir.Size = uncompressedSize
+						zipDir.Usage = compressedSize
+					}
+					zipDir.Parent = dir
+					file = zipDir
+				}
+			} else {
+				file = &File{
+					Name:   name,
+					Flag:   getFlag(info),
+					Size:   info.Size(),
+					Parent: dir,
+				}
 			}
-			setPlatformSpecificAttrs(file, info)
 
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
-			totalSize += info.Size()
-
-			dir.AddFile(file)
+			if file != nil {
+				// Only set platform-specific attributes for regular files
+				if regularFile, ok := file.(*File); ok {
+					setPlatformSpecificAttrs(regularFile, info)
+				}
+				totalSize += file.GetSize()
+				dir.AddFile(file)
+			}
 		}
 	}
 

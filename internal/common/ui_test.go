@@ -32,9 +32,19 @@ func TestSetShowAnnexedSize(t *testing.T) {
 	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ShowAnnexedSize)
 }
 
+func TestSetEnableArchiveBrowsing(t *testing.T) {
+	ui := UI{
+		Analyzer: &MockedAnalyzer{},
+	}
+	ui.SetArchiveBrowsing(true)
+
+	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ArchiveBrowsing)
+}
+
 type MockedAnalyzer struct {
 	FollowSymlinks  bool
 	ShowAnnexedSize bool
+	ArchiveBrowsing bool
 }
 
 // AnalyzeDir returns dir with files with different size exponents
@@ -71,3 +81,8 @@ func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {
 
 // SetTimeFilter does nothing
 func (a *MockedAnalyzer) SetTimeFilter(timeFilter TimeFilter) {}
+
+// SetArchiveBrowsing sets EnableArchiveBrowsing
+func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {
+	a.ArchiveBrowsing = v
+}

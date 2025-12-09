@@ -24,6 +24,7 @@ type Analyzer interface {
 	SetFollowSymlinks(bool)
 	SetShowAnnexedSize(bool)
 	SetTimeFilter(timeFilter TimeFilter)
+	SetArchiveBrowsing(bool)
 	GetProgressChan() chan CurrentProgress
 	GetDone() SignalGroup
 	ResetProgress()

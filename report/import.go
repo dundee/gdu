@@ -12,11 +12,11 @@ import (
 )
 
 // ReadAnalysis reads analysis report from JSON file and returns directory item
-func ReadAnalysis(input io.Reader) (*analyze.Dir, error) {
+func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
 	var data interface{}
 
 	var buff bytes.Buffer
-	if _, err := buff.ReadFrom(input); err != nil {
+	if _, err = buff.ReadFrom(input); err != nil {
 		return nil, err
 	}
 	if err := json.Unmarshal(buff.Bytes(), &data); err != nil {
@@ -39,8 +39,8 @@ func ReadAnalysis(input io.Reader) (*analyze.Dir, error) {
 	return processDir(items)
 }
 
-func processDir(items []interface{}) (*analyze.Dir, error) {
-	dir := &analyze.Dir{
+func processDir(items []interface{}) (dir *analyze.Dir, err error) {
+	dir = &analyze.Dir{
 		File: &analyze.File{
 			Flag: ' ',
 		},

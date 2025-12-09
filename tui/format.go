@@ -102,6 +102,96 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 	return row
 }
 
+// formatCollapsedRow formats a collapsed directory path for display
+func (ui *UI) formatCollapsedRow(collapsedPath *CollapsedPath, maxUsage, maxSize int64, marked, ignored bool) string {
+	// Use the deepest directory's stats for display
+	item := collapsedPath.DeepestDir
+
+	part := 0
+	if !ignored {
+		if ui.ShowApparentSize {
+			if size := item.GetSize(); size > 0 {
+				part = int(float64(size) / float64(maxSize) * 100.0)
+			}
+		} else {
+			if usage := item.GetUsage(); usage > 0 {
+				part = int(float64(usage) / float64(maxUsage) * 100.0)
+			}
+		}
+	}
+
+	row := string(item.GetFlag())
+
+	numberColor := fmt.Sprintf(
+		"[%s::b]",
+		ui.resultRow.NumberColor,
+	)
+
+	if ui.UseColors && !marked && !ignored {
+		row += numberColor
+	} else {
+		row += defaultColorBold
+	}
+
+	if ui.ShowApparentSize {
+		row += fmt.Sprintf("%15s", ui.formatSize(item.GetSize(), false, true))
+	} else {
+		row += fmt.Sprintf("%15s", ui.formatSize(item.GetUsage(), false, true))
+	}
+
+	if ui.useOldSizeBar {
+		row += " " + getUsageGraphOld(part) + " "
+	} else {
+		row += getUsageGraph(part)
+	}
+
+	if ui.showItemCount {
+		if ui.UseColors && !marked && !ignored {
+			row += numberColor
+		} else {
+			row += defaultColorBold
+		}
+
+		countToDisplay := item.GetItemCount()
+		if item.IsDir() {
+			countToDisplay--
+		}
+		row += fmt.Sprintf("%11s ", ui.formatCount(countToDisplay))
+	}
+
+	if ui.showMtime {
+		if ui.UseColors && !marked && !ignored {
+			row += numberColor
+		} else {
+			row += defaultColorBold
+		}
+		row += fmt.Sprintf(
+			"%s "+defaultColor,
+			item.GetMtime().Format("2006-01-02 15:04:05"),
+		)
+	}
+
+	if len(ui.markedRows) > 0 {
+		if marked {
+			row += string('✓')
+		} else {
+			row += " "
+		}
+		row += " "
+	}
+
+	// Always display as directory with special formatting for collapsed path
+	if ui.UseColors && !marked && !ignored {
+		row += fmt.Sprintf("[%s::b]/", ui.resultRow.DirectoryColor)
+	} else {
+		row += defaultColorBold + "/"
+	}
+
+	// Display the collapsed path (e.g., "a/b/c")
+	row += tview.Escape(collapsedPath.DisplayName)
+	return row
+}
+
 func (ui *UI) formatSize(size int64, reverseColor, transparentBg bool) string {
 	var color string
 	if reverseColor {

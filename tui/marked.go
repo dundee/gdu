@@ -3,12 +3,13 @@ package tui
 import (
 	"strconv"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 func (ui *UI) fileItemMarked(row int) {
@@ -95,6 +96,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 		}
 
 		ui.app.QueueUpdateDraw(func() {
+			ui.pages.RemovePage(acting)
 			ui.pages.RemovePage(acting)
 			ui.markedRows = make(map[int]struct{})
 			x, y := ui.table.GetOffset()

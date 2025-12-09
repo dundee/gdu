@@ -1,7 +1,11 @@
 package tui
 
 import (
+	"path/filepath"
+	"slices"
+
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/rivo/tview"
 )
 
@@ -68,4 +72,100 @@ func modal(p tview.Primitive, width, height int) tview.Primitive {
 			AddItem(p, height, 1, true).
 			AddItem(nil, 0, 1, false), width, 1, true).
 		AddItem(nil, 0, 1, false)
+}
+
+// CollapsedPath represents a directory chain that can be collapsed into a single display entry.
+// For example, if directory "a" contains only directory "b", and "b" contains only "c",
+// this represents the collapsed path "a/b/c" that allows direct navigation to the deepest directory.
+type CollapsedPath struct {
+	DisplayName string   // The display name shown in the UI (e.g., "a/b/c")
+	DeepestDir  fs.Item  // The actual deepest directory item
+	Segments    []string // Individual path segments of the collapsed chain
+}
+
+// findCollapsiblePath checks if the given directory item has a single subdirectory chain
+// and returns a CollapsedPath if it can be collapsed
+func findCollapsiblePath(item fs.Item) *CollapsedPath {
+	if item == nil || !item.IsDir() {
+		return nil
+	}
+
+	var segments []string
+	current := item
+
+	for {
+		files := current.GetFiles()
+
+		if len(files) > 1 {
+			break
+		}
+
+		// Count directories and files separately
+		var subdirs []fs.Item
+		var fileCount int
+		for _, file := range files {
+			if file.IsDir() {
+				subdirs = append(subdirs, file)
+			} else {
+				fileCount++
+			}
+		}
+
+		// Only collapse if there's exactly one subdirectory AND no files
+		if len(subdirs) != 1 || fileCount > 0 {
+			break
+		}
+
+		// Add this segment to the path
+		segments = append(segments, subdirs[0].GetName())
+		current = subdirs[0]
+	}
+
+	// Only create collapsed path if we have at least one collapsible segment
+	if len(segments) == 0 {
+		return nil
+	}
+
+	return &CollapsedPath{
+		DisplayName: filepath.Join(slices.Concat([]string{item.GetName()}, segments)...),
+		DeepestDir:  current,
+		Segments:    segments,
+	}
+}
+
+// findCollapsedParent checks if the current directory is the deepest directory
+// in a collapsed path, and returns the appropriate parent to navigate to
+func findCollapsedParent(currentDir fs.Item) fs.Item {
+	if currentDir == nil {
+		return nil
+	}
+	if currentDir.GetParent() == nil {
+		return nil
+	}
+
+	// Check if current directory is part of a single-child chain going up
+	current := currentDir
+	var chainParent fs.Item
+
+	// Walk up the parent chain
+	for current.GetParent() != nil {
+		parent := current.GetParent()
+
+		// If parent has more than one item, this is where the collapsed chain starts
+		if len(parent.GetFiles()) > 1 {
+			chainParent = parent
+			break
+		}
+
+		// Move up the chain
+		current = parent
+	}
+
+	// If we found a chain parent (meaning current dir is part of a collapsed path),
+	// return it, otherwise return the normal parent
+	if chainParent != nil {
+		return chainParent
+	}
+
+	return currentDir.GetParent()
 }
