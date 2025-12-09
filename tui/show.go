@@ -151,8 +151,6 @@ func (ui *UI) showDir() {
 			}
 
 			if collapsedPath != nil {
-				// Store the collapsed path information
-				ui.collapsedPaths[rowIndex] = collapsedPath
 				// Format as collapsed path
 				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxUsage, maxSize, marked, ignored))
 				// Reference should point to the deepest directory for navigation

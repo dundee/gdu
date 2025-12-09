@@ -21,7 +21,6 @@ func (ui *UI) showFilterInput() {
 
 	if ui.filteringInput == nil {
 		ui.markedRows = make(map[int]struct{})
-		ui.collapsedPaths = make(map[int]*CollapsedPath)
 
 		ui.filteringInput = tview.NewInputField()
 

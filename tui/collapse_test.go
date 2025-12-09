@@ -292,9 +292,6 @@ func TestCollapsedPathIntegration(t *testing.T) {
 	// Test that showDir properly handles collapsed paths
 	ui.showDir()
 
-	// Verify that collapsed paths are stored
-	assert.NotEmpty(t, ui.collapsedPaths)
-
 	// Test navigation into collapsed path
 	ui.table.Select(1, 0) // Select the collapsed entry
 	cell := ui.table.GetCell(1, 0)

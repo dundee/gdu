@@ -65,7 +65,6 @@ type UI struct {
 	headerBackgroundColor   string
 	defaultSortBy           string
 	defaultSortOrder        string
-	collapsedPaths          map[int]*CollapsedPath
 	exportName              string
 	devices                 []*device.Device
 	selectedTextColor       tcell.Color
@@ -141,7 +140,6 @@ func CreateUI(
 		defaultSortOrder:        "desc",
 		ignoredRows:             make(map[int]struct{}),
 		markedRows:              make(map[int]struct{}),
-		collapsedPaths:          make(map[int]*CollapsedPath),
 		exportName:              "export.json",
 		noDelete:                false,
 		noSpawnShell:            false,
@@ -392,7 +390,6 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.currentDir = selectedDir
 	ui.hideFilterInput()
 	ui.markedRows = make(map[int]struct{})
-	ui.collapsedPaths = make(map[int]*CollapsedPath)
 	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()
 
