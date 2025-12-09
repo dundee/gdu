@@ -2,6 +2,7 @@ package tui
 
 import (
 	"path/filepath"
+	"slices"
 
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -89,15 +90,15 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 		return nil
 	}
 
-	if item.GetFlag() == 'Z' {
-		return nil
-	}
-
 	var segments []string
 	current := item
 
 	for {
 		files := current.GetFiles()
+
+		if len(files) > 1 {
+			break
+		}
 
 		// Count directories and files separately
 		var subdirs []fs.Item
@@ -126,7 +127,7 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 	}
 
 	return &CollapsedPath{
-		DisplayName: filepath.Join(segments...),
+		DisplayName: filepath.Join(slices.Concat([]string{item.GetName()}, segments)...),
 		DeepestDir:  current,
 		Segments:    segments,
 	}
