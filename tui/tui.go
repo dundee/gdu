@@ -390,17 +390,24 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()
 
-	if origDir.GetParent() != nil && selectedDir.GetName() == origDir.GetParent().GetName() {
-		index := slices.IndexFunc(
-			ui.currentDir.GetFiles(),
-			func(v fs.Item) bool {
-				return v.GetName() == origDir.GetName()
-			},
-		)
-		if ui.currentDir.GetPath() != ui.topDir.GetPath() {
-			index++
+	if origDir.GetParent() != nil {
+		nestedDir := origDir
+		for nestedDir.GetParent() != nil {
+			if selectedDir.GetName() == nestedDir.GetParent().GetName() {
+				index := slices.IndexFunc(
+					ui.currentDir.GetFiles(),
+					func(v fs.Item) bool {
+						return v.GetName() == nestedDir.GetName()
+					},
+				)
+				if ui.currentDir.GetPath() != ui.topDir.GetPath() {
+					index++
+				}
+				ui.table.Select(index, 0)
+				break
+			}
+			nestedDir = nestedDir.GetParent()
 		}
-		ui.table.Select(index, 0)
 	}
 }
 

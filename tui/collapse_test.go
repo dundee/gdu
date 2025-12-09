@@ -89,7 +89,7 @@ func TestFindCollapsiblePath(t *testing.T) {
 
 	result = findCollapsiblePath(rootDir)
 	assert.NotNil(t, result)
-	assert.Equal(t, "middle/deep", result.DisplayName)
+	assert.Equal(t, "root/middle/deep", result.DisplayName)
 	assert.Equal(t, deepestDir, result.DeepestDir)
 	assert.Equal(t, []string{"middle", "deep"}, result.Segments)
 
