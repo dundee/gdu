@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -148,4 +149,48 @@ func TestStoredDirUpdateStatsWithDotFlag(t *testing.T) {
 
 	dir.UpdateStats(make(fs.HardLinkedItems))
 	assert.Equal(t, '.', dir.Flag)
+}
+
+func TestStoredAnalyzerWithZip(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	// Create valid zip
+	createTestZipFile(t, "test_dir/valid.zip")
+
+	// Create invalid zip
+	f, err := os.Create("test_dir/invalid.zip")
+	assert.NoError(t, err)
+	_, err = f.WriteString("this is not a zip file")
+	assert.NoError(t, err)
+	f.Close()
+
+	analyzer := CreateStoredAnalyzer("/tmp/test")
+	analyzer.SetArchiveBrowsing(true)
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, false,
+	).(*StoredDir)
+
+	analyzer.GetDone().Wait()
+
+	// Check valid.zip
+	var validZip fs.Item
+	var invalidZip fs.Item
+
+	for _, file := range dir.Files {
+		if file.GetName() == "valid.zip" {
+			validZip = file
+		}
+		if file.GetName() == "invalid.zip" {
+			invalidZip = file
+		}
+	}
+
+	assert.NotNil(t, validZip)
+	assert.True(t, validZip.IsDir())
+	assert.Greater(t, validZip.GetSize(), int64(0))
+
+	assert.NotNil(t, invalidZip)
+	assert.False(t, invalidZip.IsDir())
+	assert.Equal(t, int64(22), invalidZip.GetSize())
 }
