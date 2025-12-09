@@ -88,6 +88,10 @@ func (ui *UI) StartUILoop() error {
 	return nil
 }
 
+// SetCollapsePath sets the flag to collapse paths
+func (ui *UI) SetCollapsePath(value bool) {
+}
+
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	devices, err := getter.GetDevicesInfo()

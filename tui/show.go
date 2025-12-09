@@ -80,8 +80,14 @@ func (ui *UI) showDir() {
 		}
 
 		cell := tview.NewTableCell(prefix + "[::b]/..")
+
 		// Use the collapsed parent logic to handle navigation back through collapsed paths
-		collapsedParent := findCollapsedParent(ui.currentDir)
+		var collapsedParent fs.Item
+		if ui.collapsePath {
+			collapsedParent = findCollapsedParent(ui.currentDir)
+		} else {
+			collapsedParent = ui.currentDir.GetParent()
+		}
 		cell.SetReference(collapsedParent)
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		ui.table.SetCell(0, 0, cell)
@@ -139,7 +145,12 @@ func (ui *UI) showDir() {
 
 		// Check if this directory can be collapsed
 		if item.IsDir() {
-			if collapsedPath := findCollapsiblePath(item); collapsedPath != nil {
+			var collapsedPath *CollapsedPath
+			if ui.collapsePath {
+				collapsedPath = findCollapsiblePath(item)
+			}
+
+			if collapsedPath != nil {
 				// Store the collapsed path information
 				ui.collapsedPaths[rowIndex] = collapsedPath
 				// Format as collapsed path

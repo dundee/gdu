@@ -71,6 +71,7 @@ func init() {
 	flags.StringVar(&af.StoragePath, "storage-path", "/tmp/badger", "Path to persistent key-value storage directory")
 	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Read analysis data from persistent key-value storage")
 	flags.BoolVar(&af.ArchiveBrowsing, "archive-browsing", false, "Enable browsing of zip/jar archives")
+	flags.BoolVar(&af.CollapsePath, "collapse-path", false, "Collapse single-child directory chains")
 
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")

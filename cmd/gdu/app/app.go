@@ -42,6 +42,7 @@ type UI interface {
 	SetAnalyzer(analyzer common.Analyzer)
 	SetTimeFilter(timeFilter common.TimeFilter)
 	SetArchiveBrowsing(value bool)
+	SetCollapsePath(value bool)
 	StartUILoop() error
 }
 
@@ -94,6 +95,7 @@ type Flags struct {
 	MaxAge             string   `yaml:"max-age"`
 	MinAge             string   `yaml:"min-age"`
 	ArchiveBrowsing    bool     `yaml:"archive-browsing"`
+	CollapsePath       bool     `yaml:"collapse-path"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -214,6 +216,9 @@ func (a *App) Run() error {
 	}
 	if a.Flags.ArchiveBrowsing {
 		ui.SetArchiveBrowsing(true)
+	}
+	if a.Flags.CollapsePath {
+		ui.SetCollapsePath(true)
 	}
 
 	// Set up time filter if any time flags are provided

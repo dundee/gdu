@@ -87,6 +87,7 @@ type UI struct {
 	timeFilter              *timefilter.TimeFilter
 	timeFilterLoc           *time.Location
 	noDeleteWithFilter      bool
+	collapsePath            bool
 }
 
 type deleteQueueItem struct {
@@ -339,6 +340,11 @@ func (ui *UI) SetNoSpawnShell() {
 // SetNoDelete disables delete when time filters are active
 func (ui *UI) SetNoDeleteWithFilter() {
 	ui.noDeleteWithFilter = true
+}
+
+// SetCollapsePath sets the flag to collapse paths
+func (ui *UI) SetCollapsePath(value bool) {
+	ui.collapsePath = value
 }
 
 // SetDeleteInBackground sets the flag to delete files in background

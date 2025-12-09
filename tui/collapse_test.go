@@ -287,6 +287,7 @@ func TestCollapsedPathIntegration(t *testing.T) {
 	ui.topDir = topDir
 	ui.topDirPath = "/test"
 	ui.currentDirPath = "/test"
+	ui.SetCollapsePath(true)
 
 	// Test that showDir properly handles collapsed paths
 	ui.showDir()
