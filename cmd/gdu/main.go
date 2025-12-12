@@ -84,6 +84,7 @@ func init() {
 	flags.IntVarP(&af.Top, "top", "t", 0, "Show only top X largest files in non-interactive mode")
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
+	flags.BoolVarP(&af.ShowInKiB, "show-in-kib", "k", false, "Show sizes in KiB (or kB with --si) in non-interactive mode")
 	flags.BoolVar(&af.ReverseSort, "reverse-sort", false, "Reverse sorting order (smallest to largest) in non-interactive mode")
 	flags.BoolVar(&af.Mouse, "mouse", false, "Use mouse")
 	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allow deletions")
