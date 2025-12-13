@@ -85,6 +85,7 @@ type Flags struct {
 	Summarize          bool     `yaml:"summarize"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
+	ShowInKiB          bool     `yaml:"show-in-kib"`
 	WriteConfig        bool     `yaml:"-"`
 	ReverseSort        bool     `yaml:"reverse-sort"`
 	ChangeCwd          bool     `yaml:"change-cwd"`
@@ -330,6 +331,10 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.UseSIPrefix,
 		)
 	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
+		fixedUnit := ""
+		if a.Flags.ShowInKiB {
+			fixedUnit = "k"
+		}
 		stdoutUI := stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
@@ -340,6 +345,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
+			fixedUnit,
 			a.Flags.Top,
 			a.Flags.ReverseSort,
 		)
