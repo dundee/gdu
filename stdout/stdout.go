@@ -69,7 +69,9 @@ func CreateStdoutUI(
 		top:         top,
 		reverseSort: reverseSort,
 	}
-	ui.SetFixedUnit(fixedUnit)
+	if fixedUnit != "" {
+		ui.SetFixedUnit(fixedUnit)
+	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
 	ui.blue = color.New(color.FgBlue).Add(color.Bold)
