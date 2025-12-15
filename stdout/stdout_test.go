@@ -26,7 +26,7 @@ func TestAnalyzePath(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, "", 0, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -43,7 +43,7 @@ func TestShowSummary(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, "", 0, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -60,7 +60,7 @@ func TestShowSummaryBw(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, "", 0, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -77,7 +77,7 @@ func TestShowTop(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, 2, false)
+	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, "", 2, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -95,7 +95,7 @@ func TestShowTopBw(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, 2, false)
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, "", 2, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -113,7 +113,7 @@ func TestAnalyzeSubdir(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, false, "", 0, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 	assert.Nil(t, err)
@@ -130,7 +130,7 @@ func TestAnalyzePathWithColors(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, false, "", 0, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 
@@ -145,7 +145,7 @@ func TestAnalyzePathWoUnicode(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, false, "", 0, false)
 	ui.UseOldProgressRunes()
 	err := ui.AnalyzePath("test_dir/nested", nil)
 
@@ -156,7 +156,7 @@ func TestAnalyzePathWoUnicode(t *testing.T) {
 func TestItemRows(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, false, "", 0, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	err := ui.AnalyzePath("test_dir", nil)
 
@@ -170,7 +170,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, false, "", 0, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 
@@ -181,7 +181,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 func TestShowDevices(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, false, "", 0, false)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -192,7 +192,7 @@ func TestShowDevices(t *testing.T) {
 func TestShowDevicesWithColor(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, "", 0, false)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -206,7 +206,7 @@ func TestReadAnalysisWithColor(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, "", 0, false)
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -219,7 +219,7 @@ func TestReadAnalysisBw(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, false, "", 0, false)
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -232,7 +232,7 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, "", 0, false)
 	err = ui.ReadAnalysis(input)
 
 	assert.NotNil(t, err)
@@ -244,7 +244,7 @@ func TestReadAnalysisWithSummarize(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, "", 0, false)
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -259,7 +259,7 @@ func TestMaxInt(t *testing.T) {
 func TestFormatSize(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, 0, false)
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, "", 0, false)
 
 	assert.Contains(t, ui.formatSize(1), "B")
 	assert.Contains(t, ui.formatSize(1<<10+1), "KiB")
@@ -273,7 +273,7 @@ func TestFormatSize(t *testing.T) {
 func TestFormatSizeDec(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, true, false, 0, false)
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, true, false, "", 0, false)
 
 	assert.Contains(t, ui.formatSize(1), "B")
 	assert.Contains(t, ui.formatSize(1<<10+1), "kB")
@@ -287,7 +287,7 @@ func TestFormatSizeDec(t *testing.T) {
 func TestFormatSizeRaw(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, true, true, 0, false)
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, true, true, "", 0, false)
 
 	assert.Equal(t, ui.formatSize(1), "1")
 	assert.Equal(t, ui.formatSize(1<<10+1), "1025")
@@ -296,6 +296,37 @@ func TestFormatSizeRaw(t *testing.T) {
 	assert.Equal(t, ui.formatSize(1<<40+1), "1099511627777")
 	assert.Equal(t, ui.formatSize(1<<50+1), "1125899906842625")
 	assert.Equal(t, ui.formatSize(1<<60+1), "1152921504606846977")
+}
+func TestFormatSizeFixedUnitBinary(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, false, "k", 0, false)
+	assert.Equal(t, "0.1 KiB", ui.formatSize(100))
+	assert.Equal(t, "1500.0 KiB", ui.formatSize(1536000))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, false, false, false, "m", 0, false)
+	assert.Equal(t, "0.1 MiB", ui.formatSize(100*1024))
+	assert.Equal(t, "1500.0 MiB", ui.formatSize(1536000*1024))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, false, false, false, "g", 0, false)
+	assert.Equal(t, "0.1 GiB", ui.formatSize(100*1024*1024))
+	assert.Equal(t, "1500.0 GiB", ui.formatSize(1536000*1024*1024))
+}
+func TestFormatSizeFixedUnitSI(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	// -k --si
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, true, false, "k", 0, false)
+	assert.Equal(t, "0.1 kB", ui.formatSize(100))
+	assert.Equal(t, "1500.0 kB", ui.formatSize(15e+5))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, false, true, false, "m", 0, false)
+	assert.Equal(t, "0.1 MB", ui.formatSize(1e+5))
+	assert.Equal(t, "1500.0 MB", ui.formatSize(1.5e+9))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, false, true, false, "g", 0, false)
+	assert.Equal(t, "0.1 GB", ui.formatSize(1e+8))
+	assert.Equal(t, "1500.0 GB", ui.formatSize(1.5e+12))
 }
 
 // func printBuffer(buff *bytes.Buffer) {
@@ -322,7 +353,7 @@ func TestAnalyzePathWithReverseSort(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, 0, true)
+	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, "", 0, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -354,7 +385,7 @@ func TestAnalyzePathWithoutReverseSort(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, 0, false)
+	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, "", 0, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -371,7 +402,7 @@ func TestReverseSortWithColors(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, false, 0, true)
+	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, false, "", 0, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 
@@ -386,7 +417,7 @@ func TestReverseSortWithSummarize(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, 0, true)
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, false, "", 0, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -403,7 +434,7 @@ func TestReverseSortWithTop(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, 2, true)
+	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, "", 2, true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -420,7 +451,7 @@ func TestReverseSortFromAnalysisFile(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, 0, true)
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, false, "", 0, true)
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
