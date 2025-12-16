@@ -24,6 +24,10 @@
     # gdu will be installed as `gdu-go` to avoid conflicts with coreutils
     gdu-go
 
+[Mise](https://github.com/jdx/mise):
+
+    mise use -g gdu@latest
+
 [Snap](https://snapcraft.io/gdu-disk-usage-analyzer):
 
     snap install gdu-disk-usage-analyzer
