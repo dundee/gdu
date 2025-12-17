@@ -7,7 +7,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/gdamore/tcell/v2 v2.13.4
 	github.com/h2non/filetype v1.1.3
-	github.com/maruel/natural v1.2.1
+	github.com/maruel/natural v1.3.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/pkg/errors v0.9.1
