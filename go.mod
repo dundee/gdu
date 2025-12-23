@@ -1,6 +1,6 @@
 module github.com/dundee/gdu/v5
 
-go 1.25
+go 1.24
 
 require (
 	github.com/dgraph-io/badger/v4 v4.9.0
