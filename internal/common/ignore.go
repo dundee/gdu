@@ -147,8 +147,8 @@ func (ui *UI) ShouldFileBeIgnoredByType(name string) bool {
 	ext = strings.TrimPrefix(ext, ".")
 
 	for _, ignoreType := range ui.IgnoreTypes {
-		// Remove leading dot and exclamation from ignoreType
-		cleanIgnoreType := strings.TrimPrefix(strings.TrimPrefix(strings.ToLower(ignoreType), "!"), ".")
+		// Remove leading dot from ignoreType
+		cleanIgnoreType := strings.TrimPrefix(strings.ToLower(ignoreType), ".")
 		if cleanIgnoreType == ext {
 			log.Printf("File %s ignored by type", name)
 			return true
@@ -172,8 +172,8 @@ func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
 	ext = strings.TrimPrefix(ext, ".")
 
 	for _, includeType := range ui.IncludeTypes {
-		// Remove leading dot and exclamation from includeType
-		cleanIncludeType := strings.TrimPrefix(strings.TrimPrefix(strings.ToLower(includeType), "!"), ".")
+		// Remove leading dot from includeType
+		cleanIncludeType := strings.TrimPrefix(strings.ToLower(includeType), ".")
 		if cleanIncludeType == ext {
 			return true
 		}

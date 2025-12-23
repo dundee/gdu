@@ -48,8 +48,8 @@ func init() {
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
 
-	flags.StringSliceVarP(&af.TypeFilter, "type", "T", []string{}, "File types to include (e.g., --type yaml,json or --type !yaml)")
-	flags.StringSliceVarP(&af.ExcludeTypeFilter, "exclude-type", "E", []string{}, "File types to exclude (e.g., --exclude-type yaml,json or --exclude-type !yaml)")
+	flags.StringSliceVarP(&af.TypeFilter, "type", "T", []string{}, "File types to include (e.g., --type yaml,json)")
+	flags.StringSliceVarP(&af.ExcludeTypeFilter, "exclude-type", "E", []string{}, "File types to exclude (e.g., --exclude-type yaml,json)")
 	flags.StringSliceVarP(&af.IgnoreDirs, "ignore-dirs", "i", []string{"/proc", "/dev", "/sys", "/run"},
 		"Paths to ignore (separated by comma). Can be absolute or relative to current directory")
 	flags.StringSliceVarP(&af.IgnoreDirPatterns, "ignore-dirs-pattern", "I", []string{},

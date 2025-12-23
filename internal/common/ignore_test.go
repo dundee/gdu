@@ -243,12 +243,7 @@ func TestShouldFileBeIgnoredByType(t *testing.T) {
 			filename:       "test.txt",
 			expectedIgnored: false,
 		},
-		{
-			name:           "ignore with exclamation",
-			ignoreTypes:    []string{"!yaml"},
-			filename:       "test.yaml",
-			expectedIgnored: true,
-		},
+
 		{
 			name:           "ignore with uppercase",
 			ignoreTypes:    []string{"YAML"},
@@ -317,12 +312,7 @@ func TestShouldFileBeIncludedByType(t *testing.T) {
 			filename:         "test.txt",
 			expectedIncluded: false,
 		},
-		{
-			name:             "include with exclamation",
-			includeTypes:     []string{"!yaml"},
-			filename:         "test.yaml",
-			expectedIncluded: true,
-		},
+
 		{
 			name:             "include with uppercase",
 			includeTypes:     []string{"YAML"},
