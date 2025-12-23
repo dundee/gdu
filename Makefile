@@ -21,6 +21,19 @@ all: clean tarball build-all build-docker man clean-uncompressed-dist shasums
 run:
 	go run $(PACKAGE)/$(CMD_GDU)
 
+dev-build:
+	@echo "Building for development..."
+	mkdir -p local
+	GOFLAGS="$(GOFLAGS)" go build -o local/gdu $(PACKAGE)/$(CMD_GDU)
+	@echo "Build successful!"
+	@echo "Binary available at: $(PWD)/local/gdu"
+	@echo ""
+	@echo "To test:"
+	@echo "  ./local/gdu --help"
+	@echo "  ./local/gdu /path/to/directory"
+	@echo ""
+	@echo "Note: local/ directory is gitignored"
+
 vendor: go.mod go.sum
 	go mod vendor
 
@@ -156,4 +169,4 @@ install-dev-dependencies:
 	go install honnef.co/go/gotraceui/cmd/gotraceui@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-.PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release
+.PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
