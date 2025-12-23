@@ -140,7 +140,7 @@ func TestParallelAnalyzerAnalyzeDirWithConstGC(t *testing.T) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, true, // constGC = true
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, true, // constGC = true
 	).(*Dir)
 
 	analyzer.GetDone().Wait()
@@ -155,7 +155,7 @@ func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(name, _ string) bool { return name == "nested" }, false,
+		"test_dir", func(name, _ string) bool { return name == "nested" }, func(_ string) bool { return false }, false,
 	).(*Dir)
 
 	analyzer.GetDone().Wait()

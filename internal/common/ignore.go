@@ -87,6 +87,18 @@ func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
 	return err
 }
 
+// SetIgnoreTypes sets file types to ignore
+func (ui *UI) SetIgnoreTypes(types []string) {
+	log.Printf("Ignoring file types: %s", strings.Join(types, ", "))
+	ui.IgnoreTypes = types
+}
+
+// SetIncludeTypes sets file types to include (whitelist)
+func (ui *UI) SetIncludeTypes(types []string) {
+	log.Printf("Including only file types: %s", strings.Join(types, ", "))
+	ui.IncludeTypes = types
+}
+
 // SetIgnoreHidden sets flags if hidden dirs should be ignored
 func (ui *UI) SetIgnoreHidden(value bool) {
 	log.Printf("Ignoring hidden dirs")
@@ -120,6 +132,57 @@ func (ui *UI) IsHiddenDir(name, path string) bool {
 	return shouldIgnore
 }
 
+// ShouldFileBeIgnoredByType returns true if file should be ignored based on its extension
+func (ui *UI) ShouldFileBeIgnoredByType(name string) bool {
+	if len(ui.IgnoreTypes) == 0 {
+		return false
+	}
+
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext == "" {
+		return false // No extension, don't ignore
+	}
+
+	// Remove leading dot from extension
+	ext = strings.TrimPrefix(ext, ".")
+
+	for _, ignoreType := range ui.IgnoreTypes {
+		// Remove leading dot and exclamation from ignoreType
+		cleanIgnoreType := strings.TrimPrefix(strings.TrimPrefix(strings.ToLower(ignoreType), "!"), ".")
+		if cleanIgnoreType == ext {
+			log.Printf("File %s ignored by type", name)
+			return true
+		}
+	}
+	return false
+}
+
+// ShouldFileBeIncludedByType returns true if file should be included based on its extension
+func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
+	if len(ui.IncludeTypes) == 0 {
+		return true // No include filter, include all
+	}
+
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext == "" {
+		return false // No extension, don't include if we have include filter
+	}
+
+	// Remove leading dot from extension
+	ext = strings.TrimPrefix(ext, ".")
+
+	for _, includeType := range ui.IncludeTypes {
+		// Remove leading dot and exclamation from includeType
+		cleanIncludeType := strings.TrimPrefix(strings.TrimPrefix(strings.ToLower(includeType), "!"), ".")
+		if cleanIncludeType == ext {
+			return true
+		}
+	}
+	
+	log.Printf("File %s excluded by type filter", name)
+	return false
+}
+
 // CreateIgnoreFunc returns function for detecting if dir should be ignored
 // nolint: gocyclo // Why: This function is a switch statement that is not too complex
 func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
@@ -149,4 +212,24 @@ func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
 	default:
 		return func(name, path string) bool { return false }
 	}
+}
+
+// CreateFileTypeFilter returns function for detecting if file should be ignored/included based on type
+func (ui *UI) CreateFileTypeFilter() ShouldFileBeFiltered {
+	// If we have include types, use whitelist mode
+	if len(ui.IncludeTypes) > 0 {
+		return func(name string) bool {
+			return !ui.ShouldFileBeIncludedByType(name)
+		}
+	}
+	
+	// If we have ignore types, use blacklist mode
+	if len(ui.IgnoreTypes) > 0 {
+		return func(name string) bool {
+			return ui.ShouldFileBeIgnoredByType(name)
+		}
+	}
+	
+	// No type filtering
+	return func(name string) bool { return false }
 }

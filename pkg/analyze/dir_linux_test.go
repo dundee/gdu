@@ -24,7 +24,7 @@ func TestErr(t *testing.T) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -50,7 +50,7 @@ func TestSeqErr(t *testing.T) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))

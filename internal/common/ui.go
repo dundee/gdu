@@ -13,6 +13,8 @@ type UI struct {
 	IgnoreDirPaths        map[string]struct{}
 	IgnoreDirPathPatterns *regexp.Regexp
 	IgnoreHidden          bool
+	IgnoreTypes           []string
+	IncludeTypes          []string
 	UseColors             bool
 	UseSIPrefix           bool
 	ShowProgress          bool

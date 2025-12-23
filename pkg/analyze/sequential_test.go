@@ -22,7 +22,7 @@ func TestAnalyzeDirSeq(t *testing.T) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*Dir)
 
 	progress := <-analyzer.GetProgressChan()
@@ -91,7 +91,7 @@ func TestFlagsSeq(t *testing.T) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -119,7 +119,7 @@ func TestHardlinkSeq(t *testing.T) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -146,7 +146,7 @@ func TestFollowSymlinkSeq(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 	analyzer.SetFollowSymlinks(true)
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -178,7 +178,7 @@ func TestBrokenSymlinkSkippedSeq(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 	analyzer.SetFollowSymlinks(true)
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -199,7 +199,7 @@ func BenchmarkAnalyzeDirSeq(b *testing.B) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))

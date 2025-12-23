@@ -57,7 +57,7 @@ func TestRemoveDirParallel(t *testing.T) {
 
 	analyzer := analyze.CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	).(*analyze.Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))

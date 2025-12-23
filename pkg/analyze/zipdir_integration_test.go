@@ -23,7 +23,7 @@ func TestSequentialAnalyzerWithZipFile(t *testing.T) {
 	analyzer.SetArchiveBrowsing(true)
 
 	// Analyze directory (containing zip file)
-	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, false)
+	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false }, false)
 
 	// Verify result
 	assert.NotNil(t, result)
@@ -71,7 +71,7 @@ func TestParallelAnalyzerWithZipFile(t *testing.T) {
 	analyzer.SetArchiveBrowsing(true)
 
 	// Analyze directory
-	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, false)
+	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false }, false)
 
 	// Verify result
 	assert.NotNil(t, result)
@@ -108,7 +108,7 @@ func TestZipFileWithNestedStructure(t *testing.T) {
 	analyzer.SetArchiveBrowsing(true)
 
 	// Analyze directory
-	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, false)
+	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false }, false)
 
 	// Find zip file
 	files := result.GetFiles()

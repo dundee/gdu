@@ -19,6 +19,7 @@ type ParallelStableOrderAnalyzer struct {
 	doneChan         common.SignalGroup
 	wait             *WaitGroup
 	ignoreDir        common.ShouldDirBeIgnored
+	ignoreFileType   common.ShouldFileBeFiltered
 	followSymlinks   bool
 	gitAnnexedSize   bool
 }
@@ -48,6 +49,11 @@ func (a *ParallelStableOrderAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
 }
 
+// SetFileTypeFilter sets the file type filter function
+func (a *ParallelStableOrderAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeFiltered) {
+	a.ignoreFileType = filter
+}
+
 // GetProgressChan returns channel for getting progress
 func (a *ParallelStableOrderAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
@@ -70,7 +76,7 @@ func (a *ParallelStableOrderAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeFiltered, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
@@ -78,6 +84,7 @@ func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
 	}
 
 	a.ignoreDir = ignore
+	a.ignoreFileType = fileTypeFilter
 
 	go a.updateProgress()
 	dir := a.processDir(path)
@@ -162,6 +169,11 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 				if infoF != nil {
 					info = infoF
 				}
+			}
+
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+				continue // Skip this file
 			}
 
 			file = &File{

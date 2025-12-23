@@ -98,7 +98,7 @@ func TestSequentialAnalyzerAnalyzeDirWithConstGC(t *testing.T) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, true, // constGC = true
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, true, // constGC = true
 	).(*Dir)
 
 	analyzer.GetDone().Wait()
@@ -113,7 +113,7 @@ func TestSequentialAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(name, _ string) bool { return name == "nested" }, false,
+		"test_dir", func(name, _ string) bool { return name == "nested" }, func(_ string) bool { return false }, false,
 	).(*Dir)
 
 	analyzer.GetDone().Wait()

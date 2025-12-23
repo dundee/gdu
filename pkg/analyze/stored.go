@@ -23,6 +23,7 @@ type StoredAnalyzer struct {
 	doneChan            common.SignalGroup
 	wait                *WaitGroup
 	ignoreDir           common.ShouldDirBeIgnored
+	ignoreFileType      common.ShouldFileBeFiltered
 	storagePath         string
 	followSymlinks      bool
 	gitAnnexedSize      bool
@@ -74,6 +75,11 @@ func (a *StoredAnalyzer) SetArchiveBrowsing(v bool) {
 	a.archiveBrowsing = v
 }
 
+// SetFileTypeFilter sets the file type filter function
+func (a *StoredAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeFiltered) {
+	a.ignoreFileType = filter
+}
+
 // ResetProgress returns progress
 func (a *StoredAnalyzer) ResetProgress() {
 	a.progress = &common.CurrentProgress{}
@@ -86,12 +92,15 @@ func (a *StoredAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *StoredAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeFiltered, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		go manageMemoryUsage(a.doneChan)
 	}
+
+	a.ignoreDir = ignore
+	a.ignoreFileType = fileTypeFilter
 
 	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
@@ -213,6 +222,11 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
+
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 

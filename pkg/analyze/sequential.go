@@ -19,6 +19,7 @@ type SequentialAnalyzer struct {
 	doneChan            common.SignalGroup
 	wait                *WaitGroup
 	ignoreDir           common.ShouldDirBeIgnored
+	ignoreFileType      common.ShouldFileBeFiltered
 	followSymlinks      bool
 	gitAnnexedSize      bool
 	matchesTimeFilterFn common.TimeFilter
@@ -60,6 +61,11 @@ func (a *SequentialAnalyzer) SetArchiveBrowsing(v bool) {
 	a.archiveBrowsing = v
 }
 
+// SetFileTypeFilter sets the file type filter function
+func (a *SequentialAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeFiltered) {
+	a.ignoreFileType = filter
+}
+
 // GetProgressChan returns channel for getting progress
 func (a *SequentialAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
@@ -81,7 +87,7 @@ func (a *SequentialAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *SequentialAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeFiltered, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
@@ -89,6 +95,7 @@ func (a *SequentialAnalyzer) AnalyzeDir(
 	}
 
 	a.ignoreDir = ignore
+	a.ignoreFileType = fileTypeFilter
 
 	go a.updateProgress()
 	dir := a.processDir(path)
@@ -189,6 +196,11 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
+
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 
