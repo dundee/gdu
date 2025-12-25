@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/dgraph-io/badger/v4 v4.9.0
 	github.com/fatih/color v1.18.0
-	github.com/gdamore/tcell/v2 v2.13.4
+	github.com/gdamore/tcell/v2 v2.13.5
 	github.com/h2non/filetype v1.1.3
 	github.com/maruel/natural v1.3.0
 	github.com/mattn/go-isatty v0.0.20
