@@ -72,7 +72,7 @@ func TestIgnoreDirSeq(t *testing.T) {
 	defer fin()
 
 	dir := CreateSeqAnalyzer().AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return true }, false,
+		"test_dir", func(_, _ string) bool { return true }, func(_ string) bool { return false }, false,
 	).(*Dir)
 
 	assert.Equal(t, "test_dir", dir.Name)

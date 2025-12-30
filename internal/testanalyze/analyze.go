@@ -93,6 +93,9 @@ func (a *MockedAnalyzer) SetTimeFilter(timeFilter common.TimeFilter) {}
 // SetArchiveBrowsing does nothing
 func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {}
 
+// SetFileTypeFilter does nothing
+func (a *MockedAnalyzer) SetFileTypeFilter(fileTypeFilter common.ShouldFileBeFiltered) {}
+
 // ItemFromDirWithErr returns error
 func ItemFromDirWithErr(dir, file fs.Item) error {
 	return errors.New("Failed")
