@@ -208,58 +208,58 @@ func TestIgnoreFromFileWithRelativePaths(t *testing.T) {
 
 func TestShouldFileBeIgnoredByType(t *testing.T) {
 	tests := []struct {
-		name           string
-		ignoreTypes    []string
-		filename       string
+		name            string
+		ignoreTypes     []string
+		filename        string
 		expectedIgnored bool
 	}{
 		{
-			name:           "no ignore types",
-			ignoreTypes:    []string{},
-			filename:       "test.yaml",
+			name:            "no ignore types",
+			ignoreTypes:     []string{},
+			filename:        "test.yaml",
 			expectedIgnored: false,
 		},
 		{
-			name:           "ignore yaml",
-			ignoreTypes:    []string{"yaml"},
-			filename:       "test.yaml",
+			name:            "ignore yaml",
+			ignoreTypes:     []string{"yaml"},
+			filename:        "test.yaml",
 			expectedIgnored: true,
 		},
 		{
-			name:           "ignore json",
-			ignoreTypes:    []string{"json"},
-			filename:       "test.json",
+			name:            "ignore json",
+			ignoreTypes:     []string{"json"},
+			filename:        "test.json",
 			expectedIgnored: true,
 		},
 		{
-			name:           "ignore multiple types",
-			ignoreTypes:    []string{"yaml", "json"},
-			filename:       "test.yaml",
+			name:            "ignore multiple types",
+			ignoreTypes:     []string{"yaml", "json"},
+			filename:        "test.yaml",
 			expectedIgnored: true,
 		},
 		{
-			name:           "ignore multiple types - not matched",
-			ignoreTypes:    []string{"yaml", "json"},
-			filename:       "test.txt",
+			name:            "ignore multiple types - not matched",
+			ignoreTypes:     []string{"yaml", "json"},
+			filename:        "test.txt",
 			expectedIgnored: false,
 		},
 
 		{
-			name:           "ignore with uppercase",
-			ignoreTypes:    []string{"YAML"},
-			filename:       "test.yaml",
+			name:            "ignore with uppercase",
+			ignoreTypes:     []string{"YAML"},
+			filename:        "test.yaml",
 			expectedIgnored: true,
 		},
 		{
-			name:           "ignore file without extension",
-			ignoreTypes:    []string{"yaml"},
-			filename:       "test",
+			name:            "ignore file without extension",
+			ignoreTypes:     []string{"yaml"},
+			filename:        "test",
 			expectedIgnored: false,
 		},
 		{
-			name:           "ignore with dot in extension",
-			ignoreTypes:    []string{".yaml"},
-			filename:       "test.yaml",
+			name:            "ignore with dot in extension",
+			ignoreTypes:     []string{".yaml"},
+			filename:        "test.yaml",
 			expectedIgnored: true,
 		},
 	}
@@ -268,7 +268,7 @@ func TestShouldFileBeIgnoredByType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := &common.UI{}
 			ui.SetIgnoreTypes(tt.ignoreTypes)
-			
+
 			actual := ui.ShouldFileBeIgnoredByType(tt.filename)
 			assert.Equal(t, tt.expectedIgnored, actual)
 		})
@@ -337,7 +337,7 @@ func TestShouldFileBeIncludedByType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := &common.UI{}
 			ui.SetIncludeTypes(tt.includeTypes)
-			
+
 			actual := ui.ShouldFileBeIncludedByType(tt.filename)
 			assert.Equal(t, tt.expectedIncluded, actual)
 		})
@@ -401,7 +401,7 @@ func TestCreateFileTypeFilter(t *testing.T) {
 			ui := &common.UI{}
 			ui.SetIncludeTypes(tt.includeTypes)
 			ui.SetIgnoreTypes(tt.ignoreTypes)
-			
+
 			filter := ui.CreateFileTypeFilter()
 			actual := filter(tt.filename)
 			assert.Equal(t, tt.expectedFiltered, actual)

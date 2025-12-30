@@ -33,7 +33,7 @@ type UI interface {
 	AnalyzePath(path string, parentDir gfs.Item) error
 	ReadAnalysis(input io.Reader) error
 	ReadFromStorage(storagePath, path string) error
-  SetIgnoreTypes(types []string)
+	SetIgnoreTypes(types []string)
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
@@ -180,6 +180,8 @@ func init() {
 }
 
 // Run starts gdu main logic
+//
+//nolint:gocyclo // App function is a suite of if statements
 func (a *App) Run() error {
 	var ui UI
 

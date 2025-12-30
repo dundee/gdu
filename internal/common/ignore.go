@@ -178,7 +178,7 @@ func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
 			return true
 		}
 	}
-	
+
 	log.Printf("File %s excluded by type filter", name)
 	return false
 }
@@ -222,14 +222,14 @@ func (ui *UI) CreateFileTypeFilter() ShouldFileBeFiltered {
 			return !ui.ShouldFileBeIncludedByType(name)
 		}
 	}
-	
+
 	// If we have ignore types, use blacklist mode
 	if len(ui.IgnoreTypes) > 0 {
 		return func(name string) bool {
 			return ui.ShouldFileBeIgnoredByType(name)
 		}
 	}
-	
+
 	// No type filtering
 	return func(name string) bool { return false }
 }
