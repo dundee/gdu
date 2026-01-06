@@ -21,19 +21,6 @@ all: clean tarball build-all build-docker man clean-uncompressed-dist shasums
 run:
 	go run $(PACKAGE)/$(CMD_GDU)
 
-dev-build:
-	@echo "Building for development..."
-	mkdir -p local
-	GOFLAGS="$(GOFLAGS)" go build -o local/gdu $(PACKAGE)/$(CMD_GDU)
-	@echo "Build successful!"
-	@echo "Binary available at: $(PWD)/local/gdu"
-	@echo ""
-	@echo "To test:"
-	@echo "  ./local/gdu --help"
-	@echo "  ./local/gdu /path/to/directory"
-	@echo ""
-	@echo "Note: local/ directory is gitignored"
-
 vendor: go.mod go.sum
 	go mod vendor
 
