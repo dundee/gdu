@@ -214,8 +214,8 @@ func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
 	}
 }
 
-// CreateFileTypeFilter returns function for detecting if file should be ignored/included based on type
-func (ui *UI) CreateFileTypeFilter() ShouldFileBeFiltered {
+// CreateFileTypeFilter returns function for detecting if file should be ignored based on type
+func (ui *UI) CreateFileTypeFilter() ShouldFileBeIgnored {
 	// If we have include types, use whitelist mode
 	if len(ui.IncludeTypes) > 0 {
 		return func(name string) bool {

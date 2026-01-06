@@ -22,7 +22,7 @@ type ParallelAnalyzer struct {
 	doneChan            common.SignalGroup
 	wait                *WaitGroup
 	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeFiltered
+	ignoreFileType      common.ShouldFileBeIgnored
 	followSymlinks      bool
 	gitAnnexedSize      bool
 	matchesTimeFilterFn common.TimeFilter
@@ -65,7 +65,7 @@ func (a *ParallelAnalyzer) SetArchiveBrowsing(v bool) {
 }
 
 // SetFileTypeFilter sets the file type filter function
-func (a *ParallelAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeFiltered) {
+func (a *ParallelAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
 	a.ignoreFileType = filter
 }
 
@@ -91,7 +91,7 @@ func (a *ParallelAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *ParallelAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeFiltered, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))

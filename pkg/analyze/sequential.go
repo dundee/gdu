@@ -19,7 +19,7 @@ type SequentialAnalyzer struct {
 	doneChan            common.SignalGroup
 	wait                *WaitGroup
 	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeFiltered
+	ignoreFileType      common.ShouldFileBeIgnored
 	followSymlinks      bool
 	gitAnnexedSize      bool
 	matchesTimeFilterFn common.TimeFilter
@@ -62,7 +62,7 @@ func (a *SequentialAnalyzer) SetArchiveBrowsing(v bool) {
 }
 
 // SetFileTypeFilter sets the file type filter function
-func (a *SequentialAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeFiltered) {
+func (a *SequentialAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
 	a.ignoreFileType = filter
 }
 
@@ -87,7 +87,7 @@ func (a *SequentialAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *SequentialAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeFiltered, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))

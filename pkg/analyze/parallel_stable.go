@@ -19,7 +19,7 @@ type ParallelStableOrderAnalyzer struct {
 	doneChan         common.SignalGroup
 	wait             *WaitGroup
 	ignoreDir        common.ShouldDirBeIgnored
-	ignoreFileType   common.ShouldFileBeFiltered
+	ignoreFileType   common.ShouldFileBeIgnored
 	followSymlinks   bool
 	gitAnnexedSize   bool
 }
@@ -50,7 +50,7 @@ func (a *ParallelStableOrderAnalyzer) SetShowAnnexedSize(v bool) {
 }
 
 // SetFileTypeFilter sets the file type filter function
-func (a *ParallelStableOrderAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeFiltered) {
+func (a *ParallelStableOrderAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
 	a.ignoreFileType = filter
 }
 
@@ -76,7 +76,7 @@ func (a *ParallelStableOrderAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeFiltered, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))

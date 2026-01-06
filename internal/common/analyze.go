@@ -18,17 +18,17 @@ type CurrentProgress struct {
 // ShouldDirBeIgnored whether path should be ignored
 type ShouldDirBeIgnored func(name, path string) bool
 
-// ShouldFileBeFiltered whether file should be filtered by type
-type ShouldFileBeFiltered func(name string) bool
+// ShouldFileBeIgnored whether file should be ignored based on type
+type ShouldFileBeIgnored func(name string) bool
 
 // Analyzer is type for dir analyzing function
 type Analyzer interface {
-	AnalyzeDir(path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeFiltered, constGC bool) fs.Item
+	AnalyzeDir(path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored, constGC bool) fs.Item
 	SetFollowSymlinks(bool)
 	SetShowAnnexedSize(bool)
 	SetTimeFilter(timeFilter TimeFilter)
 	SetArchiveBrowsing(bool)
-	SetFileTypeFilter(fileTypeFilter ShouldFileBeFiltered)
+	SetFileTypeFilter(filter ShouldFileBeIgnored)
 	GetProgressChan() chan CurrentProgress
 	GetDone() SignalGroup
 	ResetProgress()
