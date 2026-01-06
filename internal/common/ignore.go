@@ -230,6 +230,6 @@ func (ui *UI) CreateFileTypeFilter() ShouldFileBeFiltered {
 		}
 	}
 
-	// No type filtering
-	return func(name string) bool { return false }
+	// No type filtering - return nil to indicate no filtering is needed
+	return nil
 }

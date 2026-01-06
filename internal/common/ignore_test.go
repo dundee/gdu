@@ -403,7 +403,13 @@ func TestCreateFileTypeFilter(t *testing.T) {
 			ui.SetIgnoreTypes(tt.ignoreTypes)
 
 			filter := ui.CreateFileTypeFilter()
-			actual := filter(tt.filename)
+			var actual bool
+			if filter == nil {
+				// When filter is nil, no filtering is applied, so file should not be filtered
+				actual = false
+			} else {
+				actual = filter(tt.filename)
+			}
 			assert.Equal(t, tt.expectedFiltered, actual)
 		})
 	}
@@ -454,4 +460,11 @@ func TestFileTypeFilterWithRealFiles(t *testing.T) {
 		expected := tf.name == "test.txt" || tf.name == "test.go"
 		assert.Equal(t, expected, actual, "Failed for file: %s", tf.name)
 	}
+}
+
+func TestCreateFileTypeFilterReturnsNilWhenNoFiltering(t *testing.T) {
+	ui := &common.UI{}
+	// No include or ignore types set
+	filter := ui.CreateFileTypeFilter()
+	assert.Nil(t, filter, "CreateFileTypeFilter should return nil when no filtering is configured")
 }
