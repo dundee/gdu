@@ -33,10 +33,12 @@ type UI interface {
 	AnalyzePath(path string, parentDir gfs.Item) error
 	ReadAnalysis(input io.Reader) error
 	ReadFromStorage(storagePath, path string) error
+	SetIgnoreTypes(types []string)
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreHidden(value bool)
+	SetIncludeTypes(types []string)
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
@@ -58,6 +60,8 @@ type Flags struct {
 	StoragePath        string   `yaml:"storage-path"`
 	IgnoreDirs         []string `yaml:"ignore-dirs"`
 	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
+	TypeFilter         []string `yaml:"type"`
+	ExcludeTypeFilter  []string `yaml:"exclude-type"`
 	MaxCores           int      `yaml:"max-cores"`
 	Top                int      `yaml:"top"`
 	SequentialScanning bool     `yaml:"sequential-scanning"`
@@ -176,6 +180,8 @@ func init() {
 }
 
 // Run starts gdu main logic
+//
+//nolint:gocyclo // App function is a suite of if statements
 func (a *App) Run() error {
 	var ui UI
 
@@ -230,6 +236,14 @@ func (a *App) Run() error {
 	}
 	if err := a.setNoCross(path); err != nil {
 		return err
+	}
+
+	// Process type filters
+	if len(a.Flags.TypeFilter) > 0 {
+		ui.SetIncludeTypes(a.Flags.TypeFilter)
+	}
+	if len(a.Flags.ExcludeTypeFilter) > 0 {
+		ui.SetIgnoreTypes(a.Flags.ExcludeTypeFilter)
 	}
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)

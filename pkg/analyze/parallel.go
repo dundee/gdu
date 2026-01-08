@@ -22,6 +22,7 @@ type ParallelAnalyzer struct {
 	doneChan            common.SignalGroup
 	wait                *WaitGroup
 	ignoreDir           common.ShouldDirBeIgnored
+	ignoreFileType      common.ShouldFileBeIgnored
 	followSymlinks      bool
 	gitAnnexedSize      bool
 	matchesTimeFilterFn common.TimeFilter
@@ -63,6 +64,11 @@ func (a *ParallelAnalyzer) SetArchiveBrowsing(v bool) {
 	a.archiveBrowsing = v
 }
 
+// SetFileTypeFilter sets the file type filter function
+func (a *ParallelAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
+	a.ignoreFileType = filter
+}
+
 // GetProgressChan returns channel for getting progress
 func (a *ParallelAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
@@ -85,7 +91,7 @@ func (a *ParallelAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *ParallelAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
@@ -93,6 +99,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	}
 
 	a.ignoreDir = ignore
+	a.ignoreFileType = fileTypeFilter
 
 	go a.updateProgress()
 	dir := a.processDir(path)
@@ -202,6 +209,11 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
+
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 

@@ -71,7 +71,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 	go func() {
 		defer debug.FreeOSMemory()
-		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
+		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
 
 		if parentDir != nil {
 			currentDir.SetParent(parentDir)

@@ -47,9 +47,14 @@ type MockedAnalyzer struct {
 	ArchiveBrowsing bool
 }
 
+// SetFileTypeFilter sets the file type filter function
+func (a *MockedAnalyzer) SetFileTypeFilter(filter ShouldFileBeIgnored) {
+	// Mock implementation - do nothing
+}
+
 // AnalyzeDir returns dir with files with different size exponents
 func (a *MockedAnalyzer) AnalyzeDir(
-	path string, ignore ShouldDirBeIgnored, enableGC bool,
+	path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored, enableGC bool,
 ) fs.Item {
 	return nil
 }
