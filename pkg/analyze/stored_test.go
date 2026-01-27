@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -55,20 +56,22 @@ func TestStoredAnalyzer(t *testing.T) {
 	assert.True(t, dir.IsDir())
 
 	// test dir tree
-	assert.Equal(t, "nested", dir.GetFiles()[0].GetName())
-	assert.Equal(t, "subnested", dir.GetFiles()[0].(*StoredDir).GetFiles()[1].GetName())
+	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Equal(t, "nested", files[0].GetName())
+
+	nested := files[0].(*StoredDir)
+	nestedFiles := slices.Collect(nested.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Equal(t, "subnested", nestedFiles[1].GetName())
 
 	// test file
-	assert.Equal(t, "file2", dir.GetFiles()[0].(*StoredDir).GetFiles()[0].GetName())
-	assert.Equal(t, int64(2), dir.GetFiles()[0].(*StoredDir).GetFiles()[0].GetSize())
-	assert.Equal(t, int64(4096), dir.GetFiles()[0].(*StoredDir).GetFiles()[0].GetUsage())
+	assert.Equal(t, "file2", nestedFiles[0].GetName())
+	assert.Equal(t, int64(2), nestedFiles[0].GetSize())
+	assert.Equal(t, int64(4096), nestedFiles[0].GetUsage())
 
-	assert.Equal(
-		t, "file", dir.GetFiles()[0].(*StoredDir).GetFiles()[1].(*StoredDir).GetFiles()[0].GetName(),
-	)
-	assert.Equal(
-		t, int64(5), dir.GetFiles()[0].(*StoredDir).GetFiles()[1].(*StoredDir).GetFiles()[0].GetSize(),
-	)
+	subnested := nestedFiles[1].(*StoredDir)
+	subnestedFiles := slices.Collect(subnested.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Equal(t, "file", subnestedFiles[0].GetName())
+	assert.Equal(t, int64(5), subnestedFiles[0].GetSize())
 }
 
 func TestRemoveStoredFile(t *testing.T) {
@@ -91,8 +94,10 @@ func TestRemoveStoredFile(t *testing.T) {
 	assert.Equal(t, 5, dir.ItemCount)
 	assert.True(t, dir.IsDir())
 
-	subdir := dir.GetFiles()[0].(*StoredDir)
-	subdir.RemoveFile(subdir.GetFiles()[0])
+	dirFiles := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	subdir := dirFiles[0].(*StoredDir)
+	subdirFiles := slices.Collect(subdir.GetFiles(fs.SortByName, fs.SortAsc))
+	subdir.RemoveFile(subdirFiles[0])
 
 	closeFn := DefaultStorage.Open()
 	defer closeFn()
@@ -102,7 +107,12 @@ func TestRemoveStoredFile(t *testing.T) {
 	assert.Equal(t, 4, stored.GetItemCount())
 	assert.Equal(t, int64(5+4096*3), stored.GetSize())
 
-	file := stored.GetFiles()[0].GetFiles()[0].GetFiles()[0]
+	storedFiles := slices.Collect(stored.GetFiles(fs.SortByName, fs.SortAsc))
+	storedNested := storedFiles[0].(*StoredDir)
+	storedNestedFiles := slices.Collect(storedNested.GetFiles(fs.SortByName, fs.SortAsc))
+	storedSubnested := storedNestedFiles[0].(*StoredDir)
+	storedSubnestedFiles := slices.Collect(storedSubnested.GetFiles(fs.SortByName, fs.SortAsc))
+	file := storedSubnestedFiles[0]
 	assert.Equal(t, false, file.IsDir())
 	assert.Equal(t, "file", file.GetName())
 	assert.Equal(t, "test_dir/nested/subnested", file.GetParent().GetPath())
@@ -256,7 +266,7 @@ func TestParentDirGetFilesPanics(t *testing.T) {
 		}
 	}()
 	dir := &ParentDir{}
-	dir.GetFiles()
+	dir.GetFiles(fs.SortByName, fs.SortAsc)
 }
 
 func TestParentDirGetFilesLockedPanics(t *testing.T) {
@@ -266,7 +276,7 @@ func TestParentDirGetFilesLockedPanics(t *testing.T) {
 		}
 	}()
 	dir := &ParentDir{}
-	dir.GetFilesLocked()
+	dir.GetFilesLocked(fs.SortByName, fs.SortAsc)
 }
 
 func TestParentDirRLockPanics(t *testing.T) {
@@ -277,16 +287,6 @@ func TestParentDirRLockPanics(t *testing.T) {
 	}()
 	dir := &ParentDir{}
 	dir.RLock()
-}
-
-func TestParentDirSetFilesPanics(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			assert.Equal(t, "must not be called", r)
-		}
-	}()
-	dir := &ParentDir{}
-	dir.SetFiles(nil)
 }
 
 func TestParentDirRemoveFilePanics(t *testing.T) {

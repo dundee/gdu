@@ -2,9 +2,29 @@ package fs
 
 import (
 	"io"
+	"iter"
 	"time"
 
 	"github.com/maruel/natural"
+)
+
+// SortBy represents the field to sort files by
+type SortBy int
+
+const (
+	SortBySize SortBy = iota
+	SortByName
+	SortByItemCount
+	SortByMtime
+	SortByApparentSize
+)
+
+// SortOrder represents the sort direction
+type SortOrder int
+
+const (
+	SortAsc SortOrder = iota
+	SortDesc
 )
 
 // Item is a FS item (file or dir)
@@ -25,9 +45,8 @@ type Item interface {
 	GetItemStats(linkedItems HardLinkedItems) (itemCount int, size, usage int64)
 	UpdateStats(linkedItems HardLinkedItems)
 	AddFile(Item)
-	GetFiles() Files
-	GetFilesLocked() Files
-	SetFiles(Files)
+	GetFiles(SortBy, SortOrder) iter.Seq[Item]
+	GetFilesLocked(SortBy, SortOrder) iter.Seq[Item]
 	RemoveFile(Item)
 	RLock() func()
 }
@@ -130,4 +149,28 @@ func (f ByMtime) Less(i, j int) bool {
 	}
 	// if item count is the same, sort by name
 	return natural.Less(f[i].GetName(), f[j].GetName())
+}
+
+// ParseSortBy converts a string to SortBy
+func ParseSortBy(s string) SortBy {
+	switch s {
+	case "name":
+		return SortByName
+	case "size":
+		return SortBySize
+	case "itemCount":
+		return SortByItemCount
+	case "mtime":
+		return SortByMtime
+	default:
+		return SortBySize
+	}
+}
+
+// ParseSortOrder converts a string to SortOrder
+func ParseSortOrder(s string) SortOrder {
+	if s == "asc" {
+		return SortAsc
+	}
+	return SortDesc
 }

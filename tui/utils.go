@@ -94,7 +94,11 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 	current := item
 
 	for {
-		files := current.GetFiles()
+		// Collect files to check count and types
+		var files []fs.Item
+		for file := range current.GetFiles(fs.SortByName, fs.SortAsc) {
+			files = append(files, file)
+		}
 
 		if len(files) > 1 {
 			break
@@ -151,8 +155,17 @@ func findCollapsedParent(currentDir fs.Item) fs.Item {
 	for current.GetParent() != nil {
 		parent := current.GetParent()
 
+		// Count files in parent
+		fileCount := 0
+		for range parent.GetFiles(fs.SortByName, fs.SortAsc) {
+			fileCount++
+			if fileCount > 1 {
+				break
+			}
+		}
+
 		// If parent has more than one item, this is where the collapsed chain starts
-		if len(parent.GetFiles()) > 1 {
+		if fileCount > 1 {
 			chainParent = parent
 			break
 		}

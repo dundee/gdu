@@ -36,7 +36,9 @@ func EmptyFileFromDir(dir, file fs.Item) error {
 		cur = cur.Parent.(*analyze.Dir)
 	}
 
-	dir.SetFiles(dir.GetFiles().Remove(file))
+	// Remove the old file and add a new one with zero size
+	cur = dir.(*analyze.Dir)
+	cur.Files = cur.Files.Remove(file)
 	newFile := &analyze.File{
 		Name:   file.GetName(),
 		Flag:   file.GetFlag(),

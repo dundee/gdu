@@ -346,7 +346,7 @@ func TestFileDirectoryInterleaving(t *testing.T) {
 func getFileNames(item fs.Item) []string {
 	names := []string{item.GetName()}
 	if item.IsDir() {
-		for _, child := range item.GetFiles() {
+		for child := range item.GetFiles(fs.SortByName, fs.SortAsc) {
 			names = append(names, getFileNames(child)...)
 		}
 	}

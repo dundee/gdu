@@ -72,7 +72,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 			var deleteItems []fs.Item
 			if shouldEmpty && one.IsDir() {
 				currentDir = one.(*analyze.Dir)
-				for _, file := range currentDir.GetFiles() {
+				for file := range currentDir.GetFiles(fs.SortBySize, fs.SortDesc) {
 					deleteItems = append(deleteItems, file)
 				}
 			} else {

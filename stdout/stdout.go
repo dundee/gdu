@@ -5,7 +5,6 @@ import (
 	"io"
 	"math"
 	"runtime"
-	"sort"
 	"sync"
 	"time"
 
@@ -237,13 +236,12 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 }
 
 func (ui *UI) showDir(dir fs.Item) {
+	sortOrder := fs.SortDesc
 	if ui.reverseSort {
-		sort.Sort(dir.GetFiles())
-	} else {
-		sort.Sort(sort.Reverse(dir.GetFiles()))
+		sortOrder = fs.SortAsc
 	}
 
-	for _, file := range dir.GetFiles() {
+	for file := range dir.GetFiles(fs.SortBySize, sortOrder) {
 		ui.printItem(file)
 	}
 }

@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"io"
+	"iter"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -299,12 +300,29 @@ func (f *StoredDir) GetParent() fs.Item {
 	return dir
 }
 
-// GetFiles returns files in directory
-// If files are already cached, return them
+// GetFiles returns files in directory as a sorted iterator
+// If files are already cached, use them
 // Otherwise load them from storage
-func (f *StoredDir) GetFiles() fs.Files {
+func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	return func(yield func(fs.Item) bool) {
+		files := f.loadFiles()
+		sortFiles(files, sortBy, order)
+
+		for _, item := range files {
+			if !yield(item) {
+				return
+			}
+		}
+	}
+}
+
+// loadFiles loads files from storage or returns cached files
+func (f *StoredDir) loadFiles() fs.Files {
 	if f.cachedFiles != nil {
-		return f.cachedFiles
+		// Return a copy to avoid modifying cached slice
+		result := make(fs.Files, len(f.cachedFiles))
+		copy(result, f.cachedFiles)
+		return result
 	}
 
 	if !DefaultStorage.IsOpen() {
@@ -339,12 +357,10 @@ func (f *StoredDir) GetFiles() fs.Files {
 	}
 
 	f.cachedFiles = files
-	return files
-}
-
-// SetFiles sets files in directory
-func (f *StoredDir) SetFiles(files fs.Files) {
-	f.Files = files
+	// Return a copy to avoid modifying cached slice
+	result := make(fs.Files, len(files))
+	copy(result, files)
+	return result
 }
 
 // RemoveFile removes file from stored directory
@@ -357,7 +373,7 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 		defer closeFn()
 	}
 
-	f.SetFiles(f.GetFiles().Remove(item))
+	f.Files = f.Files.Remove(item)
 	f.cachedFiles = nil
 
 	cur := f
@@ -396,7 +412,8 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	totalUsage := int64(4096)
 	var itemCount int
 	f.cachedFiles = nil
-	for _, entry := range f.GetFiles() {
+	files := f.loadFiles()
+	for _, entry := range files {
 		count, size, usage := entry.GetItemStats(linkedItems)
 		totalSize += size
 		totalUsage += usage
@@ -445,12 +462,11 @@ func (p *ParentDir) SetParent(fs.Item)                                { panic("m
 func (p *ParentDir) GetMultiLinkedInode() uint64                      { panic("must not be called") }
 func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("must not be called") }
 func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)       { panic("must not be called") }
-func (p *ParentDir) AddFile(fs.Item)                                  { panic("must not be called") }
-func (p *ParentDir) GetFiles() fs.Files                               { panic("must not be called") }
-func (p *ParentDir) GetFilesLocked() fs.Files                         { panic("must not be called") }
-func (p *ParentDir) RLock() func()                                    { panic("must not be called") }
-func (p *ParentDir) SetFiles(fs.Files)                                { panic("must not be called") }
-func (p *ParentDir) RemoveFile(item fs.Item)                          { panic("must not be called") }
+func (p *ParentDir) AddFile(fs.Item)                                               { panic("must not be called") }
+func (p *ParentDir) GetFiles(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item]            { panic("must not be called") }
+func (p *ParentDir) GetFilesLocked(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item]      { panic("must not be called") }
+func (p *ParentDir) RLock() func()                                                 { panic("must not be called") }
+func (p *ParentDir) RemoveFile(item fs.Item)                                       { panic("must not be called") }
 func (p *ParentDir) GetItemStats(
 	linkedItems fs.HardLinkedItems,
 ) (itemCount int, size, usage int64) {

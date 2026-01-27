@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -437,7 +438,8 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 		f()
 	}
 
-	nested := ui.currentDir.GetFiles()[0].(*analyze.Dir)
+	files := slices.Collect(ui.currentDir.GetFiles(fs.SortByName, fs.SortAsc))
+	nested := files[0].(*analyze.Dir)
 	subnested := nested.Files[1].(*analyze.Dir)
 	file := subnested.Files[0].(*analyze.File)
 	file2 := nested.Files[0].(*analyze.File)

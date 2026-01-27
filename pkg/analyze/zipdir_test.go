@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -55,7 +56,7 @@ func TestProcessZipFile(t *testing.T) {
 	assert.Equal(t, "ZipDirectory", zipDir.GetType())
 
 	// Verify file structure
-	files := zipDir.GetFiles()
+	files := slices.Collect(zipDir.GetFiles(fs.SortByName, fs.SortAsc))
 	assert.Greater(t, len(files), 0)
 
 	// Debug: print all files

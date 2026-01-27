@@ -7,7 +7,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -131,7 +130,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 }
 
 func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
-	sort.Sort(sort.Reverse(dir.GetFiles()))
+	// Sorting is now handled by GetFiles with sort parameters
 
 	var (
 		buff bytes.Buffer

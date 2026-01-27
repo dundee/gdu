@@ -19,7 +19,7 @@ func ItemFromDirParallel(dir, item fs.Item) error {
 	var wait sync.WaitGroup
 
 	// remove all files in the directory in parallel
-	for _, file := range item.GetFilesLocked() {
+	for file := range item.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
 		if !file.IsDir() {
 			continue
 		}
