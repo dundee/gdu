@@ -109,7 +109,6 @@ func CreateUI(
 	useColors bool,
 	showApparentSize bool,
 	showRelativeSize bool,
-	constGC bool,
 	useSIPrefix bool,
 	opts ...Option,
 ) *UI {
@@ -119,7 +118,6 @@ func CreateUI(
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
 		app:                     app,

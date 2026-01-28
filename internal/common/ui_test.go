@@ -54,7 +54,7 @@ func (a *MockedAnalyzer) SetFileTypeFilter(filter ShouldFileBeIgnored) {
 
 // AnalyzeDir returns dir with files with different size exponents
 func (a *MockedAnalyzer) AnalyzeDir(
-	path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored, enableGC bool,
+	path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored,
 ) fs.Item {
 	return nil
 }

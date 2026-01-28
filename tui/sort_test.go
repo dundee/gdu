@@ -133,7 +133,7 @@ func TestSetDEfaultSorting(t *testing.T) {
 	})
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false, opts...)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, opts...)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 
@@ -155,7 +155,7 @@ func TestSortDevicesByName(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -171,7 +171,7 @@ func TestSortDevicesByUsedSize(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -188,7 +188,7 @@ func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bo
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, apparentSize, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, apparentSize, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = sortBy

@@ -86,13 +86,11 @@ non-interactive mode
 
 **\--write-config**\[=false\] Write current configuration to file (default is $HOME/.gdu.yaml)
 
-**-g**, **\--const-gc**\[=false\] Enable memory garbage collection during analysis with constant level set by GOGC
-
 **\--enable-profiling**\[=false\] Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
 
-**\--use-storage**\[=false\] Use persistent key-value storage for analysis data (experimental)
+**-D**, **\--db** Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
 
-**-r**, **\--read-from-storage**\[=false\] Read analysis data from persistent key-value storage
+**-r**, **\--read-from-storage**\[=false\] Use existing database instead of re-scanning
 
 **-v**, **\--version**\[=false\] Print version
 

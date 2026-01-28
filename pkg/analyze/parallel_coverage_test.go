@@ -134,20 +134,6 @@ func TestParallelAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 }
 
-func TestParallelAnalyzerAnalyzeDirWithConstGC(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, true, // constGC = true
-	).(*Dir)
-
-	analyzer.GetDone().Wait()
-
-	assert.NotNil(t, dir)
-	assert.Equal(t, "test_dir", dir.Name)
-}
 
 func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
@@ -155,7 +141,7 @@ func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(name, _ string) bool { return name == "nested" }, func(_ string) bool { return false }, false,
+		"test_dir", func(name, _ string) bool { return name == "nested" }, func(_ string) bool { return false },
 	).(*Dir)
 
 	analyzer.GetDone().Wait()

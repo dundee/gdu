@@ -42,7 +42,7 @@ func TestStoredAnalyzer(t *testing.T) {
 
 	a := CreateStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	a.GetDone().Wait()
@@ -80,7 +80,7 @@ func TestRemoveStoredFile(t *testing.T) {
 
 	a := CreateStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	a.GetDone().Wait()

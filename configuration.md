@@ -91,17 +91,6 @@ Follow symlinks for files, i.e. show the size of the file to which symlink point
 #### `profiling`
 
 Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
-#### `const-gc`
-
-Enable memory garbage collection during analysis with constant level set by GOGC
-
-#### `use-storage`
-
-Use persistent key-value storage for analysis data (experimental)
-
-#### `storage-path`
-
-Path to persistent key-value storage directory (default is /tmp/badger)
 
 #### `read-from-storage`
 

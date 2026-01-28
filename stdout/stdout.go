@@ -45,7 +45,6 @@ func CreateStdoutUI(
 	showApparentSize bool,
 	showRelativeSize bool,
 	summarize bool,
-	constGC bool,
 	useSIPrefix bool,
 	noPrefix bool,
 	fixedUnit string,
@@ -59,7 +58,6 @@ func CreateStdoutUI(
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
 		output:      output,
@@ -194,7 +192,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 		updateStatsDone <- struct{}{}
 	}()
@@ -418,11 +416,10 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 
 	i := 0
 	for {
-		fmt.Fprint(ui.output, emptyRow)
-
 		select {
 		case progress = <-progressChan:
 		case <-analysisDoneChan:
+			fmt.Fprint(ui.output, emptyRow)
 			for {
 				fmt.Fprint(ui.output, emptyRow)
 				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
@@ -441,6 +438,7 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 			}
 		}
 
+		fmt.Fprint(ui.output, emptyRow)
 		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
 
 		fmt.Fprint(ui.output, "Scanning... Total items: "+

@@ -22,7 +22,7 @@ func TestAnalyzeDir(t *testing.T) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 
 	progress := <-analyzer.GetProgressChan()
@@ -72,7 +72,7 @@ func TestIgnoreDir(t *testing.T) {
 	defer fin()
 
 	dir := CreateAnalyzer().AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return true }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return true }, func(_ string) bool { return false },
 	).(*Dir)
 
 	assert.Equal(t, "test_dir", dir.Name)
@@ -91,7 +91,7 @@ func TestFlags(t *testing.T) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -119,7 +119,7 @@ func TestHardlink(t *testing.T) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -146,7 +146,7 @@ func TestFollowSymlink(t *testing.T) {
 	analyzer := CreateAnalyzer()
 	analyzer.SetFollowSymlinks(true)
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -183,7 +183,7 @@ func TestGitAnnexSymlink(t *testing.T) {
 	analyzer.SetFollowSymlinks(true)
 	analyzer.SetShowAnnexedSize(true)
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -215,7 +215,7 @@ func TestBrokenSymlinkSkipped(t *testing.T) {
 	analyzer := CreateAnalyzer()
 	analyzer.SetFollowSymlinks(true)
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -236,7 +236,7 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	)
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
@@ -251,7 +251,7 @@ func TestParallelStableOrderAnalyzerDeterminism(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		analyzer := CreateStableOrderAnalyzer()
 		dir := analyzer.AnalyzeDir(
-			"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+			"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 		)
 		analyzer.GetDone().Wait()
 		dir.UpdateStats(make(fs.HardLinkedItems))
@@ -274,7 +274,7 @@ func TestParallelVsSequentialConsistency(t *testing.T) {
 	// Run sequential analyzer
 	seqAnalyzer := CreateSeqAnalyzer()
 	seqDir := seqAnalyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	)
 	seqAnalyzer.GetDone().Wait()
 	seqDir.UpdateStats(make(fs.HardLinkedItems))
@@ -283,7 +283,7 @@ func TestParallelVsSequentialConsistency(t *testing.T) {
 	// Run parallel analyzer
 	parAnalyzer := CreateStableOrderAnalyzer()
 	parDir := parAnalyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	)
 	parAnalyzer.GetDone().Wait()
 	parDir.UpdateStats(make(fs.HardLinkedItems))
@@ -309,14 +309,14 @@ func TestFileDirectoryInterleaving(t *testing.T) {
 	// Run sequential analyzer
 	seqAnalyzer := CreateSeqAnalyzer()
 	seqDir := seqAnalyzer.AnalyzeDir(
-		"test_interleave", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_interleave", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 	seqAnalyzer.GetDone().Wait()
 
 	// Run parallel analyzer
 	parAnalyzer := CreateStableOrderAnalyzer()
 	parDir := parAnalyzer.AnalyzeDir(
-		"test_interleave", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_interleave", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 	parAnalyzer.GetDone().Wait()
 

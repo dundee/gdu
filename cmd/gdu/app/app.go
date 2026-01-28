@@ -82,7 +82,6 @@ type Flags struct {
 	NoSpawnShell       bool     `yaml:"no-spawn-shell"`
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
-	ConstGC            bool     `yaml:"const-gc"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
 	DbPath       string   `yaml:"db"`
 	Summarize          bool     `yaml:"summarize"`
@@ -356,7 +355,6 @@ func (a *App) createUI() (UI, error) {
 			output,
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
-			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
 	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
@@ -371,7 +369,6 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ShowApparentSize,
 			a.Flags.ShowRelativeSize,
 			a.Flags.Summarize,
-			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
 			fixedUnit,
@@ -392,7 +389,6 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor,
 			a.Flags.ShowApparentSize,
 			a.Flags.ShowRelativeSize,
-			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 			opts...,
 		)

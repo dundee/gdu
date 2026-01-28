@@ -57,7 +57,7 @@ func TestStoredDirRemoveFile(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -76,7 +76,7 @@ func TestStoredDirUpdateStats(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -91,7 +91,7 @@ func TestStoredDirUpdateStatsWithMtimeUpdate(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -113,7 +113,7 @@ func TestStoredDirUpdateStatsWithFlagUpdate(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -137,7 +137,7 @@ func TestStoredDirUpdateStatsWithDotFlag(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -170,7 +170,7 @@ func TestStoredAnalyzerWithZip(t *testing.T) {
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	analyzer.SetArchiveBrowsing(true)
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()

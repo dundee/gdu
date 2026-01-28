@@ -21,7 +21,7 @@ func TestShowHelp(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, '?', 0))
 
@@ -33,7 +33,7 @@ func TestCloseHelp(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -48,7 +48,7 @@ func TestCloseHelpWithQuestionMark(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -63,7 +63,7 @@ func TestKeyWhileDeleting(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	modal := tview.NewModal().SetText("Deleting...")
 	ui.pages.AddPage("deleting", modal, true, true)
@@ -77,7 +77,7 @@ func TestLeftRightKeyWhileConfirm(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	modal := tview.NewModal().SetText("Really?")
 	ui.pages.AddPage("confirm", modal, true, true)
@@ -99,7 +99,7 @@ func TestMoveLeftRight(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -145,7 +145,7 @@ func TestMoveRightOnDevice(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.SetIgnoreDirPaths([]string{})
@@ -176,7 +176,7 @@ func TestStop(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
 	assert.Nil(t, key)
@@ -190,7 +190,7 @@ func TestStopWithPrintingPath(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
-	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
 
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -216,7 +216,7 @@ func TestSpawnShell(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
-	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
 	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
@@ -246,7 +246,7 @@ func TestSpawnShellWithoutDir(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
-	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
 	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
@@ -268,7 +268,7 @@ func TestSpawnShellWithWrongDir(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
-	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
 	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
@@ -293,7 +293,7 @@ func TestSpawnShellWithError(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
-	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
 	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
@@ -318,7 +318,7 @@ func TestSpawnShellWithNoSpawnShell(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
-	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
 	called := false
 	ui.exec = func(argv0 string, argv, envv []string) error {
 		called = true
@@ -349,7 +349,7 @@ func TestOpenItemWithNoSpawnShell(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	buff := &bytes.Buffer{}
-	ui := CreateUI(app, simScreen, buff, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
 
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -371,7 +371,7 @@ func TestShowConfirm(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -401,7 +401,7 @@ func TestDeleteEmpty(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
@@ -413,7 +413,7 @@ func TestMarkEmpty(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
@@ -425,7 +425,7 @@ func TestIgnoreEmpty(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'I', 0))
@@ -439,7 +439,7 @@ func TestDelete(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -475,7 +475,7 @@ func TestDeleteWithNoDelete(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -505,7 +505,7 @@ func TestDeleteMarked(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -543,7 +543,7 @@ func TestDeleteParent(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -573,7 +573,7 @@ func TestMarkParent(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -603,7 +603,7 @@ func TestIgnoreParent(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -633,7 +633,7 @@ func TestEmptyDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -670,7 +670,7 @@ func TestMarkedEmptyDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -709,7 +709,7 @@ func TestIgnoreDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -748,7 +748,7 @@ func TestEmptyFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -789,7 +789,7 @@ func TestMarkedEmptyFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	err := ui.AnalyzePath("test_dir", nil)
@@ -830,7 +830,7 @@ func TestSortByApparentSize(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -854,7 +854,7 @@ func TestShowFileCount(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -878,7 +878,7 @@ func TestShowFileCountBW(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -902,7 +902,7 @@ func TestShowMtime(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -926,7 +926,7 @@ func TestShowMtimeBW(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -950,7 +950,7 @@ func TestShowRelativeBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -988,7 +988,7 @@ func TestRescan(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -1015,7 +1015,7 @@ func TestSorting(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -1054,7 +1054,7 @@ func TestShowFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -1081,7 +1081,7 @@ func TestShowInfoAndMoveAround(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -1116,7 +1116,7 @@ func TestBlockedActionsInArchive(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	// Simulate being in a zip dir
 	zipDir := &analyze.ZipDir{

@@ -66,7 +66,6 @@ func init() {
 		"Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)",
 	)
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
-	flags.BoolVarP(&af.ConstGC, "const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
 
 	flags.StringVarP(&af.DbPath, "db", "D", "", "Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)")

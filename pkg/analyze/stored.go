@@ -5,7 +5,6 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -93,13 +92,8 @@ func (a *StoredAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *StoredAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
-	if !constGC {
-		defer debug.SetGCPercent(debug.SetGCPercent(-1))
-		go manageMemoryUsage(a.doneChan)
-	}
-
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 

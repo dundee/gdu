@@ -186,7 +186,7 @@ func TestFormatCollapsedRow(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
 
 	// Create a test collapsed path
 	deepDir := &analyze.Dir{
@@ -234,7 +234,7 @@ func TestFormatCollapsedRow(t *testing.T) {
 	assert.Contains(t, result, "level1/level2/deep")
 
 	// Test without colors
-	ui2 := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui2 := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	result = ui2.formatCollapsedRow(collapsedPath, 1000, 1000, false, false)
 	assert.Contains(t, result, "level1/level2/deep")
 }
@@ -244,7 +244,7 @@ func TestCollapsedPathIntegration(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
 
 	// Create a directory structure that should be collapsed
 	deepestDir := &analyze.Dir{
