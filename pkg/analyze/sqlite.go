@@ -6,7 +6,6 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sync"
 	"syscall"
 	"time"
@@ -250,6 +249,25 @@ func (s *SqliteStorage) UpdateItem(id int64, size, usage int64, itemCount int) e
 	return err
 }
 
+// updateItemFlag updates an item's flag in the database
+func (s *SqliteStorage) updateItemFlag(id int64, flag rune) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+	_, err := s.db.Exec(`UPDATE items SET flag = ? WHERE id = ?`, string(flag), id)
+	return err
+}
+
+// updateItemStats updates an item's size, usage, and item_count in the database
+func (s *SqliteStorage) updateItemStats(id int64, size, usage int64, itemCount int) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+	_, err := s.db.Exec(
+		`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
+		size, usage, itemCount, id,
+	)
+	return err
+}
+
 // GetChildren returns all children of a given parent ID
 func (s *SqliteStorage) GetChildren(parentID int64) ([]*SqliteItem, error) {
 	s.m.RLock()
@@ -469,14 +487,76 @@ func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
 	return nil
 }
 
-// GetItemStats returns item statistics
+// alreadyCounted checks if this hard-linked file was already counted
+func (i *SqliteItem) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
+	mli := i.mli
+	counted := false
+	if mli > 0 {
+		i.flag = 'H'
+		i.storage.updateItemFlag(i.id, 'H') // persist to DB
+		if _, ok := linkedItems[mli]; ok {
+			counted = true
+		}
+		linkedItems[mli] = append(linkedItems[mli], i)
+	}
+	return counted
+}
+
+// GetItemStats returns item statistics, handling hard links properly
 func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
+	if i.isDir {
+		i.UpdateStats(linkedItems)
+		return i.itemCount, i.size, i.usage
+	}
+	// For files, check if already counted (hard link)
+	if i.alreadyCounted(linkedItems) {
+		return 1, 0, 0
+	}
 	return i.itemCount, i.size, i.usage
 }
 
-// UpdateStats updates the statistics (no-op for SQLite items as stats are stored in DB)
+// UpdateStats updates the statistics for directories, handling hard links
 func (i *SqliteItem) UpdateStats(linkedItems fs.HardLinkedItems) {
-	// Stats are already computed during analysis
+	if !i.isDir {
+		return
+	}
+
+	// Recalculate size/usage accounting for hard links
+	totalSize := int64(4096)
+	totalUsage := int64(4096)
+	var itemCount int
+
+	children, err := i.storage.GetChildren(i.id)
+	if err != nil {
+		log.Print(err.Error())
+		return
+	}
+
+	for _, child := range children {
+		child.parent = i
+		count, size, usage := child.GetItemStats(linkedItems)
+		totalSize += size
+		totalUsage += usage
+		itemCount += count
+
+		if child.mtime.After(i.mtime) {
+			i.mtime = child.mtime
+		}
+
+		switch child.flag {
+		case '!', '.':
+			if i.flag != '!' {
+				i.flag = '.'
+			}
+		}
+	}
+
+	i.itemCount = itemCount + 1
+	i.size = totalSize
+	i.usage = totalUsage
+
+	// Persist updated stats to database
+	i.storage.updateItemStats(i.id, i.size, i.usage, i.itemCount)
 }
 
 // AddFile adds a child file (no-op for SQLite items - children are in DB)
@@ -617,7 +697,7 @@ func (a *SqliteAnalyzer) ResetProgress() {
 // AnalyzeDir analyzes the given path and stores results in SQLite.
 // If the database already contains data, it loads from the database instead of re-scanning.
 func (a *SqliteAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
 	// Check if database already has data
 	if a.storage.HasData() {
@@ -630,11 +710,6 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 			a.doneChan.Broadcast()
 			return rootItem
 		}
-	}
-
-	if !constGC {
-		defer debug.SetGCPercent(debug.SetGCPercent(-1))
-		go manageMemoryUsage(a.doneChan)
 	}
 
 	a.ignoreDir = ignore
@@ -668,10 +743,12 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 }
 
 func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
+	// Start with 4096 for directory's own size/usage, matching Dir.UpdateStats behavior
 	var (
-		totalSize  int64
-		totalUsage int64
-		itemCount  int = 1
+		totalSize  int64 = 4096
+		totalUsage int64 = 4096
+		filesSize  int64 // only files in this directory, for progress reporting
+		itemCount  int   = 1
 	)
 
 	a.wait.Add(1)
@@ -682,22 +759,20 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		log.Print(err.Error())
 	}
 
-	// Get directory info
+	// Get directory info for mtime
 	dirInfo, err := os.Stat(path)
 	var dirMtime time.Time
-	var dirUsage int64
 	if err == nil {
 		dirMtime = dirInfo.ModTime()
-		dirUsage, _ = getSyscallStats(dirInfo)
 	}
 
-	// Insert directory into database
+	// Insert directory into database (size/usage will be updated later)
 	dirID, err := a.storage.InsertItem(
 		parentID,
 		filepath.Base(path),
 		true,
 		0, // size will be updated later
-		dirUsage,
+		0, // usage will be updated later
 		dirMtime,
 		1, // item_count will be updated later
 		0,
@@ -774,18 +849,19 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 
 			totalSize += fileSize
 			totalUsage += fileUsage
+			filesSize += fileUsage
 			itemCount++
 		}
 	}
 
 	// Update directory with computed stats
-	a.storage.UpdateItem(dirID, totalSize, totalUsage+dirUsage, itemCount)
+	a.storage.UpdateItem(dirID, totalSize, totalUsage, itemCount)
 
-	// Report progress
+	// Report progress (only files in this dir, subdirs already reported themselves)
 	a.progressChan <- common.CurrentProgress{
 		CurrentItemName: path,
 		ItemCount:       len(files),
-		TotalSize:       totalSize,
+		TotalSize:       filesSize,
 	}
 
 	// Return SqliteItem for the directory
@@ -796,7 +872,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		name:      filepath.Base(path),
 		isDir:     true,
 		size:      totalSize,
-		usage:     totalUsage + dirUsage,
+		usage:     totalUsage,
 		mtime:     dirMtime,
 		itemCount: itemCount,
 		flag:      getDirFlag(err, len(files)),
