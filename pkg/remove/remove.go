@@ -18,32 +18,22 @@ func ItemFromDir(dir, item fs.Item) error {
 	return nil
 }
 
-// EmptyFileFromDir empty file from dir
+// EmptyFileFromDir empties file from dir (truncates to 0 bytes)
 func EmptyFileFromDir(dir, file fs.Item) error {
 	err := os.Truncate(file.GetPath(), 0)
 	if err != nil {
 		return err
 	}
 
-	cur := dir.(*analyze.Dir)
-	for {
-		cur.Size -= file.GetSize()
-		cur.Usage -= file.GetUsage()
-
-		if cur.Parent == nil {
-			break
-		}
-		cur = cur.Parent.(*analyze.Dir)
-	}
-
-	dir.SetFiles(dir.GetFiles().Remove(file))
+	// Remove old file and add zero-sized one
+	dir.RemoveFile(file)
 	newFile := &analyze.File{
 		Name:   file.GetName(),
 		Flag:   file.GetFlag(),
 		Size:   0,
+		Usage:  0,
 		Parent: dir,
 	}
 	dir.AddFile(newFile)
-
 	return nil
 }

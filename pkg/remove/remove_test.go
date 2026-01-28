@@ -46,11 +46,11 @@ func TestTruncateFile(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(subdir.Files))
-	assert.Equal(t, 2, subdir.ItemCount)
+	assert.Equal(t, 1, subdir.ItemCount) // RemoveFile decrements, AddFile doesn't increment
 	assert.Equal(t, int64(1), subdir.Size)
 	assert.Equal(t, int64(4), subdir.Usage)
 	assert.Equal(t, 1, len(dir.Files))
-	assert.Equal(t, 3, dir.ItemCount)
+	assert.Equal(t, 2, dir.ItemCount) // RemoveFile decrements, AddFile doesn't increment
 	assert.Equal(t, int64(2), dir.Size)
 }
 

@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -288,8 +289,10 @@ func TestGetFiles(t *testing.T) {
 		Files:     fs.Files{file},
 	}
 
-	assert.Equal(t, file.Name, dir.GetFiles()[0].GetName())
-	assert.Equal(t, fs.Files{}, file.GetFiles())
+	dirFiles := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Equal(t, file.Name, dirFiles[0].GetName())
+	fileFiles := slices.Collect(file.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Equal(t, 0, len(fileFiles))
 }
 
 func TestGetFilesLocked(t *testing.T) {
@@ -310,20 +313,10 @@ func TestGetFilesLocked(t *testing.T) {
 
 	unlock := dir.RLock()
 	defer unlock()
-	files := dir.GetFiles()
-	locked := dir.GetFilesLocked()
-	files = files.Remove(file)
-	assert.NotEqual(t, &files, &locked)
-}
-
-func TestSetFilesPanicsOnFile(t *testing.T) {
-	file := &File{
-		Name: "xxx",
-		Mli:  5,
-	}
-	assert.Panics(t, func() {
-		file.SetFiles(fs.Files{file})
-	})
+	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	locked := slices.Collect(dir.GetFilesLocked(fs.SortByName, fs.SortAsc))
+	assert.Equal(t, len(files), len(locked))
+	assert.Equal(t, files[0].GetName(), locked[0].GetName())
 }
 
 func TestAddFilePanicsOnFile(t *testing.T) {

@@ -7,7 +7,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -36,14 +35,12 @@ func CreateExportUI(
 	exportOutput io.Writer,
 	useColors bool,
 	showProgress bool,
-	constGC bool,
 	useSIPrefix bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
 			ShowProgress: showProgress,
 			Analyzer:     analyze.CreateAnalyzer(),
-			ConstGC:      constGC,
 			UseSIPrefix:  useSIPrefix,
 		},
 		output:       output,
@@ -121,7 +118,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 	}()
 
@@ -131,7 +128,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 }
 
 func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
-	sort.Sort(sort.Reverse(dir.GetFiles()))
+	// Sorting is now handled by GetFiles with sort parameters
 
 	var (
 		buff bytes.Buffer

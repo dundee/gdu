@@ -11,6 +11,7 @@ import (
 func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
 	stat := f.Sys().(*syscall.Win32FileAttributeData)
 	file.Mtime = time.Unix(0, stat.LastWriteTime.Nanoseconds())
+	file.Usage = f.Size() // No block info on Windows, use apparent size
 }
 
 func setDirPlatformSpecificAttrs(dir *Dir, path string) {

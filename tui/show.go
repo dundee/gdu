@@ -94,7 +94,7 @@ func (ui *UI) showDir() {
 		rowIndex++
 	}
 
-	ui.sortItems()
+	sortBy, sortOrder := ui.getSortParams()
 
 	unlock := ui.currentDir.RLock()
 	defer unlock()
@@ -102,7 +102,7 @@ func (ui *UI) showDir() {
 	i := rowIndex
 	maxUsage = 0
 	maxSize = 0
-	for _, item := range ui.currentDir.GetFiles() {
+	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
 		if _, ignored := ui.ignoredRows[i]; ignored {
 			i++
 			continue
@@ -122,7 +122,7 @@ func (ui *UI) showDir() {
 		i++
 	}
 
-	for _, item := range ui.currentDir.GetFiles() {
+	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
 		if ui.filterValue != "" && !strings.Contains(
 			strings.ToLower(item.GetName()),
 			strings.ToLower(ui.filterValue),

@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/rivo/tview"
 )
@@ -50,8 +49,8 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 	var parentDir fs.Item
 	var deleteItems []fs.Item
 	if shouldEmpty && item.IsDir() {
-		parentDir = item.(*analyze.Dir)
-		for _, file := range item.GetFilesLocked() {
+		parentDir = item
+		for file := range item.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
 			deleteItems = append(deleteItems, file)
 		}
 	} else {
