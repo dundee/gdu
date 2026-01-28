@@ -71,6 +71,7 @@ func init() {
 
 	flags.BoolVar(&af.UseStorage, "use-storage", false, "Use persistent key-value storage for analysis data (experimental)")
 	flags.StringVar(&af.StoragePath, "storage-path", "/tmp/badger", "Path to persistent key-value storage directory")
+	flags.StringVarP(&af.SqliteDbPath, "db", "D", "", "Use SQLite database for analysis data (e.g., -D analysis.db)")
 	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Read analysis data from persistent key-value storage")
 	flags.BoolVar(&af.ArchiveBrowsing, "archive-browsing", false, "Enable browsing of zip/jar archives")
 	flags.BoolVar(&af.CollapsePath, "collapse-path", false, "Collapse single-child directory chains")

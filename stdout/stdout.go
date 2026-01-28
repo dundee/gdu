@@ -330,7 +330,7 @@ func (ui *UI) printItemPath(file fs.Item) {
 // ReadAnalysis reads analysis report from JSON file
 func (ui *UI) ReadAnalysis(input io.Reader) error {
 	var (
-		dir      *analyze.Dir
+		dir      fs.Item
 		wait     sync.WaitGroup
 		err      error
 		doneChan chan struct{}

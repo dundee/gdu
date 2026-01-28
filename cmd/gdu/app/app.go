@@ -86,6 +86,7 @@ type Flags struct {
 	ConstGC            bool     `yaml:"const-gc"`
 	UseStorage         bool     `yaml:"use-storage"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
+	SqliteDbPath       string   `yaml:"db"`
 	Summarize          bool     `yaml:"summarize"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
@@ -211,6 +212,13 @@ func (a *App) Run() error {
 
 	if a.Flags.UseStorage {
 		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
+	}
+	if a.Flags.SqliteDbPath != "" {
+		sqliteAnalyzer, err := analyze.CreateSqliteAnalyzer(a.Flags.SqliteDbPath)
+		if err != nil {
+			return fmt.Errorf("creating sqlite analyzer: %w", err)
+		}
+		ui.SetAnalyzer(sqliteAnalyzer)
 	}
 	if a.Flags.SequentialScanning {
 		ui.SetAnalyzer(analyze.CreateSeqAnalyzer())

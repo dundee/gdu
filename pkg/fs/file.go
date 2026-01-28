@@ -48,6 +48,7 @@ type Item interface {
 	GetFiles(SortBy, SortOrder) iter.Seq[Item]
 	GetFilesLocked(SortBy, SortOrder) iter.Seq[Item]
 	RemoveFile(Item)
+	RemoveFileByName(name string)
 	RLock() func()
 }
 

@@ -6,7 +6,6 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -71,7 +70,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 
 			var deleteItems []fs.Item
 			if shouldEmpty && one.IsDir() {
-				currentDir = one.(*analyze.Dir)
+				currentDir = one
 				for file := range currentDir.GetFiles(fs.SortBySize, fs.SortDesc) {
 					deleteItems = append(deleteItems, file)
 				}

@@ -440,6 +440,42 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	}
 }
 
+// RemoveFileByName removes file by name from stored directory
+func (f *StoredDir) RemoveFileByName(name string) {
+	if !DefaultStorage.IsOpen() {
+		f.dbLock.Lock()
+		defer f.dbLock.Unlock()
+		closeFn := DefaultStorage.Open()
+		defer closeFn()
+	}
+
+	idx, ok := f.Files.FindByName(name)
+	if !ok {
+		return
+	}
+	item := f.Files[idx]
+	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
+	f.cachedFiles = nil
+
+	cur := f
+	for {
+		cur.ItemCount -= item.GetItemCount()
+		cur.Size -= item.GetSize()
+		cur.Usage -= item.GetUsage()
+
+		err := DefaultStorage.StoreDir(cur)
+		if err != nil {
+			log.Print(err.Error())
+		}
+
+		parent := cur.GetParent()
+		if parent == nil {
+			break
+		}
+		cur = parent.(*StoredDir)
+	}
+}
+
 // ParentDir represents parent directory of single file
 // It is used to get path to parent directory of a file
 type ParentDir struct {
@@ -467,6 +503,7 @@ func (p *ParentDir) GetFiles(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item]         
 func (p *ParentDir) GetFilesLocked(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item]      { panic("must not be called") }
 func (p *ParentDir) RLock() func()                                                 { panic("must not be called") }
 func (p *ParentDir) RemoveFile(item fs.Item)                                       { panic("must not be called") }
+func (p *ParentDir) RemoveFileByName(name string)                                  { panic("must not be called") }
 func (p *ParentDir) GetItemStats(
 	linkedItems fs.HardLinkedItems,
 ) (itemCount int, size, usage int64) {

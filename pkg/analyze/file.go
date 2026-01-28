@@ -133,6 +133,11 @@ func (f *File) RemoveFile(item fs.Item) {
 	panic("RemoveFile should not be called on file")
 }
 
+// RemoveFileByName panics on file
+func (f *File) RemoveFileByName(name string) {
+	panic("RemoveFileByName should not be called on file")
+}
+
 // Dir struct
 type Dir struct {
 	*File
@@ -292,3 +297,29 @@ func (f *Dir) RLock() func() {
 	f.m.RLock()
 	return f.m.RUnlock
 }
+
+// RemoveFileByName removes item by name from dir
+func (f *Dir) RemoveFileByName(name string) {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	idx, ok := f.Files.FindByName(name)
+	if !ok {
+		return
+	}
+	item := f.Files[idx]
+	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
+
+	cur := f
+	for {
+		cur.ItemCount -= item.GetItemCount()
+		cur.Size -= item.GetSize()
+		cur.Usage -= item.GetUsage()
+
+		if cur.Parent == nil {
+			break
+		}
+		cur = cur.Parent.(*Dir)
+	}
+}
+
