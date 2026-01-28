@@ -69,10 +69,8 @@ func init() {
 	flags.BoolVarP(&af.ConstGC, "const-gc", "g", false, "Enable memory garbage collection during analysis with constant level set by GOGC")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
 
-	flags.BoolVar(&af.UseStorage, "use-storage", false, "Use persistent key-value storage for analysis data (experimental)")
-	flags.StringVar(&af.StoragePath, "storage-path", "/tmp/badger", "Path to persistent key-value storage directory")
-	flags.StringVarP(&af.SqliteDbPath, "db", "D", "", "Use SQLite database for analysis data (e.g., -D analysis.db)")
-	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Read analysis data from persistent key-value storage")
+	flags.StringVarP(&af.DbPath, "db", "D", "", "Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)")
+	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Use existing database instead of re-scanning")
 	flags.BoolVar(&af.ArchiveBrowsing, "archive-browsing", false, "Enable browsing of zip/jar archives")
 	flags.BoolVar(&af.CollapsePath, "collapse-path", false, "Collapse single-child directory chains")
 

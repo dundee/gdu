@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -19,9 +20,12 @@ import (
 
 // SqliteStorage represents SQLite database storage
 type SqliteStorage struct {
-	db     *sql.DB
-	dbPath string
-	m      sync.RWMutex
+	db         *sql.DB
+	dbPath     string
+	m          sync.RWMutex
+	tx         *sql.Tx
+	insertStmt *sql.Stmt
+	updateStmt *sql.Stmt
 }
 
 // NewSqliteStorage creates a new SQLite storage and initializes the schema
@@ -46,6 +50,17 @@ func NewSqliteStorage(dbPath string) (*SqliteStorage, error) {
 
 // createTables creates the database schema if it doesn't exist
 func (s *SqliteStorage) createTables() error {
+	// Optimize for insertion speed
+	pragmas := `
+	PRAGMA synchronous = OFF;
+	PRAGMA journal_mode = MEMORY;
+	PRAGMA cache_size = -64000;
+	PRAGMA temp_store = MEMORY;
+	`
+	if _, err := s.db.Exec(pragmas); err != nil {
+		return err
+	}
+
 	schema := `
 	CREATE TABLE IF NOT EXISTS items (
 		id          INTEGER PRIMARY KEY,
@@ -88,21 +103,128 @@ func (s *SqliteStorage) ClearItems() error {
 	return err
 }
 
-// InsertItem inserts a file/directory item into the database
-func (s *SqliteStorage) InsertItem(parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int, mli uint64, flag rune) (int64, error) {
+// BeginBulkInsert starts a transaction and prepares statements for bulk insertion
+func (s *SqliteStorage) BeginBulkInsert() error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	s.tx = tx
+
+	s.insertStmt, err = tx.Prepare(
+		`INSERT INTO items (parent_id, name, is_dir, size, usage, mtime, item_count, mli, flag)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	s.updateStmt, err = tx.Prepare(
+		`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
+	)
+	if err != nil {
+		s.insertStmt.Close()
+		tx.Rollback()
+		return err
+	}
+
+	return nil
+}
+
+// EndBulkInsert commits the transaction and closes prepared statements
+func (s *SqliteStorage) EndBulkInsert() error {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if s.insertStmt != nil {
+		s.insertStmt.Close()
+		s.insertStmt = nil
+	}
+	if s.updateStmt != nil {
+		s.updateStmt.Close()
+		s.updateStmt = nil
+	}
+	if s.tx != nil {
+		err := s.tx.Commit()
+		s.tx = nil
+		return err
+	}
+	return nil
+}
+
+// HasData returns true if the database contains analysis data
+func (s *SqliteStorage) HasData() bool {
+	s.m.RLock()
+	defer s.m.RUnlock()
+
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM items").Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
+
+// GetRootItem returns the root item (item with no parent)
+func (s *SqliteStorage) GetRootItem() (*SqliteItem, error) {
+	s.m.RLock()
+	defer s.m.RUnlock()
+
+	item := &SqliteItem{storage: s}
+	var parentID sql.NullInt64
+	var isDirInt int
+	var mtimeUnix int64
+	var flag string
+
+	err := s.db.QueryRow(
+		`SELECT id, parent_id, name, is_dir, size, usage, mtime, item_count, mli, flag
+		 FROM items WHERE parent_id IS NULL LIMIT 1`,
+	).Scan(
+		&item.id, &parentID, &item.name, &isDirInt,
+		&item.size, &item.usage, &mtimeUnix, &item.itemCount,
+		&item.mli, &flag,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	item.isDir = isDirInt == 1
+	item.mtime = time.Unix(mtimeUnix, 0)
+	if len(flag) > 0 {
+		item.flag = rune(flag[0])
+	} else {
+		item.flag = ' '
+	}
+
+	return item, nil
+}
+
+// InsertItem inserts a file/directory item into the database
+func (s *SqliteStorage) InsertItem(parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int, mli uint64, flag rune) (int64, error) {
 	isDirInt := 0
 	if isDir {
 		isDirInt = 1
 	}
 
-	result, err := s.db.Exec(
-		`INSERT INTO items (parent_id, name, is_dir, size, usage, mtime, item_count, mli, flag)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		parentID, name, isDirInt, size, usage, mtime.Unix(), itemCount, mli, string(flag),
-	)
+	var result sql.Result
+	var err error
+
+	// Use prepared statement if in bulk mode, otherwise use direct exec
+	if s.insertStmt != nil {
+		result, err = s.insertStmt.Exec(parentID, name, isDirInt, size, usage, mtime.Unix(), itemCount, mli, string(flag))
+	} else {
+		s.m.Lock()
+		result, err = s.db.Exec(
+			`INSERT INTO items (parent_id, name, is_dir, size, usage, mtime, item_count, mli, flag)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			parentID, name, isDirInt, size, usage, mtime.Unix(), itemCount, mli, string(flag),
+		)
+		s.m.Unlock()
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -112,13 +234,19 @@ func (s *SqliteStorage) InsertItem(parentID *int64, name string, isDir bool, siz
 
 // UpdateItem updates an existing item's stats
 func (s *SqliteStorage) UpdateItem(id int64, size, usage int64, itemCount int) error {
-	s.m.Lock()
-	defer s.m.Unlock()
+	var err error
 
-	_, err := s.db.Exec(
-		`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
-		size, usage, itemCount, id,
-	)
+	// Use prepared statement if in bulk mode, otherwise use direct exec
+	if s.updateStmt != nil {
+		_, err = s.updateStmt.Exec(size, usage, itemCount, id)
+	} else {
+		s.m.Lock()
+		_, err = s.db.Exec(
+			`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
+			size, usage, itemCount, id,
+		)
+		s.m.Unlock()
+	}
 	return err
 }
 
@@ -486,10 +614,24 @@ func (a *SqliteAnalyzer) ResetProgress() {
 	a.wait = (&WaitGroup{}).Init()
 }
 
-// AnalyzeDir analyzes the given path and stores results in SQLite
+// AnalyzeDir analyzes the given path and stores results in SQLite.
+// If the database already contains data, it loads from the database instead of re-scanning.
 func (a *SqliteAnalyzer) AnalyzeDir(
 	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
 ) fs.Item {
+	// Check if database already has data
+	if a.storage.HasData() {
+		log.Printf("Loading analysis from existing SQLite database")
+		rootItem, err := a.storage.GetRootItem()
+		if err != nil {
+			log.Printf("Error loading from database, will re-scan: %v", err)
+		} else {
+			// Signal that we're done immediately
+			a.doneChan.Broadcast()
+			return rootItem
+		}
+	}
+
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		go manageMemoryUsage(a.doneChan)
@@ -502,12 +644,22 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 	a.storage.ClearItems()
 	a.storage.SetMetadata("top_dir_path", path)
 
+	// Start bulk insert transaction
+	if err := a.storage.BeginBulkInsert(); err != nil {
+		log.Printf("Error starting bulk insert: %v", err)
+	}
+
 	go a.updateProgress()
 
 	// Process directory and get the root item
 	rootItem := a.processDir(path, nil)
 
 	a.wait.Wait()
+
+	// Commit bulk insert transaction
+	if err := a.storage.EndBulkInsert(); err != nil {
+		log.Printf("Error committing bulk insert: %v", err)
+	}
 
 	a.progressDoneChan <- struct{}{}
 	a.doneChan.Broadcast()
@@ -536,7 +688,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	var dirUsage int64
 	if err == nil {
 		dirMtime = dirInfo.ModTime()
-		dirUsage = getDirUsage(dirInfo)
+		dirUsage, _ = getSyscallStats(dirInfo)
 	}
 
 	// Insert directory into database
@@ -602,7 +754,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			}
 
 			fileSize := info.Size()
-			fileUsage := getFileUsage(info)
+			fileUsage, fileMli := getSyscallStats(info)
 
 			_, err = a.storage.InsertItem(
 				&dirID,
@@ -612,7 +764,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				fileUsage,
 				info.ModTime(),
 				1,
-				getMultiLinkedInode(info),
+				fileMli,
 				getFlag(info),
 			)
 			if err != nil {
@@ -669,20 +821,15 @@ func (a *SqliteAnalyzer) updateProgress() {
 	}
 }
 
-// getDirUsage returns the disk usage of a directory (platform-specific)
-func getDirUsage(info os.FileInfo) int64 {
-	// Default implementation - can be overridden per platform
-	return 4096
-}
-
-// getFileUsage returns the disk usage of a file
-func getFileUsage(info os.FileInfo) int64 {
-	// Default to size - platform-specific implementations can override
-	return info.Size()
-}
-
-// getMultiLinkedInode returns the inode number for hard link detection
-func getMultiLinkedInode(info os.FileInfo) uint64 {
-	// Default implementation - platform-specific implementations can override
-	return 0
+// getSyscallStats extracts usage and inode info from os.FileInfo using syscall
+func getSyscallStats(info os.FileInfo) (usage int64, mli uint64) {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		usage = stat.Blocks * 512 // 512-byte blocks
+		if stat.Nlink > 1 {
+			mli = stat.Ino
+		}
+	} else {
+		usage = info.Size()
+	}
+	return
 }

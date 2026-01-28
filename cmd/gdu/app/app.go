@@ -57,7 +57,6 @@ type Flags struct {
 	InputFile          string   `yaml:"input-file"`
 	OutputFile         string   `yaml:"output-file"`
 	IgnoreFromFile     string   `yaml:"ignore-from-file"`
-	StoragePath        string   `yaml:"storage-path"`
 	IgnoreDirs         []string `yaml:"ignore-dirs"`
 	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
 	TypeFilter         []string `yaml:"type"`
@@ -84,9 +83,8 @@ type Flags struct {
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
 	ConstGC            bool     `yaml:"const-gc"`
-	UseStorage         bool     `yaml:"use-storage"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
-	SqliteDbPath       string   `yaml:"db"`
+	DbPath       string   `yaml:"db"`
 	Summarize          bool     `yaml:"summarize"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
@@ -210,15 +208,24 @@ func (a *App) Run() error {
 		return err
 	}
 
-	if a.Flags.UseStorage {
-		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
-	}
-	if a.Flags.SqliteDbPath != "" {
-		sqliteAnalyzer, err := analyze.CreateSqliteAnalyzer(a.Flags.SqliteDbPath)
-		if err != nil {
-			return fmt.Errorf("creating sqlite analyzer: %w", err)
+	if a.Flags.DbPath != "" {
+		if !a.Flags.ReadFromStorage {
+			// Remove existing db before re-scan
+			if strings.HasSuffix(a.Flags.DbPath, ".badger") {
+				os.RemoveAll(a.Flags.DbPath)
+			} else {
+				os.Remove(a.Flags.DbPath)
+			}
 		}
-		ui.SetAnalyzer(sqliteAnalyzer)
+		if strings.HasSuffix(a.Flags.DbPath, ".badger") {
+			ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.DbPath))
+		} else {
+			sqliteAnalyzer, err := analyze.CreateSqliteAnalyzer(a.Flags.DbPath)
+			if err != nil {
+				return fmt.Errorf("creating sqlite analyzer: %w", err)
+			}
+			ui.SetAnalyzer(sqliteAnalyzer)
+		}
 	}
 	if a.Flags.SequentialScanning {
 		ui.SetAnalyzer(analyze.CreateSeqAnalyzer())
@@ -551,11 +558,6 @@ func (a *App) runAction(ui UI, path string) error {
 
 		if err := ui.ReadAnalysis(input); err != nil {
 			return fmt.Errorf("reading analysis: %w", err)
-		}
-	case a.Flags.ReadFromStorage:
-		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
-		if err := ui.ReadFromStorage(a.Flags.StoragePath, path); err != nil {
-			return fmt.Errorf("reading from storage (%s): %w", a.Flags.StoragePath, err)
 		}
 	default:
 		if build.RootPathPrefix != "" {
