@@ -184,7 +184,7 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 			}
 			setPlatformSpecificAttrs(file, info)
 
-			totalSize += info.Size()
+			totalSize += file.Usage
 
 			// Send file to channel with its index
 			itemChan <- indexedItem{itemCount, file}

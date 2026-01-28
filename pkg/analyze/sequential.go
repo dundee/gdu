@@ -209,7 +209,7 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				if regularFile, ok := file.(*File); ok {
 					setPlatformSpecificAttrs(regularFile, info)
 				}
-				totalSize += file.GetSize()
+				totalSize += file.GetUsage()
 				dir.AddFile(file)
 			}
 		}

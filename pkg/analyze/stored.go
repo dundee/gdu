@@ -236,7 +236,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				if regularFile, ok := file.(*File); ok {
 					setPlatformSpecificAttrs(regularFile, info)
 				}
-				totalSize += file.GetSize()
+				totalSize += file.GetUsage()
 				dir.AddFile(file)
 			}
 		}
