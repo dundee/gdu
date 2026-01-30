@@ -299,30 +299,42 @@ func (ui *UI) printItemPath(file fs.Item) {
 		size = file.GetUsage()
 	}
 
-	fmt.Fprintf(ui.output,
-		lineFormat,
-		ui.formatSize(size),
-		file.GetPath())
+	if file.IsDir() {
+		fmt.Fprintf(ui.output,
+			lineFormat,
+			ui.formatSize(size),
+			ui.blue.Sprint(file.GetPath()))
+	} else {
+		fmt.Fprintf(ui.output,
+			lineFormat,
+			ui.formatSize(size),
+			file.GetPath())
+	}
 }
 
 func (ui *UI) printDirWithDepth(dir fs.Item, currentDepth int) {
 	// Print current directory
 	ui.printItemPath(dir)
 
-	// If we haven't reached the max depth, print subdirectories
+	// If we haven't reached the max depth, print contents
 	if currentDepth < ui.depth && dir.IsDir() {
 		files := dir.GetFiles()
 
-		// Sort directories
+		// Sort files
 		if ui.reverseSort {
 			sort.Sort(files)
 		} else {
 			sort.Sort(sort.Reverse(files))
 		}
 
+		// Print all files at this depth level
 		for _, file := range files {
 			if file.IsDir() {
+				// Recurse into subdirectories
 				ui.printDirWithDepth(file, currentDepth+1)
+			} else {
+				// Print regular files
+				ui.printItemPath(file)
 			}
 		}
 	}
