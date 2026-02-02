@@ -143,6 +143,26 @@ func TestShowDepthWithColors(t *testing.T) {
 	assert.Contains(t, output.String(), "test_dir/nested")
 }
 
+func TestShowDepthWithReverseSort(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, false, "", 0, true, 2)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	outputStr := output.String()
+	assert.Contains(t, outputStr, "test_dir")
+	assert.Contains(t, outputStr, "test_dir/nested")
+	assert.Contains(t, outputStr, "test_dir/nested/subnested")
+}
+
 func TestAnalyzeSubdir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
