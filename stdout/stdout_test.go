@@ -26,7 +26,7 @@ func TestAnalyzePath(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, "", 0, false,0)
+	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, false, "", 0, false, 0)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -43,7 +43,7 @@ func TestShowSummary(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, "", 0, false,0)
+	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, false, "", 0, false, 0)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
