@@ -407,7 +407,7 @@ func TestReadWrongAnalysisFromFile(t *testing.T) {
 	)
 
 	assert.Empty(t, out)
-	assert.Contains(t, err.Error(), "Array of maps not found")
+	assert.Contains(t, err.Error(), "array of maps not found")
 }
 
 func TestWrongCombinationOfPrefixes(t *testing.T) {
@@ -563,7 +563,7 @@ func TestMaxCoresLowEdge(t *testing.T) {
 }
 
 // nolint: unparam // Why: it's used in linux tests
-func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (string, error) {
+func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (output string, err error) {
 	buff := bytes.NewBufferString("")
 
 	app := App{
@@ -575,7 +575,7 @@ func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGe
 		Getter:      getter,
 		PathChecker: testdir.MockedPathChecker,
 	}
-	err := app.Run()
+	err = app.Run()
 
 	return strings.TrimSpace(buff.String()), err
 }

@@ -1,3 +1,5 @@
+// Package common contains commong logic and interfaces used across Gdu
+// nolint: revive //Why: this is common package
 package common
 
 import (
@@ -11,6 +13,8 @@ type UI struct {
 	IgnoreDirPaths        map[string]struct{}
 	IgnoreDirPathPatterns *regexp.Regexp
 	IgnoreHidden          bool
+	IgnoreTypes           []string
+	IncludeTypes          []string
 	UseColors             bool
 	UseSIPrefix           bool
 	ShowProgress          bool
@@ -32,6 +36,16 @@ func (ui *UI) SetFollowSymlinks(v bool) {
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (ui *UI) SetShowAnnexedSize(v bool) {
 	ui.Analyzer.SetShowAnnexedSize(v)
+}
+
+// SetTimeFilter sets the time filter function for file inclusion
+func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
+	ui.Analyzer.SetTimeFilter(timeFilter)
+}
+
+// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
+func (ui *UI) SetArchiveBrowsing(v bool) {
+	ui.Analyzer.SetArchiveBrowsing(v)
 }
 
 // binary multiplies prefixes (IEC)

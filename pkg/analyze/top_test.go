@@ -14,7 +14,7 @@ func TestCollectTopFiles2(t *testing.T) {
 	defer fin()
 
 	dir := CreateAnalyzer().AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	)
 
 	topFiles := CollectTopFiles(dir, 2)
@@ -30,7 +30,7 @@ func TestCollectTopFiles1(t *testing.T) {
 	defer fin()
 
 	dir := CreateAnalyzer().AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
 	)
 
 	topFiles := CollectTopFiles(dir, 1)

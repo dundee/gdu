@@ -28,6 +28,8 @@ type UI struct {
 	depth       int
 	summarize   bool
 	noPrefix    bool
+	fixedBase   float64
+	fixedSuffix string
 	reverseSort bool
 }
 
@@ -48,6 +50,7 @@ func CreateStdoutUI(
 	constGC bool,
 	useSIPrefix bool,
 	noPrefix bool,
+	fixedUnit string,
 	top int,
 	reverseSort bool,
 	depth int,
@@ -69,7 +72,9 @@ func CreateStdoutUI(
 		reverseSort: reverseSort,
 		depth:       depth,
 	}
-
+	if fixedUnit != "" {
+		ui.SetFixedUnit(fixedUnit)
+	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
 	ui.blue = color.New(color.FgBlue).Add(color.Bold)
@@ -80,7 +85,27 @@ func CreateStdoutUI(
 
 	return ui
 }
+func (ui *UI) SetFixedUnit(unitChar string) {
+	k, m, g := common.Ki, common.Mi, common.Gi
+	suffixMap := map[string]string{"k": " KiB", "m": " MiB", "g": " GiB"}
 
+	if ui.UseSIPrefix {
+		k, m, g = common.K, common.M, common.G
+		suffixMap = map[string]string{"k": " kB", "m": " MB", "g": " GB"}
+	}
+
+	switch unitChar {
+	case "k":
+		ui.fixedBase = k
+		ui.fixedSuffix = suffixMap["k"]
+	case "m":
+		ui.fixedBase = m
+		ui.fixedSuffix = suffixMap["m"]
+	case "g":
+		ui.fixedBase = g
+		ui.fixedSuffix = suffixMap["g"]
+	}
+}
 func (ui *UI) UseOldProgressRunes() {
 	progressRunes = progressRunesOld
 	progressRunesCount = len(progressRunes)
@@ -89,6 +114,10 @@ func (ui *UI) UseOldProgressRunes() {
 // StartUILoop stub
 func (ui *UI) StartUILoop() error {
 	return nil
+}
+
+// SetCollapsePath sets the flag to collapse paths
+func (ui *UI) SetCollapsePath(value bool) {
 }
 
 // ListDevices lists mounted devices and shows their disk usage
@@ -169,7 +198,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 		updateStatsDone <- struct{}{}
 	}()
@@ -470,6 +499,10 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 func (ui *UI) formatSize(size int64) string {
 	if ui.noPrefix {
 		return ui.orange.Sprintf("%d", size)
+	}
+	if ui.fixedBase > 0 {
+		val := float64(size) / ui.fixedBase
+		return ui.orange.Sprintf("%.1f", val) + ui.fixedSuffix
 	}
 	if ui.UseSIPrefix {
 		return ui.formatWithDecPrefix(size)

@@ -15,17 +15,20 @@ import (
 
 // StoredAnalyzer implements Analyzer
 type StoredAnalyzer struct {
-	storage          *Storage
-	progress         *common.CurrentProgress
-	progressChan     chan common.CurrentProgress
-	progressOutChan  chan common.CurrentProgress
-	progressDoneChan chan struct{}
-	doneChan         common.SignalGroup
-	wait             *WaitGroup
-	ignoreDir        common.ShouldDirBeIgnored
-	storagePath      string
-	followSymlinks   bool
-	gitAnnexedSize   bool
+	storage             *Storage
+	progress            *common.CurrentProgress
+	progressChan        chan common.CurrentProgress
+	progressOutChan     chan common.CurrentProgress
+	progressDoneChan    chan struct{}
+	doneChan            common.SignalGroup
+	wait                *WaitGroup
+	ignoreDir           common.ShouldDirBeIgnored
+	ignoreFileType      common.ShouldFileBeIgnored
+	storagePath         string
+	followSymlinks      bool
+	gitAnnexedSize      bool
+	matchesTimeFilterFn common.TimeFilter
+	archiveBrowsing     bool
 }
 
 // CreateStoredAnalyzer returns Analyzer
@@ -62,6 +65,21 @@ func (a *StoredAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
 }
 
+// SetTimeFilter sets the time filter function for file inclusion
+func (a *StoredAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
+	a.matchesTimeFilterFn = matchesTimeFilterFn
+}
+
+// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
+func (a *StoredAnalyzer) SetArchiveBrowsing(v bool) {
+	a.archiveBrowsing = v
+}
+
+// SetFileTypeFilter sets the file type filter function
+func (a *StoredAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
+	a.ignoreFileType = filter
+}
+
 // ResetProgress returns progress
 func (a *StoredAnalyzer) ResetProgress() {
 	a.progress = &common.CurrentProgress{}
@@ -74,12 +92,15 @@ func (a *StoredAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *StoredAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 		go manageMemoryUsage(a.doneChan)
 	}
+
+	a.ignoreDir = ignore
+	a.ignoreFileType = fileTypeFilter
 
 	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
@@ -106,7 +127,7 @@ func (a *StoredAnalyzer) AnalyzeDir(
 
 func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 	var (
-		file      *File
+		file      fs.Item
 		err       error
 		totalSize int64
 		info      os.FileInfo
@@ -167,17 +188,56 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				log.Print(err.Error())
 				continue
 			}
-			file = &File{
-				Name:   name,
-				Flag:   getFlag(info),
-				Size:   info.Size(),
-				Parent: parent,
+
+			// Check if it's a zip or jar file
+			if a.archiveBrowsing && isZipFile(name) {
+				zipDir, err := processZipFile(entryPath, info)
+				if err != nil {
+					// If unable to process zip file, treat as regular file
+					log.Printf("Failed to process zip file %s: %v", entryPath, err)
+					file = &File{
+						Name:   name,
+						Flag:   getFlag(info),
+						Size:   info.Size(),
+						Parent: parent,
+					}
+				} else {
+					// Successfully processed zip file, use zip content size
+					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
+					if err == nil {
+						zipDir.Size = uncompressedSize
+						zipDir.Usage = compressedSize
+					}
+					zipDir.Parent = parent
+					file = zipDir
+				}
+			} else {
+				file = &File{
+					Name:   name,
+					Flag:   getFlag(info),
+					Size:   info.Size(),
+					Parent: parent,
+				}
 			}
-			setPlatformSpecificAttrs(file, info)
 
-			totalSize += info.Size()
+			// Apply time filter if set
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
 
-			dir.AddFile(file)
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+				continue // Skip this file
+			}
+
+			if file != nil {
+				// Only set platform-specific attributes for regular files
+				if regularFile, ok := file.(*File); ok {
+					setPlatformSpecificAttrs(regularFile, info)
+				}
+				totalSize += file.GetSize()
+				dir.AddFile(file)
+			}
 		}
 	}
 

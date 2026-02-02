@@ -12,10 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -70,7 +71,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 	go func() {
 		defer debug.FreeOSMemory()
-		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
+		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
 
 		if parentDir != nil {
 			currentDir.SetParent(parentDir)
@@ -405,4 +406,12 @@ func (ui *UI) exportAnalysis() {
 			return
 		}
 	}()
+}
+
+func (ui *UI) isInArchive() bool {
+	if ui.currentDir == nil {
+		return false
+	}
+	_, ok := ui.currentDir.(*analyze.ZipDir)
+	return ok
 }

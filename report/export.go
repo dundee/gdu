@@ -65,14 +65,18 @@ func (ui *UI) StartUILoop() error {
 	return nil
 }
 
+// SetCollapsePath sets the flag to collapse paths
+func (ui *UI) SetCollapsePath(value bool) {
+}
+
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
-	return errors.New("Exporting devices list is not supported")
+	return errors.New("exporting devices list is not supported")
 }
 
 // ReadAnalysis reads analysis report from JSON file
 func (ui *UI) ReadAnalysis(input io.Reader) error {
-	return errors.New("Reading analysis is not possible while exporting")
+	return errors.New("reading analysis is not possible while exporting")
 }
 
 // ReadFromStorage reads analysis data from persistent key-value storage
@@ -117,7 +121,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.ConstGC)
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 	}()
 

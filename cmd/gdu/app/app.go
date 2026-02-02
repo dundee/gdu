@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -20,6 +21,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v5/pkg/timefilter"
 	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
@@ -31,13 +33,18 @@ type UI interface {
 	AnalyzePath(path string, parentDir gfs.Item) error
 	ReadAnalysis(input io.Reader) error
 	ReadFromStorage(storagePath, path string) error
+	SetIgnoreTypes(types []string)
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreHidden(value bool)
+	SetIncludeTypes(types []string)
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
+	SetTimeFilter(timeFilter common.TimeFilter)
+	SetArchiveBrowsing(value bool)
+	SetCollapsePath(value bool)
 	StartUILoop() error
 }
 
@@ -53,6 +60,8 @@ type Flags struct {
 	StoragePath        string   `yaml:"storage-path"`
 	IgnoreDirs         []string `yaml:"ignore-dirs"`
 	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
+	TypeFilter         []string `yaml:"type"`
+	ExcludeTypeFilter  []string `yaml:"exclude-type"`
 	MaxCores           int      `yaml:"max-cores"`
 	Top                int      `yaml:"top"`
 	Depth              int      `yaml:"depth"`
@@ -81,11 +90,18 @@ type Flags struct {
 	Summarize          bool     `yaml:"summarize"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
+	ShowInKiB          bool     `yaml:"show-in-kib"`
 	WriteConfig        bool     `yaml:"-"`
 	ReverseSort        bool     `yaml:"reverse-sort"`
 	ChangeCwd          bool     `yaml:"change-cwd"`
 	DeleteInBackground bool     `yaml:"delete-in-background"`
 	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
+	Since              string   `yaml:"since"`
+	Until              string   `yaml:"until"`
+	MaxAge             string   `yaml:"max-age"`
+	MinAge             string   `yaml:"min-age"`
+	ArchiveBrowsing    bool     `yaml:"archive-browsing"`
+	CollapsePath       bool     `yaml:"collapse-path"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -165,6 +181,8 @@ func init() {
 }
 
 // Run starts gdu main logic
+//
+//nolint:gocyclo // App function is a suite of if statements
 func (a *App) Run() error {
 	var ui UI
 
@@ -204,8 +222,29 @@ func (a *App) Run() error {
 	if a.Flags.ShowAnnexedSize {
 		ui.SetShowAnnexedSize(true)
 	}
+	if a.Flags.ArchiveBrowsing {
+		ui.SetArchiveBrowsing(true)
+	}
+	if a.Flags.CollapsePath {
+		ui.SetCollapsePath(true)
+	}
+
+	// Set up time filter if any time flags are provided
+	if a.Flags.Since != "" || a.Flags.Until != "" || a.Flags.MaxAge != "" || a.Flags.MinAge != "" {
+		if err := a.setTimeFilters(ui); err != nil {
+			return err
+		}
+	}
 	if err := a.setNoCross(path); err != nil {
 		return err
+	}
+
+	// Process type filters
+	if len(a.Flags.TypeFilter) > 0 {
+		ui.SetIncludeTypes(a.Flags.TypeFilter)
+	}
+	if len(a.Flags.ExcludeTypeFilter) > 0 {
+		ui.SetIgnoreTypes(a.Flags.ExcludeTypeFilter)
 	}
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
@@ -253,13 +292,43 @@ func (a *App) setMaxProcs() {
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
+func (a *App) setTimeFilters(ui UI) error {
+	loc := time.Local
+	now := time.Now()
+
+	timeFilter, err := timefilter.NewTimeFilter(
+		a.Flags.Since,
+		a.Flags.Until,
+		a.Flags.MaxAge,
+		a.Flags.MinAge,
+		now,
+		loc,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid time filter: %w", err)
+	}
+
+	if !timeFilter.IsEmpty() {
+		timeFilterFunc := func(mtime time.Time) bool {
+			return timeFilter.IncludeByTimeFilter(mtime, loc)
+		}
+		ui.SetTimeFilter(timeFilterFunc)
+
+		// If this is a TUI, also set the filter info for display
+		if tuiUI, ok := ui.(*tui.UI); ok {
+			tuiUI.SetTimeFilterWithInfo(timeFilter, loc)
+		}
+	}
+	return nil
+}
+
 func (a *App) createUI() (UI, error) {
 	var ui UI
+	var err error
 
 	switch {
 	case a.Flags.OutputFile != "":
 		var output io.Writer
-		var err error
 		if a.Flags.OutputFile == "-" {
 			output = os.Stdout
 		} else {
@@ -277,6 +346,10 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.UseSIPrefix,
 		)
 	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
+		fixedUnit := ""
+		if a.Flags.ShowInKiB {
+			fixedUnit = "k"
+		}
 		stdoutUI := stdout.CreateStdoutUI(
 			a.Writer,
 			!a.Flags.NoColor && a.Istty,
@@ -287,6 +360,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
+			fixedUnit,
 			a.Flags.Top,
 			a.Flags.ReverseSort,
 			a.Flags.Depth,

@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
@@ -79,7 +80,15 @@ func (ui *UI) showDir() {
 		}
 
 		cell := tview.NewTableCell(prefix + "[::b]/..")
-		cell.SetReference(ui.currentDir.GetParent())
+
+		// Use the collapsed parent logic to handle navigation back through collapsed paths
+		var collapsedParent fs.Item
+		if ui.collapsePath {
+			collapsedParent = findCollapsedParent(ui.currentDir)
+		} else {
+			collapsedParent = ui.currentDir.GetParent()
+		}
+		cell.SetReference(collapsedParent)
 		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		ui.table.SetCell(0, 0, cell)
 		rowIndex++
@@ -113,7 +122,7 @@ func (ui *UI) showDir() {
 		i++
 	}
 
-	for i, item := range ui.currentDir.GetFiles() {
+	for _, item := range ui.currentDir.GetFiles() {
 		if ui.filterValue != "" && !strings.Contains(
 			strings.ToLower(item.GetName()),
 			strings.ToLower(ui.filterValue),
@@ -130,8 +139,34 @@ func (ui *UI) showDir() {
 		}
 
 		_, marked := ui.markedRows[rowIndex]
-		cell := tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
-		cell.SetReference(ui.currentDir.GetFiles()[i])
+
+		var cell *tview.TableCell
+		var reference fs.Item
+
+		// Check if this directory can be collapsed
+		if item.IsDir() {
+			var collapsedPath *CollapsedPath
+			if ui.collapsePath {
+				collapsedPath = findCollapsiblePath(item)
+			}
+
+			if collapsedPath != nil {
+				// Format as collapsed path
+				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxUsage, maxSize, marked, ignored))
+				// Reference should point to the deepest directory for navigation
+				reference = collapsedPath.DeepestDir
+			} else {
+				// Regular directory formatting
+				cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+				reference = item
+			}
+		} else {
+			// Regular file formatting
+			cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+			reference = item
+		}
+
+		cell.SetReference(reference)
 
 		switch {
 		case ignored:
@@ -170,6 +205,8 @@ func (ui *UI) showDir() {
 			strconv.Itoa(len(ui.markedRows)) + footerTextColor
 	}
 
+	timeFilterText := ui.formatTimeFilterInfo()
+
 	ui.footerLabel.SetText(
 		selected + footerTextColor +
 			" Total disk usage: " +
@@ -180,7 +217,8 @@ func (ui *UI) showDir() {
 			ui.formatSize(totalSize, true, false) +
 			" Items: " + footerNumberColor + strconv.Itoa(itemCount) +
 			footerTextColor +
-			" Sorting by: " + ui.sortBy + " " + ui.sortOrder)
+			" Sorting by: " + ui.sortBy + " " + ui.sortOrder +
+			timeFilterText)
 
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
@@ -260,8 +298,13 @@ func (ui *UI) showDevices() {
 }
 
 func (ui *UI) showErr(msg string, err error) {
+	text := msg
+	if err != nil {
+		text += ": " + err.Error()
+	}
+
 	modal := tview.NewModal().
-		SetText(msg + ": " + err.Error()).
+		SetText(text).
 		AddButtons([]string{"ok"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			ui.pages.RemovePage("error")
@@ -322,9 +365,13 @@ func (ui *UI) formatHelpTextFor() string {
 			)
 		}
 
-		if ui.noDelete && (strings.Contains(line, "Empty file or directory") ||
-			strings.Contains(line, "Delete file or directory")) {
+		isFound := (strings.Contains(line, "Empty file or directory") ||
+			strings.Contains(line, "Delete file or directory"))
+
+		if ui.noDelete && isFound {
 			lines[i] += " (disabled)"
+		} else if ui.noDeleteWithFilter && isFound {
+			lines[i] += " (disabled/filter)"
 		}
 
 		if ui.noSpawnShell && (strings.Contains(line, "Spawn shell in current directory") ||

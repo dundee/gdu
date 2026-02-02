@@ -1,5 +1,4 @@
 //go:build freebsd || darwin
-// +build freebsd darwin
 
 package device
 
@@ -24,8 +23,9 @@ type BSDDevicesInfoGetter struct {
 var Getter DevicesInfoGetter = BSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 
 // GetMounts returns all mounted filesystems from output of /sbin/mount
-func (t BSDDevicesInfoGetter) GetMounts() (Devices, error) {
-	out, err := exec.Command(t.MountCmd).Output()
+func (t BSDDevicesInfoGetter) GetMounts() (devices Devices, err error) {
+	var out []byte
+	out, err = exec.Command(t.MountCmd).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +36,9 @@ func (t BSDDevicesInfoGetter) GetMounts() (Devices, error) {
 }
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
-func (t BSDDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
-	mounts, err := t.GetMounts()
+func (t BSDDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
+	var mounts Devices
+	mounts, err = t.GetMounts()
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +46,7 @@ func (t BSDDevicesInfoGetter) GetDevicesInfo() (Devices, error) {
 	return processMounts(mounts, false)
 }
 
-func readMountOutput(rdr io.Reader) (Devices, error) {
-	mounts := Devices{}
+func readMountOutput(rdr io.Reader) (mounts Devices, err error) {
 
 	scanner := bufio.NewScanner(rdr)
 	for scanner.Scan() {
@@ -76,8 +76,7 @@ func readMountOutput(rdr io.Reader) (Devices, error) {
 	return mounts, nil
 }
 
-func processMounts(mounts Devices, ignoreErrors bool) (Devices, error) {
-	devices := Devices{}
+func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
 
 	for _, mount := range mounts {
 		if !strings.HasPrefix(mount.Name, "/dev") && mount.Fstype != "zfs" {

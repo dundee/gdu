@@ -173,6 +173,10 @@ func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {
 
 func (ui *UI) handleShell(key *tcell.EventKey) *tcell.EventKey {
 	if key.Rune() == 'b' {
+		if ui.isInArchive() {
+			ui.showErr("Spawning shell is not supported in archives", nil)
+			return nil
+		}
 		if ui.noSpawnShell {
 			previousHeaderText := ui.header.GetText(false)
 
@@ -221,10 +225,22 @@ func (ui *UI) handleFiltering(key *tcell.EventKey) *tcell.EventKey {
 func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	switch key.Rune() {
 	case 'd':
+		if ui.isInArchive() {
+			ui.showErr("Deletion is not supported in archives", nil)
+			return nil
+		}
 		ui.handleDelete(false)
 	case 'e':
+		if ui.isInArchive() {
+			ui.showErr("Deletion is not supported in archives", nil)
+			return nil
+		}
 		ui.handleDelete(true)
 	case 'v':
+		if ui.isInArchive() {
+			ui.showErr("Viewing content is not supported in archives", nil)
+			return nil
+		}
 		ui.showFile()
 	case 'o':
 		if ui.noSpawnShell {
@@ -245,34 +261,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.openItem()
 	case 'i':
 		ui.showInfo()
-	case 'a':
-		ui.ShowApparentSize = !ui.ShowApparentSize
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
-	case 'B':
-		ui.ShowRelativeSize = !ui.ShowRelativeSize
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
-	case 'c':
-		ui.showItemCount = !ui.showItemCount
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
-	case 'm':
-		ui.showMtime = !ui.showMtime
-		if ui.currentDir != nil {
-			row, column := ui.table.GetSelection()
-			ui.showDir()
-			ui.table.Select(row, column)
-		}
+	case 'a', 'B', 'c', 'm':
+		ui.handleToggles(key)
 	case 'r':
 		if ui.currentDir != nil {
 			ui.rescanDir()
@@ -280,14 +270,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	case 'E':
 		ui.confirmExport()
 		return nil
-	case 's':
-		ui.setSorting("size")
-	case 'C':
-		ui.setSorting("itemCount")
-	case 'n':
-		ui.setSorting("name")
-	case 'M':
-		ui.setSorting("mtime")
+	case 's', 'C', 'n', 'M':
+		ui.handleSorting(key)
 	case '/':
 		ui.showFilterInput()
 		return nil
@@ -297,6 +281,37 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.ignoreItem()
 	}
 	return key
+}
+
+func (ui *UI) handleToggles(key *tcell.EventKey) {
+	switch key.Rune() {
+	case 'a':
+		ui.ShowApparentSize = !ui.ShowApparentSize
+	case 'B':
+		ui.ShowRelativeSize = !ui.ShowRelativeSize
+	case 'c':
+		ui.showItemCount = !ui.showItemCount
+	case 'm':
+		ui.showMtime = !ui.showMtime
+	}
+	if ui.currentDir != nil {
+		row, column := ui.table.GetSelection()
+		ui.showDir()
+		ui.table.Select(row, column)
+	}
+}
+
+func (ui *UI) handleSorting(key *tcell.EventKey) {
+	switch key.Rune() {
+	case 's':
+		ui.setSorting("size")
+	case 'C':
+		ui.setSorting("itemCount")
+	case 'n':
+		ui.setSorting("name")
+	case 'M':
+		ui.setSorting("mtime")
+	}
 }
 
 func (ui *UI) handleLeft() {

@@ -9,7 +9,7 @@ import (
 )
 
 // SizeFromKey returns size from git-annex key.
-func SizeFromKey(name string) (int64, error) {
+func SizeFromKey(name string) (size int64, err error) {
 	nameParts := strings.SplitN(name, "--", 2)
 	backendKVs := nameParts[0]
 	backendKVParts := strings.Split(backendKVs, "-")
@@ -23,7 +23,7 @@ func SizeFromKey(name string) (int64, error) {
 			continue
 		}
 
-		size, err := strconv.ParseInt(p[1:], 10, 64)
+		size, err = strconv.ParseInt(p[1:], 10, 64)
 		if err != nil {
 			return 0, fmt.Errorf("failed to parse size: %w", err)
 		}

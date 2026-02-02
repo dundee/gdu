@@ -8,11 +8,11 @@ type DevicesInfoGetterMock struct {
 }
 
 // GetDevicesInfo returns mocked devices
-func (t DevicesInfoGetterMock) GetDevicesInfo() (device.Devices, error) {
+func (t DevicesInfoGetterMock) GetDevicesInfo() (devices device.Devices, err error) {
 	return t.Devices, nil
 }
 
 // GetMounts returns all mounted filesystems from /proc/mounts
-func (t DevicesInfoGetterMock) GetMounts() (device.Devices, error) {
+func (t DevicesInfoGetterMock) GetMounts() (devices device.Devices, err error) {
 	return t.Devices, nil
 }

@@ -74,6 +74,8 @@ non-interactive mode
 
 **\--no-prefix**\[=false\] Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
 
+**\--no-spawn-shell**\[=false\] Do not allow spawning shell
+
 **\--no-delete**\[=false\] Do not allow deletions
 
 **-f**, **\--input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.

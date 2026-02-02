@@ -12,15 +12,18 @@ import (
 
 // SequentialAnalyzer implements Analyzer
 type SequentialAnalyzer struct {
-	progress         *common.CurrentProgress
-	progressChan     chan common.CurrentProgress
-	progressOutChan  chan common.CurrentProgress
-	progressDoneChan chan struct{}
-	doneChan         common.SignalGroup
-	wait             *WaitGroup
-	ignoreDir        common.ShouldDirBeIgnored
-	followSymlinks   bool
-	gitAnnexedSize   bool
+	progress            *common.CurrentProgress
+	progressChan        chan common.CurrentProgress
+	progressOutChan     chan common.CurrentProgress
+	progressDoneChan    chan struct{}
+	doneChan            common.SignalGroup
+	wait                *WaitGroup
+	ignoreDir           common.ShouldDirBeIgnored
+	ignoreFileType      common.ShouldFileBeIgnored
+	followSymlinks      bool
+	gitAnnexedSize      bool
+	matchesTimeFilterFn common.TimeFilter
+	archiveBrowsing     bool
 }
 
 // CreateSeqAnalyzer returns Analyzer
@@ -48,6 +51,21 @@ func (a *SequentialAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
 }
 
+// SetTimeFilter sets the time filter function for file inclusion
+func (a *SequentialAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
+	a.matchesTimeFilterFn = matchesTimeFilterFn
+}
+
+// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
+func (a *SequentialAnalyzer) SetArchiveBrowsing(v bool) {
+	a.archiveBrowsing = v
+}
+
+// SetFileTypeFilter sets the file type filter function
+func (a *SequentialAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
+	a.ignoreFileType = filter
+}
+
 // GetProgressChan returns channel for getting progress
 func (a *SequentialAnalyzer) GetProgressChan() chan common.CurrentProgress {
 	return a.progressOutChan
@@ -69,7 +87,7 @@ func (a *SequentialAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *SequentialAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
 ) fs.Item {
 	if !constGC {
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
@@ -77,6 +95,7 @@ func (a *SequentialAnalyzer) AnalyzeDir(
 	}
 
 	a.ignoreDir = ignore
+	a.ignoreFileType = fileTypeFilter
 
 	go a.updateProgress()
 	dir := a.processDir(path)
@@ -91,7 +110,7 @@ func (a *SequentialAnalyzer) AnalyzeDir(
 
 func (a *SequentialAnalyzer) processDir(path string) *Dir {
 	var (
-		file      *File
+		file      fs.Item
 		err       error
 		totalSize int64
 		info      os.FileInfo
@@ -144,17 +163,55 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
-			file = &File{
-				Name:   name,
-				Flag:   getFlag(info),
-				Size:   info.Size(),
-				Parent: dir,
+			// Check if it's a zip or jar file
+			if a.archiveBrowsing && isZipFile(name) {
+				zipDir, err := processZipFile(entryPath, info)
+				if err != nil {
+					// If unable to process zip file, treat as regular file
+					log.Printf("Failed to process zip file %s: %v", entryPath, err)
+					file = &File{
+						Name:   name,
+						Flag:   getFlag(info),
+						Size:   info.Size(),
+						Parent: dir,
+					}
+				} else {
+					// Successfully processed zip file, use zip content size
+					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
+					if err == nil {
+						zipDir.Size = uncompressedSize
+						zipDir.Usage = compressedSize
+					}
+					zipDir.Parent = dir
+					file = zipDir
+				}
+			} else {
+				file = &File{
+					Name:   name,
+					Flag:   getFlag(info),
+					Size:   info.Size(),
+					Parent: dir,
+				}
 			}
-			setPlatformSpecificAttrs(file, info)
 
-			totalSize += info.Size()
+			// Apply time filter if set
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
 
-			dir.AddFile(file)
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+				continue // Skip this file
+			}
+
+			if file != nil {
+				// Only set platform-specific attributes for regular files
+				if regularFile, ok := file.(*File); ok {
+					setPlatformSpecificAttrs(regularFile, info)
+				}
+				totalSize += file.GetSize()
+				dir.AddFile(file)
+			}
 		}
 	}
 

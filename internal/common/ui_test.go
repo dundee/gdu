@@ -1,3 +1,5 @@
+// Package common contains commong logic and interfaces used across Gdu
+// nolint: revive //Why: this is common package
 package common
 
 import (
@@ -30,14 +32,29 @@ func TestSetShowAnnexedSize(t *testing.T) {
 	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ShowAnnexedSize)
 }
 
+func TestSetEnableArchiveBrowsing(t *testing.T) {
+	ui := UI{
+		Analyzer: &MockedAnalyzer{},
+	}
+	ui.SetArchiveBrowsing(true)
+
+	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ArchiveBrowsing)
+}
+
 type MockedAnalyzer struct {
 	FollowSymlinks  bool
 	ShowAnnexedSize bool
+	ArchiveBrowsing bool
+}
+
+// SetFileTypeFilter sets the file type filter function
+func (a *MockedAnalyzer) SetFileTypeFilter(filter ShouldFileBeIgnored) {
+	// Mock implementation - do nothing
 }
 
 // AnalyzeDir returns dir with files with different size exponents
 func (a *MockedAnalyzer) AnalyzeDir(
-	path string, ignore ShouldDirBeIgnored, enableGC bool,
+	path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored, enableGC bool,
 ) fs.Item {
 	return nil
 }
@@ -65,4 +82,12 @@ func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {
 // SetShowAnnexedSize does nothing
 func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {
 	a.ShowAnnexedSize = v
+}
+
+// SetTimeFilter does nothing
+func (a *MockedAnalyzer) SetTimeFilter(timeFilter TimeFilter) {}
+
+// SetArchiveBrowsing sets EnableArchiveBrowsing
+func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {
+	a.ArchiveBrowsing = v
 }
