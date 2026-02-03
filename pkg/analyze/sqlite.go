@@ -19,12 +19,13 @@ import (
 
 // SqliteStorage represents SQLite database storage
 type SqliteStorage struct {
-	db         *sql.DB
-	dbPath     string
-	m          sync.RWMutex
-	tx         *sql.Tx
-	insertStmt *sql.Stmt
-	updateStmt *sql.Stmt
+	db           *sql.DB
+	dbPath       string
+	m            sync.RWMutex
+	tx           *sql.Tx
+	insertStmt   *sql.Stmt
+	updateStmt   *sql.Stmt
+	hasInodeStmt *sql.Stmt
 }
 
 // NewSqliteStorage creates a new SQLite storage and initializes the schema
@@ -75,6 +76,7 @@ func (s *SqliteStorage) createTables() error {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_items_parent_id ON items(parent_id);
+	CREATE INDEX IF NOT EXISTS idx_items_mli ON items(mli) WHERE mli != 0;
 
 	CREATE TABLE IF NOT EXISTS metadata (
 		key   TEXT PRIMARY KEY,
@@ -131,6 +133,16 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 		return err
 	}
 
+	s.hasInodeStmt, err = tx.Prepare(
+		`SELECT 1 FROM items WHERE mli = ? LIMIT 1`,
+	)
+	if err != nil {
+		s.insertStmt.Close()
+		s.updateStmt.Close()
+		tx.Rollback()
+		return err
+	}
+
 	return nil
 }
 
@@ -147,6 +159,10 @@ func (s *SqliteStorage) EndBulkInsert() error {
 		s.updateStmt.Close()
 		s.updateStmt = nil
 	}
+	if s.hasInodeStmt != nil {
+		s.hasInodeStmt.Close()
+		s.hasInodeStmt = nil
+	}
 	if s.tx != nil {
 		err := s.tx.Commit()
 		s.tx = nil
@@ -160,12 +176,28 @@ func (s *SqliteStorage) HasData() bool {
 	s.m.RLock()
 	defer s.m.RUnlock()
 
-	var count int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM items").Scan(&count)
+	var rowid int
+	err := s.db.QueryRow("SELECT MAX(rowid) FROM items").Scan(&rowid)
 	if err != nil {
 		return false
 	}
-	return count > 0
+	return rowid > 0
+}
+
+// HasInode returns true if a file with the given inode already exists in the database
+func (s *SqliteStorage) HasInode(mli uint64) bool {
+	var exists int
+	var err error
+
+	if s.hasInodeStmt != nil {
+		err = s.hasInodeStmt.QueryRow(mli).Scan(&exists)
+	} else {
+		s.m.RLock()
+		err = s.db.QueryRow(`SELECT 1 FROM items WHERE mli = ? LIMIT 1`, mli).Scan(&exists)
+		s.m.RUnlock()
+	}
+
+	return err == nil
 }
 
 // GetRootItem returns the root item (item with no parent)
@@ -246,25 +278,6 @@ func (s *SqliteStorage) UpdateItem(id int64, size, usage int64, itemCount int) e
 		)
 		s.m.Unlock()
 	}
-	return err
-}
-
-// updateItemFlag updates an item's flag in the database
-func (s *SqliteStorage) updateItemFlag(id int64, flag rune) error {
-	s.m.Lock()
-	defer s.m.Unlock()
-	_, err := s.db.Exec(`UPDATE items SET flag = ? WHERE id = ?`, string(flag), id)
-	return err
-}
-
-// updateItemStats updates an item's size, usage, and item_count in the database
-func (s *SqliteStorage) updateItemStats(id int64, size, usage int64, itemCount int) error {
-	s.m.Lock()
-	defer s.m.Unlock()
-	_, err := s.db.Exec(
-		`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
-		size, usage, itemCount, id,
-	)
 	return err
 }
 
@@ -487,76 +500,13 @@ func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
 	return nil
 }
 
-// alreadyCounted checks if this hard-linked file was already counted
-func (i *SqliteItem) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
-	mli := i.mli
-	counted := false
-	if mli > 0 {
-		i.flag = 'H'
-		i.storage.updateItemFlag(i.id, 'H') // persist to DB
-		if _, ok := linkedItems[mli]; ok {
-			counted = true
-		}
-		linkedItems[mli] = append(linkedItems[mli], i)
-	}
-	return counted
-}
-
-// GetItemStats returns item statistics, handling hard links properly
+// GetItemStats returns item statistics - hard links already handled during scan
 func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
-	if i.isDir {
-		i.UpdateStats(linkedItems)
-		return i.itemCount, i.size, i.usage
-	}
-	// For files, check if already counted (hard link)
-	if i.alreadyCounted(linkedItems) {
-		return 1, 0, 0
-	}
 	return i.itemCount, i.size, i.usage
 }
 
-// UpdateStats updates the statistics for directories, handling hard links
+// UpdateStats is a no-op for SqliteItem - hard links are handled during scan
 func (i *SqliteItem) UpdateStats(linkedItems fs.HardLinkedItems) {
-	if !i.isDir {
-		return
-	}
-
-	// Recalculate size/usage accounting for hard links
-	totalSize := int64(4096)
-	totalUsage := int64(4096)
-	var itemCount int
-
-	children, err := i.storage.GetChildren(i.id)
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
-
-	for _, child := range children {
-		child.parent = i
-		count, size, usage := child.GetItemStats(linkedItems)
-		totalSize += size
-		totalUsage += usage
-		itemCount += count
-
-		if child.mtime.After(i.mtime) {
-			i.mtime = child.mtime
-		}
-
-		switch child.flag {
-		case '!', '.':
-			if i.flag != '!' {
-				i.flag = '.'
-			}
-		}
-	}
-
-	i.itemCount = itemCount + 1
-	i.size = totalSize
-	i.usage = totalUsage
-
-	// Persist updated stats to database
-	i.storage.updateItemStats(i.id, i.size, i.usage, i.itemCount)
 }
 
 // AddFile adds a child file (no-op for SQLite items - children are in DB)
@@ -830,6 +780,14 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 
 			fileSize := info.Size()
 			fileUsage, fileMli := getSyscallStats(info)
+			fileFlag := getFlag(info)
+
+			// Handle hard links: if inode already seen, don't count size
+			if fileMli != 0 && a.storage.HasInode(fileMli) {
+				fileSize = 0
+				fileUsage = 0
+				fileFlag = 'H'
+			}
 
 			_, err = a.storage.InsertItem(
 				&dirID,
@@ -840,7 +798,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				info.ModTime(),
 				1,
 				fileMli,
-				getFlag(info),
+				fileFlag,
 			)
 			if err != nil {
 				log.Print(err.Error())
