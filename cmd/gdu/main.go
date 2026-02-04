@@ -37,6 +37,7 @@ However HDDs work as well, but the performance gain is not so huge.
 	RunE:         runE,
 }
 
+// nolint:funlen // a lot of flags to initialize
 func init() {
 	af = &app.Flags{}
 	flags := rootCmd.Flags()
