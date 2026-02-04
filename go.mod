@@ -3,7 +3,7 @@ module github.com/dundee/gdu/v5
 go 1.24.0
 
 require (
-	github.com/dgraph-io/badger/v4 v4.9.0
+	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/fatih/color v1.18.0
 	github.com/gdamore/tcell/v2 v2.13.8
 	github.com/h2non/filetype v1.1.3
