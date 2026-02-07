@@ -281,7 +281,7 @@ func sortFiles(files fs.Files, sortBy fs.SortBy, order fs.SortOrder) {
 		sorter = fs.ByMtime(files)
 	case fs.SortByApparentSize:
 		sorter = fs.ByApparentSize(files)
-	default: // SortBySize (usage)
+	case fs.SortBySize:
 		sorter = files
 	}
 
@@ -322,4 +322,3 @@ func (f *Dir) RemoveFileByName(name string) {
 		cur = cur.Parent.(*Dir)
 	}
 }
-

@@ -84,7 +84,7 @@ type Flags struct {
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
-	DbPath       string   `yaml:"db"`
+	DbPath             string   `yaml:"db"`
 	Summarize          bool     `yaml:"summarize"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
@@ -180,7 +180,7 @@ func init() {
 
 // Run starts gdu main logic
 //
-//nolint:gocyclo // App function is a suite of if statements
+//nolint:gocyclo,funlen // App function is a suite of if statements
 func (a *App) Run() error {
 	var ui UI
 

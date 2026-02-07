@@ -92,7 +92,6 @@ func TestSequentialAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 }
 
-
 func TestSequentialAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

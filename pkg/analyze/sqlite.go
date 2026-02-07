@@ -14,6 +14,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 
+	// nolint:revive // use driver
 	_ "modernc.org/sqlite"
 )
 
@@ -120,7 +121,10 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 	if err != nil {
-		tx.Rollback()
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+		}
 		return err
 	}
 
@@ -129,7 +133,10 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 	)
 	if err != nil {
 		s.insertStmt.Close()
-		tx.Rollback()
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+		}
 		return err
 	}
 
@@ -139,7 +146,10 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 	if err != nil {
 		s.insertStmt.Close()
 		s.updateStmt.Close()
-		tx.Rollback()
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+		}
 		return err
 	}
 
@@ -225,7 +235,7 @@ func (s *SqliteStorage) GetRootItem() (*SqliteItem, error) {
 
 	item.isDir = isDirInt == 1
 	item.mtime = time.Unix(mtimeUnix, 0)
-	if len(flag) > 0 {
+	if flag != "" {
 		item.flag = rune(flag[0])
 	} else {
 		item.flag = ' '
@@ -235,7 +245,9 @@ func (s *SqliteStorage) GetRootItem() (*SqliteItem, error) {
 }
 
 // InsertItem inserts a file/directory item into the database
-func (s *SqliteStorage) InsertItem(parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int, mli uint64, flag rune) (int64, error) {
+func (s *SqliteStorage) InsertItem(
+	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int, mli uint64, flag rune,
+) (int64, error) {
 	isDirInt := 0
 	if isDir {
 		isDirInt = 1
@@ -264,7 +276,7 @@ func (s *SqliteStorage) InsertItem(parentID *int64, name string, isDir bool, siz
 }
 
 // UpdateItem updates an existing item's stats
-func (s *SqliteStorage) UpdateItem(id int64, size, usage int64, itemCount int) error {
+func (s *SqliteStorage) UpdateItem(id, size, usage int64, itemCount int) error {
 	var err error
 
 	// Use prepared statement if in bulk mode, otherwise use direct exec
@@ -318,7 +330,7 @@ func (s *SqliteStorage) GetChildren(parentID int64) ([]*SqliteItem, error) {
 		}
 		item.isDir = isDirInt == 1
 		item.mtime = time.Unix(mtimeUnix, 0)
-		if len(flag) > 0 {
+		if flag != "" {
 			item.flag = rune(flag[0])
 		} else {
 			item.flag = ' '
@@ -358,7 +370,7 @@ func (s *SqliteStorage) GetItemByID(id int64) (*SqliteItem, error) {
 	}
 	item.isDir = isDirInt == 1
 	item.mtime = time.Unix(mtimeUnix, 0)
-	if len(flag) > 0 {
+	if flag != "" {
 		item.flag = rune(flag[0])
 	} else {
 		item.flag = ' '
@@ -501,7 +513,7 @@ func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
 }
 
 // GetItemStats returns item statistics - hard links already handled during scan
-func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (int, int64, int64) {
+func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size, usage int64) {
 	return i.itemCount, i.size, i.usage
 }
 
@@ -666,8 +678,14 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 	a.ignoreFileType = fileTypeFilter
 
 	// Clear existing data and store metadata
-	a.storage.ClearItems()
-	a.storage.SetMetadata("top_dir_path", path)
+	err := a.storage.ClearItems()
+	if err != nil {
+		log.Printf("Error clearing items: %v", err)
+	}
+	err = a.storage.SetMetadata("top_dir_path", path)
+	if err != nil {
+		log.Printf("Error setting metadata: %v", err)
+	}
 
 	// Start bulk insert transaction
 	if err := a.storage.BeginBulkInsert(); err != nil {
@@ -698,7 +716,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		totalSize  int64 = 4096
 		totalUsage int64 = 4096
 		filesSize  int64 // only files in this directory, for progress reporting
-		itemCount  int   = 1
+		itemCount  = 1
 	)
 
 	a.wait.Add(1)
@@ -813,7 +831,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 
 	// Update directory with computed stats
-	a.storage.UpdateItem(dirID, totalSize, totalUsage, itemCount)
+	err = a.storage.UpdateItem(dirID, totalSize, totalUsage, itemCount)
+	if err != nil {
+		log.Printf("Error updating item: %v", err)
+	}
 
 	// Report progress (only files in this dir, subdirs already reported themselves)
 	a.progressChan <- common.CurrentProgress{

@@ -134,7 +134,6 @@ func TestParallelAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 }
 
-
 func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
