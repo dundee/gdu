@@ -121,6 +121,7 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 		}
 
 		// Add this segment to the path
+		// nolint:staticcheck // the result is used
 		segments = append(segments, subdirs[0].GetName())
 		current = subdirs[0]
 	}

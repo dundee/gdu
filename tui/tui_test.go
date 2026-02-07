@@ -806,7 +806,7 @@ func TestNoSpawnShell(t *testing.T) {
 	assert.Equal(t, ui.noSpawnShell, true)
 }
 
-// nolint: deadcode,unused // Why: for debugging
+// nolint: unused // Why: for debugging
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()
 
