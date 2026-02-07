@@ -419,18 +419,19 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 	i := 0
 	for {
 		select {
-		case progress = <-progressChan:
-			fmt.Fprint(ui.output, emptyRow)
-			fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
-			fmt.Fprint(ui.output, "Scanning... Total items: "+
-				ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
-				" size: "+
-				ui.formatSize(progress.TotalSize))
-			i++
-			i %= progressRunesCount
 		case <-ticker.C:
-			// Update only the spinner without clearing the line
-			fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+			select {
+			case progress = <-progressChan:
+				fmt.Fprint(ui.output, emptyRow)
+				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+				fmt.Fprint(ui.output, "Scanning... Total items: "+
+					ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
+					" size: "+
+					ui.formatSize(progress.TotalSize))
+			default:
+				// Update only the spinner without clearing the line
+				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+			}
 			i++
 			i %= progressRunesCount
 		case <-analysisDoneChan:
