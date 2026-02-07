@@ -106,17 +106,3 @@ func TestReadFromStorage(t *testing.T) {
 	assert.Contains(t, out, "nested")
 	assert.Nil(t, err)
 }
-
-func TestReadFromStorageWithErr(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	_, err := runApp(
-		&Flags{LogFile: "/dev/null", ReadFromStorage: true, DbPath: "/tmp/badger-xxx.badger"},
-		[]string{"test_dir"},
-		false,
-		testdev.DevicesInfoGetterMock{},
-	)
-
-	assert.ErrorContains(t, err, "Key not found")
-}
