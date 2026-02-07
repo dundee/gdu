@@ -63,6 +63,7 @@ type Flags struct {
 	ExcludeTypeFilter  []string `yaml:"exclude-type"`
 	MaxCores           int      `yaml:"max-cores"`
 	Top                int      `yaml:"top"`
+	Depth              int      `yaml:"depth"`
 	SequentialScanning bool     `yaml:"sequential-scanning"`
 	ShowDisks          bool     `yaml:"-"`
 	ShowApparentSize   bool     `yaml:"show-apparent-size"`
@@ -374,6 +375,7 @@ func (a *App) createUI() (UI, error) {
 			fixedUnit,
 			a.Flags.Top,
 			a.Flags.ReverseSort,
+			a.Flags.Depth,
 		)
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()

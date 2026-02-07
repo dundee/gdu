@@ -24,6 +24,7 @@ type UI struct {
 	orange      *color.Color
 	blue        *color.Color
 	top         int
+	depth       int
 	summarize   bool
 	noPrefix    bool
 	fixedBase   float64
@@ -50,6 +51,7 @@ func CreateStdoutUI(
 	fixedUnit string,
 	top int,
 	reverseSort bool,
+	depth int,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -65,6 +67,7 @@ func CreateStdoutUI(
 		noPrefix:    noPrefix,
 		top:         top,
 		reverseSort: reverseSort,
+		depth:       depth,
 	}
 	if fixedUnit != "" {
 		ui.SetFixedUnit(fixedUnit)
@@ -202,6 +205,8 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	switch {
 	case ui.top > 0:
 		ui.printTopFiles(dir)
+	case ui.depth > 0:
+		ui.printDirWithDepth(dir, 0)
 	case ui.summarize:
 		ui.printTotalItem(dir)
 	default:
@@ -319,10 +324,43 @@ func (ui *UI) printItemPath(file fs.Item) {
 		size = file.GetUsage()
 	}
 
-	fmt.Fprintf(ui.output,
-		lineFormat,
-		ui.formatSize(size),
-		file.GetPath())
+	if file.IsDir() {
+		fmt.Fprintf(ui.output,
+			lineFormat,
+			ui.formatSize(size),
+			ui.blue.Sprint(file.GetPath()))
+	} else {
+		fmt.Fprintf(ui.output,
+			lineFormat,
+			ui.formatSize(size),
+			file.GetPath())
+	}
+}
+
+func (ui *UI) printDirWithDepth(dir fs.Item, currentDepth int) {
+	// Print current directory
+	ui.printItemPath(dir)
+
+	// If we haven't reached the max depth, print contents
+	if currentDepth < ui.depth && dir.IsDir() {
+		sortOrder := fs.SortDesc
+		if ui.reverseSort {
+			sortOrder = fs.SortAsc
+		}
+
+		files := dir.GetFiles(fs.SortBySize, sortOrder)
+
+		// Print all files at this depth level
+		for file := range files {
+			if file.IsDir() {
+				// Recurse into subdirectories
+				ui.printDirWithDepth(file, currentDepth+1)
+			} else {
+				// Print regular files
+				ui.printItemPath(file)
+			}
+		}
+	}
 }
 
 // ReadAnalysis reads analysis report from JSON file

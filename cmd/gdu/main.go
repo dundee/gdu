@@ -37,6 +37,7 @@ However HDDs work as well, but the performance gain is not so huge.
 	RunE:         runE,
 }
 
+// nolint:funlen // a lot of flags to initialize
 func init() {
 	af = &app.Flags{}
 	flags := rootCmd.Flags()
@@ -84,6 +85,7 @@ func init() {
 	flags.BoolVarP(&af.NoUnicode, "no-unicode", "u", false, "Do not use Unicode symbols (for size bar)")
 	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")
 	flags.IntVarP(&af.Top, "top", "t", 0, "Show only top X largest files in non-interactive mode")
+	flags.IntVar(&af.Depth, "depth", 0, "Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored)")
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
 	flags.BoolVarP(&af.ShowInKiB, "show-in-kib", "k", false, "Show sizes in KiB (or kB with --si) in non-interactive mode")
