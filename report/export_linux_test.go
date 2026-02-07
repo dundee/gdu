@@ -27,7 +27,7 @@ func TestReadFromStorage(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false, true, false, false)
+	ui := CreateExportUI(output, reportOutput, false, true, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
 	err := ui.AnalyzePath("test_dir", nil)
@@ -47,7 +47,7 @@ func TestReadFromStorageWithErr(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false, false, false, false)
+	ui := CreateExportUI(output, reportOutput, false, false, false)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.ReadFromStorage(storagePath, "test_dir")
 
