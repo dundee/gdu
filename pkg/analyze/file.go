@@ -1,7 +1,9 @@
 package analyze
 
 import (
+	"iter"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -107,23 +109,18 @@ func (f *File) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size
 func (f *File) UpdateStats(linkedItems fs.HardLinkedItems) {}
 
 // GetFiles returns all files in directory
-func (f *File) GetFiles() fs.Files {
-	return fs.Files{}
+func (f *File) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	return func(yield func(fs.Item) bool) {}
 }
 
 // GetFilesLocked returns all files in directory
-func (f *File) GetFilesLocked() fs.Files {
-	return f.GetFiles()
+func (f *File) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	return f.GetFiles(sortBy, order)
 }
 
 // RLock panics on file
 func (f *File) RLock() func() {
-	panic("SetFiles should not be called on file")
-}
-
-// SetFiles panics on file
-func (f *File) SetFiles(files fs.Files) {
-	panic("SetFiles should not be called on file")
+	panic("RLock should not be called on file")
 }
 
 // AddFile panics on file
@@ -134,6 +131,11 @@ func (f *File) AddFile(item fs.Item) {
 // RemoveFile panics on file
 func (f *File) RemoveFile(item fs.Item) {
 	panic("RemoveFile should not be called on file")
+}
+
+// RemoveFileByName panics on file
+func (f *File) RemoveFileByName(name string) {
+	panic("RemoveFileByName should not be called on file")
 }
 
 // Dir struct
@@ -150,22 +152,40 @@ func (f *Dir) AddFile(item fs.Item) {
 	f.Files = append(f.Files, item)
 }
 
-// GetFiles returns all files in directory
-func (f *Dir) GetFiles() fs.Files {
-	return f.Files
+// GetFiles returns all files in directory as a sorted iterator
+func (f *Dir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	return func(yield func(fs.Item) bool) {
+		// Make a copy to avoid modifying the original slice
+		sorted := make(fs.Files, len(f.Files))
+		copy(sorted, f.Files)
+		sortFiles(sorted, sortBy, order)
+
+		for _, item := range sorted {
+			if !yield(item) {
+				return
+			}
+		}
+	}
 }
 
-// GetFilesLocked returns all files in directory
+// GetFilesLocked returns all files in directory as a sorted iterator
 // It is safe to call this function from multiple goroutines
-func (f *Dir) GetFilesLocked() fs.Files {
-	f.m.RLock()
-	defer f.m.RUnlock()
-	return f.GetFiles()[:]
-}
+func (f *Dir) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	return func(yield func(fs.Item) bool) {
+		f.m.RLock()
+		defer f.m.RUnlock()
 
-// SetFiles sets files in directory
-func (f *Dir) SetFiles(files fs.Files) {
-	f.Files = files
+		// Make a copy to avoid modifying the original slice
+		sorted := make(fs.Files, len(f.Files))
+		copy(sorted, f.Files)
+		sortFiles(sorted, sortBy, order)
+
+		for _, item := range sorted {
+			if !yield(item) {
+				return
+			}
+		}
+	}
 }
 
 // GetType returns name type of item
@@ -207,7 +227,7 @@ func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int
-	for _, entry := range f.GetFiles() {
+	for _, entry := range f.Files {
 		count, size, usage := entry.GetItemStats(linkedItems)
 		totalSize += size
 		totalUsage += usage
@@ -234,7 +254,7 @@ func (f *Dir) RemoveFile(item fs.Item) {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	f.SetFiles(f.GetFiles().Remove(item))
+	f.Files = f.Files.Remove(item)
 
 	cur := f
 	for {
@@ -249,8 +269,56 @@ func (f *Dir) RemoveFile(item fs.Item) {
 	}
 }
 
+// sortFiles sorts files in place according to sortBy and order
+func sortFiles(files fs.Files, sortBy fs.SortBy, order fs.SortOrder) {
+	var sorter sort.Interface
+	switch sortBy {
+	case fs.SortByName:
+		sorter = fs.ByName(files)
+	case fs.SortByItemCount:
+		sorter = fs.ByItemCount(files)
+	case fs.SortByMtime:
+		sorter = fs.ByMtime(files)
+	case fs.SortByApparentSize:
+		sorter = fs.ByApparentSize(files)
+	case fs.SortBySize:
+		sorter = files
+	}
+
+	if order == fs.SortDesc {
+		sort.Sort(sort.Reverse(sorter))
+	} else {
+		sort.Sort(sorter)
+	}
+}
+
 // RLock read locks dir
 func (f *Dir) RLock() func() {
 	f.m.RLock()
 	return f.m.RUnlock
+}
+
+// RemoveFileByName removes item by name from dir
+func (f *Dir) RemoveFileByName(name string) {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	idx, ok := f.Files.FindByName(name)
+	if !ok {
+		return
+	}
+	item := f.Files[idx]
+	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
+
+	cur := f
+	for {
+		cur.ItemCount -= item.GetItemCount()
+		cur.Size -= item.GetSize()
+		cur.Usage -= item.GetUsage()
+
+		if cur.Parent == nil {
+			break
+		}
+		cur = cur.Parent.(*Dir)
+	}
 }

@@ -9,8 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/exp/slices"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -111,7 +109,6 @@ func CreateUI(
 	useColors bool,
 	showApparentSize bool,
 	showRelativeSize bool,
-	constGC bool,
 	useSIPrefix bool,
 	opts ...Option,
 ) *UI {
@@ -121,7 +118,6 @@ func CreateUI(
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
 		app:                     app,
@@ -402,16 +398,22 @@ func (ui *UI) fileItemSelected(row, column int) {
 		nestedDir := origDir
 		for nestedDir.GetParent() != nil {
 			if selectedDir.GetName() == nestedDir.GetParent().GetName() {
-				index := slices.IndexFunc(
-					ui.currentDir.GetFiles(),
-					func(v fs.Item) bool {
-						return v.GetName() == nestedDir.GetName()
-					},
-				)
-				if ui.currentDir.GetPath() != ui.topDir.GetPath() {
-					index++
+				sortBy, sortOrder := ui.getSortParams()
+				index := -1
+				i := 0
+				for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
+					if item.GetName() == nestedDir.GetName() {
+						index = i
+						break
+					}
+					i++
 				}
-				ui.table.Select(index, 0)
+				if index >= 0 {
+					if ui.currentDir.GetPath() != ui.topDir.GetPath() {
+						index++
+					}
+					ui.table.Select(index, 0)
+				}
 				break
 			}
 			nestedDir = nestedDir.GetParent()

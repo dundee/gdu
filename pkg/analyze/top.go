@@ -38,7 +38,7 @@ func CollectTopFiles(dir fs.Item, count int) fs.Files {
 }
 
 func walkDir(dir fs.Item, topList *TopList) {
-	for _, item := range dir.GetFiles() {
+	for item := range dir.GetFiles(fs.SortBySize, fs.SortDesc) {
 		if item.IsDir() {
 			walkDir(item, topList)
 		} else {

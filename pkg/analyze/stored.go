@@ -2,9 +2,9 @@ package analyze
 
 import (
 	"io"
+	"iter"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -92,13 +92,8 @@ func (a *StoredAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *StoredAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
-	if !constGC {
-		defer debug.SetGCPercent(debug.SetGCPercent(-1))
-		go manageMemoryUsage(a.doneChan)
-	}
-
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
@@ -235,7 +230,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				if regularFile, ok := file.(*File); ok {
 					setPlatformSpecificAttrs(regularFile, info)
 				}
-				totalSize += file.GetSize()
+				totalSize += file.GetUsage()
 				dir.AddFile(file)
 			}
 		}
@@ -299,12 +294,29 @@ func (f *StoredDir) GetParent() fs.Item {
 	return dir
 }
 
-// GetFiles returns files in directory
-// If files are already cached, return them
+// GetFiles returns files in directory as a sorted iterator
+// If files are already cached, use them
 // Otherwise load them from storage
-func (f *StoredDir) GetFiles() fs.Files {
+func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	return func(yield func(fs.Item) bool) {
+		files := f.loadFiles()
+		sortFiles(files, sortBy, order)
+
+		for _, item := range files {
+			if !yield(item) {
+				return
+			}
+		}
+	}
+}
+
+// loadFiles loads files from storage or returns cached files
+func (f *StoredDir) loadFiles() fs.Files {
 	if f.cachedFiles != nil {
-		return f.cachedFiles
+		// Return a copy to avoid modifying cached slice
+		result := make(fs.Files, len(f.cachedFiles))
+		copy(result, f.cachedFiles)
+		return result
 	}
 
 	if !DefaultStorage.IsOpen() {
@@ -339,12 +351,10 @@ func (f *StoredDir) GetFiles() fs.Files {
 	}
 
 	f.cachedFiles = files
-	return files
-}
-
-// SetFiles sets files in directory
-func (f *StoredDir) SetFiles(files fs.Files) {
-	f.Files = files
+	// Return a copy to avoid modifying cached slice
+	result := make(fs.Files, len(files))
+	copy(result, files)
+	return result
 }
 
 // RemoveFile removes file from stored directory
@@ -357,7 +367,7 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 		defer closeFn()
 	}
 
-	f.SetFiles(f.GetFiles().Remove(item))
+	f.Files = f.Files.Remove(item)
 	f.cachedFiles = nil
 
 	cur := f
@@ -396,7 +406,8 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	totalUsage := int64(4096)
 	var itemCount int
 	f.cachedFiles = nil
-	for _, entry := range f.GetFiles() {
+	files := f.loadFiles()
+	for _, entry := range files {
 		count, size, usage := entry.GetItemStats(linkedItems)
 		totalSize += size
 		totalUsage += usage
@@ -423,6 +434,42 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	}
 }
 
+// RemoveFileByName removes file by name from stored directory
+func (f *StoredDir) RemoveFileByName(name string) {
+	if !DefaultStorage.IsOpen() {
+		f.dbLock.Lock()
+		defer f.dbLock.Unlock()
+		closeFn := DefaultStorage.Open()
+		defer closeFn()
+	}
+
+	idx, ok := f.Files.FindByName(name)
+	if !ok {
+		return
+	}
+	item := f.Files[idx]
+	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
+	f.cachedFiles = nil
+
+	cur := f
+	for {
+		cur.ItemCount -= item.GetItemCount()
+		cur.Size -= item.GetSize()
+		cur.Usage -= item.GetUsage()
+
+		err := DefaultStorage.StoreDir(cur)
+		if err != nil {
+			log.Print(err.Error())
+		}
+
+		parent := cur.GetParent()
+		if parent == nil {
+			break
+		}
+		cur = parent.(*StoredDir)
+	}
+}
+
 // ParentDir represents parent directory of single file
 // It is used to get path to parent directory of a file
 type ParentDir struct {
@@ -432,25 +479,27 @@ type ParentDir struct {
 func (p *ParentDir) GetPath() string {
 	return p.Path
 }
-func (p *ParentDir) GetName() string                                  { panic("must not be called") }
-func (p *ParentDir) GetFlag() rune                                    { panic("must not be called") }
-func (p *ParentDir) IsDir() bool                                      { panic("must not be called") }
-func (p *ParentDir) GetSize() int64                                   { panic("must not be called") }
-func (p *ParentDir) GetType() string                                  { panic("must not be called") }
-func (p *ParentDir) GetUsage() int64                                  { panic("must not be called") }
-func (p *ParentDir) GetMtime() time.Time                              { panic("must not be called") }
-func (p *ParentDir) GetItemCount() int                                { panic("must not be called") }
-func (p *ParentDir) GetParent() fs.Item                               { panic("must not be called") }
-func (p *ParentDir) SetParent(fs.Item)                                { panic("must not be called") }
-func (p *ParentDir) GetMultiLinkedInode() uint64                      { panic("must not be called") }
-func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("must not be called") }
-func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)       { panic("must not be called") }
-func (p *ParentDir) AddFile(fs.Item)                                  { panic("must not be called") }
-func (p *ParentDir) GetFiles() fs.Files                               { panic("must not be called") }
-func (p *ParentDir) GetFilesLocked() fs.Files                         { panic("must not be called") }
-func (p *ParentDir) RLock() func()                                    { panic("must not be called") }
-func (p *ParentDir) SetFiles(fs.Files)                                { panic("must not be called") }
-func (p *ParentDir) RemoveFile(item fs.Item)                          { panic("must not be called") }
+func (p *ParentDir) GetName() string                                    { panic("must not be called") }
+func (p *ParentDir) GetFlag() rune                                      { panic("must not be called") }
+func (p *ParentDir) IsDir() bool                                        { panic("must not be called") }
+func (p *ParentDir) GetSize() int64                                     { panic("must not be called") }
+func (p *ParentDir) GetType() string                                    { panic("must not be called") }
+func (p *ParentDir) GetUsage() int64                                    { panic("must not be called") }
+func (p *ParentDir) GetMtime() time.Time                                { panic("must not be called") }
+func (p *ParentDir) GetItemCount() int                                  { panic("must not be called") }
+func (p *ParentDir) GetParent() fs.Item                                 { panic("must not be called") }
+func (p *ParentDir) SetParent(fs.Item)                                  { panic("must not be called") }
+func (p *ParentDir) GetMultiLinkedInode() uint64                        { panic("must not be called") }
+func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error   { panic("must not be called") }
+func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)         { panic("must not be called") }
+func (p *ParentDir) AddFile(fs.Item)                                    { panic("must not be called") }
+func (p *ParentDir) GetFiles(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item] { panic("must not be called") }
+func (p *ParentDir) GetFilesLocked(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item] {
+	panic("must not be called")
+}
+func (p *ParentDir) RLock() func()                { panic("must not be called") }
+func (p *ParentDir) RemoveFile(item fs.Item)      { panic("must not be called") }
+func (p *ParentDir) RemoveFileByName(name string) { panic("must not be called") }
 func (p *ParentDir) GetItemStats(
 	linkedItems fs.HardLinkedItems,
 ) (itemCount int, size, usage int64) {

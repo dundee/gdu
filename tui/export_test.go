@@ -19,7 +19,7 @@ func TestConfirmExport(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 
@@ -51,7 +51,7 @@ func TestExportAnalysis(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -90,7 +90,7 @@ func TestExportAnalysisEsc(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -124,7 +124,7 @@ func TestExportAnalysisWithName(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -185,7 +185,7 @@ func TestExportAnalysisWithoutRights(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir

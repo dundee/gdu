@@ -57,7 +57,6 @@ type Flags struct {
 	InputFile          string   `yaml:"input-file"`
 	OutputFile         string   `yaml:"output-file"`
 	IgnoreFromFile     string   `yaml:"ignore-from-file"`
-	StoragePath        string   `yaml:"storage-path"`
 	IgnoreDirs         []string `yaml:"ignore-dirs"`
 	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
 	TypeFilter         []string `yaml:"type"`
@@ -84,9 +83,8 @@ type Flags struct {
 	NoSpawnShell       bool     `yaml:"no-spawn-shell"`
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
-	ConstGC            bool     `yaml:"const-gc"`
-	UseStorage         bool     `yaml:"use-storage"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
+	DbPath             string   `yaml:"db"`
 	Summarize          bool     `yaml:"summarize"`
 	UseSIPrefix        bool     `yaml:"use-si-prefix"`
 	NoPrefix           bool     `yaml:"no-prefix"`
@@ -182,7 +180,7 @@ func init() {
 
 // Run starts gdu main logic
 //
-//nolint:gocyclo // App function is a suite of if statements
+//nolint:gocyclo,funlen // App function is a suite of if statements
 func (a *App) Run() error {
 	var ui UI
 
@@ -210,8 +208,24 @@ func (a *App) Run() error {
 		return err
 	}
 
-	if a.Flags.UseStorage {
-		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
+	if a.Flags.DbPath != "" {
+		if !a.Flags.ReadFromStorage {
+			// Remove existing db before re-scan
+			if strings.HasSuffix(a.Flags.DbPath, ".badger") {
+				os.RemoveAll(a.Flags.DbPath)
+			} else {
+				os.Remove(a.Flags.DbPath)
+			}
+		}
+		if strings.HasSuffix(a.Flags.DbPath, ".badger") {
+			ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.DbPath))
+		} else {
+			sqliteAnalyzer, err := analyze.CreateSqliteAnalyzer(a.Flags.DbPath)
+			if err != nil {
+				return fmt.Errorf("creating sqlite analyzer: %w", err)
+			}
+			ui.SetAnalyzer(sqliteAnalyzer)
+		}
 	}
 	if a.Flags.SequentialScanning {
 		ui.SetAnalyzer(analyze.CreateSeqAnalyzer())
@@ -342,7 +356,6 @@ func (a *App) createUI() (UI, error) {
 			output,
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
-			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 		)
 	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
@@ -357,7 +370,6 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.ShowApparentSize,
 			a.Flags.ShowRelativeSize,
 			a.Flags.Summarize,
-			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 			a.Flags.NoPrefix,
 			fixedUnit,
@@ -379,7 +391,6 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor,
 			a.Flags.ShowApparentSize,
 			a.Flags.ShowRelativeSize,
-			a.Flags.ConstGC,
 			a.Flags.UseSIPrefix,
 			opts...,
 		)
@@ -545,11 +556,6 @@ func (a *App) runAction(ui UI, path string) error {
 
 		if err := ui.ReadAnalysis(input); err != nil {
 			return fmt.Errorf("reading analysis: %w", err)
-		}
-	case a.Flags.ReadFromStorage:
-		ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.StoragePath))
-		if err := ui.ReadFromStorage(a.Flags.StoragePath, path); err != nil {
-			return fmt.Errorf("reading from storage (%s): %w", a.Flags.StoragePath, err)
 		}
 	default:
 		if build.RootPathPrefix != "" {

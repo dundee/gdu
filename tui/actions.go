@@ -71,11 +71,12 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 	go func() {
 		defer debug.FreeOSMemory()
-		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
+		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
 
 		if parentDir != nil {
 			currentDir.SetParent(parentDir)
-			parentDir.SetFiles(parentDir.GetFiles().RemoveByName(currentDir.GetName()))
+			// Remove old entry with the same name and add new one
+			parentDir.RemoveFileByName(currentDir.GetName())
 			parentDir.AddFile(currentDir)
 		} else {
 			ui.topDirPath = path
@@ -204,8 +205,8 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	var currentDir fs.Item
 	var deleteItems []fs.Item
 	if shouldEmpty && selectedItem.IsDir() {
-		currentDir = selectedItem.(*analyze.Dir)
-		for _, file := range currentDir.GetFiles() {
+		currentDir = selectedItem
+		for file := range currentDir.GetFiles(fs.SortBySize, fs.SortDesc) {
 			deleteItems = append(deleteItems, file)
 		}
 	} else {

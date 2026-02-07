@@ -20,7 +20,7 @@ func TestDoubleClick(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -54,7 +54,7 @@ func TestScroll(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -80,7 +80,7 @@ func TestScrollWhenPageOpened(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -106,7 +106,7 @@ func TestEmptyEvent(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	event, action := ui.onMouse(nil, tview.MouseMove)
 	assert.True(t, event == nil)
@@ -118,7 +118,7 @@ func TestMouseMove(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	event, action := ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseMove)
 	assert.True(t, event != nil)

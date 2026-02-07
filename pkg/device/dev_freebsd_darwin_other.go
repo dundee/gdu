@@ -47,7 +47,6 @@ func (t BSDDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
 }
 
 func readMountOutput(rdr io.Reader) (mounts Devices, err error) {
-
 	scanner := bufio.NewScanner(rdr)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -56,7 +55,7 @@ func readMountOutput(rdr io.Reader) (mounts Devices, err error) {
 		parts := re.FindAllStringSubmatch(line, -1)
 
 		if len(parts) < 1 {
-			return nil, errors.New("Cannot parse mount output")
+			return nil, errors.New("cannot parse mount output")
 		}
 
 		fstype := strings.TrimSpace(strings.Split(parts[0][3], ",")[0])
@@ -77,7 +76,6 @@ func readMountOutput(rdr io.Reader) (mounts Devices, err error) {
 }
 
 func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
-
 	for _, mount := range mounts {
 		if !strings.HasPrefix(mount.Name, "/dev") && mount.Fstype != "zfs" {
 			continue

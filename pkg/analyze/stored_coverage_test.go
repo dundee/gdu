@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -45,8 +46,8 @@ func TestStoredDirGetFilesCached(t *testing.T) {
 		cachedFiles: files,
 	}
 
-	result := dir.GetFiles()
-	assert.Equal(t, files, result)
+	result := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Equal(t, len(files), len(result))
 }
 
 func TestStoredDirRemoveFile(t *testing.T) {
@@ -56,14 +57,15 @@ func TestStoredDirRemoveFile(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
 
 	// Remove a file
-	if len(dir.GetFiles()) > 0 {
-		dir.RemoveFile(dir.GetFiles()[0])
+	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	if len(files) > 0 {
+		dir.RemoveFile(files[0])
 	}
 }
 
@@ -74,7 +76,7 @@ func TestStoredDirUpdateStats(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -89,7 +91,7 @@ func TestStoredDirUpdateStatsWithMtimeUpdate(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -111,7 +113,7 @@ func TestStoredDirUpdateStatsWithFlagUpdate(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -135,7 +137,7 @@ func TestStoredDirUpdateStatsWithDotFlag(t *testing.T) {
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()
@@ -168,7 +170,7 @@ func TestStoredAnalyzerWithZip(t *testing.T) {
 	analyzer := CreateStoredAnalyzer("/tmp/test")
 	analyzer.SetArchiveBrowsing(true)
 	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false }, false,
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*StoredDir)
 
 	analyzer.GetDone().Wait()

@@ -3,7 +3,6 @@ package analyze
 import (
 	"os"
 	"path/filepath"
-	"runtime/debug"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -76,13 +75,8 @@ func (a *ParallelStableOrderAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
-	if !constGC {
-		defer debug.SetGCPercent(debug.SetGCPercent(-1))
-		go manageMemoryUsage(a.doneChan)
-	}
-
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
@@ -184,7 +178,7 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 			}
 			setPlatformSpecificAttrs(file, info)
 
-			totalSize += info.Size()
+			totalSize += file.Usage
 
 			// Send file to channel with its index
 			itemChan <- indexedItem{itemCount, file}

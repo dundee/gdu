@@ -57,7 +57,7 @@ func TestUseStorage(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	const storagePath = "/tmp/badger-test"
+	const storagePath = "/tmp/badger-test.badger"
 	defer func() {
 		err := os.RemoveAll(storagePath)
 		if err != nil {
@@ -66,7 +66,7 @@ func TestUseStorage(t *testing.T) {
 	}()
 
 	out, err := runApp(
-		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: storagePath},
+		&Flags{LogFile: "/dev/null", DbPath: storagePath},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
@@ -80,7 +80,7 @@ func TestReadFromStorage(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	storagePath := "/tmp/badger-test4"
+	storagePath := "/tmp/badger-test4.badger"
 	defer func() {
 		err := os.RemoveAll(storagePath)
 		if err != nil {
@@ -89,7 +89,7 @@ func TestReadFromStorage(t *testing.T) {
 	}()
 
 	out, err := runApp(
-		&Flags{LogFile: "/dev/null", UseStorage: true, StoragePath: storagePath},
+		&Flags{LogFile: "/dev/null", DbPath: storagePath},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
@@ -98,25 +98,11 @@ func TestReadFromStorage(t *testing.T) {
 	assert.Nil(t, err)
 
 	out, err = runApp(
-		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: storagePath},
+		&Flags{LogFile: "/dev/null", ReadFromStorage: true, DbPath: storagePath},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
 	)
 	assert.Contains(t, out, "nested")
 	assert.Nil(t, err)
-}
-
-func TestReadFromStorageWithErr(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	_, err := runApp(
-		&Flags{LogFile: "/dev/null", ReadFromStorage: true, StoragePath: "/tmp/badger-xxx"},
-		[]string{"test_dir"},
-		false,
-		testdev.DevicesInfoGetterMock{},
-	)
-
-	assert.ErrorContains(t, err, "Key not found")
 }

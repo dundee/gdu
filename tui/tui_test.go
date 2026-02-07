@@ -29,7 +29,7 @@ func TestFooter(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -74,7 +74,7 @@ func TestUpdateProgress(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	done := ui.Analyzer.GetDone()
 	done.Broadcast()
 	ui.updateProgress()
@@ -85,7 +85,7 @@ func TestHelp(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -109,7 +109,7 @@ func TestHelpBw(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
@@ -131,7 +131,7 @@ func TestAppRun(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	err := ui.StartUILoop()
 
@@ -143,7 +143,7 @@ func TestAppRunWithErr(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	err := ui.StartUILoop()
 
@@ -167,7 +167,7 @@ func TestRescanDir(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -216,7 +216,7 @@ func TestSelectedWithoutCurrentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	ui.fileItemSelected(1, 0)
 
@@ -230,7 +230,7 @@ func TestBeforeDraw(t *testing.T) {
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, screen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, false, true, false, false)
 
 	for _, f := range ui.app.(*testapp.MockedApp).BeforeDraws {
 		assert.False(t, f(screen))
@@ -242,7 +242,7 @@ func TestIgnorePaths(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.SetIgnoreDirPaths([]string{"/aaa", "/bbb"})
 
@@ -676,7 +676,7 @@ func TestShowErr(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 
 	ui.showErr("Something went wrong", errors.New("error"))
 
@@ -688,7 +688,7 @@ func TestShowErrBW(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.showErr("Something went wrong", errors.New("error"))
 
@@ -710,7 +710,7 @@ func TestSetStyles(t *testing.T) {
 	})
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false, opts...)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, opts...)
 
 	ui.SetSelectedBackgroundColor(tcell.ColorRed)
 	ui.SetSelectedTextColor(tcell.ColorRed)
@@ -739,7 +739,7 @@ func TestSetCurrentItemNameMaxLen(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.SetCurrentItemNameMaxLen(5)
 
@@ -751,7 +751,7 @@ func TestUseOldSizeBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.UseOldSizeBar()
 
@@ -763,7 +763,7 @@ func TestSetShowItemCount(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.SetShowItemCount()
 
@@ -775,7 +775,7 @@ func TestSetShowMTime(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.SetShowMTime()
 
@@ -787,7 +787,7 @@ func TestNoDelete(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.SetNoDelete()
 
@@ -799,14 +799,14 @@ func TestNoSpawnShell(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
 	ui.SetNoSpawnShell()
 
 	assert.Equal(t, ui.noSpawnShell, true)
 }
 
-// nolint: deadcode,unused // Why: for debugging
+// nolint: unused // Why: for debugging
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()
 
@@ -841,7 +841,7 @@ func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize, mockedAnaly
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, useColors, apparentSize, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, useColors, apparentSize, false, false)
 
 	if mockedAnalyzer {
 		ui.Analyzer = &testanalyze.MockedAnalyzer{}

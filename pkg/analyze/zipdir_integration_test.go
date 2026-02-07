@@ -23,16 +23,15 @@ func TestSequentialAnalyzerWithZipFile(t *testing.T) {
 	analyzer.SetArchiveBrowsing(true)
 
 	// Analyze directory (containing zip file)
-	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false }, false)
+	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false })
 
 	// Verify result
 	assert.NotNil(t, result)
 	assert.True(t, result.IsDir())
 
 	// Find zip file
-	files := result.GetFiles()
 	var zipItem fs.Item
-	for _, file := range files {
+	for file := range result.GetFiles(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "test.zip" {
 			zipItem = file
 			break
@@ -43,18 +42,16 @@ func TestSequentialAnalyzerWithZipFile(t *testing.T) {
 	assert.True(t, zipItem.IsDir(), "zip file should be treated as directory")
 
 	// Verify zip file content
-	zipFiles := zipItem.GetFiles()
-	assert.Greater(t, len(zipFiles), 0, "zip file should contain content")
-
-	// Find specific file
+	zipFilesCount := 0
 	foundTextFile := false
-	for _, file := range zipFiles {
+	for file := range zipItem.GetFiles(fs.SortByName, fs.SortAsc) {
+		zipFilesCount++
 		if file.GetName() == "test.txt" {
 			foundTextFile = true
 			assert.False(t, file.IsDir())
-			break
 		}
 	}
+	assert.Greater(t, zipFilesCount, 0, "zip file should contain content")
 	assert.True(t, foundTextFile, "should find test.txt in zip file")
 }
 
@@ -71,16 +68,15 @@ func TestParallelAnalyzerWithZipFile(t *testing.T) {
 	analyzer.SetArchiveBrowsing(true)
 
 	// Analyze directory
-	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false }, false)
+	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false })
 
 	// Verify result
 	assert.NotNil(t, result)
 	assert.True(t, result.IsDir())
 
 	// Find jar file
-	files := result.GetFiles()
 	var jarItem fs.Item
-	for _, file := range files {
+	for file := range result.GetFiles(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "test.jar" {
 			jarItem = file
 			break
@@ -91,8 +87,11 @@ func TestParallelAnalyzerWithZipFile(t *testing.T) {
 	assert.True(t, jarItem.IsDir(), "jar file should be treated as directory")
 
 	// Verify jar file content
-	jarFiles := jarItem.GetFiles()
-	assert.Greater(t, len(jarFiles), 0, "jar file should contain content")
+	jarFilesCount := 0
+	for range jarItem.GetFiles(fs.SortByName, fs.SortAsc) {
+		jarFilesCount++
+	}
+	assert.Greater(t, jarFilesCount, 0, "jar file should contain content")
 }
 
 func TestZipFileWithNestedStructure(t *testing.T) {
@@ -108,12 +107,11 @@ func TestZipFileWithNestedStructure(t *testing.T) {
 	analyzer.SetArchiveBrowsing(true)
 
 	// Analyze directory
-	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false }, false)
+	result := analyzer.AnalyzeDir(tempDir, func(string, string) bool { return false }, func(string) bool { return false })
 
 	// Find zip file
-	files := result.GetFiles()
 	var zipItem fs.Item
-	for _, file := range files {
+	for file := range result.GetFiles(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "nested.zip" {
 			zipItem = file
 			break
@@ -122,12 +120,9 @@ func TestZipFileWithNestedStructure(t *testing.T) {
 
 	assert.NotNil(t, zipItem)
 
-	// Verify nested structure
-	zipFiles := zipItem.GetFiles()
-
 	// Find deeply nested directory
 	var level1Dir fs.Item
-	for _, file := range zipFiles {
+	for file := range zipItem.GetFiles(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "level1" && file.IsDir() {
 			level1Dir = file
 			break
@@ -136,9 +131,8 @@ func TestZipFileWithNestedStructure(t *testing.T) {
 	assert.NotNil(t, level1Dir, "should find level1 directory")
 
 	// Find level2 directory
-	level1Files := level1Dir.GetFiles()
 	var level2Dir fs.Item
-	for _, file := range level1Files {
+	for file := range level1Dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "level2" && file.IsDir() {
 			level2Dir = file
 			break
@@ -147,9 +141,8 @@ func TestZipFileWithNestedStructure(t *testing.T) {
 	assert.NotNil(t, level2Dir, "should find level2 directory")
 
 	// Find deepest nested file
-	level2Files := level2Dir.GetFiles()
 	foundDeepFile := false
-	for _, file := range level2Files {
+	for file := range level2Dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "deep.txt" {
 			foundDeepFile = true
 			break

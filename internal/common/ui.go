@@ -20,7 +20,6 @@ type UI struct {
 	ShowProgress          bool
 	ShowApparentSize      bool
 	ShowRelativeSize      bool
-	ConstGC               bool
 }
 
 // SetAnalyzer sets analyzer instance

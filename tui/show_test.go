@@ -15,7 +15,7 @@ func TestHelpNoSpawnShell(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.SetNoSpawnShell()
 	ui.showHelp()
 
@@ -31,7 +31,7 @@ func TestCollapsePathFlag(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 
 	// Create a collapsible structure
 	deepestDir := &analyze.Dir{

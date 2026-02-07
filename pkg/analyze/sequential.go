@@ -3,7 +3,6 @@ package analyze
 import (
 	"os"
 	"path/filepath"
-	"runtime/debug"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -87,13 +86,8 @@ func (a *SequentialAnalyzer) ResetProgress() {
 
 // AnalyzeDir analyzes given path
 func (a *SequentialAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, constGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
-	if !constGC {
-		defer debug.SetGCPercent(debug.SetGCPercent(-1))
-		go manageMemoryUsage(a.doneChan)
-	}
-
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
@@ -209,7 +203,7 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				if regularFile, ok := file.(*File); ok {
 					setPlatformSpecificAttrs(regularFile, info)
 				}
-				totalSize += file.GetSize()
+				totalSize += file.GetUsage()
 				dir.AddFile(file)
 			}
 		}

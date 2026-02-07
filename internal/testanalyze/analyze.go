@@ -15,7 +15,7 @@ type MockedAnalyzer struct{}
 
 // AnalyzeDir returns dir with files with different size exponents
 func (a *MockedAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, enableGC bool,
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
 	dir := &analyze.Dir{
 		File: &analyze.File{

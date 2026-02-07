@@ -41,7 +41,6 @@ Or you can use Gdu directly via Docker:
 
 Flags:
       --config-file string            Read config from file (default is $HOME/.gdu.yaml)
-  -g, --const-gc                      Enable memory garbage collection during analysis with constant level set by GOGC
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -L, --follow-symlinks               Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
   -h, --help                          help for gdu
@@ -209,42 +208,16 @@ To enable:
 echo "delete-in-parallel: true" >> ~/.gdu.yaml
 ```
 
-## Memory usage
+## Saving analysis data to database
 
-### Automatic balancing
-
-Gdu tries to balance performance and memory usage.
-
-When less memory is used by gdu than the total free memory of the host,
-then Garbage Collection is disabled during the analysis phase completely to gain maximum speed.
-
-Otherwise GC is enabled.
-The more memory is used and the less memory is free, the more often will the GC happen.
-
-### Manual memory usage control
-
-If you want manual control over Garbage Collection, you can use `--const-gc` / `-g` flag.
-It will run Garbage Collection during the analysis phase with constant level of aggressiveness.
-As a result, the analysis will be about 25% slower and will consume about 30% less memory.
-To change the level, you can set the `GOGC` environment variable to specify how often the garbage collection will happen.
-Lower value (than 100) means GC will run more often. Higher means less often. Negative number will stop GC.
-
-Example running gdu with constant GC, but not so aggressive as default:
+Gdu can store the analysis data to a database file instead of just memory.
+This allows you to save and reload analysis results later.
+Both SQLite and BadgerDB are supported.
 
 ```
-GOGC=200 gdu -g /
-```
-
-## Saving analysis data to persistent key-value storage (experimental)
-
-Gdu can store the analysis data to persistent key-value storage instead of just memory.
-Gdu will run much slower (approx 10x) but it should use much less memory (when using small GOGC as well).
-Gdu can also reopen with the saved data.
-Currently only BadgerDB is supported as the key-value storage (embedded).
-
-```
-GOGC=10 gdu -g --use-storage /    # saves analysis data to key-value storage
-gdu -r /                          # reads just saved data, does not run analysis again
+gdu --db analysis.sqlite /        # saves analysis data to SQLite database
+gdu --db analysis.badger /        # saves analysis data to BadgerDB
+gdu -r --db analysis.sqlite /     # reads saved data, does not run analysis again
 ```
 
 ## Running tests

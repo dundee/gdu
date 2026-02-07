@@ -5,7 +5,6 @@ import (
 	"io"
 	"math"
 	"runtime"
-	"sort"
 	"sync"
 	"time"
 
@@ -47,7 +46,6 @@ func CreateStdoutUI(
 	showApparentSize bool,
 	showRelativeSize bool,
 	summarize bool,
-	constGC bool,
 	useSIPrefix bool,
 	noPrefix bool,
 	fixedUnit string,
@@ -62,7 +60,6 @@ func CreateStdoutUI(
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
 			Analyzer:         analyze.CreateAnalyzer(),
-			ConstGC:          constGC,
 			UseSIPrefix:      useSIPrefix,
 		},
 		output:      output,
@@ -198,7 +195,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter(), ui.ConstGC)
+		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
 		dir.UpdateStats(make(fs.HardLinkedItems, 10))
 		updateStatsDone <- struct{}{}
 	}()
@@ -242,13 +239,12 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 }
 
 func (ui *UI) showDir(dir fs.Item) {
+	sortOrder := fs.SortDesc
 	if ui.reverseSort {
-		sort.Sort(dir.GetFiles())
-	} else {
-		sort.Sort(sort.Reverse(dir.GetFiles()))
+		sortOrder = fs.SortAsc
 	}
 
-	for _, file := range dir.GetFiles() {
+	for file := range dir.GetFiles(fs.SortBySize, sortOrder) {
 		ui.printItem(file)
 	}
 }
@@ -347,17 +343,15 @@ func (ui *UI) printDirWithDepth(dir fs.Item, currentDepth int) {
 
 	// If we haven't reached the max depth, print contents
 	if currentDepth < ui.depth && dir.IsDir() {
-		files := dir.GetFiles()
-
-		// Sort files
+		sortOrder := fs.SortDesc
 		if ui.reverseSort {
-			sort.Sort(files)
-		} else {
-			sort.Sort(sort.Reverse(files))
+			sortOrder = fs.SortAsc
 		}
 
+		files := dir.GetFiles(fs.SortBySize, sortOrder)
+
 		// Print all files at this depth level
-		for _, file := range files {
+		for file := range files {
 			if file.IsDir() {
 				// Recurse into subdirectories
 				ui.printDirWithDepth(file, currentDepth+1)
@@ -372,7 +366,7 @@ func (ui *UI) printDirWithDepth(dir fs.Item, currentDepth int) {
 // ReadAnalysis reads analysis report from JSON file
 func (ui *UI) ReadAnalysis(input io.Reader) error {
 	var (
-		dir      *analyze.Dir
+		dir      fs.Item
 		wait     sync.WaitGroup
 		err      error
 		doneChan chan struct{}
@@ -455,16 +449,32 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 
 	progressChan := ui.Analyzer.GetProgressChan()
 	analysisDoneChan := ui.Analyzer.GetDone()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 
 	var progress common.CurrentProgress
 
 	i := 0
 	for {
-		fmt.Fprint(ui.output, emptyRow)
-
 		select {
-		case progress = <-progressChan:
+		case <-ticker.C:
+			select {
+			case progress = <-progressChan:
+				fmt.Fprint(ui.output, emptyRow)
+				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+				fmt.Fprint(ui.output, "Scanning... Total items: "+
+					ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
+					" size: "+
+					ui.formatSize(progress.TotalSize))
+			default:
+				// Update only the spinner without clearing the line
+				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+			}
+			i++
+			i %= progressRunesCount
 		case <-analysisDoneChan:
+			ticker.Stop()
+			fmt.Fprint(ui.output, emptyRow)
 			for {
 				fmt.Fprint(ui.output, emptyRow)
 				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
@@ -482,17 +492,6 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 				}
 			}
 		}
-
-		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
-
-		fmt.Fprint(ui.output, "Scanning... Total items: "+
-			ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
-			" size: "+
-			ui.formatSize(progress.TotalSize))
-
-		time.Sleep(100 * time.Millisecond)
-		i++
-		i %= progressRunesCount
 	}
 }
 

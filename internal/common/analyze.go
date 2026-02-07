@@ -23,7 +23,7 @@ type ShouldFileBeIgnored func(name string) bool
 
 // Analyzer is type for dir analyzing function
 type Analyzer interface {
-	AnalyzeDir(path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored, constGC bool) fs.Item
+	AnalyzeDir(path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored) fs.Item
 	SetFollowSymlinks(bool)
 	SetShowAnnexedSize(bool)
 	SetTimeFilter(timeFilter TimeFilter)
