@@ -5,6 +5,7 @@ CMD_GDU := cmd/gdu
 VERSION := $(shell git describe --tags 2>/dev/null)
 NAMEVER := $(NAME)-$(subst v,,$(VERSION))
 DATE := $(shell date +'%Y-%m-%d')
+GOBIN := go
 GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw -pgo=default.pgo
 GOFLAGS_STATIC ?= -trimpath -mod=readonly -modcacherw -pgo=default.pgo
 LDFLAGS := -s -w -extldflags '-static' \
@@ -31,12 +32,12 @@ tarball: vendor
 build:
 	@echo "Version: " $(VERSION)
 	mkdir -p dist
-	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
 
 build-static:
 	@echo "Version: " $(VERSION)
 	mkdir -p dist
-	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
 
 build-docker:
 	@echo "Version: " $(VERSION)
@@ -65,14 +66,14 @@ build-all:
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
 
-	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64-x $(PACKAGE)/$(CMD_GDU)
-	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64_static $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64-x $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64_static $(PACKAGE)/$(CMD_GDU)
 
-	CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv5l $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv6l $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv7l $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o dist/gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv5l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv6l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv7l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=android GOARCH=arm64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
 
 	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_* gdu_android_*; do tar czf $$file.tgz $$file; done
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
@@ -97,22 +98,26 @@ coverage:
 	gotestsum -- -race -coverprofile=coverage.txt -covermode=atomic ./...
 
 coverage-html: coverage
-	go tool cover -html=coverage.txt
+	$(GOBIN) tool cover -html=coverage.txt
 
 gobench:
-	go test -bench=. $(PACKAGE)/pkg/analyze
+	$(GOBIN) test -bench=. $(PACKAGE)/pkg/analyze
 
 heap-profile:
-	go tool pprof -web http://localhost:6060/debug/pprof/heap
+	$(GOBIN) tool pprof -web http://localhost:6060/debug/pprof/heap
 
 pgo:
 	wget -O cpu.pprof http://localhost:6060/debug/pprof/profile?seconds=30
-	go tool pprof -proto cpu.pprof default.pgo > merged.pprof
+	$(GOBIN) tool pprof -proto cpu.pprof default.pgo > merged.pprof
 	mv merged.pprof default.pgo
 
 trace:
 	wget -O trace.out http://localhost:6060/debug/pprof/trace?seconds=30
 	gotraceui ./trace.out
+
+profile:
+	wget -O cpu.pprof http://localhost:6060/debug/pprof/profile?seconds=30
+	$(GOBIN) tool pprof -web cpu.pprof
 
 benchmark:
 	sudo cpupower frequency-set -g performance
@@ -134,7 +139,7 @@ lint:
 	golangci-lint run -c .golangci.yml
 
 clean:
-	go mod tidy
+	$(GOBIN) mod tidy
 	-rm coverage.txt
 	-rm -r test_dir
 	-rm -r vendor
@@ -151,9 +156,9 @@ release:
 	gh release create -t "gdu $(VERSION)" $(VERSION) ./dist/*
 
 install-dev-dependencies:
-	go install gotest.tools/gotestsum@latest
-	go install github.com/mitchellh/gox@latest
-	go install honnef.co/go/gotraceui/cmd/gotraceui@latest
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+	$(GOBIN) install gotest.tools/gotestsum@latest
+	$(GOBIN) install github.com/mitchellh/gox@latest
+	$(GOBIN) install honnef.co/go/gotraceui/cmd/gotraceui@latest
+	$(GOBIN) install github.com/golangci/golangci-lint/cmd/golangci-lint@2.8.0
 
 .PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
