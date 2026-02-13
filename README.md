@@ -40,8 +40,13 @@ Or you can use Gdu directly via Docker:
   gdu [directory_to_scan] [flags]
 
 Flags:
+      --archive-browsing              Enable browsing of zip/jar archives
+      --collapse-path                 Collapse single-child directory chains
       --config-file string            Read config from file (default is $HOME/.gdu.yaml)
+  -D, --db string                     Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
+      --depth int                     Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored)
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
+  -E, --exclude-type strings          File types to exclude (e.g., --exclude-type yaml,json)
   -L, --follow-symlinks               Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
   -h, --help                          help for gdu
   -i, --ignore-dirs strings           Paths to ignore (separated by comma). Can be absolute or relative to current directory (default [/proc,/dev,/sys,/run])
@@ -49,7 +54,9 @@ Flags:
   -X, --ignore-from string            Read path patterns to ignore from file
   -f, --input-file string             Import analysis from JSON file
   -l, --log-file string               Path to a logfile (default "/dev/null")
-  -m, --max-cores int                 Set max cores that Gdu will use
+      --max-age string                Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
+  -m, --max-cores int                 Set max cores that Gdu will use. 8 cores available (default 8)
+      --min-age string                Include files with mtime at least DURATION old (e.g., 30d, 1w)
       --mouse                         Use mouse
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
@@ -61,20 +68,22 @@ Flags:
   -u, --no-unicode                    Do not use Unicode symbols (for size bar)
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
-  -r, --read-from-storage             Read analysis data from persistent key-value storage
+  -r, --read-from-storage             Use existing database instead of re-scanning
       --reverse-sort                  Reverse sorting order (smallest to largest) in non-interactive mode
       --sequential                    Use sequential scanning (intended for rotating HDDs)
   -A, --show-annexed-size             Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size            Show apparent size
   -d, --show-disks                    Show all mounted disks
+  -k, --show-in-kib                   Show sizes in KiB (or kB with --si) in non-interactive mode
   -C, --show-item-count               Show number of items in directory
   -M, --show-mtime                    Show latest mtime of items in directory
   -B, --show-relative-size            Show relative size
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
-      --storage-path string           Path to persistent key-value storage directory (default "/tmp/badger")
+      --since string                  Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)
   -s, --summarize                     Show only a total in non-interactive mode
   -t, --top int                       Show only top X largest files in non-interactive mode
-      --use-storage                   Use persistent key-value storage for analysis data (experimental)
+  -T, --type strings                  File types to include (e.g., --type yaml,json)
+      --until string                  Include files with mtime <= WHEN. WHEN accepts RFC3339 timestamp or date only YYYY-MM-DD
   -v, --version                       Print version
       --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
 

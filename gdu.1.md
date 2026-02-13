@@ -36,6 +36,18 @@ is not so huge.
     Read path patterns to ignore from file.
     Supports both absolute and relative path patterns.
 
+**-T**, **\--type** File types to include (e.g., --type yaml,json)
+
+**-E**, **\--exclude-type** File types to exclude (e.g., --exclude-type yaml,json)
+
+**\--max-age** Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
+
+**\--min-age** Include files with mtime at least DURATION old (e.g., 30d, 1w)
+
+**\--since** Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)
+
+**\--until** Include files with mtime <= WHEN. WHEN accepts RFC3339 timestamp or date only YYYY-MM-DD
+
 **-l**, **\--log-file**=\"/dev/null\" Path to a logfile
 
 **-m**, **\--max-cores** Set max cores that Gdu will use.
@@ -66,7 +78,15 @@ non-interactive mode
 
 **-C**, **\--show-item-count**\[=false\] Show number of items in directory
 
+**-k**, **\--show-in-kib**\[=false\] Show sizes in KiB (or kB with --si) in non-interactive mode
+
 **-M**, **\--show-mtime**\[=false\] Show latest mtime of items in directory
+
+**\--archive-browsing**\[=false\] Enable browsing of zip/jar archives
+
+**\--depth**\[=0\] Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored)
+
+**\--collapse-path**\[=false\] Collapse single-child directory chains
 
 **\--mouse**\[=false\] Use mouse
 
