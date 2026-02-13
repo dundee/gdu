@@ -29,3 +29,16 @@ func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 
 	dir.Mtime = time.Unix(int64(stat.Mtimespec.Sec), int64(stat.Mtimespec.Nsec))
 }
+
+// getSyscallStats extracts usage and inode info from os.FileInfo using syscall
+func getSyscallStats(info os.FileInfo) (usage int64, mli uint64) {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		usage = stat.Blocks * 512 // 512-byte blocks
+		if stat.Nlink > 1 {
+			mli = stat.Ino
+		}
+	} else {
+		usage = info.Size()
+	}
+	return
+}

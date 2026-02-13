@@ -22,7 +22,7 @@ var Getter DevicesInfoGetter = BSDDevicesInfoGetter{MountCmd: "/sbin/mount"}
 
 // GetMounts returns all mounted filesystems from output of /sbin/mount
 func (t BSDDevicesInfoGetter) GetMounts() (devices Devices, err error) {
-	out, err = exec.Command(t.MountCmd).Output()
+	out, err := exec.Command(t.MountCmd).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (t BSDDevicesInfoGetter) GetMounts() (devices Devices, err error) {
 
 // GetDevicesInfo returns result of GetMounts with usage info about mounted devices (by calling Statfs syscall)
 func (t BSDDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
-	mounts, err = t.GetMounts()
+	mounts, err := t.GetMounts()
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +43,6 @@ func (t BSDDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
 }
 
 func readMountOutput(rdr io.Reader) (mounts Devices, err error) {
-	mounts := Devices{}
-
 	scanner := bufio.NewScanner(rdr)
 	for scanner.Scan() {
 		line := scanner.Text()

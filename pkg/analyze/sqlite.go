@@ -7,15 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
-
-	// nolint:revive // use driver
-	_ "modernc.org/sqlite"
 )
 
 // SqliteStorage represents SQLite database storage
@@ -874,17 +870,4 @@ func (a *SqliteAnalyzer) updateProgress() {
 		default:
 		}
 	}
-}
-
-// getSyscallStats extracts usage and inode info from os.FileInfo using syscall
-func getSyscallStats(info os.FileInfo) (usage int64, mli uint64) {
-	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		usage = stat.Blocks * 512 // 512-byte blocks
-		if stat.Nlink > 1 {
-			mli = stat.Ino
-		}
-	} else {
-		usage = info.Size()
-	}
-	return
 }

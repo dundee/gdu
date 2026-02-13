@@ -10,8 +10,6 @@ import (
 )
 
 func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
-	devices := Devices{}
-
 	for _, mount := range mounts {
 		if strings.HasPrefix(mount.Name, "/dev") || mount.Fstype == "zfs" {
 			info := &unix.Statfs_t{}
