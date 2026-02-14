@@ -41,6 +41,7 @@ type UI struct {
 	help                    *tview.Flex
 	table                   *tview.Table
 	filteringInput          *tview.InputField
+	typeFilteringInput      *tview.InputField
 	done                    chan struct{}
 	remover                 func(fs.Item, fs.Item) error
 	emptier                 func(fs.Item, fs.Item) error
@@ -54,6 +55,7 @@ type UI struct {
 	topDirPath              string
 	currentDirPath          string
 	filterValue             string
+	typeFilterValue         string
 	sortBy                  string
 	sortOrder               string
 	footerTextColor         string
@@ -76,6 +78,7 @@ type UI struct {
 	showItemCount           bool
 	showMtime               bool
 	filtering               bool
+	typeFiltering           bool
 	headerHidden            bool
 	useOldSizeBar           bool
 	noDelete                bool
@@ -385,6 +388,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 	origDir := ui.currentDir
 	ui.currentDir = selectedDir
 	ui.hideFilterInput()
+	ui.hideTypeFilterInput()
 	ui.markedRows = make(map[int]struct{})
 	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()

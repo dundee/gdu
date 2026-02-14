@@ -21,6 +21,7 @@ const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
                [::b]r     [white:black:-]Rescan current directory
                [::b]E     [white:black:-]Export analysis data to file as JSON
                [::b]/     [white:black:-]Search items by name
+               [::b]T     [white:black:-]Filter items by file type (extension)
                [::b]a     [white:black:-]Toggle between showing disk usage and apparent size
                [::b]B     [white:black:-]Toggle bar alignment to biggest file or directory
                [::b]c     [white:black:-]Show/hide file count
@@ -130,6 +131,10 @@ func (ui *UI) showDir() {
 			continue
 		}
 
+		if !ui.matchesTypeFilter(item.GetName(), item.IsDir()) {
+			continue
+		}
+
 		_, ignored := ui.ignoredRows[rowIndex]
 
 		if !ignored {
@@ -207,6 +212,8 @@ func (ui *UI) showDir() {
 
 	timeFilterText := ui.formatTimeFilterInfo()
 
+	typeFilterText := ui.formatTypeFilterInfo(footerNumberColor, footerTextColor)
+
 	ui.footerLabel.SetText(
 		selected + footerTextColor +
 			" Total disk usage: " +
@@ -218,12 +225,13 @@ func (ui *UI) showDir() {
 			" Items: " + footerNumberColor + strconv.Itoa(itemCount) +
 			footerTextColor +
 			" Sorting by: " + ui.sortBy + " " + ui.sortOrder +
+			typeFilterText +
 			timeFilterText)
 
 	ui.table.Select(0, 0)
 	ui.table.ScrollToBeginning()
 
-	if !ui.filtering {
+	if !ui.filtering && !ui.typeFiltering {
 		ui.app.SetFocus(ui.table)
 	}
 }
@@ -381,4 +389,11 @@ func (ui *UI) formatHelpTextFor() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+func (ui *UI) formatTypeFilterInfo(numberColor, textColor string) string {
+	if ui.typeFilterValue == "" {
+		return ""
+	}
+	return " Type filter: " + numberColor + ui.typeFilterValue + textColor
 }
