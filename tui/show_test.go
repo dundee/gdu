@@ -16,6 +16,7 @@ func TestHelpNoSpawnShell(t *testing.T) {
 	defer simScreen.Fini()
 
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.SetNoDelete()
 	ui.SetNoSpawnShell()
 	ui.SetNoViewFile()
 	ui.showHelp()
@@ -24,6 +25,8 @@ func TestHelpNoSpawnShell(t *testing.T) {
 
 	helpText := ui.formatHelpTextFor()
 
+	assert.True(t, strings.Contains(helpText, "Delete file or directory (disabled)"))
+	assert.True(t, strings.Contains(helpText, "Empty file or directory (disabled)"))
 	assert.True(t, strings.Contains(helpText, "Spawn shell in current directory (disabled)"))
 	assert.True(t, strings.Contains(helpText, "Open file or directory in external program (disabled)"))
 	assert.True(t, strings.Contains(helpText, "Show content of file (disabled)"))
