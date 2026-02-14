@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
@@ -70,10 +71,18 @@ func TestDoubleClickNoViewFile(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.table.Select(2, 0)
 	ui.SetNoViewFile()
+	previousHeaderText := ui.header.GetText(false)
 
 	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseLeftDoubleClick)
 	assert.False(t, ui.pages.HasPage("file"))
 	assert.Equal(t, " Viewing files is disabled!", ui.header.GetText(false))
+
+	time.Sleep(2100 * time.Millisecond)
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, previousHeaderText, ui.header.GetText(false))
 }
 
 func TestScroll(t *testing.T) {

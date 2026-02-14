@@ -13,7 +13,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-const (
+var (
 	helpDisabledSuffix = " (disabled)"
 
 	helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down

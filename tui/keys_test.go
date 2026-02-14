@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
@@ -1096,11 +1097,19 @@ func TestShowFileWithNoViewFile(t *testing.T) {
 	ui.table.Select(0, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.table.Select(2, 0)
+	previousHeaderText := ui.header.GetText(false)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'v', 0))
 
 	assert.False(t, ui.pages.HasPage("file"))
 	assert.Equal(t, " Viewing files is disabled!", ui.header.GetText(false))
+
+	time.Sleep(2100 * time.Millisecond)
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, previousHeaderText, ui.header.GetText(false))
 }
 
 func TestShowInfoAndMoveAround(t *testing.T) {
