@@ -416,6 +416,49 @@ func TestMatchesTypeFilter(t *testing.T) {
 	assert.True(t, ui.matchesTypeFilter("anything", false))
 }
 
+func TestTypeFilterInputNoColorAndChangedCallback(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(80, 30)
+	defer simScreen.Fini()
+
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	dir := createDirWithExtensions()
+	ui.currentDir = dir
+	ui.topDir = dir
+	ui.topDirPath = dir.GetPath()
+	ui.showDir()
+
+	ui.showTypeFilterInput()
+	assert.NotNil(t, ui.typeFilteringInput)
+
+	handler := ui.typeFilteringInput.InputHandler()
+	handler(tcell.NewEventKey(tcell.KeyRune, 'g', 0), func(p tview.Primitive) {})
+	handler(tcell.NewEventKey(tcell.KeyRune, 'o', 0), func(p tview.Primitive) {})
+
+	assert.Equal(t, "go", ui.typeFilterValue)
+	assert.True(t, tableContains(ui, "main.go"))
+	assert.False(t, tableContains(ui, "config.yaml"))
+}
+
+func TestTypeFilterShowAgainKeepsExistingInput(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(80, 30)
+	defer simScreen.Fini()
+
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	dir := createDirWithExtensions()
+	ui.currentDir = dir
+	ui.topDir = dir
+	ui.topDirPath = dir.GetPath()
+	ui.showDir()
+
+	ui.showTypeFilterInput()
+	original := ui.typeFilteringInput
+
+	ui.showTypeFilterInput()
+
+	assert.Equal(t, original, ui.typeFilteringInput)
+	assert.True(t, ui.typeFiltering)
+}
+
 func collectTableTexts(ui *UI) []string {
 	var texts []string
 	for i := 0; i < ui.table.GetRowCount(); i++ {
