@@ -17,6 +17,7 @@ func TestHelpNoSpawnShell(t *testing.T) {
 
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.SetNoSpawnShell()
+	ui.SetNoViewFile()
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -25,6 +26,7 @@ func TestHelpNoSpawnShell(t *testing.T) {
 
 	assert.True(t, strings.Contains(helpText, "Spawn shell in current directory (disabled)"))
 	assert.True(t, strings.Contains(helpText, "Open file or directory in external program (disabled)"))
+	assert.True(t, strings.Contains(helpText, "Show content of file (disabled)"))
 }
 
 func TestCollapsePathFlag(t *testing.T) {

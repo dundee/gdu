@@ -13,7 +13,10 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-const helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
+const (
+	helpDisabledSuffix = " (disabled)"
+
+	helpText = `     [::b]up/down, k/j    [white:black:-]Move cursor up/down
   [::b]pgup/pgdn, g/G     [white:black:-]Move cursor top/bottom
  [::b]enter, right, l     [white:black:-]Go to directory/device
          [::b]left, h     [white:black:-]Go to parent directory
@@ -43,6 +46,7 @@ Sort by (twice toggles asc/desc):
                [::b]s     [white:black:-]Sort by size (asc/desc)
                [::b]C     [white:black:-]Sort by file count (asc/desc)
                [::b]M     [white:black:-]Sort by mtime (asc/desc)`
+)
 
 // nolint: funlen // Why: complex function
 func (ui *UI) showDir() {
@@ -369,14 +373,18 @@ func (ui *UI) formatHelpTextFor() string {
 			strings.Contains(line, "Delete file or directory"))
 
 		if ui.noDelete && isFound {
-			lines[i] += " (disabled)"
+			lines[i] += helpDisabledSuffix
 		} else if ui.noDeleteWithFilter && isFound {
 			lines[i] += " (disabled/filter)"
 		}
 
 		if ui.noSpawnShell && (strings.Contains(line, "Spawn shell in current directory") ||
 			strings.Contains(line, "Open file or directory in external program")) {
-			lines[i] += " (disabled)"
+			lines[i] += helpDisabledSuffix
+		}
+
+		if ui.noViewFile && strings.Contains(line, "Show content of file") {
+			lines[i] += helpDisabledSuffix
 		}
 	}
 

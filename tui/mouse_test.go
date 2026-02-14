@@ -49,6 +49,33 @@ func TestDoubleClick(t *testing.T) {
 	assert.True(t, ui.pages.HasPage("file"))
 }
 
+func TestDoubleClickNoViewFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
+	ui.table.Select(2, 0)
+	ui.SetNoViewFile()
+
+	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseLeftDoubleClick)
+	assert.False(t, ui.pages.HasPage("file"))
+	assert.Equal(t, " Viewing files is disabled!", ui.header.GetText(false))
+}
+
 func TestScroll(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()

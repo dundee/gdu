@@ -79,6 +79,7 @@ type UI struct {
 	headerHidden            bool
 	useOldSizeBar           bool
 	noDelete                bool
+	noViewFile              bool
 	noSpawnShell            bool
 	deleteInBackground      bool
 	timeFilter              *timefilter.TimeFilter
@@ -138,6 +139,7 @@ func CreateUI(
 		markedRows:              make(map[int]struct{}),
 		exportName:              "export.json",
 		noDelete:                false,
+		noViewFile:              false,
 		noSpawnShell:            false,
 		deleteQueue:             make(chan deleteQueueItem, 1000),
 		deleteWorkersCount:      3 * runtime.GOMAXPROCS(0),
@@ -329,6 +331,10 @@ func (ui *UI) SetNoDelete() {
 // SetNoSpawnShell disables shell spawning
 func (ui *UI) SetNoSpawnShell() {
 	ui.noSpawnShell = true
+}
+
+func (ui *UI) SetNoViewFile() {
+	ui.noViewFile = true
 }
 
 // SetNoDelete disables delete when time filters are active
