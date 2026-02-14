@@ -3,6 +3,8 @@ package tui
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -93,6 +95,16 @@ func TestLeftRightKeyWhileConfirm(t *testing.T) {
 }
 
 func TestMoveLeftRight(t *testing.T) {
+	origWD, err := os.Getwd()
+	assert.Nil(t, err)
+
+	err = os.Chdir(t.TempDir())
+	assert.Nil(t, err)
+	defer func() {
+		err := os.Chdir(origWD)
+		assert.Nil(t, err)
+	}()
+
 	fin := testdir.CreateTestDir()
 	defer fin()
 	simScreen := testapp.CreateSimScreen()
@@ -101,7 +113,7 @@ func TestMoveLeftRight(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.done = make(chan struct{})
-	err := ui.AnalyzePath("test_dir", nil)
+	err = ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
@@ -134,8 +146,13 @@ func TestMoveLeftRight(t *testing.T) {
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 'h', 0))
+	<-ui.done
 
-	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, filepath.Dir("test_dir"), ui.currentDirPath)
 }
 
 func TestMoveRightOnDevice(t *testing.T) {

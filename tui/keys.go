@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -322,11 +323,32 @@ func (ui *UI) handleLeft() {
 			if err != nil {
 				ui.showErr("Error listing devices", err)
 			}
+		} else {
+			ui.analyzeParentOfTopDir()
 		}
 		return
 	}
 	if ui.currentDir != nil {
 		ui.fileItemSelected(0, 0)
+	}
+}
+
+func (ui *UI) analyzeParentOfTopDir() {
+	if ui.currentDir == nil || ui.isInArchive() {
+		return
+	}
+
+	currentPath := ui.currentDir.GetPath()
+	parentPath := filepath.Dir(currentPath)
+	if parentPath == currentPath {
+		return
+	}
+
+	ui.Analyzer.ResetProgress()
+	ui.linkedItems = make(fs.HardLinkedItems)
+
+	if err := ui.AnalyzePath(parentPath, nil); err != nil {
+		ui.showErr("Error analyzing parent directory", err)
 	}
 }
 
