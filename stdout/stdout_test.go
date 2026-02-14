@@ -66,6 +66,23 @@ func TestShowItemCountInNonInteractiveMode(t *testing.T) {
 	assert.Regexp(t, regexp.MustCompile(`(?m)\s+15\s+/c$`), out)
 }
 
+func TestShowItemCountInNonInteractiveModeWithColorsAndFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "single")
+	err := os.WriteFile(filePath, []byte("x"), 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, true, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetShowItemCount()
+
+	err = ui.AnalyzePath(tmpDir, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+1\s+single$`), out)
+}
+
 func TestShowSummary(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
