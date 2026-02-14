@@ -806,6 +806,18 @@ func TestNoSpawnShell(t *testing.T) {
 	assert.Equal(t, ui.noSpawnShell, true)
 }
 
+func TestNoViewFile(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+
+	ui.SetNoViewFile()
+
+	assert.Equal(t, ui.noViewFile, true)
+}
+
 // nolint: unused // Why: for debugging
 func printScreen(simScreen tcell.SimulationScreen) {
 	b, _, _ := simScreen.GetContents()

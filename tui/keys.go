@@ -241,6 +241,21 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 			ui.showErr("Viewing content is not supported in archives", nil)
 			return nil
 		}
+		if ui.noViewFile {
+			previousHeaderText := ui.header.GetText(false)
+
+			ui.header.SetText(" Viewing files is disabled!")
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				ui.app.QueueUpdateDraw(func() {
+					ui.header.Clear()
+					ui.header.SetText(previousHeaderText)
+				})
+			}()
+
+			return nil
+		}
 		ui.showFile()
 	case 'o':
 		if ui.noSpawnShell {
