@@ -10,6 +10,10 @@ import (
 	"github.com/rivo/tview"
 )
 
+var analyzeParentPath = func(ui *UI, path string, parentDir fs.Item) error {
+	return ui.AnalyzePath(path, parentDir)
+}
+
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if ui.handleCtrlZ(key) == nil {
 		return nil
@@ -347,7 +351,7 @@ func (ui *UI) analyzeParentOfTopDir() {
 	ui.Analyzer.ResetProgress()
 	ui.linkedItems = make(fs.HardLinkedItems)
 
-	if err := ui.AnalyzePath(parentPath, nil); err != nil {
+	if err := analyzeParentPath(ui, parentPath, nil); err != nil {
 		ui.showErr("Error analyzing parent directory", err)
 	}
 }

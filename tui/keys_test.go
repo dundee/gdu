@@ -254,6 +254,29 @@ func TestAnalyzeParentOfTopDirAtFilesystemRoot(t *testing.T) {
 	assert.False(t, ui.pages.HasPage("error"))
 }
 
+func TestAnalyzeParentOfTopDirShowsErrorWhenAnalyzeFails(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDir = &analyze.Dir{
+		File:     &analyze.File{Name: "test_dir"},
+		BasePath: ".",
+	}
+	origAnalyzeParentPath := analyzeParentPath
+	t.Cleanup(func() {
+		analyzeParentPath = origAnalyzeParentPath
+	})
+	analyzeParentPath = func(ui *UI, path string, parentDir fs.Item) error {
+		return errors.New("boom")
+	}
+
+	ui.analyzeParentOfTopDir()
+
+	assert.True(t, ui.pages.HasPage("error"))
+}
+
 func TestStop(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
