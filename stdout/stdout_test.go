@@ -3,6 +3,8 @@ package stdout
 import (
 	"bytes"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -34,6 +36,34 @@ func TestAnalyzePath(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "nested")
+}
+
+func TestShowItemCountInNonInteractiveMode(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	for dirName, fileCount := range map[string]int{"a": 5, "b": 10, "c": 15} {
+		dirPath := filepath.Join(tmpDir, dirName)
+		err := os.Mkdir(dirPath, 0o755)
+		assert.Nil(t, err)
+
+		for i := 0; i < fileCount; i++ {
+			filePath := filepath.Join(dirPath, "f"+string(rune('a'+i)))
+			err = os.WriteFile(filePath, []byte("x"), 0o644)
+			assert.Nil(t, err)
+		}
+	}
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetShowItemCount()
+
+	err := ui.AnalyzePath(tmpDir, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+5\s+/a$`), out)
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+10\s+/b$`), out)
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+15\s+/c$`), out)
 }
 
 func TestShowSummary(t *testing.T) {
@@ -339,6 +369,13 @@ func TestFormatSizeDec(t *testing.T) {
 	assert.Contains(t, ui.formatSize(1<<40+1), "TB")
 	assert.Contains(t, ui.formatSize(1<<50+1), "PB")
 	assert.Contains(t, ui.formatSize(1<<60+1), "EB")
+}
+
+func TestFormatCount(t *testing.T) {
+	assert.Equal(t, "42", formatCount(42))
+	assert.Equal(t, "1.5k", formatCount(1500))
+	assert.Equal(t, "2.5M", formatCount(2500000))
+	assert.Equal(t, "3.5G", formatCount(3500000000))
 }
 
 func TestFormatSizeRaw(t *testing.T) {

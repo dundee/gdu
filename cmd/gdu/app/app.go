@@ -380,6 +380,9 @@ func (a *App) createUI() (UI, error) {
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()
 		}
+		if a.Flags.ShowItemCount {
+			stdoutUI.SetShowItemCount()
+		}
 		ui = stdoutUI
 	default:
 		opts := a.getOptions()
