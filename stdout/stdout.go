@@ -289,13 +289,13 @@ func (ui *UI) printItem(file fs.Item) {
 	var lineFormat string
 	if ui.showItemCnt {
 		if ui.UseColors {
-			lineFormat = "%s %20s %11s %s\n"
+			lineFormat = "%s %23s %25s %s\n"
 		} else {
 			lineFormat = "%s %9s %11s %s\n"
 		}
 	} else {
 		if ui.UseColors {
-			lineFormat = "%s %20s %s\n"
+			lineFormat = "%s %23s %s\n"
 		} else {
 			lineFormat = "%s %9s %s\n"
 		}
@@ -324,7 +324,7 @@ func (ui *UI) printItem(file fs.Item) {
 			lineFormat,
 			string(file.GetFlag()),
 			ui.formatSize(size),
-			formatCount(countToDisplay),
+			ui.formatCount(countToDisplay),
 			name,
 		)
 		return
@@ -337,21 +337,6 @@ func (ui *UI) printItem(file fs.Item) {
 		ui.formatSize(size),
 		name,
 	)
-}
-
-func formatCount(count int) string {
-	count64 := float64(count)
-
-	switch {
-	case count64 >= common.G:
-		return fmt.Sprintf("%.1fG", float64(count)/float64(common.G))
-	case count64 >= common.M:
-		return fmt.Sprintf("%.1fM", float64(count)/float64(common.M))
-	case count64 >= common.K:
-		return fmt.Sprintf("%.1fk", float64(count)/float64(common.K))
-	default:
-		return fmt.Sprintf("%d", count)
-	}
 }
 
 func (ui *UI) printItemPath(file fs.Item) {
@@ -537,6 +522,21 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 				}
 			}
 		}
+	}
+}
+
+func (ui *UI) formatCount(count int) string {
+	count64 := float64(count)
+
+	switch {
+	case count64 >= common.G:
+		return ui.red.Sprintf("%.1f", float64(count)/float64(common.G)) + "G"
+	case count64 >= common.M:
+		return ui.red.Sprintf("%.1f", float64(count)/float64(common.M)) + "M"
+	case count64 >= common.K:
+		return ui.red.Sprintf("%.1f", float64(count)/float64(common.K)) + "k"
+	default:
+		return ui.red.Sprintf("%d", count)
 	}
 }
 
