@@ -1,6 +1,8 @@
 /.vscode
 /.idea
 /coverage.txt
+/coverage.out
+/coverage.html
 /dist
 /test_dir
 /tui/test_dir
