@@ -124,6 +124,11 @@ Delete items in the background, not blocking the UI from work
 
 Delete items in parallel, which might increase the speed of deletion
 
+#### `browse-parent-dirs`
+
+Allow navigating above the launch directory by pressing the left arrow key. When enabled, pressing left at the top-level directory will rescan and open its parent directory. Disabled by default.
+
+
 #### `style.selected-row.text-color`
 
 Color of text for the selected row

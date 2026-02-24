@@ -327,7 +327,7 @@ func (ui *UI) handleLeft() {
 			if err != nil {
 				ui.showErr("Error listing devices", err)
 			}
-		} else {
+		} else if ui.browseParentDirs {
 			ui.analyzeParentOfTopDir()
 		}
 		return

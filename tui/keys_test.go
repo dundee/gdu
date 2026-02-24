@@ -124,6 +124,7 @@ func TestMoveLeftRight(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.done = make(chan struct{})
+	ui.browseParentDirs = true
 	err = ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 
@@ -213,6 +214,25 @@ func TestHandleLeftShowsErrorWhenListDevicesFails(t *testing.T) {
 	ui.handleLeft()
 
 	assert.True(t, ui.pages.HasPage("error"))
+}
+
+func TestHandleLeftAtTopDirDoesNothingWhenBrowseParentDirsDisabled(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDirPath = "test_dir"
+	ui.topDirPath = "test_dir"
+	ui.currentDir = &analyze.Dir{
+		File:     &analyze.File{Name: "test_dir"},
+		BasePath: ".",
+	}
+
+	ui.handleLeft()
+
+	assert.False(t, ui.pages.HasPage("error"))
+	assert.Equal(t, "test_dir", ui.currentDirPath)
 }
 
 func TestAnalyzeParentOfTopDirNilCurrentDir(t *testing.T) {
