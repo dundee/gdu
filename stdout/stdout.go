@@ -23,6 +23,7 @@ type UI struct {
 	red         *color.Color
 	orange      *color.Color
 	blue        *color.Color
+	showItemCnt bool
 	top         int
 	depth       int
 	summarize   bool
@@ -103,6 +104,11 @@ func (ui *UI) SetFixedUnit(unitChar string) {
 		ui.fixedSuffix = suffixMap["g"]
 	}
 }
+
+func (ui *UI) SetShowItemCount() {
+	ui.showItemCnt = true
+}
+
 func (ui *UI) UseOldProgressRunes() {
 	progressRunes = progressRunesOld
 	progressRunesCount = len(progressRunes)
@@ -281,10 +287,18 @@ func (ui *UI) printTotalItem(file fs.Item) {
 
 func (ui *UI) printItem(file fs.Item) {
 	var lineFormat string
-	if ui.UseColors {
-		lineFormat = "%s %20s %s\n"
+	if ui.showItemCnt {
+		if ui.UseColors {
+			lineFormat = "%s %20s %11s %s\n"
+		} else {
+			lineFormat = "%s %9s %11s %s\n"
+		}
 	} else {
-		lineFormat = "%s %9s %s\n"
+		if ui.UseColors {
+			lineFormat = "%s %20s %s\n"
+		} else {
+			lineFormat = "%s %9s %s\n"
+		}
 	}
 
 	var size int64
@@ -294,18 +308,49 @@ func (ui *UI) printItem(file fs.Item) {
 		size = file.GetUsage()
 	}
 
+	countToDisplay := file.GetItemCount()
 	if file.IsDir() {
-		fmt.Fprintf(ui.output,
+		countToDisplay--
+	}
+
+	name := file.GetName()
+	if file.IsDir() {
+		name = ui.blue.Sprint("/" + file.GetName())
+	}
+
+	if ui.showItemCnt {
+		fmt.Fprintf(
+			ui.output,
 			lineFormat,
 			string(file.GetFlag()),
 			ui.formatSize(size),
-			ui.blue.Sprint("/"+file.GetName()))
-	} else {
-		fmt.Fprintf(ui.output,
-			lineFormat,
-			string(file.GetFlag()),
-			ui.formatSize(size),
-			file.GetName())
+			formatCount(countToDisplay),
+			name,
+		)
+		return
+	}
+
+	fmt.Fprintf(
+		ui.output,
+		lineFormat,
+		string(file.GetFlag()),
+		ui.formatSize(size),
+		name,
+	)
+}
+
+func formatCount(count int) string {
+	count64 := float64(count)
+
+	switch {
+	case count64 >= common.G:
+		return fmt.Sprintf("%.1fG", float64(count)/float64(common.G))
+	case count64 >= common.M:
+		return fmt.Sprintf("%.1fM", float64(count)/float64(common.M))
+	case count64 >= common.K:
+		return fmt.Sprintf("%.1fk", float64(count)/float64(common.K))
+	default:
+		return fmt.Sprintf("%d", count)
 	}
 }
 
