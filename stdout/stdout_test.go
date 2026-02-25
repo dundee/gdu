@@ -389,10 +389,13 @@ func TestFormatSizeDec(t *testing.T) {
 }
 
 func TestFormatCount(t *testing.T) {
-	assert.Equal(t, "42", formatCount(42))
-	assert.Equal(t, "1.5k", formatCount(1500))
-	assert.Equal(t, "2.5M", formatCount(2500000))
-	assert.Equal(t, "3.5G", formatCount(3500000000))
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, true, true, true, false, false, true, false, "", 0, false, 0)
+
+	assert.Equal(t, "42", ui.formatCount(42))
+	assert.Equal(t, "1.5k", ui.formatCount(1500))
+	assert.Equal(t, "2.5M", ui.formatCount(2500000))
+	assert.Equal(t, "3.5G", ui.formatCount(3500000000))
 }
 
 func TestFormatSizeRaw(t *testing.T) {
