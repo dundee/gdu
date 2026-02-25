@@ -17,7 +17,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if ui.pages.HasPage("file") || ui.pages.HasPage("export") {
 		return key // send event to primitive
 	}
-	if ui.filtering {
+	if ui.filtering || ui.typeFiltering {
 		return key
 	}
 
@@ -213,9 +213,17 @@ func (ui *UI) handleLeftRight(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleFiltering(key *tcell.EventKey) *tcell.EventKey {
-	if key.Key() == tcell.KeyTab && ui.filteringInput != nil {
+	if key.Key() != tcell.KeyTab {
+		return key
+	}
+	if ui.filteringInput != nil {
 		ui.filtering = true
 		ui.app.SetFocus(ui.filteringInput)
+		return nil
+	}
+	if ui.typeFilteringInput != nil {
+		ui.typeFiltering = true
+		ui.app.SetFocus(ui.typeFilteringInput)
 		return nil
 	}
 	return key
@@ -274,6 +282,9 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.handleSorting(key)
 	case '/':
 		ui.showFilterInput()
+		return nil
+	case 'T':
+		ui.showTypeFilterInput()
 		return nil
 	case ' ':
 		ui.handleMark()
