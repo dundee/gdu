@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -30,6 +32,21 @@ func (ui *UI) onMouse(event *tcell.EventMouse, action tview.MouseAction) (*tcell
 			if selectedFile.IsDir() {
 				ui.handleRight()
 			} else {
+				if ui.noViewFile {
+					previousHeaderText := ui.header.GetText(false)
+
+					ui.header.SetText(" Viewing files is disabled!")
+
+					go func() {
+						time.Sleep(2 * time.Second)
+						ui.app.QueueUpdateDraw(func() {
+							ui.header.Clear()
+							ui.header.SetText(previousHeaderText)
+						})
+					}()
+
+					return nil, action
+				}
 				ui.showFile()
 			}
 		}

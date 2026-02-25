@@ -92,6 +92,7 @@ func init() {
 	flags.BoolVar(&af.ReverseSort, "reverse-sort", false, "Reverse sorting order (smallest to largest) in non-interactive mode")
 	flags.BoolVar(&af.Mouse, "mouse", false, "Use mouse")
 	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allow deletions")
+	flags.BoolVar(&af.NoViewFile, "no-view-file", false, "Do not allow viewing file contents")
 	flags.BoolVar(&af.NoSpawnShell, "no-spawn-shell", false, "Do not allow spawning shell")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 	flags.StringVar(

@@ -98,6 +98,8 @@ non-interactive mode
 
 **\--no-delete**\[=false\] Do not allow deletions
 
+**\--no-view-file**\[=false\] Do not allow viewing file contents
+
 **-f**, **\--input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 
 **-o**, **\--output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.

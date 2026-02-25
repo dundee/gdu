@@ -61,6 +61,7 @@ Flags:
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
       --no-delete                     Do not allow deletions
+      --no-view-file                  Do not allow viewing file contents
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
@@ -105,6 +106,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu                                   # analyze current dir
     gdu -a                                # show apparent size instead of disk usage
     gdu --no-delete                       # prevent write operations
+    gdu --no-view-file                    # prevent viewing file contents
     gdu <some_dir_to_analyze>             # analyze given dir
     gdu -d                                # show all mounted disks
     gdu -l ./gdu.log <some_dir>           # write errors to log file

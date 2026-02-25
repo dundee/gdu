@@ -80,6 +80,7 @@ type Flags struct {
 	NoCross            bool     `yaml:"no-cross"`
 	NoHidden           bool     `yaml:"no-hidden"`
 	NoDelete           bool     `yaml:"no-delete"`
+	NoViewFile         bool     `yaml:"no-view-file"`
 	NoSpawnShell       bool     `yaml:"no-spawn-shell"`
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
@@ -496,6 +497,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.NoDelete {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetNoDelete()
+		})
+	}
+	if a.Flags.NoViewFile {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetNoViewFile()
 		})
 	}
 	if a.Flags.NoSpawnShell {

@@ -84,6 +84,10 @@ Ignore hidden directories (beginning with dot)
 
 Do not allow deletions
 
+#### `no-view-file`
+
+Do not allow viewing file contents
+
 #### `follow-symlinks`
 
 Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
