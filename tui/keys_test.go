@@ -3,6 +3,9 @@ package tui
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -15,6 +18,16 @@ import (
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
 )
+
+type devicesInfoGetterErrMock struct{}
+
+func (m devicesInfoGetterErrMock) GetDevicesInfo() (device.Devices, error) {
+	return nil, fmt.Errorf("failed getting devices")
+}
+
+func (m devicesInfoGetterErrMock) GetMounts() (device.Devices, error) {
+	return nil, fmt.Errorf("failed getting mounts")
+}
 
 func TestShowHelp(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
@@ -93,6 +106,16 @@ func TestLeftRightKeyWhileConfirm(t *testing.T) {
 }
 
 func TestMoveLeftRight(t *testing.T) {
+	origWD, err := os.Getwd()
+	assert.Nil(t, err)
+
+	err = os.Chdir(t.TempDir())
+	assert.Nil(t, err)
+	defer func() {
+		err := os.Chdir(origWD)
+		assert.Nil(t, err)
+	}()
+
 	fin := testdir.CreateTestDir()
 	defer fin()
 	simScreen := testapp.CreateSimScreen()
@@ -101,7 +124,8 @@ func TestMoveLeftRight(t *testing.T) {
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	ui.done = make(chan struct{})
-	err := ui.AnalyzePath("test_dir", nil)
+	ui.browseParentDirs = true
+	err = ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 
 	<-ui.done // wait for analyzer
@@ -134,8 +158,13 @@ func TestMoveLeftRight(t *testing.T) {
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyLeft, 'h', 0))
+	<-ui.done
 
-	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, filepath.Dir("test_dir"), ui.currentDirPath)
 }
 
 func TestMoveRightOnDevice(t *testing.T) {
@@ -169,6 +198,103 @@ func TestMoveRightOnDevice(t *testing.T) {
 
 	assert.Nil(t, ui.currentDir)
 	assert.Equal(t, "/dev/root", ui.table.GetCell(1, 0).GetReference().(*device.Device).Name)
+}
+
+func TestHandleLeftShowsErrorWhenListDevicesFails(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDirPath = "test_dir"
+	ui.topDirPath = "test_dir"
+	ui.devices = device.Devices{&device.Device{Name: "x"}}
+	ui.getter = devicesInfoGetterErrMock{}
+
+	ui.handleLeft()
+
+	assert.True(t, ui.pages.HasPage("error"))
+}
+
+func TestHandleLeftAtTopDirDoesNothingWhenBrowseParentDirsDisabled(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDirPath = "test_dir"
+	ui.topDirPath = "test_dir"
+	ui.currentDir = &analyze.Dir{
+		File:     &analyze.File{Name: "test_dir"},
+		BasePath: ".",
+	}
+
+	ui.handleLeft()
+
+	assert.False(t, ui.pages.HasPage("error"))
+	assert.Equal(t, "test_dir", ui.currentDirPath)
+}
+
+func TestAnalyzeParentOfTopDirNilCurrentDir(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDir = nil
+
+	ui.analyzeParentOfTopDir()
+
+	assert.False(t, ui.pages.HasPage("error"))
+}
+
+func TestAnalyzeParentOfTopDirInArchive(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDir = &analyze.ZipDir{Dir: &analyze.Dir{}}
+
+	ui.analyzeParentOfTopDir()
+
+	assert.False(t, ui.pages.HasPage("error"))
+}
+
+func TestAnalyzeParentOfTopDirAtFilesystemRoot(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDir = &analyze.Dir{File: &analyze.File{Name: "/"}}
+
+	ui.analyzeParentOfTopDir()
+
+	assert.False(t, ui.pages.HasPage("error"))
+}
+
+func TestAnalyzeParentOfTopDirShowsErrorWhenAnalyzeFails(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.currentDir = &analyze.Dir{
+		File:     &analyze.File{Name: "test_dir"},
+		BasePath: ".",
+	}
+	origAnalyzeParentPath := analyzeParentPath
+	t.Cleanup(func() {
+		analyzeParentPath = origAnalyzeParentPath
+	})
+	analyzeParentPath = func(ui *UI, path string, parentDir fs.Item) error {
+		return errors.New("boom")
+	}
+
+	ui.analyzeParentOfTopDir()
+
+	assert.True(t, ui.pages.HasPage("error"))
 }
 
 func TestStop(t *testing.T) {

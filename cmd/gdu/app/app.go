@@ -100,6 +100,7 @@ type Flags struct {
 	MinAge             string   `yaml:"min-age"`
 	ArchiveBrowsing    bool     `yaml:"archive-browsing"`
 	CollapsePath       bool     `yaml:"collapse-path"`
+	BrowseParentDirs   bool     `yaml:"browse-parent-dirs"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -510,6 +511,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.DeleteInParallel {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetDeleteInParallel()
+		})
+	}
+	if a.Flags.BrowseParentDirs {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetBrowseParentDirs()
 		})
 	}
 	return opts

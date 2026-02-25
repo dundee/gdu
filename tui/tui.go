@@ -88,6 +88,7 @@ type UI struct {
 	timeFilterLoc           *time.Location
 	noDeleteWithFilter      bool
 	collapsePath            bool
+	browseParentDirs        bool
 }
 
 type deleteQueueItem struct {
@@ -337,6 +338,11 @@ func (ui *UI) SetNoSpawnShell() {
 // SetNoDelete disables delete when time filters are active
 func (ui *UI) SetNoDeleteWithFilter() {
 	ui.noDeleteWithFilter = true
+}
+
+// SetBrowseParentDirs enables navigating above the launch directory
+func (ui *UI) SetBrowseParentDirs() {
+	ui.browseParentDirs = true
 }
 
 // SetCollapsePath sets the flag to collapse paths

@@ -2,12 +2,17 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
+
+var analyzeParentPath = func(ui *UI, path string, parentDir fs.Item) error {
+	return ui.AnalyzePath(path, parentDir)
+}
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if ui.handleCtrlZ(key) == nil {
@@ -333,11 +338,32 @@ func (ui *UI) handleLeft() {
 			if err != nil {
 				ui.showErr("Error listing devices", err)
 			}
+		} else if ui.browseParentDirs {
+			ui.analyzeParentOfTopDir()
 		}
 		return
 	}
 	if ui.currentDir != nil {
 		ui.fileItemSelected(0, 0)
+	}
+}
+
+func (ui *UI) analyzeParentOfTopDir() {
+	if ui.currentDir == nil || ui.isInArchive() {
+		return
+	}
+
+	currentPath := ui.currentDir.GetPath()
+	parentPath := filepath.Dir(currentPath)
+	if parentPath == currentPath {
+		return
+	}
+
+	ui.Analyzer.ResetProgress()
+	ui.linkedItems = make(fs.HardLinkedItems)
+
+	if err := analyzeParentPath(ui, parentPath, nil); err != nil {
+		ui.showErr("Error analyzing parent directory", err)
 	}
 }
 
