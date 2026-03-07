@@ -3,6 +3,7 @@
 package analyze
 
 import (
+	// nolint:revive // Why: importing SQLite driver for side effects
 	_ "modernc.org/sqlite"
 )
 
