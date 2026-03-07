@@ -588,6 +588,10 @@ type SqliteAnalyzer struct {
 
 // CreateSqliteAnalyzer creates a new SQLite analyzer
 func CreateSqliteAnalyzer(dbPath string) (*SqliteAnalyzer, error) {
+	if err := checkAvailable(); err != nil {
+		return nil, err
+	}
+
 	storage, err := NewSqliteStorage(dbPath)
 	if err != nil {
 		return nil, err
