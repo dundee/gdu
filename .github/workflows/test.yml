@@ -14,21 +14,21 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v6
       with:
-        go-version: 1.25.x
+        go-version: 1.26.x
     - name: Checkout code
       uses: actions/checkout@v6
     - name: Run linters
       uses: golangci/golangci-lint-action@v9
       with:
-        version: v2.6
+        version: v2.11.2
 
   test:
     strategy:
       matrix:
-        go-version: [1.24.x, 1.25.x]
+        go-version: [1.24.x, 1.25.x, 1.26.x]
         platform: [ubuntu-latest]
         include:
-          - go-version: 1.25.x
+          - go-version: 1.26.x
             platform: macos-latest
     runs-on: ${{ matrix.platform }}
     steps:
@@ -49,7 +49,7 @@ jobs:
       if: success()
       uses: actions/setup-go@v6
       with:
-        go-version: 1.25.x
+        go-version: 1.26.x
     - name: Checkout code
       uses: actions/checkout@v6
     - name: Calc coverage
