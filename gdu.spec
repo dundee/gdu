@@ -1,5 +1,5 @@
 Name:           gdu
-Version:        5.32.0
+Version:        5.34.0
 Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
 
@@ -52,6 +52,24 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Mon Mar 9 2026 Daniel Milde - 5.34.0-1
+- feat: add interactive file type filtering via -T key by @ShivamB25 in #493
+- feat: allow navigating above launch directory by @ShivamB25 in #494
+- feat: add --no-view-file flag for interactive viewer (#428) by @ShivamB25 in #496
+- fix: enable --show-item-count in non-interactive mode (#431) by @ShivamB25 in #495
+- fix: align columns in non-interactive mode by @dundee in #500
+- fix: support for sqlite db on all platforms by @dundee in #507
+* Sat Feb 14 2026 Daniel Milde - 5.33.0-1
+- feat: add SQLite analyzer and some assorted changes by @quetz in #484
+- feat: add --archive-browsing flag to show zip/jar files as dirs, add --collapse-path flag to for collapsing single-child directory
+- feat: add --depth flag by @sguptasf in #485
+- feat: add options to force output units by @shuaixr in #464
+- feat: allow excluding file(s) by their type by @AmauMaill in #472
+- feat: bump version of go and badger by @joy4eg in #438
+- feat: time filters by @Sarke in #425
+- feat: bump versions of dependencies by @dundee in #450
+- chains by @bingoohuang in #434
+- fix: non-deterministic ordering in ParallelAnalyzer by @ShivamB25 in #445
 * Sat Nov 22 2025 Daniel Milde - 5.32.0-1
 - feat: Add --no-spawn-shell flag to disable shell access by @ShivamB25 in #440
 - feat: Add --reverse-sort flag for non-interactive mode by @ShivamB25 in #436
@@ -65,7 +83,7 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 - docs: fix link to configuration.md by @joliss in #392
 * Fri Jun 6 2025 Daniel Milde - 5.31.0-1
 - feat: relative path ignore support by @s0up4200 in #398
-- feat: Add support showing size of absent git-annex'ed files by @stv0g in #404
+- feat: Add support showing size of absent git-annexed files by @stv0g in #404
 - fix: ctrl_z corruption #253 by @yurenchen000 in #406
 - fix: item count for --show-item-count by @dundee in #416
 - fix: automatically run non-interactive when related flag set by @dundee in #418
