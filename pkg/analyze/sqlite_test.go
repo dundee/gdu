@@ -24,6 +24,18 @@ func TestNewSqliteStorage(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestNewSqliteStorageNestedDir(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "nested", "dir", "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	assert.NotNil(t, storage)
+	defer storage.Close()
+
+	// Test that the database is created
+	_, err = os.Stat(dbPath)
+	assert.NoError(t, err)
+}
+
 func TestSqliteStorageClose(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	storage, err := NewSqliteStorage(dbPath)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,6 +28,11 @@ type SqliteStorage struct {
 
 // NewSqliteStorage creates a new SQLite storage and initializes the schema
 func NewSqliteStorage(dbPath string) (*SqliteStorage, error) {
+	parentDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(parentDir, 0o755); err != nil {
+		return nil, errors.Wrap(err, "failed to create parent directory for SQLite database")
+	}
+
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
