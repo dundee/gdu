@@ -29,7 +29,7 @@ type SqliteStorage struct {
 // NewSqliteStorage creates a new SQLite storage and initializes the schema
 func NewSqliteStorage(dbPath string) (*SqliteStorage, error) {
 	parentDir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := os.MkdirAll(parentDir, 0o755); err != nil {
 		return nil, errors.Wrap(err, "failed to create parent directory for SQLite database")
 	}
 
