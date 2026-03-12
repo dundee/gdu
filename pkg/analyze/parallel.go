@@ -58,7 +58,7 @@ func (a *ParallelAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) 
 	a.matchesTimeFilterFn = matchesTimeFilterFn
 }
 
-// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
+// SetArchiveBrowsing sets whether browsing of zip/jar/tar archives is enabled
 func (a *ParallelAnalyzer) SetArchiveBrowsing(v bool) {
 	a.archiveBrowsing = v
 }
@@ -170,11 +170,10 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
-			// Check if it's a zip or jar file
-			if a.archiveBrowsing && isZipFile(name) {
+			switch {
+			case a.archiveBrowsing && isZipFile(name):
 				zipDir, err := processZipFile(entryPath, info)
 				if err != nil {
-					// If unable to process zip file, treat as regular file
 					log.Printf("Failed to process zip file %s: %v", entryPath, err)
 					file = &File{
 						Name:   name,
@@ -183,7 +182,6 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 						Parent: dir,
 					}
 				} else {
-					// Successfully processed zip file, use zip content size
 					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
 					if err == nil {
 						zipDir.Size = uncompressedSize
@@ -192,7 +190,21 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 					zipDir.Parent = dir
 					file = zipDir
 				}
-			} else {
+			case a.archiveBrowsing && isTarFile(name):
+				tarDir, err := processTarFile(entryPath, info)
+				if err != nil {
+					log.Printf("Failed to process tar file %s: %v", entryPath, err)
+					file = &File{
+						Name:   name,
+						Flag:   getFlag(info),
+						Size:   info.Size(),
+						Parent: dir,
+					}
+				} else {
+					tarDir.Parent = dir
+					file = tarDir
+				}
+			default:
 				file = &File{
 					Name:   name,
 					Flag:   getFlag(info),

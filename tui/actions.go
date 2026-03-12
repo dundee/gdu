@@ -413,6 +413,9 @@ func (ui *UI) isInArchive() bool {
 	if ui.currentDir == nil {
 		return false
 	}
-	_, ok := ui.currentDir.(*analyze.ZipDir)
+	if _, ok := ui.currentDir.(*analyze.ZipDir); ok {
+		return true
+	}
+	_, ok := ui.currentDir.(*analyze.TarDir)
 	return ok
 }
