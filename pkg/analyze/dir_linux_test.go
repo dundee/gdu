@@ -30,7 +30,7 @@ func TestErr(t *testing.T) {
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, "test_dir", dir.GetName())
-	assert.Equal(t, 2, dir.ItemCount)
+	assert.Equal(t, int64(2), dir.ItemCount)
 	assert.Equal(t, '.', dir.GetFlag())
 
 	assert.Equal(t, "nested", dir.Files[0].GetName())
@@ -56,7 +56,7 @@ func TestSeqErr(t *testing.T) {
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, "test_dir", dir.GetName())
-	assert.Equal(t, 2, dir.ItemCount)
+	assert.Equal(t, int64(2), dir.ItemCount)
 	assert.Equal(t, '.', dir.GetFlag())
 
 	assert.Equal(t, "nested", dir.Files[0].GetName())
