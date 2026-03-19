@@ -127,9 +127,9 @@ func TestSortByItemCount(t *testing.T) {
 
 	sort.Sort(sort.Reverse(fs.ByItemCount(files)))
 
-	assert.Equal(t, 3, files[0].GetItemCount())
-	assert.Equal(t, 2, files[1].GetItemCount())
-	assert.Equal(t, 1, files[2].GetItemCount())
+	assert.Equal(t, int64(3), files[0].GetItemCount())
+	assert.Equal(t, int64(2), files[1].GetItemCount())
+	assert.Equal(t, int64(1), files[2].GetItemCount())
 }
 
 func TestSortByName(t *testing.T) {

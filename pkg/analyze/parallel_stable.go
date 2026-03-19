@@ -205,7 +205,7 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 
 	a.progressChan <- common.CurrentProgress{
 		CurrentItemName: path,
-		ItemCount:       len(files),
+		ItemCount:       int64(len(files)),
 		TotalSize:       totalSize,
 	}
 	return dir

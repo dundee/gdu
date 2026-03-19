@@ -52,7 +52,7 @@ func TestStoredAnalyzer(t *testing.T) {
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, int64(7+4096*3), dir.Size)
-	assert.Equal(t, 5, dir.ItemCount)
+	assert.Equal(t, int64(5), dir.ItemCount)
 	assert.True(t, dir.IsDir())
 
 	// test dir tree
@@ -91,7 +91,7 @@ func TestRemoveStoredFile(t *testing.T) {
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
 	assert.Equal(t, int64(7+4096*3), dir.Size)
-	assert.Equal(t, 5, dir.ItemCount)
+	assert.Equal(t, int64(5), dir.ItemCount)
 	assert.True(t, dir.IsDir())
 
 	dirFiles := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
@@ -104,7 +104,7 @@ func TestRemoveStoredFile(t *testing.T) {
 	stored, err := DefaultStorage.GetDirForPath("test_dir")
 	assert.NoError(t, err)
 
-	assert.Equal(t, 4, stored.GetItemCount())
+	assert.Equal(t, int64(4), stored.GetItemCount())
 	assert.Equal(t, int64(5+4096*3), stored.GetSize())
 
 	storedFiles := slices.Collect(stored.GetFiles(fs.SortByName, fs.SortAsc))

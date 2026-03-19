@@ -75,7 +75,7 @@ func (f *File) GetType() string {
 }
 
 // GetItemCount returns 1 for file
-func (f *File) GetItemCount() int {
+func (f *File) GetItemCount() int64 {
 	return 1
 }
 
@@ -98,7 +98,7 @@ func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
 }
 
 // GetItemStats returns 1 as count of items, apparent usage and real usage of this file
-func (f *File) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size, usage int64) {
+func (f *File) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int64, size, usage int64) {
 	if f.alreadyCounted(linkedItems) {
 		return 1, 0, 0
 	}
@@ -143,7 +143,7 @@ type Dir struct {
 	*File
 	BasePath  string
 	Files     fs.Files
-	ItemCount int
+	ItemCount int64
 	m         sync.RWMutex
 }
 
@@ -194,7 +194,7 @@ func (f *Dir) GetType() string {
 }
 
 // GetItemCount returns number of files in dir
-func (f *Dir) GetItemCount() int {
+func (f *Dir) GetItemCount() int64 {
 	f.m.RLock()
 	defer f.m.RUnlock()
 	return f.ItemCount
@@ -217,7 +217,7 @@ func (f *Dir) GetPath() string {
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size, usage int64) {
+func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int64, size, usage int64) {
 	f.UpdateStats(linkedItems)
 	return f.ItemCount, f.GetSize(), f.GetUsage()
 }
@@ -226,7 +226,7 @@ func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size,
 func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
-	var itemCount int
+	var itemCount int64
 	for _, entry := range f.Files {
 		count, size, usage := entry.GetItemStats(linkedItems)
 		totalSize += size

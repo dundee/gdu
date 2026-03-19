@@ -75,7 +75,7 @@ func TestParallelAnalyzerUpdateProgress(t *testing.T) {
 	// Send some progress updates
 	analyzer.progressChan <- struct {
 		CurrentItemName string
-		ItemCount       int
+		ItemCount       int64
 		TotalSize       int64
 	}{
 		CurrentItemName: "test",
@@ -102,7 +102,7 @@ func TestParallelAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	// Send some progress updates
 	analyzer.progressChan <- struct {
 		CurrentItemName string
-		ItemCount       int
+		ItemCount       int64
 		TotalSize       int64
 	}{
 		CurrentItemName: "test",
@@ -116,7 +116,7 @@ func TestParallelAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	// Send another progress update to trigger the default case
 	analyzer.progressChan <- struct {
 		CurrentItemName string
-		ItemCount       int
+		ItemCount       int64
 		TotalSize       int64
 	}{
 		CurrentItemName: "test2",
@@ -148,5 +148,5 @@ func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 	assert.NotNil(t, dir)
 	assert.Equal(t, "test_dir", dir.Name)
 	// Should have fewer items since nested directory was ignored
-	assert.Less(t, dir.ItemCount, 5)
+	assert.Less(t, dir.ItemCount, int64(5))
 }

@@ -56,7 +56,7 @@ func (ui *UI) showDir() {
 		totalSize  int64
 		maxUsage   int64
 		maxSize    int64
-		itemCount  int
+		itemCount  int64
 	)
 
 	ui.currentDirPath = ui.currentDir.GetPath()
@@ -226,7 +226,7 @@ func (ui *UI) showDir() {
 			" Apparent size: " +
 			footerNumberColor +
 			ui.formatSize(totalSize, true, false) +
-			" Items: " + footerNumberColor + strconv.Itoa(itemCount) +
+			" Items: " + footerNumberColor + fmt.Sprintf("%d", itemCount) +
 			footerTextColor +
 			" Sorting by: " + ui.sortBy + " " + ui.sortOrder +
 			typeFilterText +

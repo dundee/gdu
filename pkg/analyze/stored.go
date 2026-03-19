@@ -243,7 +243,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 
 	a.progressChan <- common.CurrentProgress{
 		CurrentItemName: path,
-		ItemCount:       len(files),
+		ItemCount:       int64(len(files)),
 		TotalSize:       totalSize,
 	}
 
@@ -390,7 +390,7 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size, usage int64) {
+func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int64, size, usage int64) {
 	f.UpdateStats(linkedItems)
 	return f.ItemCount, f.GetSize(), f.GetUsage()
 }
@@ -404,7 +404,7 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
-	var itemCount int
+	var itemCount int64
 	f.cachedFiles = nil
 	files := f.loadFiles()
 	for _, entry := range files {
@@ -486,7 +486,7 @@ func (p *ParentDir) GetSize() int64                                     { panic(
 func (p *ParentDir) GetType() string                                    { panic("must not be called") }
 func (p *ParentDir) GetUsage() int64                                    { panic("must not be called") }
 func (p *ParentDir) GetMtime() time.Time                                { panic("must not be called") }
-func (p *ParentDir) GetItemCount() int                                  { panic("must not be called") }
+func (p *ParentDir) GetItemCount() int64                                { panic("must not be called") }
 func (p *ParentDir) GetParent() fs.Item                                 { panic("must not be called") }
 func (p *ParentDir) SetParent(fs.Item)                                  { panic("must not be called") }
 func (p *ParentDir) GetMultiLinkedInode() uint64                        { panic("must not be called") }
@@ -502,6 +502,6 @@ func (p *ParentDir) RemoveFile(item fs.Item)      { panic("must not be called") 
 func (p *ParentDir) RemoveFileByName(name string) { panic("must not be called") }
 func (p *ParentDir) GetItemStats(
 	linkedItems fs.HardLinkedItems,
-) (itemCount int, size, usage int64) {
+) (itemCount int64, size, usage int64) {
 	panic("must not be called")
 }

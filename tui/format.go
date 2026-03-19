@@ -218,7 +218,7 @@ func (ui *UI) formatSize(size int64, reverseColor, transparentBg bool) string {
 	return formatWithBinPrefix(float64(size), color)
 }
 
-func (ui *UI) formatCount(count int) string {
+func (ui *UI) formatCount(count int64) string {
 	row := ""
 	color := defaultColor
 	count64 := float64(count)
