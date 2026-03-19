@@ -43,11 +43,11 @@ func TestRemoveFileParallel(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, 0, len(subdir.Files))
-	assert.Equal(t, 1, subdir.ItemCount)
+	assert.Equal(t, int64(1), subdir.ItemCount)
 	assert.Equal(t, int64(1), subdir.Size)
 	assert.Equal(t, int64(4), subdir.Usage)
 	assert.Equal(t, 1, len(dir.Files))
-	assert.Equal(t, 2, dir.ItemCount)
+	assert.Equal(t, int64(2), dir.ItemCount)
 	assert.Equal(t, int64(2), dir.Size)
 }
 

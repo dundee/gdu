@@ -37,12 +37,12 @@ type Item interface {
 	GetType() string
 	GetUsage() int64
 	GetMtime() time.Time
-	GetItemCount() int
+	GetItemCount() int64
 	GetParent() Item
 	SetParent(Item)
 	GetMultiLinkedInode() uint64
 	EncodeJSON(writer io.Writer, topLevel bool) error
-	GetItemStats(linkedItems HardLinkedItems) (itemCount int, size, usage int64)
+	GetItemStats(linkedItems HardLinkedItems) (itemCount int64, size, usage int64)
 	UpdateStats(linkedItems HardLinkedItems)
 	AddFile(Item)
 	GetFiles(SortBy, SortOrder) iter.Seq[Item]

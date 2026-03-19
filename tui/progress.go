@@ -30,7 +30,7 @@ func (ui *UI) updateProgress() {
 			return
 		}
 
-		func(itemCount int, totalSize int64, currentItem string) {
+		func(itemCount int64, totalSize int64, currentItem string) {
 			delta := time.Since(start).Round(time.Second)
 
 			ui.app.QueueUpdateDraw(func() {
