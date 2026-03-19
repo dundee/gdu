@@ -278,7 +278,7 @@ func (s *SqliteStorage) InsertItem(
 }
 
 // UpdateItem updates an existing item's stats
-func (s *SqliteStorage) UpdateItem(id, size, usage int64, itemCount int) error {
+func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64) error {
 	var err error
 
 	// Use prepared statement if in bulk mode, otherwise use direct exec
@@ -413,7 +413,7 @@ type SqliteItem struct {
 	size      int64
 	usage     int64
 	mtime     time.Time
-	itemCount int
+	itemCount int64
 	mli       uint64
 	flag      rune
 	parent    fs.Item
@@ -475,7 +475,7 @@ func (i *SqliteItem) GetMtime() time.Time {
 }
 
 // GetItemCount returns the item count
-func (i *SqliteItem) GetItemCount() int {
+func (i *SqliteItem) GetItemCount() int64 {
 	return i.itemCount
 }
 
@@ -515,7 +515,7 @@ func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
 }
 
 // GetItemStats returns item statistics - hard links already handled during scan
-func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int, size, usage int64) {
+func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
 	return i.itemCount, i.size, i.usage
 }
 
@@ -722,7 +722,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		totalSize  int64 = 4096
 		totalUsage int64 = 4096
 		filesSize  int64 // only files in this directory, for progress reporting
-		itemCount  = 1
+		itemCount  int64 = 1
 	)
 
 	a.wait.Add(1)
@@ -845,7 +845,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	// Report progress (only files in this dir, subdirs already reported themselves)
 	a.progressChan <- common.CurrentProgress{
 		CurrentItemName: path,
-		ItemCount:       len(files),
+		ItemCount:       int64(len(files)),
 		TotalSize:       filesSize,
 	}
 

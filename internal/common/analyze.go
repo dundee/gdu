@@ -11,7 +11,7 @@ import (
 // CurrentProgress struct
 type CurrentProgress struct {
 	CurrentItemName string
-	ItemCount       int
+	ItemCount       int64
 	TotalSize       int64
 }
 

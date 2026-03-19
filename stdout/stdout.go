@@ -525,7 +525,7 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 	}
 }
 
-func (ui *UI) formatCount(count int) string {
+func (ui *UI) formatCount(count int64) string {
 	count64 := float64(count)
 
 	switch {

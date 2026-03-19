@@ -131,7 +131,7 @@ func TestSqliteStorageInsertAndGetItem(t *testing.T) {
 	assert.True(t, root.IsDir())
 	assert.Equal(t, int64(1000), root.GetSize())
 	assert.Equal(t, int64(2000), root.GetUsage())
-	assert.Equal(t, 5, root.GetItemCount())
+	assert.Equal(t, int64(5), root.GetItemCount())
 	assert.Equal(t, ' ', root.GetFlag())
 	assert.Equal(t, mtime, root.GetMtime())
 }
@@ -190,7 +190,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int64(500), item.GetSize())
 	assert.Equal(t, int64(1000), item.GetUsage())
-	assert.Equal(t, 10, item.GetItemCount())
+	assert.Equal(t, int64(10), item.GetItemCount())
 }
 
 func TestSqliteStorageBulkInsert(t *testing.T) {
@@ -451,7 +451,7 @@ func TestSqliteItemGetItemStats(t *testing.T) {
 	assert.NoError(t, err)
 
 	count, size, usage := item.GetItemStats(make(fs.HardLinkedItems))
-	assert.Equal(t, 5, count)
+	assert.Equal(t, int64(5), count)
 	assert.Equal(t, int64(1000), size)
 	assert.Equal(t, int64(2000), usage)
 }
@@ -658,7 +658,7 @@ func TestSqliteAnalyzerAnalyzeDir(t *testing.T) {
 	// Test dir info
 	assert.Equal(t, "test_dir", dir.GetName())
 	assert.True(t, dir.IsDir())
-	assert.Equal(t, 5, dir.GetItemCount())
+	assert.Equal(t, int64(5), dir.GetItemCount())
 	// Size should include directory overhead + file sizes: 4096*3 + 7 bytes
 	assert.Equal(t, int64(7+4096*3), dir.GetSize())
 
@@ -698,7 +698,7 @@ func TestSqliteAnalyzerIgnoreDir(t *testing.T) {
 	analyzer.GetDone().Wait()
 
 	assert.Equal(t, "test_dir", dir.GetName())
-	assert.Equal(t, 1, dir.GetItemCount())
+	assert.Equal(t, int64(1), dir.GetItemCount())
 }
 
 func TestSqliteAnalyzerIgnoreFileType(t *testing.T) {
@@ -719,7 +719,7 @@ func TestSqliteAnalyzerIgnoreFileType(t *testing.T) {
 
 	// Only directories should remain
 	assert.Equal(t, "test_dir", dir.GetName())
-	assert.Equal(t, 3, dir.GetItemCount()) // test_dir, nested, subnested
+	assert.Equal(t, int64(3), dir.GetItemCount()) // test_dir, nested, subnested
 }
 
 func TestSqliteAnalyzerHardlinks(t *testing.T) {
@@ -743,7 +743,7 @@ func TestSqliteAnalyzerHardlinks(t *testing.T) {
 
 	// file2 and file3 are counted just once for size but twice for item count
 	assert.Equal(t, int64(7+4096*3), dir.GetSize())
-	assert.Equal(t, 6, dir.GetItemCount())
+	assert.Equal(t, int64(6), dir.GetItemCount())
 
 	// Check hard link flag
 	nested := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))[0].(*SqliteItem)
@@ -850,7 +850,7 @@ func TestSqliteAnalyzerTimeFilter(t *testing.T) {
 	analyzer.GetDone().Wait()
 
 	// Only directories should remain
-	assert.Equal(t, 3, dir.GetItemCount()) // test_dir, nested, subnested
+	assert.Equal(t, int64(3), dir.GetItemCount()) // test_dir, nested, subnested
 }
 
 func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
@@ -869,7 +869,7 @@ func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
 	analyzer1.GetDone().Wait()
 
 	assert.Equal(t, "test_dir", dir1.GetName())
-	assert.Equal(t, 5, dir1.GetItemCount())
+	assert.Equal(t, int64(5), dir1.GetItemCount())
 
 	analyzer1.storage.Close()
 
@@ -884,7 +884,7 @@ func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
 	analyzer2.GetDone().Wait()
 
 	assert.Equal(t, "test_dir", dir2.GetName())
-	assert.Equal(t, 5, dir2.GetItemCount())
+	assert.Equal(t, int64(5), dir2.GetItemCount())
 }
 
 func TestSqliteAnalyzerProgress(t *testing.T) {
