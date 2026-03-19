@@ -390,7 +390,7 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int64, size, usage int64) {
+func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
 	f.UpdateStats(linkedItems)
 	return f.ItemCount, f.GetSize(), f.GetUsage()
 }
@@ -502,6 +502,6 @@ func (p *ParentDir) RemoveFile(item fs.Item)      { panic("must not be called") 
 func (p *ParentDir) RemoveFileByName(name string) { panic("must not be called") }
 func (p *ParentDir) GetItemStats(
 	linkedItems fs.HardLinkedItems,
-) (itemCount int64, size, usage int64) {
+) (itemCount, size, usage int64) {
 	panic("must not be called")
 }

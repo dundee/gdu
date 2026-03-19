@@ -125,7 +125,7 @@ func TestHardlinkSeq(t *testing.T) {
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, int64(7+4096*3), dir.Size) // file2 and file3 are counted just once for size
-	assert.Equal(t, int64(6), dir.ItemCount)          // but twice for item count
+	assert.Equal(t, int64(6), dir.ItemCount)   // but twice for item count
 
 	// test file3
 	assert.Equal(t, "file3", dir.Files[0].(*Dir).Files[1].GetName())

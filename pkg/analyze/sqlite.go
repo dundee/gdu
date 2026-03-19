@@ -278,7 +278,7 @@ func (s *SqliteStorage) InsertItem(
 }
 
 // UpdateItem updates an existing item's stats
-func (s *SqliteStorage) UpdateItem(id, size, usage int64, itemCount int64) error {
+func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64) error {
 	var err error
 
 	// Use prepared statement if in bulk mode, otherwise use direct exec
@@ -515,7 +515,7 @@ func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
 }
 
 // GetItemStats returns item statistics - hard links already handled during scan
-func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount int64, size, usage int64) {
+func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
 	return i.itemCount, i.size, i.usage
 }
 
