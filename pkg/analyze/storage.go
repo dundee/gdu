@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger/v4"
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/pkg/errors"
 )
@@ -57,6 +58,13 @@ func (s *Storage) IsOpen() bool {
 func (s *Storage) Open() func() {
 	options := badger.DefaultOptions(s.storagePath)
 	options.Logger = nil
+
+	if !common.Is64Bit {
+		// For 32-bit systems, we need to set ValueLogFileSize to a smaller value to
+		// avoid "cannot allocate memory while mmapping" error
+		options.ValueLogFileSize = (1<<30 - 1) / 2
+	}
+
 	db, err := badger.Open(options)
 	if err != nil {
 		panic(err)
