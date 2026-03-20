@@ -74,10 +74,10 @@ func (ui *UI) updateProgress() {
 // terminals.  Writing to stderr ensures it reaches the terminal even when
 // the TUI has taken over stdout/stdin via tcell.
 func writeTerminalProgress(percent int) {
-	fmt.Fprintf(os.Stderr, "\x1b]9;4;1;%d\x07", percent)
+	fmt.Fprintf(os.Stderr, "\x1b]9;4;1;%d\x1b\\", percent)
 }
 
 // clearTerminalProgress removes the terminal tab/taskbar progress indicator.
 func clearTerminalProgress() {
-	fmt.Fprintf(os.Stderr, "\x1b]9;4;0;0\x07")
+	fmt.Fprintf(os.Stderr, "\x1b]9;4;0;0\x1b\\")
 }
