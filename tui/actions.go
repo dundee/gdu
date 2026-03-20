@@ -57,12 +57,23 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	ui.progress.SetTitle(" Scanning... ")
 	ui.progress.SetDynamicColors(true)
 
+	innerFlex := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(nil, 0, 1, false).
+		AddItem(ui.progress, 8, 1, false)
+
+	if ui.currentDeviceSize > 0 {
+		ui.progressBar = NewProgressBar()
+		ui.progressBar.SetBorder(true)
+		ui.progressBar.SetTitle(" Progress ")
+		ui.progressBar.SetUseColor(ui.UseColors)
+		innerFlex.AddItem(ui.progressBar, 3, 1, false)
+	}
+
+	innerFlex.AddItem(nil, 0, 1, false)
+
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-			AddItem(nil, 0, 1, false).
-			AddItem(ui.progress, 8, 1, false).
-			AddItem(nil, 0, 1, false), 0, 50, false).
+		AddItem(innerFlex, 0, 50, false).
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("progress", flex, true, true)

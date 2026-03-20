@@ -37,6 +37,7 @@ type UI struct {
 	currentDirLabel         *tview.TextView
 	pages                   *tview.Pages
 	progress                *tview.TextView
+	progressBar             *ProgressBar
 	status                  *tview.TextView
 	help                    *tview.Flex
 	table                   *tview.Table
@@ -90,6 +91,7 @@ type UI struct {
 	noDeleteWithFilter      bool
 	collapsePath            bool
 	browseParentDirs        bool
+	currentDeviceSize       int64
 }
 
 type deleteQueueItem struct {
@@ -452,6 +454,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 	ui.resetSorting()
 
+	ui.currentDeviceSize = selectedDevice.Size
 	ui.Analyzer.ResetProgress()
 	ui.linkedItems = make(fs.HardLinkedItems)
 	err = ui.AnalyzePath(selectedDevice.MountPoint, nil)

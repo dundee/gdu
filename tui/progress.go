@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -15,6 +17,7 @@ func (ui *UI) updateProgress() {
 
 	progressChan := ui.Analyzer.GetProgressChan()
 	doneChan := ui.Analyzer.GetDone()
+	deviceSize := ui.currentDeviceSize
 
 	var progress common.CurrentProgress
 	start := time.Now()
@@ -23,6 +26,10 @@ func (ui *UI) updateProgress() {
 		select {
 		case progress = <-progressChan:
 		case <-doneChan:
+			if deviceSize > 0 {
+				clearTerminalProgress()
+				ui.currentDeviceSize = 0
+			}
 			ui.app.QueueUpdateDraw(func() {
 				ui.progress.SetTitle(" Finalizing... ")
 				ui.progress.SetText("Calculating disk usage...")
@@ -32,6 +39,14 @@ func (ui *UI) updateProgress() {
 
 		func(itemCount int64, totalSize int64, currentItem string) {
 			delta := time.Since(start).Round(time.Second)
+
+			if deviceSize > 0 {
+				percent := int(totalSize * 100 / deviceSize)
+				writeTerminalProgress(percent)
+				if ui.progressBar != nil {
+					ui.progressBar.SetProgress(percent)
+				}
+			}
 
 			ui.app.QueueUpdateDraw(func() {
 				ui.progress.SetText("Total items: " +
@@ -50,4 +65,18 @@ func (ui *UI) updateProgress() {
 
 		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+// writeTerminalProgress emits an OSC 9;4 sequence to update the terminal
+// tab/taskbar progress indicator. percent must be in the range [0, 100].
+// This sequence is supported by Windows Terminal, ConEmu, and compatible
+// terminals.  Writing to stderr ensures it reaches the terminal even when
+// the TUI has taken over stdout/stdin via tcell.
+func writeTerminalProgress(percent int) {
+	fmt.Fprintf(os.Stderr, "\x1b]9;4;1;%d\x07", percent)
+}
+
+// clearTerminalProgress removes the terminal tab/taskbar progress indicator.
+func clearTerminalProgress() {
+	fmt.Fprintf(os.Stderr, "\x1b]9;4;0;0\x07")
 }
