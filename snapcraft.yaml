@@ -9,6 +9,7 @@ base: core24
 parts:
   gdu:
     plugin: go
+    build-snaps: [go/latest/stable]
     source: .
     override-build: |
           GO111MODULE=on CGO_ENABLED=0 go build \
