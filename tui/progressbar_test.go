@@ -2,7 +2,9 @@ package tui
 
 import (
 	"testing"
+	"time"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/stretchr/testify/assert"
 )
@@ -73,4 +75,45 @@ func TestUpdateProgressWithDeviceSize(t *testing.T) {
 
 	// After updateProgress returns, currentDeviceSize must be cleared.
 	assert.Equal(t, int64(0), ui.currentDeviceSize)
+}
+
+func TestUpdateProgressBarDisabled(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, nil, false, false, false, false)
+	ui.currentDeviceSize = 1000
+	ui.showDiskProgressBar = false
+
+	done := ui.Analyzer.GetDone()
+	done.Broadcast()
+	ui.updateProgress()
+
+	// showDiskProgressBar is false, so currentDeviceSize must NOT be cleared.
+	assert.Equal(t, int64(1000), ui.currentDeviceSize)
+}
+
+func TestUpdateProgressUpdatesBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, nil, false, false, false, false)
+	ui.currentDeviceSize = 1000
+	ui.showDiskProgressBar = true
+	ui.progressBar = NewProgressBar()
+
+	progressChan := ui.Analyzer.GetProgressChan()
+	doneChan := ui.Analyzer.GetDone()
+
+	go func() {
+		progressChan <- common.CurrentProgress{TotalSize: 500, ItemCount: 5}
+		time.Sleep(200 * time.Millisecond)
+		doneChan.Broadcast()
+	}()
+
+	ui.updateProgress()
+
+	assert.Equal(t, 50, ui.progressBar.GetProgress())
 }

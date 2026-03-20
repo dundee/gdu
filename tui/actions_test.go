@@ -510,3 +510,66 @@ func TestExitViewFile(t *testing.T) {
 
 	assert.False(t, ui.pages.HasPage("file"))
 }
+
+func TestAnalyzePathCreatesProgressBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	ui.currentDeviceSize = 1e6
+	ui.showDiskProgressBar = true
+
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, ui.progressBar)
+
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+}
+
+func TestAnalyzePathNoProgressBarWhenDisabled(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	ui.currentDeviceSize = 1e6
+	ui.showDiskProgressBar = false
+
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	assert.Nil(t, ui.progressBar)
+
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+}
+
+func TestAnalyzePathNoProgressBarWhenNoDeviceSize(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	ui.currentDeviceSize = 0
+	ui.showDiskProgressBar = true
+
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	assert.Nil(t, ui.progressBar)
+
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+}
