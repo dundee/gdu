@@ -61,7 +61,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 		AddItem(nil, 0, 1, false).
 		AddItem(ui.progress, 8, 1, false)
 
-	if ui.currentDeviceSize > 0 {
+	if ui.currentDeviceSize > 0 && ui.showDiskProgressBar {
 		ui.progressBar = NewProgressBar()
 		ui.progressBar.SetBorder(true)
 		ui.progressBar.SetTitle(" Progress ")

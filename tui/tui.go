@@ -91,6 +91,7 @@ type UI struct {
 	noDeleteWithFilter      bool
 	collapsePath            bool
 	browseParentDirs        bool
+	showDiskProgressBar     bool
 	currentDeviceSize       int64
 }
 
@@ -356,6 +357,11 @@ func (ui *UI) SetBrowseParentDirs() {
 // SetCollapsePath sets the flag to collapse paths
 func (ui *UI) SetCollapsePath(value bool) {
 	ui.collapsePath = value
+}
+
+// SetShowDiskProgressBar sets whether to show a progress bar when scanning a whole disk
+func (ui *UI) SetShowDiskProgressBar(value bool) {
+	ui.showDiskProgressBar = value
 }
 
 // SetDeleteInBackground sets the flag to delete files in background

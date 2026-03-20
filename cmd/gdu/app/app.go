@@ -129,7 +129,8 @@ type Style struct {
 
 // ProgressModalOpts defines options for progress modal
 type ProgressModalOpts struct {
-	CurrentItemNameMaxLen int `yaml:"current-item-path-max-len"`
+	CurrentItemNameMaxLen int  `yaml:"current-item-path-max-len"`
+	ShowDiskProgressBar   bool `yaml:"show-disk-progress-bar"`
 }
 
 // ColorStyle defines styling of some item
@@ -524,6 +525,9 @@ func (a *App) getOptions() []tui.Option {
 			ui.SetBrowseParentDirs()
 		})
 	}
+	opts = append(opts, func(ui *tui.UI) {
+		ui.SetShowDiskProgressBar(a.Flags.Style.ProgressModal.ShowDiskProgressBar)
+	})
 	return opts
 }
 

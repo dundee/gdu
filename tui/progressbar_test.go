@@ -65,6 +65,7 @@ func TestUpdateProgressWithDeviceSize(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, nil, false, false, false, false)
 	ui.currentDeviceSize = 1000
+	ui.showDiskProgressBar = true
 
 	done := ui.Analyzer.GetDone()
 	done.Broadcast()

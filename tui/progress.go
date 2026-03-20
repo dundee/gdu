@@ -18,6 +18,7 @@ func (ui *UI) updateProgress() {
 	progressChan := ui.Analyzer.GetProgressChan()
 	doneChan := ui.Analyzer.GetDone()
 	deviceSize := ui.currentDeviceSize
+	showBar := ui.showDiskProgressBar
 
 	var progress common.CurrentProgress
 	start := time.Now()
@@ -26,7 +27,7 @@ func (ui *UI) updateProgress() {
 		select {
 		case progress = <-progressChan:
 		case <-doneChan:
-			if deviceSize > 0 {
+			if deviceSize > 0 && showBar {
 				clearTerminalProgress()
 				ui.currentDeviceSize = 0
 			}
@@ -40,7 +41,7 @@ func (ui *UI) updateProgress() {
 		func(itemCount int64, totalSize int64, currentItem string) {
 			delta := time.Since(start).Round(time.Second)
 
-			if deviceSize > 0 {
+			if deviceSize > 0 && showBar {
 				percent := int(totalSize * 100 / deviceSize)
 				writeTerminalProgress(percent)
 				if ui.progressBar != nil {
