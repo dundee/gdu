@@ -151,6 +151,8 @@ func (ui *UI) handleCtrlZ(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleQuit(key *tcell.EventKey) *tcell.EventKey {
+	clearTerminalProgress()
+
 	switch key.Rune() {
 	case 'Q':
 		ui.app.Stop()

@@ -37,6 +37,7 @@ type UI struct {
 	currentDirLabel         *tview.TextView
 	pages                   *tview.Pages
 	progress                *tview.TextView
+	progressBar             *ProgressBar
 	status                  *tview.TextView
 	help                    *tview.Flex
 	table                   *tview.Table
@@ -90,6 +91,8 @@ type UI struct {
 	noDeleteWithFilter      bool
 	collapsePath            bool
 	browseParentDirs        bool
+	showDiskProgressBar     bool
+	currentDeviceSize       int64
 }
 
 type deleteQueueItem struct {
@@ -356,6 +359,11 @@ func (ui *UI) SetCollapsePath(value bool) {
 	ui.collapsePath = value
 }
 
+// SetShowDiskProgressBar sets whether to show a progress bar when scanning a whole disk
+func (ui *UI) SetShowDiskProgressBar(value bool) {
+	ui.showDiskProgressBar = value
+}
+
 // SetDeleteInBackground sets the flag to delete files in background
 func (ui *UI) SetDeleteInBackground() {
 	ui.deleteInBackground = true
@@ -452,6 +460,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 	ui.resetSorting()
 
+	ui.currentDeviceSize = selectedDevice.Size
 	ui.Analyzer.ResetProgress()
 	ui.linkedItems = make(fs.HardLinkedItems)
 	err = ui.AnalyzePath(selectedDevice.MountPoint, nil)

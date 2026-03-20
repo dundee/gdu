@@ -81,6 +81,43 @@ func TestUpdateProgress(t *testing.T) {
 	assert.True(t, true)
 }
 
+func TestSetShowDiskProgressBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+
+	ui.SetShowDiskProgressBar(true)
+	assert.True(t, ui.showDiskProgressBar)
+
+	ui.SetShowDiskProgressBar(false)
+	assert.False(t, ui.showDiskProgressBar)
+}
+
+func TestDeviceSelectedSetsCurrentDeviceSize(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.ListDevices(getDevicesInfoMock())
+	assert.Nil(t, err)
+
+	ui.deviceItemSelected(1, 0)
+
+	// currentDeviceSize must be set to the selected device's Size before analysis starts.
+	assert.Equal(t, int64(1e12), ui.currentDeviceSize)
+
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+}
+
 func TestHelp(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()

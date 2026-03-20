@@ -39,7 +39,7 @@ However HDDs work as well, but the performance gain is not so huge.
 
 // nolint:funlen // a lot of flags to initialize
 func init() {
-	af = &app.Flags{}
+	af = &app.Flags{Style: app.Style{ProgressModal: app.ProgressModalOpts{ShowDiskProgressBar: true}}}
 	flags := rootCmd.Flags()
 	flags.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
