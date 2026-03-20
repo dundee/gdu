@@ -6,6 +6,13 @@ description: |
   However HDDs work as well, but the performance gain is not so huge.
 confinement: strict
 base: core24
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  ppc64el:
+  riscv64:
+  s390x:
 parts:
   gdu:
     plugin: go
