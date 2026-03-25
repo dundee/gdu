@@ -46,21 +46,21 @@ build-docker:
 build-all:
 	@echo "Version: " $(VERSION)
 	-mkdir dist
-	-CGO_ENABLED=0 gox \
+	CGO_ENABLED=0 gox \
 		-os="darwin" \
 		-arch="amd64 arm64" \
 		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
 
-	-CGO_ENABLED=0 gox \
+	CGO_ENABLED=0 gox \
 		-os="windows" \
 		-arch="amd64" \
 		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
 
-	-CGO_ENABLED=0 gox \
+	CGO_ENABLED=0 gox \
 		-os="linux freebsd netbsd openbsd" \
 		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)" \
