@@ -1,0 +1,46 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.26.x
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Run tests
+        run: go test -v -covermode=count ./...
+      - name: Install tooling
+        run: go install github.com/mitchellh/gox@latest
+      - name: Import GPG key
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.PRIVATE_GPG_KEY }}
+      - name: Build
+        run: |
+          make clean
+          make tarball
+          make build-all
+          make man
+          make clean-uncompressed-dist
+          cd dist
+          sha256sum * > sha256sums.txt
+          gpg --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --sign --armor --detach-sign sha256sums.txt
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            dist/*
+          generate_release_notes: true
