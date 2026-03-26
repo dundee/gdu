@@ -1313,3 +1313,55 @@ func TestBlockedActionsInArchive(t *testing.T) {
 	assert.True(t, ui.pages.HasPage("error"))
 	ui.pages.RemovePage("error")
 }
+
+func TestPrintMarkedEmpty(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, simScreen, buff, false, true, false, false)
+	ui.done = make(chan struct{})
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'p', 0))
+	assert.Nil(t, key)
+	assert.Empty(t, ui.markedPaths)
+}
+
+func TestPrintMarked(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, simScreen, buff, false, true, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+
+	ui.table.Select(1, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0)) // mark item
+
+	assert.Equal(t, 1, len(ui.markedRows))
+
+	// pressing 'p' saves paths but does not quit
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'p', 0))
+	assert.Nil(t, key)
+	assert.Equal(t, 1, len(ui.markedPaths))
+	assert.Empty(t, buff.String()) // nothing written yet
+
+	// quitting with 'q' flushes the saved paths to output
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.NotEmpty(t, buff.String())
+}

@@ -156,10 +156,12 @@ func (ui *UI) handleQuit(key *tcell.EventKey) *tcell.EventKey {
 	switch key.Rune() {
 	case 'Q':
 		ui.app.Stop()
+		ui.printMarkedPaths()
 		fmt.Fprintf(ui.output, "%s\n", ui.currentDirPath)
 		return nil
 	case 'q':
 		ui.app.Stop()
+		ui.printMarkedPaths()
 		return nil
 	}
 	return key
@@ -310,6 +312,9 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case ' ':
 		ui.handleMark()
+	case 'p':
+		ui.printMarked()
+		return nil
 	case 'I':
 		ui.ignoreItem()
 	}

@@ -146,3 +146,17 @@ func (ui *UI) confirmDeletionMarked(shouldEmpty bool) {
 
 	ui.pages.AddPage("confirm", modal, true, true)
 }
+
+func (ui *UI) printMarked() {
+	if len(ui.markedRows) == 0 {
+		return
+	}
+	for row := range ui.markedRows {
+		item := ui.table.GetCell(row, 0).GetReference().(fs.Item)
+		ui.markedPaths = append(ui.markedPaths, item.GetPath())
+	}
+	ui.markedRows = make(map[int]struct{})
+	selectRow, _ := ui.table.GetSelection()
+	ui.showDir()
+	ui.table.Select(selectRow, 0)
+}

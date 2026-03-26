@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -51,6 +52,7 @@ type UI struct {
 	linkedItems             fs.HardLinkedItems
 	ignoredRows             map[int]struct{}
 	markedRows              map[int]struct{}
+	markedPaths             []string
 	deleteQueue             chan deleteQueueItem
 	resultRow               ResultRow
 	topDirPath              string
@@ -313,6 +315,7 @@ func (ui *UI) StartUILoop() error {
 		s := <-c
 		log.Printf("Got signal: %s", s)
 		ui.app.QueueUpdateDraw(func() {
+			ui.printMarkedPaths()
 			ui.app.Stop()
 		})
 	}()
@@ -591,4 +594,11 @@ func (ui *UI) isDeleteAllowedWithFilter() bool {
 	}
 
 	return false
+}
+
+// printMarkedPaths prints the paths of the marked items to the output
+func (ui *UI) printMarkedPaths() {
+	for _, path := range ui.markedPaths {
+		fmt.Fprintf(ui.output, "%s\n", path)
+	}
 }

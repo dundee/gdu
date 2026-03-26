@@ -37,6 +37,7 @@ Item under cursor:
                [::b]d     [white:black:-]Delete file or directory
                [::b]e     [white:black:-]Empty file or directory
 			   [::b]space [white:black:-]Mark file or directory for deletion
+			   [::b]p     [white:black:-]Print marked items paths to stdout after quitting
 			   [::b]I     [white:black:-]Ignore file or directory
                [::b]v     [white:black:-]Show content of file
                [::b]o     [white:black:-]Open file or directory in external program
