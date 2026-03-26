@@ -4,6 +4,10 @@
 
     pacman -S gdu
 
+[Conda Forge](https://github.com/conda-forge/gdu-feedstock)
+
+    conda install gdu
+
 [Debian](https://packages.debian.org/bullseye/gdu):
 
     apt install gdu
