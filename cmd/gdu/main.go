@@ -81,6 +81,7 @@ func init() {
 	flags.BoolVarP(&af.ShowItemCount, "show-item-count", "C", false, "Show number of items in directory")
 	flags.BoolVarP(&af.ShowMTime, "show-mtime", "M", false, "Show latest mtime of items in directory")
 	flags.BoolVarP(&af.NonInteractive, "non-interactive", "n", false, "Do not run in interactive mode")
+	flags.BoolVar(&af.Interactive, "interactive", false, "Force interactive mode even when output is not a TTY")
 	flags.BoolVarP(&af.NoProgress, "no-progress", "p", false, "Do not show progress in non-interactive mode")
 	flags.BoolVarP(&af.NoUnicode, "no-unicode", "u", false, "Do not use Unicode symbols (for size bar)")
 	flags.BoolVarP(&af.Summarize, "summarize", "s", false, "Show only a total in non-interactive mode")

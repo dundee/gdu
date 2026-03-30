@@ -63,6 +63,8 @@ size of the file to which symlink points to (symlinks to directories are not fol
 
 **-n**, **\--non-interactive**\[=false\] Do not run in interactive mode
 
+**\--interactive**\[=false\] Force interactive mode even when output is not a TTY
+
 **-p**, **\--no-progress**\[=false\] Do not show progress in
 non-interactive mode
 

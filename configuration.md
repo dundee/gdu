@@ -68,6 +68,10 @@ Use mouse
 
 Do not run in interactive mode
 
+#### `interactive`
+
+Force interactive mode even when output is not a TTY
+
 #### `no-progress`
 
 Do not show progress in non-interactive mode

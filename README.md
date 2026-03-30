@@ -53,6 +53,7 @@ Flags:
   -I, --ignore-dirs-pattern strings   Path patterns to ignore (separated by comma)
   -X, --ignore-from string            Read path patterns to ignore from file
   -f, --input-file string             Import analysis from JSON file
+      --interactive                   Force interactive mode even when output is not a TTY
   -l, --log-file string               Path to a logfile (default "/dev/null")
       --max-age string                Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
   -m, --max-cores int                 Set max cores that Gdu will use. 8 cores available (default 8)
@@ -116,6 +117,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -c /                              # use only white/gray/black colors
 
     gdu -n /                              # only print stats, do not start interactive mode
+    gdu --interactive / | tee out.txt     # force interactive mode even when stdout is piped
     gdu -p /                              # do not show progress, useful when using its output in a script
     gdu -ps /some/dir                     # show only total usage for given dir
     gdu -t 10 /                           # show top 10 largest files
@@ -132,7 +134,7 @@ Basic list of actions in interactive mode (show help modal for more):
 
 Gdu has three modes: interactive (default), non-interactive and export.
 
-Non-interactive mode is started automatically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag.
+Non-interactive mode is started automatically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag. Use `--interactive` to disable this automatic fallback and force interactive mode.
 
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag.
 

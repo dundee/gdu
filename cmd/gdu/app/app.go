@@ -75,6 +75,7 @@ type Flags struct {
 	NoColor            bool     `yaml:"no-color"`
 	Mouse              bool     `yaml:"mouse"`
 	NonInteractive     bool     `yaml:"non-interactive"`
+	Interactive        bool     `yaml:"interactive"`
 	NoProgress         bool     `yaml:"no-progress"`
 	NoUnicode          bool     `yaml:"no-unicode"`
 	NoCross            bool     `yaml:"no-cross"`
@@ -107,9 +108,21 @@ type Flags struct {
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
 // based on the flags set.
 func (f *Flags) ShouldRunInNonInteractiveMode(istty bool) bool {
+	if f.NonInteractive {
+		return true
+	}
+
+	if f.Interactive {
+		return f.ShowVersion ||
+			f.OutputFile != "" ||
+			f.NoPrefix ||
+			f.NoProgress ||
+			f.Summarize ||
+			f.Top > 0
+	}
+
 	return !istty ||
 		f.ShowVersion ||
-		f.NonInteractive ||
 		f.OutputFile != "" ||
 		f.NoPrefix ||
 		f.NoProgress ||
@@ -198,6 +211,10 @@ func (a *App) Run() error {
 
 	if a.Flags.NoPrefix && a.Flags.UseSIPrefix {
 		return fmt.Errorf("--no-prefix and --si cannot be used at once")
+	}
+
+	if a.Flags.NonInteractive && a.Flags.Interactive {
+		return fmt.Errorf("--interactive and --non-interactive cannot be used at once")
 	}
 
 	path := a.getPath()
