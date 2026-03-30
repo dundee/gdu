@@ -4,6 +4,7 @@ package app
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testdev"
@@ -105,4 +106,48 @@ func TestReadFromStorage(t *testing.T) {
 	)
 	assert.Contains(t, out, "nested")
 	assert.Nil(t, err)
+}
+
+func TestAnalyzePathWithSqliteStorage(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	dbPath := filepath.Join(t.TempDir(), "db", "test.sqlite")
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", DbPath: dbPath},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+
+	out, err = runApp(
+		&Flags{LogFile: "/dev/null", DbPath: dbPath, ReadFromStorage: true},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+}
+
+func TestAnalyzePathWithSqliteStorageError(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	parentFile := filepath.Join(t.TempDir(), "parent-file")
+	err := os.WriteFile(parentFile, []byte("x"), 0o600)
+	assert.Nil(t, err)
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", DbPath: filepath.Join(parentFile, "db.sqlite")},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.ErrorContains(t, err, "creating sqlite analyzer")
 }
