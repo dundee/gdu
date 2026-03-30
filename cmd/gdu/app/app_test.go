@@ -33,6 +33,36 @@ func TestVersion(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestShouldRunInNonInteractiveModeInteractiveOverridesNoTTY(t *testing.T) {
+	flags := &Flags{Interactive: true}
+
+	assert.False(t, flags.ShouldRunInNonInteractiveMode(false))
+}
+
+func TestShouldRunInNonInteractiveMode(t *testing.T) {
+	flags := &Flags{NonInteractive: true}
+
+	assert.True(t, flags.ShouldRunInNonInteractiveMode(false))
+}
+
+func TestShouldRunInNonInteractiveModeInteractiveKeepsNonInteractiveOnlyFlags(t *testing.T) {
+	flags := &Flags{Interactive: true, Summarize: true}
+
+	assert.True(t, flags.ShouldRunInNonInteractiveMode(false))
+}
+
+func TestInteractiveAndNonInteractiveConflict(t *testing.T) {
+	out, err := runApp(
+		&Flags{Interactive: true, NonInteractive: true},
+		[]string{"."},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.ErrorContains(t, err, "--interactive and --non-interactive cannot be used at once")
+}
+
 func TestAnalyzePath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
