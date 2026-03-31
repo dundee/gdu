@@ -40,7 +40,7 @@ Or you can use Gdu directly via Docker:
   gdu [directory_to_scan] [flags]
 
 Flags:
-      --archive-browsing              Enable browsing of zip/jar archives
+      --archive-browsing              Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
       --collapse-path                 Collapse single-child directory chains
       --config-file string            Read config from file (default is $HOME/.gdu.yaml)
   -D, --db string                     Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
@@ -62,12 +62,12 @@ Flags:
   -c, --no-color                      Do not use colorized output
   -x, --no-cross                      Do not cross filesystem boundaries
       --no-delete                     Do not allow deletions
-      --no-view-file                  Do not allow viewing file contents
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
       --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
   -p, --no-progress                   Do not show progress in non-interactive mode
       --no-spawn-shell                Do not allow spawning shell
   -u, --no-unicode                    Do not use Unicode symbols (for size bar)
+      --no-view-file                  Do not allow viewing file contents
   -n, --non-interactive               Do not run in interactive mode
   -o, --output-file string            Export all info into file as JSON
   -r, --read-from-storage             Use existing database instead of re-scanning
