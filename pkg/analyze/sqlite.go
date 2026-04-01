@@ -81,6 +81,7 @@ func (s *SqliteStorage) createTables() error {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_items_parent_id ON items(parent_id);
+	CREATE INDEX IF NOT EXISTS idx_items_parent_name ON items(parent_id, name);
 	CREATE INDEX IF NOT EXISTS idx_items_mli ON items(mli) WHERE mli != 0;
 
 	CREATE TABLE IF NOT EXISTS metadata (
@@ -297,12 +298,8 @@ func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64) error {
 	return err
 }
 
-// DeleteItem removes an item and its children from the database
-func (s *SqliteStorage) DeleteItem(id int64) error {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	// Recursive deletion using a Common Table Expression (CTE)
+// deleteItemTree removes an item and all its descendants from the database within the given transaction.
+func (s *SqliteStorage) deleteItemTree(tx *sql.Tx, id int64) error {
 	query := `
 	WITH RECURSIVE to_delete(id) AS (
 		SELECT ?
@@ -311,58 +308,17 @@ func (s *SqliteStorage) DeleteItem(id int64) error {
 	)
 	DELETE FROM items WHERE id IN (SELECT id FROM to_delete)
 	`
-	_, err := s.db.Exec(query, id)
+	_, err := tx.Exec(query, id)
 	return err
 }
 
-// RemoveItemAndUpdateStats removes an item and its children, and updates ancestors' stats in a transaction
-func (s *SqliteStorage) RemoveItemAndUpdateStats(id, parentID, size, usage, itemCount int64) error {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				log.Errorf("failed to rollback transaction: %v", rollbackErr)
-			}
-		}
-	}()
-
-	// Recursive deletion using a Common Table Expression (CTE)
-	deleteQuery := `
-	WITH RECURSIVE to_delete(id) AS (
-		SELECT ?
-		UNION ALL
-		SELECT items.id FROM items JOIN to_delete ON items.parent_id = to_delete.id
+// updateAncestorStats subtracts size/usage/itemCount from a single ancestor row within the given transaction.
+func (s *SqliteStorage) updateAncestorStats(tx *sql.Tx, id, size, usage, itemCount int64) error {
+	_, err := tx.Exec(
+		`UPDATE items SET size = size - ?, usage = usage - ?, item_count = item_count - ? WHERE id = ?`,
+		size, usage, itemCount, id,
 	)
-	DELETE FROM items WHERE id IN (SELECT id FROM to_delete)
-	`
-	if _, err = tx.Exec(deleteQuery, id); err != nil {
-		return err
-	}
-
-	// Recursive update of ancestors
-	updateQuery := `
-	WITH RECURSIVE ancestors(id, parent_id) AS (
-		SELECT id, parent_id FROM items WHERE id = ?
-		UNION ALL
-		SELECT i.id, i.parent_id FROM items i JOIN ancestors a ON i.id = a.parent_id
-	)
-	UPDATE items SET
-		size = size - ?,
-		usage = usage - ?,
-		item_count = item_count - ?
-	WHERE id IN (SELECT id FROM ancestors)
-	`
-	if _, err = tx.Exec(updateQuery, parentID, size, usage, itemCount); err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return err
 }
 
 // GetChildByName returns a child item by its name and parent ID
@@ -610,6 +566,15 @@ func (i *SqliteItem) SetParent(parent fs.Item) {
 	i.parent = parent
 }
 
+// GetParentLocked returns the in-memory parent without hitting the database.
+// Used inside RemoveFile where storage.m is already write-locked.
+func (i *SqliteItem) GetParentLocked() *SqliteItem {
+	if i.parent != nil {
+		return i.parent.(*SqliteItem)
+	}
+	return nil
+}
+
 // GetMultiLinkedInode returns the multi-linked inode number
 func (i *SqliteItem) GetMultiLinkedInode() uint64 {
 	return i.mli
@@ -770,27 +735,75 @@ func (i *SqliteItem) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.S
 	return i.GetFiles(sortBy, order)
 }
 
-// RemoveFile removes a child file
+// RemoveFile removes a child file, updating both in-memory stats and the database in one pass.
 func (i *SqliteItem) RemoveFile(item fs.Item) {
 	sqliteItem := item.(*SqliteItem)
-	if err := i.storage.RemoveItemAndUpdateStats(sqliteItem.id, i.id, item.GetSize(), item.GetUsage(), item.GetItemCount()); err != nil {
+	size := item.GetSize()
+	usage := item.GetUsage()
+	itemCount := item.GetItemCount()
+
+	i.storage.m.Lock()
+	tx, err := i.storage.db.Begin()
+	if err != nil {
+		i.storage.m.Unlock()
+		log.Errorf("Error starting transaction for deletion: %v", err)
+		return
+	}
+
+	if err = i.storage.deleteItemTree(tx, sqliteItem.id); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			log.Errorf("failed to rollback transaction: %v", rbErr)
+		}
+		i.storage.m.Unlock()
 		log.Errorf("Error deleting item from database: %v", err)
 		return
 	}
 
+	// Collect ancestor IDs for DB updates, walking the in-memory parent chain.
+	var ancestorIDs []int64
 	cur := i
 	for {
-		cur.m.Lock()
-		cur.size -= item.GetSize()
-		cur.usage -= item.GetUsage()
-		cur.itemCount -= item.GetItemCount()
-		cur.m.Unlock()
-
-		parent := cur.GetParent()
+		ancestorIDs = append(ancestorIDs, cur.id)
+		parent := cur.GetParentLocked()
 		if parent == nil {
 			break
 		}
-		cur = parent.(*SqliteItem)
+		cur = parent
+	}
+
+	// Update all ancestor rows in the DB within the transaction.
+	for _, aid := range ancestorIDs {
+		if err = i.storage.updateAncestorStats(tx, aid, size, usage, itemCount); err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Errorf("failed to rollback transaction: %v", rbErr)
+			}
+			i.storage.m.Unlock()
+			log.Errorf("Error updating ancestor stats in database: %v", err)
+			return
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Errorf("Error committing deletion transaction: %v", err)
+		i.storage.m.Unlock()
+		return
+	}
+	i.storage.m.Unlock()
+
+	// DB commit succeeded — now apply in-memory stats updates.
+	cur = i
+	for {
+		cur.m.Lock()
+		cur.size -= size
+		cur.usage -= usage
+		cur.itemCount -= itemCount
+		cur.m.Unlock()
+
+		parent := cur.GetParentLocked()
+		if parent == nil {
+			break
+		}
+		cur = parent
 	}
 }
 
