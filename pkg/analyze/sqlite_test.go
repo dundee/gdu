@@ -3,6 +3,7 @@
 package analyze
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
@@ -498,15 +499,39 @@ func TestSqliteItemRemoveFile(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	id, err := storage.InsertItem(nil, "dir", true, 0, 0, time.Now(), 1, 0, ' ')
-	assert.NoError(t, err)
+	// root -> subdir -> file
+	rootID, _ := storage.InsertItem(nil, "root", true, 5000, 10000, time.Now(), 3, 0, ' ')
+	subdirID, _ := storage.InsertItem(&rootID, "subdir", true, 2000, 5000, time.Now(), 2, 0, ' ')
+	fileID, _ := storage.InsertItem(&subdirID, "file.txt", false, 1000, 4000, time.Now(), 1, 0, ' ')
 
-	item, err := storage.GetItemByID(id)
-	assert.NoError(t, err)
+	root, _ := storage.GetItemByID(rootID)
+	subdir, _ := storage.GetItemByID(subdirID)
+	file, _ := storage.GetItemByID(fileID)
+	subdir.SetParent(root)
+	file.SetParent(subdir)
 
-	// RemoveFile is a no-op for SqliteItem
-	item.RemoveFile(nil)
-	// Just verify it doesn't panic
+	// Remove file from subdir
+	subdir.RemoveFile(file)
+
+	// Check local stats for subdir
+	assert.Equal(t, int64(1000), subdir.GetSize())
+	assert.Equal(t, int64(1000), subdir.GetUsage())
+	assert.Equal(t, int64(1), subdir.GetItemCount())
+
+	// Check memory-state propagation for root
+	assert.Equal(t, int64(4000), root.GetSize())
+	assert.Equal(t, int64(6000), root.GetUsage())
+	assert.Equal(t, int64(2), root.GetItemCount())
+
+	// Check database stats for root
+	rootFromDB, _ := storage.GetItemByID(rootID)
+	assert.Equal(t, int64(4000), rootFromDB.GetSize())
+	assert.Equal(t, int64(6000), rootFromDB.GetUsage())
+	assert.Equal(t, int64(2), rootFromDB.GetItemCount())
+
+	// Check that file is gone from DB
+	_, err = storage.GetItemByID(fileID)
+	assert.Error(t, err)
 }
 
 func TestSqliteItemRemoveFileByName(t *testing.T) {
@@ -515,15 +540,18 @@ func TestSqliteItemRemoveFileByName(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	id, err := storage.InsertItem(nil, "dir", true, 0, 0, time.Now(), 1, 0, ' ')
-	assert.NoError(t, err)
+	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, time.Now(), 2, 0, ' ')
+	storage.InsertItem(&rootID, "file.txt", false, 10, 20, time.Now(), 1, 0, ' ')
 
-	item, err := storage.GetItemByID(id)
-	assert.NoError(t, err)
+	root, _ := storage.GetItemByID(rootID)
+	root.RemoveFileByName("file.txt")
 
-	// RemoveFileByName is a no-op for SqliteItem
-	item.RemoveFileByName("test")
-	// Just verify it doesn't panic
+	assert.Equal(t, int64(90), root.GetSize())
+	assert.Equal(t, int64(180), root.GetUsage())
+	assert.Equal(t, int64(1), root.GetItemCount())
+
+	children, _ := storage.GetChildren(rootID)
+	assert.Empty(t, children)
 }
 
 func TestSqliteItemEncodeJSON(t *testing.T) {
@@ -532,15 +560,19 @@ func TestSqliteItemEncodeJSON(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	id, err := storage.InsertItem(nil, "dir", true, 0, 0, time.Now(), 1, 0, ' ')
+	mtime := time.Unix(1600000000, 0)
+	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, mtime, 2, 0, ' ')
+	storage.InsertItem(&rootID, "file.txt", false, 10, 20, mtime, 1, 0, ' ')
+
+	root, _ := storage.GetItemByID(rootID)
+
+	var buf bytes.Buffer
+	err = root.EncodeJSON(&buf, false)
 	assert.NoError(t, err)
 
-	item, err := storage.GetItemByID(id)
-	assert.NoError(t, err)
-
-	// EncodeJSON returns nil (simplified implementation)
-	err = item.EncodeJSON(nil, false)
-	assert.NoError(t, err)
+	expected := `[{"name":"root","asize":100,"dsize":200,"mtime":1600000000},
+{"name":"file.txt","asize":10,"dsize":20,"mtime":1600000000}]`
+	assert.Equal(t, expected, buf.String())
 }
 
 func TestCreateSqliteAnalyzer(t *testing.T) {

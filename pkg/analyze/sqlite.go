@@ -2,10 +2,12 @@ package analyze
 
 import (
 	"database/sql"
+	"encoding/json"
 	"io"
 	"iter"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -295,6 +297,112 @@ func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64) error {
 	return err
 }
 
+// DeleteItem removes an item and its children from the database
+func (s *SqliteStorage) DeleteItem(id int64) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	// Recursive deletion using a Common Table Expression (CTE)
+	query := `
+	WITH RECURSIVE to_delete(id) AS (
+		SELECT ?
+		UNION ALL
+		SELECT items.id FROM items JOIN to_delete ON items.parent_id = to_delete.id
+	)
+	DELETE FROM items WHERE id IN (SELECT id FROM to_delete)
+	`
+	_, err := s.db.Exec(query, id)
+	return err
+}
+
+// RemoveItemAndUpdateStats removes an item and its children, and updates ancestors' stats in a transaction
+func (s *SqliteStorage) RemoveItemAndUpdateStats(id, parentID, size, usage, itemCount int64) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Errorf("failed to rollback transaction: %v", rollbackErr)
+			}
+		}
+	}()
+
+	// Recursive deletion using a Common Table Expression (CTE)
+	deleteQuery := `
+	WITH RECURSIVE to_delete(id) AS (
+		SELECT ?
+		UNION ALL
+		SELECT items.id FROM items JOIN to_delete ON items.parent_id = to_delete.id
+	)
+	DELETE FROM items WHERE id IN (SELECT id FROM to_delete)
+	`
+	if _, err = tx.Exec(deleteQuery, id); err != nil {
+		return err
+	}
+
+	// Recursive update of ancestors
+	updateQuery := `
+	WITH RECURSIVE ancestors(id, parent_id) AS (
+		SELECT id, parent_id FROM items WHERE id = ?
+		UNION ALL
+		SELECT i.id, i.parent_id FROM items i JOIN ancestors a ON i.id = a.parent_id
+	)
+	UPDATE items SET
+		size = size - ?,
+		usage = usage - ?,
+		item_count = item_count - ?
+	WHERE id IN (SELECT id FROM ancestors)
+	`
+	if _, err = tx.Exec(updateQuery, parentID, size, usage, itemCount); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// GetChildByName returns a child item by its name and parent ID
+func (s *SqliteStorage) GetChildByName(parentID int64, name string) (*SqliteItem, error) {
+	s.m.RLock()
+	defer s.m.RUnlock()
+
+	item := &SqliteItem{storage: s}
+	var pID sql.NullInt64
+	var isDirInt int
+	var mtimeUnix int64
+	var flag string
+
+	err := s.db.QueryRow(
+		`SELECT id, parent_id, name, is_dir, size, usage, mtime, item_count, mli, flag
+		 FROM items WHERE parent_id = ? AND name = ? LIMIT 1`,
+		parentID, name,
+	).Scan(
+		&item.id, &pID, &item.name, &isDirInt,
+		&item.size, &item.usage, &mtimeUnix, &item.itemCount,
+		&item.mli, &flag,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if pID.Valid {
+		item.parentID = &pID.Int64
+	}
+	item.isDir = isDirInt == 1
+	item.mtime = time.Unix(mtimeUnix, 0)
+	if flag != "" {
+		item.flag = rune(flag[0])
+	} else {
+		item.flag = ' '
+	}
+
+	return item, nil
+}
+
 // GetChildren returns all children of a given parent ID
 func (s *SqliteStorage) GetChildren(parentID int64) ([]*SqliteItem, error) {
 	s.m.RLock()
@@ -509,8 +617,111 @@ func (i *SqliteItem) GetMultiLinkedInode() uint64 {
 
 // EncodeJSON encodes the item to JSON
 func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
-	// Delegate to standard encoding logic
-	// This is a simplified version - full implementation would mirror Dir.EncodeJSON
+	if i.isDir {
+		return i.encodeDirJSON(writer, topLevel)
+	}
+	return i.encodeFileJSON(writer)
+}
+
+func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
+	buff := make([]byte, 0, 128)
+	buff = append(buff, []byte(`[{"name":`)...)
+
+	name := i.GetName()
+	if topLevel {
+		name = i.GetPath()
+	}
+	if err := addSqliteString(&buff, name); err != nil {
+		return err
+	}
+
+	if i.GetSize() > 0 {
+		buff = append(buff, []byte(`,"asize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
+	}
+	if i.GetUsage() > 0 {
+		buff = append(buff, []byte(`,"dsize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
+	}
+	if !i.GetMtime().IsZero() {
+		buff = append(buff, []byte(`,"mtime":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
+	}
+
+	buff = append(buff, '}')
+
+	children, err := i.storage.GetChildren(i.id)
+	if err != nil {
+		return err
+	}
+
+	if len(children) > 0 {
+		buff = append(buff, ',')
+	}
+	buff = append(buff, '\n')
+
+	if _, err := writer.Write(buff); err != nil {
+		return err
+	}
+
+	for idx, child := range children {
+		if idx > 0 {
+			if _, err := writer.Write([]byte(",\n")); err != nil {
+				return err
+			}
+		}
+		child.parent = i
+		if err := child.EncodeJSON(writer, false); err != nil {
+			return err
+		}
+	}
+
+	if _, err := writer.Write([]byte("]")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i *SqliteItem) encodeFileJSON(writer io.Writer) error {
+	buff := make([]byte, 0, 128)
+	buff = append(buff, []byte(`{"name":`)...)
+	if err := addSqliteString(&buff, i.GetName()); err != nil {
+		return err
+	}
+	if i.GetSize() > 0 {
+		buff = append(buff, []byte(`,"asize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
+	}
+	if i.GetUsage() > 0 {
+		buff = append(buff, []byte(`,"dsize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
+	}
+	if !i.GetMtime().IsZero() {
+		buff = append(buff, []byte(`,"mtime":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
+	}
+
+	if i.flag == '@' {
+		buff = append(buff, []byte(`,"notreg":true`)...)
+	}
+	if i.flag == 'H' {
+		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(i.mli, 10)+`,"hlnkc":true`)...)
+	}
+
+	buff = append(buff, '}')
+
+	if _, err := writer.Write(buff); err != nil {
+		return err
+	}
+	return nil
+}
+
+func addSqliteString(buff *[]byte, val string) error {
+	b, err := json.Marshal(val)
+	if err != nil {
+		return err
+	}
+	*buff = append(*buff, b...)
 	return nil
 }
 
@@ -561,12 +772,37 @@ func (i *SqliteItem) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.S
 
 // RemoveFile removes a child file
 func (i *SqliteItem) RemoveFile(item fs.Item) {
-	// TODO: implement deletion from database
+	sqliteItem := item.(*SqliteItem)
+	if err := i.storage.RemoveItemAndUpdateStats(sqliteItem.id, i.id, item.GetSize(), item.GetUsage(), item.GetItemCount()); err != nil {
+		log.Errorf("Error deleting item from database: %v", err)
+		return
+	}
+
+	cur := i
+	for {
+		cur.m.Lock()
+		cur.size -= item.GetSize()
+		cur.usage -= item.GetUsage()
+		cur.itemCount -= item.GetItemCount()
+		cur.m.Unlock()
+
+		parent := cur.GetParent()
+		if parent == nil {
+			break
+		}
+		cur = parent.(*SqliteItem)
+	}
 }
 
 // RemoveFileByName removes a child by name
 func (i *SqliteItem) RemoveFileByName(name string) {
-	// TODO: implement deletion from database
+	child, err := i.storage.GetChildByName(i.id, name)
+	if err != nil {
+		log.Errorf("Error getting child from database: %v", err)
+		return
+	}
+
+	i.RemoveFile(child)
 }
 
 // RLock returns a no-op unlock function
