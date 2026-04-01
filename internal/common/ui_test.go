@@ -41,6 +41,20 @@ func TestSetEnableArchiveBrowsing(t *testing.T) {
 	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ArchiveBrowsing)
 }
 
+func TestSetAnalyzer(t *testing.T) {
+	ui := UI{}
+	a := &MockedAnalyzer{}
+	ui.SetAnalyzer(a)
+	assert.Equal(t, a, ui.Analyzer)
+}
+
+func TestSetTimeFilter(t *testing.T) {
+	ui := UI{Analyzer: &MockedAnalyzer{}}
+	assert.NotPanics(t, func() {
+		ui.SetTimeFilter(nil)
+	})
+}
+
 type MockedAnalyzer struct {
 	FollowSymlinks  bool
 	ShowAnnexedSize bool
