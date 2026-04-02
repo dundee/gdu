@@ -251,7 +251,7 @@ func (s *SqliteStorage) GetRootItem() (*SqliteItem, error) {
 
 // InsertItem inserts a file/directory item into the database
 func (s *SqliteStorage) InsertItem(
-	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int, mli uint64, flag rune,
+	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int64, mli uint64, flag rune,
 ) (int64, error) {
 	isDirInt := 0
 	if isDir {
@@ -997,7 +997,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		0, // size will be updated later
 		0, // usage will be updated later
 		dirMtime,
-		1, // item_count will be updated later
+		int64(1), // item_count will be updated later
 		0,
 		getDirFlag(err, len(files)),
 	)
@@ -1051,9 +1051,60 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				continue
 			}
 
-			fileSize := info.Size()
-			fileUsage, fileMli := getSyscallStats(info)
-			fileFlag := getFlag(info)
+			var (
+				fileSize  int64
+				fileUsage int64
+				fileMli   uint64
+				fileFlag  rune
+			)
+
+			switch {
+			case a.archiveBrowsing && isZipFile(name):
+				zipDir, err := processZipFile(entryPath, info)
+				if err != nil {
+					log.Printf("Failed to process zip file %s: %v", entryPath, err)
+					fileSize = info.Size()
+					fileUsage, fileMli = getSyscallStats(info)
+					fileFlag = getFlag(info)
+				} else {
+					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
+					if err == nil {
+						zipDir.Size = uncompressedSize
+						zipDir.Usage = compressedSize
+					}
+					_, err = a.insertMemItemRecursive(&dirID, zipDir)
+					if err != nil {
+						log.Printf("Failed to insert zip items into DB: %v", err)
+					}
+					totalSize += zipDir.GetSize()
+					totalUsage += zipDir.GetUsage()
+					filesSize += zipDir.GetUsage()
+					itemCount += zipDir.GetItemCount()
+					continue
+				}
+			case a.archiveBrowsing && isTarFile(name):
+				tarDir, err := processTarFile(entryPath, info)
+				if err != nil {
+					log.Printf("Failed to process tar file %s: %v", entryPath, err)
+					fileSize = info.Size()
+					fileUsage, fileMli = getSyscallStats(info)
+					fileFlag = getFlag(info)
+				} else {
+					_, err = a.insertMemItemRecursive(&dirID, tarDir)
+					if err != nil {
+						log.Printf("Failed to insert tar items into DB: %v", err)
+					}
+					totalSize += tarDir.GetSize()
+					totalUsage += tarDir.GetUsage()
+					filesSize += tarDir.GetUsage()
+					itemCount += tarDir.GetItemCount()
+					continue
+				}
+			default:
+				fileSize = info.Size()
+				fileUsage, fileMli = getSyscallStats(info)
+				fileFlag = getFlag(info)
+			}
 
 			// Handle hard links: if inode already seen, don't count size
 			if fileMli != 0 && a.storage.HasInode(fileMli) {
@@ -1069,7 +1120,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				fileSize,
 				fileUsage,
 				info.ModTime(),
-				1,
+				int64(1),
 				fileMli,
 				fileFlag,
 			)
@@ -1111,6 +1162,41 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		itemCount: itemCount,
 		flag:      getDirFlag(err, len(files)),
 	}
+}
+
+func (a *SqliteAnalyzer) insertMemItemRecursive(parentID *int64, item fs.Item) (int64, error) {
+	var (
+		size      = item.GetSize()
+		usage     = item.GetUsage()
+		itemCount = item.GetItemCount()
+		mli       = item.GetMultiLinkedInode()
+	)
+
+	id, err := a.storage.InsertItem(
+		parentID,
+		item.GetName(),
+		item.IsDir(),
+		size,
+		usage,
+		item.GetMtime(),
+		itemCount,
+		mli,
+		item.GetFlag(),
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	if item.IsDir() {
+		for child := range item.GetFiles(fs.SortBySize, fs.SortDesc) {
+			_, err := a.insertMemItemRecursive(&id, child)
+			if err != nil {
+				return 0, err
+			}
+		}
+	}
+
+	return id, nil
 }
 
 func (a *SqliteAnalyzer) updateProgress() {
