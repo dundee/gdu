@@ -134,7 +134,7 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 	}
 
 	s.updateStmt, err = tx.Prepare(
-		`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
+		`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
 	)
 	if err != nil {
 		s.insertStmt.Close()
@@ -281,17 +281,17 @@ func (s *SqliteStorage) InsertItem(
 }
 
 // UpdateItem updates an existing item's stats
-func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64) error {
+func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64, flag rune) error {
 	var err error
 
 	// Use prepared statement if in bulk mode, otherwise use direct exec
 	if s.updateStmt != nil {
-		_, err = s.updateStmt.Exec(size, usage, itemCount, id)
+		_, err = s.updateStmt.Exec(size, usage, itemCount, string(flag), id)
 	} else {
 		s.m.Lock()
 		_, err = s.db.Exec(
-			`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
-			size, usage, itemCount, id,
+			`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
+			size, usage, itemCount, string(flag), id,
 		)
 		s.m.Unlock()
 	}
@@ -312,12 +312,22 @@ func (s *SqliteStorage) deleteItemTree(tx *sql.Tx, id int64) error {
 	return err
 }
 
-// updateAncestorStats subtracts size/usage/itemCount from a single ancestor row within the given transaction.
-func (s *SqliteStorage) updateAncestorStats(tx *sql.Tx, id, size, usage, itemCount int64) error {
-	_, err := tx.Exec(
-		`UPDATE items SET size = size - ?, usage = usage - ?, item_count = item_count - ? WHERE id = ?`,
-		size, usage, itemCount, id,
+// updateAllAncestorsStats subtracts size/usage/itemCount from all ancestor rows within the given transaction.
+func (s *SqliteStorage) updateAllAncestorsStats(tx *sql.Tx, id, size, usage, itemCount int64) error {
+	query := `
+	WITH RECURSIVE ancestors(id) AS (
+		SELECT parent_id FROM items WHERE id = ? AND parent_id IS NOT NULL
+		UNION ALL
+		SELECT items.parent_id FROM items JOIN ancestors ON items.id = ancestors.id
+		WHERE items.parent_id IS NOT NULL
 	)
+	UPDATE items SET
+		size = size - ?,
+		usage = usage - ?,
+		item_count = item_count - ?
+	WHERE id IN (SELECT id FROM ancestors) OR id = ?
+	`
+	_, err := tx.Exec(query, id, size, usage, itemCount, id)
 	return err
 }
 
@@ -360,15 +370,35 @@ func (s *SqliteStorage) GetChildByName(parentID int64, name string) (*SqliteItem
 }
 
 // GetChildren returns all children of a given parent ID
-func (s *SqliteStorage) GetChildren(parentID int64) ([]*SqliteItem, error) {
+func (s *SqliteStorage) GetChildren(parentID int64, sortBy fs.SortBy, order fs.SortOrder) ([]*SqliteItem, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()
 
-	rows, err := s.db.Query(
-		`SELECT id, parent_id, name, is_dir, size, usage, mtime, item_count, mli, flag
-		 FROM items WHERE parent_id = ?`,
-		parentID,
-	)
+	query := `SELECT id, parent_id, name, is_dir, size, usage, mtime, item_count, mli, flag
+		 FROM items WHERE parent_id = ?`
+
+	switch sortBy {
+	case fs.SortBySize:
+		query += " ORDER BY usage"
+	case fs.SortByName:
+		query += " ORDER BY name"
+	case fs.SortByItemCount:
+		query += " ORDER BY item_count"
+	case fs.SortByMtime:
+		query += " ORDER BY mtime"
+	case fs.SortByApparentSize:
+		query += " ORDER BY size"
+	default:
+		query += " ORDER BY usage"
+	}
+
+	if order == fs.SortDesc {
+		query += " DESC"
+	} else {
+		query += " ASC"
+	}
+
+	rows, err := s.db.Query(query, parentID)
 	if err != nil {
 		return nil, err
 	}
@@ -486,8 +516,9 @@ type SqliteItem struct {
 
 // GetPath returns the full path of the item
 func (i *SqliteItem) GetPath() string {
-	if i.parent != nil {
-		return filepath.Join(i.parent.GetPath(), i.name)
+	parent := i.GetParent()
+	if parent != nil {
+		return filepath.Join(parent.GetPath(), i.name)
 	}
 	// For root item, get basePath from metadata
 	basePath, err := i.storage.GetMetadata("top_dir_path")
@@ -615,7 +646,7 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 
 	buff = append(buff, '}')
 
-	children, err := i.storage.GetChildren(i.id)
+	children, err := i.storage.GetChildren(i.id, fs.SortBySize, fs.SortDesc)
 	if err != nil {
 		return err
 	}
@@ -707,23 +738,15 @@ func (i *SqliteItem) AddFile(item fs.Item) {
 // GetFiles returns children as a sorted iterator
 func (i *SqliteItem) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
 	return func(yield func(fs.Item) bool) {
-		children, err := i.storage.GetChildren(i.id)
+		children, err := i.storage.GetChildren(i.id, sortBy, order)
 		if err != nil {
 			log.Print(err.Error())
 			return
 		}
 
-		// Convert to fs.Files for sorting
-		files := make(fs.Files, len(children))
-		for idx, child := range children {
+		for _, child := range children {
 			child.parent = i
-			files[idx] = child
-		}
-
-		sortFiles(files, sortBy, order)
-
-		for _, item := range files {
-			if !yield(item) {
+			if !yield(child) {
 				return
 			}
 		}
@@ -759,28 +782,14 @@ func (i *SqliteItem) RemoveFile(item fs.Item) {
 		return
 	}
 
-	// Collect ancestor IDs for DB updates, walking the in-memory parent chain.
-	var ancestorIDs []int64
-	cur := i
-	for {
-		ancestorIDs = append(ancestorIDs, cur.id)
-		parent := cur.GetParentLocked()
-		if parent == nil {
-			break
-		}
-		cur = parent
-	}
-
 	// Update all ancestor rows in the DB within the transaction.
-	for _, aid := range ancestorIDs {
-		if err = i.storage.updateAncestorStats(tx, aid, size, usage, itemCount); err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil {
-				log.Errorf("failed to rollback transaction: %v", rbErr)
-			}
-			i.storage.m.Unlock()
-			log.Errorf("Error updating ancestor stats in database: %v", err)
-			return
+	if err = i.storage.updateAllAncestorsStats(tx, i.id, size, usage, itemCount); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			log.Errorf("failed to rollback transaction: %v", rbErr)
 		}
+		i.storage.m.Unlock()
+		log.Errorf("Error updating ancestor stats in database: %v", err)
+		return
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -791,7 +800,7 @@ func (i *SqliteItem) RemoveFile(item fs.Item) {
 	i.storage.m.Unlock()
 
 	// DB commit succeeded — now apply in-memory stats updates.
-	cur = i
+	cur := i
 	for {
 		cur.m.Lock()
 		cur.size -= size
@@ -977,10 +986,12 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	a.wait.Add(1)
 	defer a.wait.Done()
 
-	files, err := os.ReadDir(path)
-	if err != nil {
-		log.Print(err.Error())
+	files, readErr := os.ReadDir(path)
+	if readErr != nil {
+		log.Print(readErr.Error())
 	}
+
+	dirFlag := getDirFlag(readErr, len(files))
 
 	// Get directory info for mtime
 	dirInfo, err := os.Stat(path)
@@ -999,7 +1010,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		dirMtime,
 		1, // item_count will be updated later
 		0,
-		getDirFlag(err, len(files)),
+		dirFlag,
 	)
 	if err != nil {
 		log.Print(err.Error())
@@ -1022,11 +1033,19 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				totalSize += subItem.size
 				totalUsage += subItem.usage
 				itemCount += subItem.itemCount
+
+				switch subItem.flag {
+				case '!', '.':
+					if dirFlag != '!' {
+						dirFlag = '.'
+					}
+				}
 			}
 		} else {
 			info, err := f.Info()
 			if err != nil {
 				log.Print(err.Error())
+				dirFlag = '!'
 				continue
 			}
 
@@ -1034,6 +1053,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
 					log.Print(err.Error())
+					dirFlag = '!'
 					continue
 				}
 				if infoF != nil {
@@ -1086,7 +1106,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 
 	// Update directory with computed stats
-	err = a.storage.UpdateItem(dirID, totalSize, totalUsage, itemCount)
+	err = a.storage.UpdateItem(dirID, totalSize, totalUsage, itemCount, dirFlag)
 	if err != nil {
 		log.Printf("Error updating item: %v", err)
 	}
@@ -1109,7 +1129,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		usage:     totalUsage,
 		mtime:     dirMtime,
 		itemCount: itemCount,
-		flag:      getDirFlag(err, len(files)),
+		flag:      dirFlag,
 	}
 }
 

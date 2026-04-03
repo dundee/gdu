@@ -160,7 +160,7 @@ func TestSqliteStorageInsertAndGetChildren(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Get children
-	children, err := storage.GetChildren(rootID)
+	children, err := storage.GetChildren(rootID, fs.SortBySize, fs.SortDesc)
 	assert.NoError(t, err)
 	assert.Len(t, children, 3)
 
@@ -185,7 +185,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Update item
-	err = storage.UpdateItem(id, 500, 1000, 10)
+	err = storage.UpdateItem(id, 500, 1000, 10, ' ')
 	assert.NoError(t, err)
 
 	// Verify update
@@ -194,6 +194,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 	assert.Equal(t, int64(500), item.GetSize())
 	assert.Equal(t, int64(1000), item.GetUsage())
 	assert.Equal(t, int64(10), item.GetItemCount())
+	assert.Equal(t, ' ', item.GetFlag())
 }
 
 func TestSqliteStorageBulkInsert(t *testing.T) {
@@ -216,7 +217,7 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 	}
 
 	// Update during bulk mode
-	err = storage.UpdateItem(rootID, 10000, 20000, 101)
+	err = storage.UpdateItem(rootID, 10000, 20000, 101, ' ')
 	assert.NoError(t, err)
 
 	// End bulk insert
@@ -224,7 +225,7 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify
-	children, err := storage.GetChildren(rootID)
+	children, err := storage.GetChildren(rootID, fs.SortBySize, fs.SortDesc)
 	assert.NoError(t, err)
 	assert.Len(t, children, 100)
 }
@@ -534,6 +535,31 @@ func TestSqliteItemRemoveFile(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSqliteItemRemoveFileAncestorsNotInMemory(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	// root -> subdir -> file
+	rootID, _ := storage.InsertItem(nil, "root", true, 5000, 10000, time.Now(), 3, 0, ' ')
+	subdirID, _ := storage.InsertItem(&rootID, "subdir", true, 2000, 5000, time.Now(), 2, 0, ' ')
+	fileID, _ := storage.InsertItem(&subdirID, "file.txt", false, 1000, 4000, time.Now(), 1, 0, ' ')
+
+	subdir, _ := storage.GetItemByID(subdirID)
+	file, _ := storage.GetItemByID(fileID)
+	// root is NOT loaded and not set as parent of subdir
+
+	// Remove file from subdir
+	subdir.RemoveFile(file)
+
+	// Check database stats for root
+	rootFromDB, _ := storage.GetItemByID(rootID)
+	assert.Equal(t, int64(4000), rootFromDB.GetSize())
+	assert.Equal(t, int64(6000), rootFromDB.GetUsage())
+	assert.Equal(t, int64(2), rootFromDB.GetItemCount())
+}
+
 func TestSqliteItemRemoveFileByName(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	storage, err := NewSqliteStorage(dbPath)
@@ -550,7 +576,7 @@ func TestSqliteItemRemoveFileByName(t *testing.T) {
 	assert.Equal(t, int64(180), root.GetUsage())
 	assert.Equal(t, int64(1), root.GetItemCount())
 
-	children, _ := storage.GetChildren(rootID)
+	children, _ := storage.GetChildren(rootID, fs.SortBySize, fs.SortDesc)
 	assert.Empty(t, children)
 }
 
