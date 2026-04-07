@@ -15,79 +15,18 @@ import (
 
 // StoredAnalyzer implements Analyzer
 type StoredAnalyzer struct {
-	storage             *Storage
-	progress            *common.CurrentProgress
-	progressChan        chan common.CurrentProgress
-	progressOutChan     chan common.CurrentProgress
-	progressDoneChan    chan struct{}
-	doneChan            common.SignalGroup
-	wait                *WaitGroup
-	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeIgnored
-	storagePath         string
-	followSymlinks      bool
-	gitAnnexedSize      bool
-	matchesTimeFilterFn common.TimeFilter
-	archiveBrowsing     bool
+	BaseAnalyzer
+	storage     *Storage
+	storagePath string
 }
 
 // CreateStoredAnalyzer returns Analyzer
 func CreateStoredAnalyzer(storagePath string) *StoredAnalyzer {
-	return &StoredAnalyzer{
+	a := &StoredAnalyzer{
 		storagePath: storagePath,
-		progress: &common.CurrentProgress{
-			ItemCount: 0,
-			TotalSize: int64(0),
-		},
-		progressChan:     make(chan common.CurrentProgress, 1),
-		progressOutChan:  make(chan common.CurrentProgress, 1),
-		progressDoneChan: make(chan struct{}),
-		doneChan:         make(common.SignalGroup),
-		wait:             (&WaitGroup{}).Init(),
 	}
-}
-
-// GetProgressChan returns channel for getting progress
-func (a *StoredAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
-// GetDone returns channel for checking when analysis is done
-func (a *StoredAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-func (a *StoredAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-func (a *StoredAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetTimeFilter sets the time filter function for file inclusion
-func (a *StoredAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
-	a.matchesTimeFilterFn = matchesTimeFilterFn
-}
-
-// SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
-func (a *StoredAnalyzer) SetArchiveBrowsing(v bool) {
-	a.archiveBrowsing = v
-}
-
-// SetFileTypeFilter sets the file type filter function
-func (a *StoredAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// ResetProgress returns progress
-func (a *StoredAnalyzer) ResetProgress() {
-	a.progress = &common.CurrentProgress{}
-	a.progressChan = make(chan common.CurrentProgress, 1)
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
-	a.wait = (&WaitGroup{}).Init()
+	a.init()
+	return a
 }
 
 // AnalyzeDir analyzes given path
@@ -251,23 +190,6 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 	return dir
 }
 
-func (a *StoredAnalyzer) updateProgress() {
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
-		}
-	}
-}
 
 // StoredDir implements Dir item stored on disk
 type StoredDir struct {

@@ -826,19 +826,8 @@ func (i *SqliteItem) RLock() func() {
 
 // SqliteAnalyzer implements Analyzer using SQLite storage
 type SqliteAnalyzer struct {
-	storage             *SqliteStorage
-	progress            *common.CurrentProgress
-	progressChan        chan common.CurrentProgress
-	progressOutChan     chan common.CurrentProgress
-	progressDoneChan    chan struct{}
-	doneChan            common.SignalGroup
-	wait                *WaitGroup
-	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeIgnored
-	followSymlinks      bool
-	gitAnnexedSize      bool
-	matchesTimeFilterFn common.TimeFilter
-	archiveBrowsing     bool
+	BaseAnalyzer
+	storage *SqliteStorage
 }
 
 // CreateSqliteAnalyzer creates a new SQLite analyzer
@@ -852,63 +841,11 @@ func CreateSqliteAnalyzer(dbPath string) (*SqliteAnalyzer, error) {
 		return nil, err
 	}
 
-	return &SqliteAnalyzer{
+	a := &SqliteAnalyzer{
 		storage: storage,
-		progress: &common.CurrentProgress{
-			ItemCount: 0,
-			TotalSize: int64(0),
-		},
-		progressChan:     make(chan common.CurrentProgress, 1),
-		progressOutChan:  make(chan common.CurrentProgress, 1),
-		progressDoneChan: make(chan struct{}),
-		doneChan:         make(common.SignalGroup),
-		wait:             (&WaitGroup{}).Init(),
-	}, nil
-}
-
-// SetFollowSymlinks sets whether symlinks should be followed
-func (a *SqliteAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-// SetShowAnnexedSize sets whether to use annexed size
-func (a *SqliteAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetTimeFilter sets the time filter function
-func (a *SqliteAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
-	a.matchesTimeFilterFn = matchesTimeFilterFn
-}
-
-// SetArchiveBrowsing sets whether archive browsing is enabled
-func (a *SqliteAnalyzer) SetArchiveBrowsing(v bool) {
-	a.archiveBrowsing = v
-}
-
-// SetFileTypeFilter sets the file type filter
-func (a *SqliteAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// GetProgressChan returns the progress channel
-func (a *SqliteAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
-// GetDone returns the done signal group
-func (a *SqliteAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-// ResetProgress resets the progress state
-func (a *SqliteAnalyzer) ResetProgress() {
-	a.progress = &common.CurrentProgress{}
-	a.progressChan = make(chan common.CurrentProgress, 1)
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
-	a.wait = (&WaitGroup{}).Init()
+	}
+	a.init()
+	return a, nil
 }
 
 // AnalyzeDir analyzes the given path and stores results in SQLite.
@@ -1113,20 +1050,3 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 }
 
-func (a *SqliteAnalyzer) updateProgress() {
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
-		}
-	}
-}

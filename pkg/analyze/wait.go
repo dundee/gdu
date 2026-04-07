@@ -5,30 +5,37 @@ import "sync"
 // A WaitGroup waits for a collection of goroutines to finish.
 // In contrast to sync.WaitGroup Add method can be called from a goroutine.
 type WaitGroup struct {
-	wait   sync.Mutex
 	value  int
 	access sync.Mutex
+	done   chan struct{}
 }
 
 // Init prepares the WaitGroup for usage, locks
 func (s *WaitGroup) Init() *WaitGroup {
-	s.wait.Lock()
+	s.done = make(chan struct{})
 	return s
 }
 
 // Add increments value
 func (s *WaitGroup) Add(value int) {
 	s.access.Lock()
+	defer s.access.Unlock()
 	s.value += value
-	s.access.Unlock()
 }
 
 // Done decrements the value by one, if value is 0, lock is released
 func (s *WaitGroup) Done() {
 	s.access.Lock()
+	defer s.access.Unlock()
 	s.value--
-	s.check()
-	s.access.Unlock()
+	if s.value == 0 {
+		select {
+		case <-s.done:
+			// already closed
+		default:
+			close(s.done)
+		}
+	}
 }
 
 // Wait blocks until value is 0
@@ -37,13 +44,6 @@ func (s *WaitGroup) Wait() {
 	isValue := s.value > 0
 	s.access.Unlock()
 	if isValue {
-		s.wait.Lock()
-	}
-}
-
-func (s *WaitGroup) check() {
-	if s.value == 0 {
-		s.wait.TryLock()
-		s.wait.Unlock()
+		<-s.done
 	}
 }
