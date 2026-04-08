@@ -11,66 +11,14 @@ import (
 
 // ParallelStableOrderAnalyzer implements Analyzer
 type ParallelStableOrderAnalyzer struct {
-	progress         *common.CurrentProgress
-	progressChan     chan common.CurrentProgress
-	progressOutChan  chan common.CurrentProgress
-	progressDoneChan chan struct{}
-	doneChan         common.SignalGroup
-	wait             *WaitGroup
-	ignoreDir        common.ShouldDirBeIgnored
-	ignoreFileType   common.ShouldFileBeIgnored
-	followSymlinks   bool
-	gitAnnexedSize   bool
+	BaseAnalyzer
 }
 
 // CreateStableOrderAnalyzer returns parallel Analyzer which keeps stable order of files
 func CreateStableOrderAnalyzer() *ParallelStableOrderAnalyzer {
-	return &ParallelStableOrderAnalyzer{
-		progress: &common.CurrentProgress{
-			ItemCount: 0,
-			TotalSize: int64(0),
-		},
-		progressChan:     make(chan common.CurrentProgress, 1),
-		progressOutChan:  make(chan common.CurrentProgress, 1),
-		progressDoneChan: make(chan struct{}),
-		doneChan:         make(common.SignalGroup),
-		wait:             (&WaitGroup{}).Init(),
-	}
-}
-
-// SetFollowSymlinks sets whether symlink to files should be followed
-func (a *ParallelStableOrderAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-// SetShowAnnexedSize sets whether to use annexed size of git-annex files
-func (a *ParallelStableOrderAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetFileTypeFilter sets the file type filter function
-func (a *ParallelStableOrderAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// GetProgressChan returns channel for getting progress
-func (a *ParallelStableOrderAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
-// GetDone returns channel for checking when analysis is done
-func (a *ParallelStableOrderAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-// ResetProgress returns progress
-func (a *ParallelStableOrderAnalyzer) ResetProgress() {
-	a.progress = &common.CurrentProgress{}
-	a.progressChan = make(chan common.CurrentProgress, 1)
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
-	a.wait = (&WaitGroup{}).Init()
+	a := &ParallelStableOrderAnalyzer{}
+	a.init()
+	return a
 }
 
 // AnalyzeDir analyzes given path
@@ -80,7 +28,7 @@ func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
-	go a.updateProgress()
+	go a.UpdateProgress()
 	dir := a.processDir(path)
 
 	dir.BasePath = filepath.Dir(path)
@@ -99,7 +47,7 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 	}
 
 	var (
-		file      *File
+		file      fs.Item
 		err       error
 		totalSize int64
 		info      os.FileInfo
@@ -153,6 +101,17 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 				dir.Flag = '!'
 				continue
 			}
+
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+				continue // Skip this file
+			}
+
+			// Apply time filter if set
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
+
 			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
@@ -165,24 +124,60 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
-			// Apply file type filter if set
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
-				continue // Skip this file
+			switch {
+			case a.archiveBrowsing && isZipFile(name):
+				zipDir, err := processZipFile(entryPath, info)
+				if err != nil {
+					log.Printf("Failed to process zip file %s: %v", entryPath, err)
+					file = &File{
+						Name:   name,
+						Flag:   getFlag(info),
+						Size:   info.Size(),
+						Parent: dir,
+					}
+				} else {
+					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
+					if err == nil {
+						zipDir.Size = uncompressedSize
+						zipDir.Usage = compressedSize
+					}
+					zipDir.Parent = dir
+					file = zipDir
+				}
+			case a.archiveBrowsing && isTarFile(name):
+				tarDir, err := processTarFile(entryPath, info)
+				if err != nil {
+					log.Printf("Failed to process tar file %s: %v", entryPath, err)
+					file = &File{
+						Name:   name,
+						Flag:   getFlag(info),
+						Size:   info.Size(),
+						Parent: dir,
+					}
+				} else {
+					tarDir.Parent = dir
+					file = tarDir
+				}
+			default:
+				file = &File{
+					Name:   name,
+					Flag:   getFlag(info),
+					Size:   info.Size(),
+					Parent: dir,
+				}
 			}
 
-			file = &File{
-				Name:   name,
-				Flag:   getFlag(info),
-				Size:   info.Size(),
-				Parent: dir,
+			if file != nil {
+				// Only set platform-specific attributes for regular files
+				if regularFile, ok := file.(*File); ok {
+					setPlatformSpecificAttrs(regularFile, info)
+				}
+				totalSize += file.GetUsage()
+
+				// Send file to channel with its index
+				itemChan <- indexedItem{itemCount, file}
+				itemCount++
 			}
-			setPlatformSpecificAttrs(file, info)
-
-			totalSize += file.Usage
-
-			// Send file to channel with its index
-			itemChan <- indexedItem{itemCount, file}
-			itemCount++
 		}
 	}
 
@@ -209,22 +204,4 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 		TotalSize:       totalSize,
 	}
 	return dir
-}
-
-func (a *ParallelStableOrderAnalyzer) updateProgress() {
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
-		}
-	}
 }
