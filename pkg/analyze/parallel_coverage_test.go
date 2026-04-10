@@ -70,7 +70,7 @@ func TestParallelAnalyzerUpdateProgress(t *testing.T) {
 	analyzer := CreateAnalyzer()
 
 	// Start the progress updater
-	go analyzer.updateProgress()
+	go analyzer.UpdateProgress()
 
 	// Send some progress updates
 	analyzer.progressChan <- struct {
@@ -97,7 +97,7 @@ func TestParallelAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	analyzer := CreateAnalyzer()
 
 	// Start the progress updater
-	go analyzer.updateProgress()
+	go analyzer.UpdateProgress()
 
 	// Send some progress updates
 	analyzer.progressChan <- struct {

@@ -28,7 +28,7 @@ func TestSequentialAnalyzerUpdateProgress(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 
 	// Start the progress updater
-	go analyzer.updateProgress()
+	go analyzer.UpdateProgress()
 
 	// Send some progress updates
 	analyzer.progressChan <- struct {
@@ -55,7 +55,7 @@ func TestSequentialAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 
 	// Start the progress updater
-	go analyzer.updateProgress()
+	go analyzer.UpdateProgress()
 
 	// Send some progress updates
 	analyzer.progressChan <- struct {

@@ -251,7 +251,7 @@ func (s *SqliteStorage) GetRootItem() (*SqliteItem, error) {
 
 // InsertItem inserts a file/directory item into the database
 func (s *SqliteStorage) InsertItem(
-	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int, mli uint64, flag rune,
+	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int64, mli uint64, flag rune,
 ) (int64, error) {
 	isDirInt := 0
 	if isDir {
@@ -486,8 +486,9 @@ type SqliteItem struct {
 
 // GetPath returns the full path of the item
 func (i *SqliteItem) GetPath() string {
-	if i.parent != nil {
-		return filepath.Join(i.parent.GetPath(), i.name)
+	parent := i.GetParent()
+	if parent != nil {
+		return filepath.Join(parent.GetPath(), i.name)
 	}
 	// For root item, get basePath from metadata
 	basePath, err := i.storage.GetMetadata("top_dir_path")
@@ -514,6 +515,8 @@ func (i *SqliteItem) IsDir() bool {
 
 // GetSize returns the apparent size
 func (i *SqliteItem) GetSize() int64 {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	return i.size
 }
 
@@ -530,6 +533,8 @@ func (i *SqliteItem) GetType() string {
 
 // GetUsage returns the disk usage
 func (i *SqliteItem) GetUsage() int64 {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	return i.usage
 }
 
@@ -540,11 +545,16 @@ func (i *SqliteItem) GetMtime() time.Time {
 
 // GetItemCount returns the item count
 func (i *SqliteItem) GetItemCount() int64 {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	return i.itemCount
 }
 
 // GetParent returns the parent item
 func (i *SqliteItem) GetParent() fs.Item {
+	i.m.Lock()
+	defer i.m.Unlock()
+
 	if i.parent != nil {
 		return i.parent
 	}
@@ -563,12 +573,16 @@ func (i *SqliteItem) GetParent() fs.Item {
 
 // SetParent sets the parent item
 func (i *SqliteItem) SetParent(parent fs.Item) {
+	i.m.Lock()
+	defer i.m.Unlock()
 	i.parent = parent
 }
 
 // GetParentLocked returns the in-memory parent without hitting the database.
 // Used inside RemoveFile where storage.m is already write-locked.
 func (i *SqliteItem) GetParentLocked() *SqliteItem {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	if i.parent != nil {
 		return i.parent.(*SqliteItem)
 	}
@@ -692,6 +706,8 @@ func addSqliteString(buff *[]byte, val string) error {
 
 // GetItemStats returns item statistics - hard links already handled during scan
 func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
+	i.m.RLock()
+	defer i.m.RUnlock()
 	return i.itemCount, i.size, i.usage
 }
 
@@ -826,19 +842,8 @@ func (i *SqliteItem) RLock() func() {
 
 // SqliteAnalyzer implements Analyzer using SQLite storage
 type SqliteAnalyzer struct {
-	storage             *SqliteStorage
-	progress            *common.CurrentProgress
-	progressChan        chan common.CurrentProgress
-	progressOutChan     chan common.CurrentProgress
-	progressDoneChan    chan struct{}
-	doneChan            common.SignalGroup
-	wait                *WaitGroup
-	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeIgnored
-	followSymlinks      bool
-	gitAnnexedSize      bool
-	matchesTimeFilterFn common.TimeFilter
-	archiveBrowsing     bool
+	BaseAnalyzer
+	storage *SqliteStorage
 }
 
 // CreateSqliteAnalyzer creates a new SQLite analyzer
@@ -852,63 +857,11 @@ func CreateSqliteAnalyzer(dbPath string) (*SqliteAnalyzer, error) {
 		return nil, err
 	}
 
-	return &SqliteAnalyzer{
+	a := &SqliteAnalyzer{
 		storage: storage,
-		progress: &common.CurrentProgress{
-			ItemCount: 0,
-			TotalSize: int64(0),
-		},
-		progressChan:     make(chan common.CurrentProgress, 1),
-		progressOutChan:  make(chan common.CurrentProgress, 1),
-		progressDoneChan: make(chan struct{}),
-		doneChan:         make(common.SignalGroup),
-		wait:             (&WaitGroup{}).Init(),
-	}, nil
-}
-
-// SetFollowSymlinks sets whether symlinks should be followed
-func (a *SqliteAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-// SetShowAnnexedSize sets whether to use annexed size
-func (a *SqliteAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetTimeFilter sets the time filter function
-func (a *SqliteAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
-	a.matchesTimeFilterFn = matchesTimeFilterFn
-}
-
-// SetArchiveBrowsing sets whether archive browsing is enabled
-func (a *SqliteAnalyzer) SetArchiveBrowsing(v bool) {
-	a.archiveBrowsing = v
-}
-
-// SetFileTypeFilter sets the file type filter
-func (a *SqliteAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// GetProgressChan returns the progress channel
-func (a *SqliteAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
-// GetDone returns the done signal group
-func (a *SqliteAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-// ResetProgress resets the progress state
-func (a *SqliteAnalyzer) ResetProgress() {
-	a.progress = &common.CurrentProgress{}
-	a.progressChan = make(chan common.CurrentProgress, 1)
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
-	a.wait = (&WaitGroup{}).Init()
+	}
+	a.Init()
+	return a, nil
 }
 
 // AnalyzeDir analyzes the given path and stores results in SQLite.
@@ -947,7 +900,7 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 		log.Printf("Error starting bulk insert: %v", err)
 	}
 
-	go a.updateProgress()
+	go a.UpdateProgress()
 
 	// Process directory and get the root item
 	rootItem := a.processDir(path, nil)
@@ -1024,6 +977,11 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				itemCount += subItem.itemCount
 			}
 		} else {
+			// Apply file type filter
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+				continue
+			}
+
 			info, err := f.Info()
 			if err != nil {
 				log.Print(err.Error())
@@ -1043,11 +1001,6 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 
 			// Apply time filter
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-				continue
-			}
-
-			// Apply file type filter
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue
 			}
 
@@ -1110,23 +1063,5 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		mtime:     dirMtime,
 		itemCount: itemCount,
 		flag:      getDirFlag(err, len(files)),
-	}
-}
-
-func (a *SqliteAnalyzer) updateProgress() {
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
-		}
 	}
 }
