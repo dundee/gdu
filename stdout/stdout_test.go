@@ -83,6 +83,44 @@ func TestShowItemCountInNonInteractiveModeWithColorsAndFile(t *testing.T) {
 	assert.Regexp(t, regexp.MustCompile(`(?m)\s+1\s+single$`), out)
 }
 
+func TestShowSummaryApparentSizeForFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "small.txt")
+	err := os.WriteFile(filePath, []byte("hello"), 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	// showApparentSize=true, summarize=true
+	ui := CreateStdoutUI(output, false, false, true, false, true, false, false, "", 0, false, 0)
+	err = ui.AnalyzePath(filePath, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	// With apparent size, a 5-byte file should show "5 B", not "4.0 KiB"
+	assert.Contains(t, out, "5 B")
+	assert.Contains(t, out, "small.txt")
+}
+
+func TestShowSummaryDiskUsageForFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "small.txt")
+	err := os.WriteFile(filePath, []byte("hello"), 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	// showApparentSize=false, summarize=true
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
+	err = ui.AnalyzePath(filePath, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	// Without apparent size, should show disk usage (>= 5 bytes, typically 4 KiB)
+	assert.Contains(t, out, "small.txt")
+	assert.NotContains(t, out, "5 B")
+}
+
 func TestShowSummary(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

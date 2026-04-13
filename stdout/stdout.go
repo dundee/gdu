@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -183,6 +185,17 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 
 // AnalyzePath analyzes recursively disk usage in given path
 func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
+	// When path is a regular file, create a File item directly so that
+	// apparent-size (GetSize) and disk-usage (GetUsage) are both correct.
+	// Running a file through AnalyzeDir + UpdateStats would report the
+	// default 4096-byte directory overhead instead of the real values.
+	info, err := os.Stat(path)
+	if err == nil && info.Mode().IsRegular() {
+		file := analyze.CreateFileItem(filepath.Base(path), info)
+		ui.printTotalItem(file)
+		return nil
+	}
+
 	var (
 		dir             fs.Item
 		wait            sync.WaitGroup
