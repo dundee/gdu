@@ -3,6 +3,7 @@
 package analyze
 
 import (
+	"archive/zip"
 	"bytes"
 	"os"
 	"path/filepath"
@@ -62,7 +63,7 @@ func TestSqliteStorageHasData(t *testing.T) {
 	assert.False(t, storage.HasData())
 
 	// Insert an item
-	_, err = storage.InsertItem(nil, "root", true, 100, 100, time.Now(), 1, 0, ' ')
+	_, err = storage.InsertItem(nil, "root", true, 100, 100, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	// Now has data
@@ -76,7 +77,7 @@ func TestSqliteStorageClearItems(t *testing.T) {
 	defer storage.Close()
 
 	// Insert an item
-	_, err = storage.InsertItem(nil, "root", true, 100, 100, time.Now(), 1, 0, ' ')
+	_, err = storage.InsertItem(nil, "root", true, 100, 100, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 	assert.True(t, storage.HasData())
 
@@ -123,7 +124,7 @@ func TestSqliteStorageInsertAndGetItem(t *testing.T) {
 	mtime := time.Now().Truncate(time.Second)
 
 	// Insert root directory
-	rootID, err := storage.InsertItem(nil, "root", true, 1000, 2000, mtime, 5, 0, ' ')
+	rootID, err := storage.InsertItem(nil, "root", true, 1000, 2000, mtime, int64(5), 0, ' ')
 	assert.NoError(t, err)
 	assert.Greater(t, rootID, int64(0))
 
@@ -148,15 +149,15 @@ func TestSqliteStorageInsertAndGetChildren(t *testing.T) {
 	mtime := time.Now().Truncate(time.Second)
 
 	// Insert root
-	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, mtime, 1, 0, ' ')
+	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, mtime, int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	// Insert children
-	_, err = storage.InsertItem(&rootID, "file1.txt", false, 100, 4096, mtime, 1, 0, ' ')
+	_, err = storage.InsertItem(&rootID, "file1.txt", false, 100, 4096, mtime, int64(1), 0, ' ')
 	assert.NoError(t, err)
-	_, err = storage.InsertItem(&rootID, "file2.txt", false, 200, 4096, mtime, 1, 12345, 'H')
+	_, err = storage.InsertItem(&rootID, "file2.txt", false, 200, 4096, mtime, int64(1), 12345, 'H')
 	assert.NoError(t, err)
-	_, err = storage.InsertItem(&rootID, "subdir", true, 500, 8192, mtime, 3, 0, ' ')
+	_, err = storage.InsertItem(&rootID, "subdir", true, 500, 8192, mtime, int64(3), 0, ' ')
 	assert.NoError(t, err)
 
 	// Get children
@@ -181,7 +182,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 	defer storage.Close()
 
 	// Insert item
-	id, err := storage.InsertItem(nil, "dir", true, 100, 200, time.Now(), 1, 0, ' ')
+	id, err := storage.InsertItem(nil, "dir", true, 100, 200, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	// Update item
@@ -207,11 +208,11 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Insert many items
-	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
+	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	for i := 0; i < 100; i++ {
-		_, err = storage.InsertItem(&rootID, "file", false, 100, 4096, time.Now(), 1, 0, ' ')
+		_, err = storage.InsertItem(&rootID, "file", false, 100, 4096, time.Now(), int64(1), 0, ' ')
 		assert.NoError(t, err)
 	}
 
@@ -239,7 +240,7 @@ func TestSqliteStorageHasInode(t *testing.T) {
 	assert.False(t, storage.HasInode(12345))
 
 	// Insert item with inode
-	_, err = storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), 1, 12345, 'H')
+	_, err = storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), int64(1), 12345, 'H')
 	assert.NoError(t, err)
 
 	// Now inode exists
@@ -257,7 +258,7 @@ func TestSqliteStorageHasInodeBulkMode(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Insert item with inode in bulk mode
-	_, err = storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), 1, 12345, 'H')
+	_, err = storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), int64(1), 12345, 'H')
 	assert.NoError(t, err)
 
 	// Check inode during bulk mode (uses prepared statement)
@@ -279,11 +280,11 @@ func TestSqliteItemGetPath(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Insert root
-	rootID, err := storage.InsertItem(nil, "testdir", true, 0, 0, time.Now(), 1, 0, ' ')
+	rootID, err := storage.InsertItem(nil, "testdir", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	// Insert child
-	childID, err := storage.InsertItem(&rootID, "file.txt", false, 100, 4096, time.Now(), 1, 0, ' ')
+	childID, err := storage.InsertItem(&rootID, "file.txt", false, 100, 4096, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	// Get root item
@@ -305,19 +306,19 @@ func TestSqliteItemGetType(t *testing.T) {
 	defer storage.Close()
 
 	// Directory
-	dirID, err := storage.InsertItem(nil, "dir", true, 0, 0, time.Now(), 1, 0, ' ')
+	dirID, err := storage.InsertItem(nil, "dir", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 	dir, _ := storage.GetItemByID(dirID)
 	assert.Equal(t, "Directory", dir.GetType())
 
 	// File
-	fileID, err := storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), 1, 0, ' ')
+	fileID, err := storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 	file, _ := storage.GetItemByID(fileID)
 	assert.Equal(t, "File", file.GetType())
 
 	// Other (symlink flag)
-	otherID, err := storage.InsertItem(nil, "symlink", false, 100, 4096, time.Now(), 1, 0, '@')
+	otherID, err := storage.InsertItem(nil, "symlink", false, 100, 4096, time.Now(), int64(1), 0, '@')
 	assert.NoError(t, err)
 	other, _ := storage.GetItemByID(otherID)
 	assert.Equal(t, "Other", other.GetType())
@@ -330,9 +331,9 @@ func TestSqliteItemGetParent(t *testing.T) {
 	defer storage.Close()
 
 	// Insert root and child
-	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
+	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
-	childID, err := storage.InsertItem(&rootID, "child", false, 100, 4096, time.Now(), 1, 0, ' ')
+	childID, err := storage.InsertItem(&rootID, "child", false, 100, 4096, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	// Get child
@@ -361,7 +362,7 @@ func TestSqliteItemGetMultiLinkedInode(t *testing.T) {
 	defer storage.Close()
 
 	// Insert item with inode
-	id, err := storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), 1, 12345, 'H')
+	id, err := storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), int64(1), 12345, 'H')
 	assert.NoError(t, err)
 
 	item, err := storage.GetItemByID(id)
@@ -376,13 +377,13 @@ func TestSqliteItemGetFiles(t *testing.T) {
 	defer storage.Close()
 
 	// Insert root and children with different usages (SortBySize sorts by usage)
-	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
+	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
-	_, err = storage.InsertItem(&rootID, "small.txt", false, 100, 1000, time.Now(), 1, 0, ' ')
+	_, err = storage.InsertItem(&rootID, "small.txt", false, 100, 1000, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
-	_, err = storage.InsertItem(&rootID, "large.txt", false, 1000, 9000, time.Now(), 1, 0, ' ')
+	_, err = storage.InsertItem(&rootID, "large.txt", false, 1000, 9000, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
-	_, err = storage.InsertItem(&rootID, "medium.txt", false, 500, 5000, time.Now(), 1, 0, ' ')
+	_, err = storage.InsertItem(&rootID, "medium.txt", false, 500, 5000, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	root, err := storage.GetItemByID(rootID)
@@ -409,9 +410,9 @@ func TestSqliteItemGetFilesLocked(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
+	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
-	_, err = storage.InsertItem(&rootID, "file.txt", false, 100, 4096, time.Now(), 1, 0, ' ')
+	_, err = storage.InsertItem(&rootID, "file.txt", false, 100, 4096, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	root, err := storage.GetItemByID(rootID)
@@ -429,7 +430,7 @@ func TestSqliteItemRLock(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	id, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
+	id, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	item, err := storage.GetItemByID(id)
@@ -482,7 +483,7 @@ func TestSqliteItemAddFile(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	id, err := storage.InsertItem(nil, "dir", true, 0, 0, time.Now(), 1, 0, ' ')
+	id, err := storage.InsertItem(nil, "dir", true, 0, 0, time.Now(), int64(1), 0, ' ')
 	assert.NoError(t, err)
 
 	item, err := storage.GetItemByID(id)
@@ -500,9 +501,9 @@ func TestSqliteItemRemoveFile(t *testing.T) {
 	defer storage.Close()
 
 	// root -> subdir -> file
-	rootID, _ := storage.InsertItem(nil, "root", true, 5000, 10000, time.Now(), 3, 0, ' ')
-	subdirID, _ := storage.InsertItem(&rootID, "subdir", true, 2000, 5000, time.Now(), 2, 0, ' ')
-	fileID, _ := storage.InsertItem(&subdirID, "file.txt", false, 1000, 4000, time.Now(), 1, 0, ' ')
+	rootID, _ := storage.InsertItem(nil, "root", true, 5000, 10000, time.Now(), int64(3), 0, ' ')
+	subdirID, _ := storage.InsertItem(&rootID, "subdir", true, 2000, 5000, time.Now(), int64(2), 0, ' ')
+	fileID, _ := storage.InsertItem(&subdirID, "file.txt", false, 1000, 4000, time.Now(), int64(1), 0, ' ')
 
 	root, _ := storage.GetItemByID(rootID)
 	subdir, _ := storage.GetItemByID(subdirID)
@@ -540,8 +541,8 @@ func TestSqliteItemRemoveFileByName(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, time.Now(), 2, 0, ' ')
-	storage.InsertItem(&rootID, "file.txt", false, 10, 20, time.Now(), 1, 0, ' ')
+	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, time.Now(), int64(2), 0, ' ')
+	storage.InsertItem(&rootID, "file.txt", false, 10, 20, time.Now(), int64(1), 0, ' ')
 
 	root, _ := storage.GetItemByID(rootID)
 	root.RemoveFileByName("file.txt")
@@ -561,8 +562,8 @@ func TestSqliteItemEncodeJSON(t *testing.T) {
 	defer storage.Close()
 
 	mtime := time.Unix(1600000000, 0)
-	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, mtime, 2, 0, ' ')
-	storage.InsertItem(&rootID, "file.txt", false, 10, 20, mtime, 1, 0, ' ')
+	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, mtime, int64(2), 0, ' ')
+	storage.InsertItem(&rootID, "file.txt", false, 10, 20, mtime, int64(1), 0, ' ')
 
 	root, _ := storage.GetItemByID(rootID)
 
@@ -946,6 +947,51 @@ func TestSqliteAnalyzerProgress(t *testing.T) {
 	}
 
 	analyzer.GetDone().Wait()
+}
+
+func TestSqliteArchiveBrowsing(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	// Create a zip file
+	buf := new(bytes.Buffer)
+	zw := zip.NewWriter(buf)
+	f, _ := zw.Create("file_in_zip.txt")
+	_, _ = f.Write([]byte("content"))
+	zw.Close()
+	_ = os.WriteFile("test_dir/test.zip", buf.Bytes(), 0644)
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	assert.NoError(t, err)
+	defer analyzer.storage.Close()
+
+	analyzer.SetArchiveBrowsing(true)
+
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	).(*SqliteItem)
+
+	analyzer.GetDone().Wait()
+
+	// Find zip file in results
+	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	var zipItem *SqliteItem
+	for _, f := range files {
+		if f.GetName() == "test.zip" {
+			zipItem = f.(*SqliteItem)
+			break
+		}
+	}
+
+	assert.NotNil(t, zipItem)
+	assert.True(t, zipItem.IsDir()) // Zip file becomes a directory when browsing is enabled
+
+	// Check contents of zip file in DB
+	zipFiles := slices.Collect(zipItem.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Len(t, zipFiles, 1)
+	assert.Equal(t, "file_in_zip.txt", zipFiles[0].GetName())
+	assert.Equal(t, int64(7), zipFiles[0].GetSize())
 }
 
 func BenchmarkSqliteAnalyzeDir(b *testing.B) {
