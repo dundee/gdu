@@ -149,15 +149,20 @@ type Dir struct {
 
 // AddFile add item to files
 func (f *Dir) AddFile(item fs.Item) {
+	f.m.Lock()
+	defer f.m.Unlock()
 	f.Files = append(f.Files, item)
 }
 
 // GetFiles returns all files in directory as a sorted iterator
 func (f *Dir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
 	return func(yield func(fs.Item) bool) {
+		f.m.RLock()
 		// Make a copy to avoid modifying the original slice
 		sorted := make(fs.Files, len(f.Files))
 		copy(sorted, f.Files)
+		f.m.RUnlock()
+
 		sortFiles(sorted, sortBy, order)
 
 		for _, item := range sorted {
@@ -205,6 +210,27 @@ func (f *Dir) IsDir() bool {
 	return true
 }
 
+// GetSize returns size of the dir
+func (f *Dir) GetSize() int64 {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Size
+}
+
+// GetUsage returns usage of the dir
+func (f *Dir) GetUsage() int64 {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Usage
+}
+
+// GetMtime returns mtime of the dir
+func (f *Dir) GetMtime() time.Time {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Mtime
+}
+
 // GetPath returns absolute path of the file
 func (f *Dir) GetPath() string {
 	if f.BasePath != "" {
@@ -224,6 +250,9 @@ func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usa
 
 // UpdateStats recursively updates size and item count
 func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
+	f.m.Lock()
+	defer f.m.Unlock()
+
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int64
@@ -252,15 +281,16 @@ func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 // RemoveFile removes item from dir, updates size and item count
 func (f *Dir) RemoveFile(item fs.Item) {
 	f.m.Lock()
-	defer f.m.Unlock()
-
 	f.Files = f.Files.Remove(item)
+	f.m.Unlock()
 
 	cur := f
 	for {
+		cur.m.Lock()
 		cur.ItemCount -= item.GetItemCount()
 		cur.Size -= item.GetSize()
 		cur.Usage -= item.GetUsage()
+		cur.m.Unlock()
 
 		if cur.Parent == nil {
 			break
@@ -301,20 +331,22 @@ func (f *Dir) RLock() func() {
 // RemoveFileByName removes item by name from dir
 func (f *Dir) RemoveFileByName(name string) {
 	f.m.Lock()
-	defer f.m.Unlock()
-
 	idx, ok := f.Files.FindByName(name)
 	if !ok {
+		f.m.Unlock()
 		return
 	}
 	item := f.Files[idx]
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
+	f.m.Unlock()
 
 	cur := f
 	for {
+		cur.m.Lock()
 		cur.ItemCount -= item.GetItemCount()
 		cur.Size -= item.GetSize()
 		cur.Usage -= item.GetUsage()
+		cur.m.Unlock()
 
 		if cur.Parent == nil {
 			break

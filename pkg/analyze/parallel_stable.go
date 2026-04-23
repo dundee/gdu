@@ -11,66 +11,14 @@ import (
 
 // ParallelStableOrderAnalyzer implements Analyzer
 type ParallelStableOrderAnalyzer struct {
-	progress         *common.CurrentProgress
-	progressChan     chan common.CurrentProgress
-	progressOutChan  chan common.CurrentProgress
-	progressDoneChan chan struct{}
-	doneChan         common.SignalGroup
-	wait             *WaitGroup
-	ignoreDir        common.ShouldDirBeIgnored
-	ignoreFileType   common.ShouldFileBeIgnored
-	followSymlinks   bool
-	gitAnnexedSize   bool
+	BaseAnalyzer
 }
 
 // CreateStableOrderAnalyzer returns parallel Analyzer which keeps stable order of files
 func CreateStableOrderAnalyzer() *ParallelStableOrderAnalyzer {
-	return &ParallelStableOrderAnalyzer{
-		progress: &common.CurrentProgress{
-			ItemCount: 0,
-			TotalSize: int64(0),
-		},
-		progressChan:     make(chan common.CurrentProgress, 1),
-		progressOutChan:  make(chan common.CurrentProgress, 1),
-		progressDoneChan: make(chan struct{}),
-		doneChan:         make(common.SignalGroup),
-		wait:             (&WaitGroup{}).Init(),
-	}
-}
-
-// SetFollowSymlinks sets whether symlink to files should be followed
-func (a *ParallelStableOrderAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-// SetShowAnnexedSize sets whether to use annexed size of git-annex files
-func (a *ParallelStableOrderAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetFileTypeFilter sets the file type filter function
-func (a *ParallelStableOrderAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// GetProgressChan returns channel for getting progress
-func (a *ParallelStableOrderAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
-// GetDone returns channel for checking when analysis is done
-func (a *ParallelStableOrderAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-// ResetProgress returns progress
-func (a *ParallelStableOrderAnalyzer) ResetProgress() {
-	a.progress = &common.CurrentProgress{}
-	a.progressChan = make(chan common.CurrentProgress, 1)
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
-	a.wait = (&WaitGroup{}).Init()
+	a := &ParallelStableOrderAnalyzer{}
+	a.init()
+	return a
 }
 
 // AnalyzeDir analyzes given path
@@ -211,20 +159,3 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 	return dir
 }
 
-func (a *ParallelStableOrderAnalyzer) updateProgress() {
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
-		}
-	}
-}
