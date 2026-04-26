@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
+var concurrencyLimit = make(chan struct{}, 2*runtime.GOMAXPROCS(0))
 
 var _ common.Analyzer = (*ParallelAnalyzer)(nil)
 

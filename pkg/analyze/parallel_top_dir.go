@@ -3,14 +3,11 @@ package analyze
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 )
-
-var stackConcurrencyLimit = make(chan struct{}, 100*runtime.GOMAXPROCS(0))
 
 var _ common.Analyzer = (*TopDirAnalyzer)(nil)
 
@@ -213,7 +210,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
-		topDir.SetFlag('!')
+		topDir.SetFlag('.')
 	}
 
 	for _, f := range files {
@@ -226,11 +223,11 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 
 			a.wait.Add(1)
 			go func(entryPath string) {
-				stackConcurrencyLimit <- struct{}{}
+				concurrencyLimit <- struct{}{}
 
 				a.processSubDir(entryPath, topDir)
 
-				<-stackConcurrencyLimit
+				<-concurrencyLimit
 				a.wait.Done()
 			}(entryPath)
 		} else {
@@ -244,7 +241,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			info, err = f.Info()
 			if err != nil {
 				log.Print(err.Error())
-				topDir.SetFlag('!')
+				topDir.SetFlag('.')
 				continue
 			}
 
@@ -257,7 +254,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
 					log.Print(err.Error())
-					topDir.SetFlag('!')
+					topDir.SetFlag('.')
 					continue
 				}
 				if infoF != nil {
