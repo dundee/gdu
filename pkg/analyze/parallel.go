@@ -12,6 +12,8 @@ import (
 
 var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
+var _ common.Analyzer = (*ParallelAnalyzer)(nil)
+
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
 	progress            *common.CurrentProgress

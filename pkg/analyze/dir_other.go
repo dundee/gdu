@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+func getPlatformSpecificUsage(info os.FileInfo) int64 {
+	return info.Size() // No block info on Windows, use apparent size
+}
+
 func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
 	stat := f.Sys().(*syscall.Win32FileAttributeData)
 	file.Mtime = time.Unix(0, stat.LastWriteTime.Nanoseconds())

@@ -60,7 +60,7 @@ func CreateStdoutUI(
 			ShowProgress:     showProgress,
 			ShowApparentSize: showApparentSize,
 			ShowRelativeSize: showRelativeSize,
-			Analyzer:         analyze.CreateAnalyzer(),
+			Analyzer:         analyze.CreateTopDirAnalyzer(),
 			UseSIPrefix:      useSIPrefix,
 		},
 		output:      output,
@@ -76,6 +76,10 @@ func CreateStdoutUI(
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
 	ui.blue = color.New(color.FgBlue).Add(color.Bold)
+
+	if ui.top > 0 || ui.depth > 0 {
+		ui.Analyzer = analyze.CreateAnalyzer()
+	}
 
 	if !useColors {
 		color.NoColor = true

@@ -136,6 +136,10 @@ Gdu has three modes: interactive (default), non-interactive and export.
 
 Non-interactive mode is started automatically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag. Use `--interactive` to disable this automatic fallback and force interactive mode.
 
+In non-interactive mode (without `--top` or `--depth` flags), gdu uses a memory-efficient analyzer that only tracks top-level directory totals.
+This means memory usage stays constant regardless of how large the scanned directory tree is.
+When `--top` or `--depth` flags are used, the full directory tree is built in memory as in interactive mode.
+
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag.
 
 Hard links are counted only once.

@@ -13,6 +13,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/stretchr/testify/assert"
 )
@@ -570,4 +571,41 @@ func TestReverseSortFromAnalysisFile(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "main.go")
+}
+
+func TestDefaultAnalyzerIsTopDir(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+
+	_, ok := ui.Analyzer.(*analyze.TopDirAnalyzer)
+	assert.True(t, ok, "default analyzer should be TopDirAnalyzer")
+}
+
+func TestAnalyzerWithTopIsParallel(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 5, false, 0)
+
+	_, ok := ui.Analyzer.(*analyze.ParallelAnalyzer)
+	assert.True(t, ok, "analyzer with top > 0 should be ParallelAnalyzer")
+}
+
+func TestAnalyzerWithDepthIsParallel(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 3)
+
+	_, ok := ui.Analyzer.(*analyze.ParallelAnalyzer)
+	assert.True(t, ok, "analyzer with depth > 0 should be ParallelAnalyzer")
+}
+
+func TestAnalyzePathWithTopDirAnalyzer(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
 }
