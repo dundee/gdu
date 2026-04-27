@@ -14,78 +14,14 @@ var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
-	progress            *common.CurrentProgress
-	progressChan        chan common.CurrentProgress
-	progressOutChan     chan common.CurrentProgress
-	progressDoneChan    chan struct{}
-	doneChan            common.SignalGroup
-	wait                *WaitGroup
-	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeIgnored
-	followSymlinks      bool
-	gitAnnexedSize      bool
-	matchesTimeFilterFn common.TimeFilter
-	archiveBrowsing     bool
+	BaseAnalyzer
 }
 
 // CreateAnalyzer returns Analyzer
 func CreateAnalyzer() *ParallelAnalyzer {
-	return &ParallelAnalyzer{
-		progress: &common.CurrentProgress{
-			ItemCount: 0,
-			TotalSize: int64(0),
-		},
-		progressChan:     make(chan common.CurrentProgress, 1),
-		progressOutChan:  make(chan common.CurrentProgress, 1),
-		progressDoneChan: make(chan struct{}),
-		doneChan:         make(common.SignalGroup),
-		wait:             (&WaitGroup{}).Init(),
-	}
-}
-
-// SetFollowSymlinks sets whether symlink to files should be followed
-func (a *ParallelAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-// SetShowAnnexedSize sets whether to use annexed size of git-annex files
-func (a *ParallelAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetTimeFilter sets the time filter function for file inclusion
-func (a *ParallelAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
-	a.matchesTimeFilterFn = matchesTimeFilterFn
-}
-
-// SetArchiveBrowsing sets whether browsing of zip/jar/tar archives is enabled
-func (a *ParallelAnalyzer) SetArchiveBrowsing(v bool) {
-	a.archiveBrowsing = v
-}
-
-// SetFileTypeFilter sets the file type filter function
-func (a *ParallelAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// GetProgressChan returns channel for getting progress
-func (a *ParallelAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
-// GetDone returns channel for checking when analysis is done
-func (a *ParallelAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-// ResetProgress returns progress
-func (a *ParallelAnalyzer) ResetProgress() {
-	a.progress = &common.CurrentProgress{}
-	a.progressChan = make(chan common.CurrentProgress, 1)
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
-	a.wait = (&WaitGroup{}).Init()
+	a := &ParallelAnalyzer{}
+	a.init()
+	return a
 }
 
 // AnalyzeDir analyzes given path
@@ -95,7 +31,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
-	go a.updateProgress()
+	go a.UpdateProgress()
 	dir := a.processDir(path)
 
 	dir.BasePath = filepath.Dir(path)
@@ -158,6 +94,17 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				dir.Flag = '!'
 				continue
 			}
+
+			// Apply file type filter if set
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+				continue // Skip this file
+			}
+
+			// Apply time filter if set
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+				continue // Skip this file
+			}
+
 			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
@@ -213,16 +160,6 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
-			// Apply time filter if set
-			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-				continue // Skip this file
-			}
-
-			// Apply file type filter if set
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
-				continue // Skip this file
-			}
-
 			if file != nil {
 				// Only set platform-specific attributes for regular files
 				if regularFile, ok := file.(*File); ok {
@@ -251,40 +188,4 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		TotalSize:       totalSize,
 	}
 	return dir
-}
-
-func (a *ParallelAnalyzer) updateProgress() {
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
-		}
-	}
-}
-
-func getDirFlag(err error, items int) rune {
-	switch {
-	case err != nil:
-		return '!'
-	case items == 0:
-		return 'e'
-	default:
-		return ' '
-	}
-}
-
-func getFlag(f os.FileInfo) rune {
-	if f.Mode()&os.ModeSymlink != 0 || f.Mode()&os.ModeSocket != 0 {
-		return '@'
-	}
-	return ' '
 }
