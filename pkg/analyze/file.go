@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"iter"
+	"os"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -95,6 +96,17 @@ func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
 		linkedItems[mli] = append(linkedItems[mli], f)
 	}
 	return counted
+}
+
+// CreateFileItem creates a File from an os.FileInfo with correct platform-specific attributes
+func CreateFileItem(name string, info os.FileInfo) *File {
+	file := &File{
+		Name: name,
+		Size: info.Size(),
+		Flag: getFlag(info),
+	}
+	setPlatformSpecificAttrs(file, info)
+	return file
 }
 
 // GetItemStats returns 1 as count of items, apparent usage and real usage of this file
