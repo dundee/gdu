@@ -10,14 +10,14 @@ import (
 func TestTopDirAddUsage(t *testing.T) {
 	td := &TopDir{Name: "test"}
 	td.AddUsage(100, 200, 5)
-	assert.Equal(t, int64(100), td.Size)
-	assert.Equal(t, int64(200), td.Usage)
-	assert.Equal(t, int64(5), td.ItemCount)
+	assert.Equal(t, int64(100), td.Size.Load())
+	assert.Equal(t, int64(200), td.Usage.Load())
+	assert.Equal(t, int64(5), td.ItemCount.Load())
 
 	td.AddUsage(50, 80, 3)
-	assert.Equal(t, int64(150), td.Size)
-	assert.Equal(t, int64(280), td.Usage)
-	assert.Equal(t, int64(8), td.ItemCount)
+	assert.Equal(t, int64(150), td.Size.Load())
+	assert.Equal(t, int64(280), td.Usage.Load())
+	assert.Equal(t, int64(8), td.ItemCount.Load())
 }
 
 func TestTopDirSetFlag(t *testing.T) {

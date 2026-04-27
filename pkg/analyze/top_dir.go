@@ -4,6 +4,7 @@ import (
 	"io"
 	"iter"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -13,25 +14,21 @@ var _ fs.Item = (*SimpleDir)(nil)
 
 type TopDir struct {
 	Name      string
-	Size      int64
-	Usage     int64
-	ItemCount int64
+	Size      atomic.Int64
+	Usage     atomic.Int64
+	ItemCount atomic.Int64
 	Flag      rune
-	m         sync.RWMutex
+	m         sync.Mutex
 }
 
 func (d *TopDir) AddUsage(size, usage, itemCount int64) {
-	d.m.Lock()
-	d.Size += size
-	d.Usage += usage
-	d.ItemCount += itemCount
-	d.m.Unlock()
+	d.Size.Add(size)
+	d.Usage.Add(usage)
+	d.ItemCount.Add(itemCount)
 }
 
 func (d *TopDir) GetUsage() (size, usage, itemCount int64) {
-	d.m.RLock()
-	defer d.m.RUnlock()
-	return d.Size, d.Usage, d.ItemCount
+	return d.Size.Load(), d.Usage.Load(), d.ItemCount.Load()
 }
 
 func (d *TopDir) SetFlag(flag rune) {
