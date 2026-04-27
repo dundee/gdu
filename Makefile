@@ -121,18 +121,49 @@ profile:
 
 benchmark:
 	sudo cpupower frequency-set -g performance
-	hyperfine --export-markdown=bench-cold.md \
+	hyperfine --export-markdown=docs/benchmarks/bench-cold.md \
 		--prepare 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches' \
 		--ignore-failure \
 		'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~' 'pdu ~' \
-		'gdu -npc ~' 'gdu -gnpc ~' 'gdu -npc --use-storage ~'
-	hyperfine --export-markdown=bench-warm.md \
+		'gdu -npc ~' \
+		'gdu -npc --db=tmp.badger ~' \
+		'gdu -npc --db=tmp.db ~' \
+		'GOMAXPROCS=100 gdu -npc ~'
+	hyperfine --export-markdown=docs/benchmarks/bench-warm.md \
 		--warmup 5 \
 		--ignore-failure \
 		'dua ~' 'duc index ~' 'ncdu -0 -o /dev/null ~' \
 		'diskus ~' 'du -hs ~' 'dust -d0 ~' 'pdu ~' \
-		'gdu -npc ~' 'gdu -gnpc ~' 'gdu -npc --use-storage ~'
+		'gdu -npc ~' \
+		'gdu -npc --db=tmp.badger ~' \
+		'gdu -npc --db=tmp.db ~' \
+		'GOMAXPROCS=100 gdu -npc ~'
+	hyperfine -M 1 --export-markdown=docs/benchmarks/bench-cold-big.md \
+		--prepare 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches' \
+		--ignore-failure \
+		'dua /' \
+		'diskus /' 'dust -d0 /' \
+		'gdu -npc /' 'GOMAXPROCS=5 gdu -npc /'
+	sudo cpupower frequency-set -g schedutil
+
+benchmark-parameter-scan:
+	sudo cpupower frequency-set -g performance
+	hyperfine --export-markdown=docs/benchmarks/bench-cold-param-scan.md \
+		--prepare 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches' \
+		--ignore-failure \
+		-P procs 1 120 -D 10 \
+		'GOMAXPROCS={procs} gdu -npc ~'
+	hyperfine --export-markdown=docs/benchmarks/bench-warm-param-scan.md \
+		--warmup 5 \
+		--ignore-failure \
+		-P procs 1 20 \
+		'GOMAXPROCS={procs} gdu -npc ~'
+	hyperfine -M 1 --export-markdown=docs/benchmarks/bench-cold-big-param-scan.md \
+		--prepare 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches' \
+		--ignore-failure \
+		-P procs 1 10 \
+		'GOMAXPROCS={procs} gdu -npc /'
 	sudo cpupower frequency-set -g schedutil
 
 lint:
