@@ -10,6 +10,17 @@ import (
 
 const devBSize = 512
 
+func getPlatformSpecificUsageAndMli(info os.FileInfo) (usage int64, ino uint64) {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		if stat.Nlink > 1 {
+			ino = stat.Ino
+		}
+
+		return stat.Blocks * devBSize, ino
+	}
+	return 0, 0
+}
+
 func setPlatformSpecificAttrs(file *File, f os.FileInfo) {
 	if stat, ok := f.Sys().(*syscall.Stat_t); ok {
 		file.Usage = stat.Blocks * devBSize
