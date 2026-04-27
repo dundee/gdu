@@ -37,7 +37,7 @@ Or you can use Gdu directly via Docker:
 ## Usage
 
 ```
-  gdu [directory_to_scan] [flags]
+  gdu [flags] [directory_to_scan]
 
 Flags:
       --archive-browsing              Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
@@ -127,7 +127,8 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -o- / | gzip -c >report.json.gz   # write all info to JSON file for later analysis
     zcat report.json.gz | gdu -f-         # read analysis from file
 
-    GOGC=10 gdu -g --use-storage /        # use persistent key-value storage for saving analysis data
+    gdu --db=tmp.badger /                 # use persistent key-value storage for saving analysis data
+    gdu --db=tmp.db /                     # use persistent SQLite storage for saving analysis data
     gdu -r /                              # read saved analysis data from persistent key-value storage
 
 ## Modes
@@ -136,7 +137,7 @@ Gdu has three modes: interactive (default), non-interactive and export.
 
 Non-interactive mode is started automatically when TTY is not detected (using [go-isatty](https://github.com/mattn/go-isatty)), for example if the output is being piped to a file, or it can be started explicitly by using a flag. Use `--interactive` to disable this automatic fallback and force interactive mode.
 
-In non-interactive mode (without `--top` or `--depth` flags), gdu uses a memory-efficient analyzer that only tracks top-level directory totals.
+In non-interactive mode (and without `--top` and `--depth` flags), gdu uses a memory-efficient analyzer that only tracks top-level directory totals.
 This means memory usage stays constant regardless of how large the scanned directory tree is.
 When `--top` or `--depth` flags are used, the full directory tree is built in memory as in interactive mode.
 
