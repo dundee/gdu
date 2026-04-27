@@ -3,6 +3,7 @@ package analyze
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -28,6 +29,7 @@ type TopDirAnalyzer struct {
 	gitAnnexedSize      bool
 	matchesTimeFilterFn common.TimeFilter
 	archiveBrowsing     bool
+	linkedItems         sync.Map
 }
 
 // CreateTopDirAnalyzer returns Analyzer
@@ -170,7 +172,12 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 				Size: info.Size(),
 			}
 
-			file.Usage = getPlatformSpecificUsage(info)
+			usage, mli := getPlatformSpecificUsageAndMli(info)
+			file.Usage = usage
+
+			if mli > 0 {
+				file.Flag = 'H'
+			}
 
 			dir.Files = append(dir.Files, file)
 		}
@@ -262,7 +269,15 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 				}
 			}
 
-			totalUsage += getPlatformSpecificUsage(info)
+			usage, mli := getPlatformSpecificUsageAndMli(info)
+
+			if mli > 0 {
+				if _, loaded := a.linkedItems.LoadOrStore(mli, struct{}{}); loaded {
+					continue
+				}
+			}
+
+			totalUsage += usage
 			totalSize += info.Size()
 		}
 	}
