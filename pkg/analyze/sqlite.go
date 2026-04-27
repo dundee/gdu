@@ -251,7 +251,7 @@ func (s *SqliteStorage) GetRootItem() (*SqliteItem, error) {
 
 // InsertItem inserts a file/directory item into the database
 func (s *SqliteStorage) InsertItem(
-	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int, mli uint64, flag rune,
+	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time, itemCount int64, mli uint64, flag rune,
 ) (int64, error) {
 	isDirInt := 0
 	if isDir {
@@ -486,8 +486,9 @@ type SqliteItem struct {
 
 // GetPath returns the full path of the item
 func (i *SqliteItem) GetPath() string {
-	if i.parent != nil {
-		return filepath.Join(i.parent.GetPath(), i.name)
+	parent := i.GetParent()
+	if parent != nil {
+		return filepath.Join(parent.GetPath(), i.name)
 	}
 	// For root item, get basePath from metadata
 	basePath, err := i.storage.GetMetadata("top_dir_path")
@@ -1082,6 +1083,29 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			totalUsage += fileUsage
 			filesSize += fileUsage
 			itemCount++
+
+			// Handle archive browsing
+			if a.archiveBrowsing {
+				var (
+					archiveItem fs.Item
+					err         error
+				)
+				if isZipFile(name) {
+					archiveItem, err = processZipFile(entryPath, info)
+				} else if isTarFile(name) {
+					archiveItem, err = processTarFile(entryPath, info)
+				}
+
+				if err != nil {
+					log.Errorf("Failed to process archive %s: %v", entryPath, err)
+				} else if archiveItem != nil {
+					// Archive content should be siblings of other items in the archive,
+					// so we persist its children into dirID.
+					for child := range archiveItem.GetFiles(fs.SortByName, fs.SortAsc) {
+						a.persistArchive(dirID, child)
+					}
+				}
+			}
 		}
 	}
 
@@ -1110,6 +1134,48 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		mtime:     dirMtime,
 		itemCount: itemCount,
 		flag:      getDirFlag(err, len(files)),
+	}
+}
+
+func (a *SqliteAnalyzer) persistArchive(parentID int64, item fs.Item) {
+	if item.IsDir() {
+		// Insert directory
+		dirID, err := a.storage.InsertItem(
+			&parentID,
+			item.GetName(),
+			true,
+			item.GetSize(),
+			item.GetUsage(),
+			item.GetMtime(),
+			int64(item.GetItemCount()),
+			0,
+			item.GetFlag(),
+		)
+		if err != nil {
+			log.Errorf("Error persisting archive directory: %v", err)
+			return
+		}
+
+		// Recursively persist children
+		for child := range item.GetFiles(fs.SortByName, fs.SortAsc) {
+			a.persistArchive(dirID, child)
+		}
+	} else {
+		// Insert file
+		_, err := a.storage.InsertItem(
+			&parentID,
+			item.GetName(),
+			false,
+			item.GetSize(),
+			item.GetUsage(),
+			item.GetMtime(),
+			1,
+			item.GetMultiLinkedInode(),
+			item.GetFlag(),
+		)
+		if err != nil {
+			log.Errorf("Error persisting archive file: %v", err)
+		}
 	}
 }
 

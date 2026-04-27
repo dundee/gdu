@@ -298,6 +298,32 @@ func TestSqliteItemGetPath(t *testing.T) {
 	assert.Equal(t, "/home/user/testdir/file.txt", child.GetPath())
 }
 
+func TestSqliteItemGetPathLazyLoad(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	// Set up metadata for path resolution
+	err = storage.SetMetadata("top_dir_path", "/home/user/testdir")
+	assert.NoError(t, err)
+
+	// Insert root
+	rootID, err := storage.InsertItem(nil, "testdir", true, 0, 0, time.Now(), 1, 0, ' ')
+	assert.NoError(t, err)
+
+	// Insert child
+	childID, err := storage.InsertItem(&rootID, "file.txt", false, 100, 4096, time.Now(), 1, 0, ' ')
+	assert.NoError(t, err)
+
+	// Get child (without setting parent manually)
+	child, err := storage.GetItemByID(childID)
+	assert.NoError(t, err)
+
+	// Path should still be correctly resolved via lazy loading of parent
+	assert.Equal(t, "/home/user/testdir/file.txt", child.GetPath())
+}
+
 func TestSqliteItemGetType(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	storage, err := NewSqliteStorage(dbPath)
