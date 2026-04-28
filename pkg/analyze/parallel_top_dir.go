@@ -10,6 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var pathSep = string(os.PathSeparator)
+
 var _ common.Analyzer = (*TopDirAnalyzer)(nil)
 
 // TopDirAnalyzer implements Analyzer
@@ -58,7 +60,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 
 	for _, f := range files {
 		name := f.Name()
-		entryPath := filepath.Join(path, name)
+		entryPath := path + pathSep + name
 		if f.IsDir() {
 			if a.ignoreDir(name, entryPath) {
 				continue
@@ -167,7 +169,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 
 	for _, f := range files {
 		name := f.Name()
-		entryPath := filepath.Join(path, name)
+		entryPath := path + pathSep + name
 		if f.IsDir() {
 			if a.ignoreDir(name, entryPath) {
 				continue
