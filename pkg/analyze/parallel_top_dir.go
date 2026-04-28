@@ -17,79 +17,15 @@ var _ common.Analyzer = (*TopDirAnalyzer)(nil)
 // thus is suitable only for non-interactive mode.
 // It tries to use only stack for storing state and results.
 type TopDirAnalyzer struct {
-	progress            *common.CurrentProgress
-	progressChan        chan common.CurrentProgress
-	progressOutChan     chan common.CurrentProgress
-	progressDoneChan    chan struct{}
-	doneChan            common.SignalGroup
-	wait                *WaitGroup
-	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeIgnored
-	followSymlinks      bool
-	gitAnnexedSize      bool
-	matchesTimeFilterFn common.TimeFilter
-	archiveBrowsing     bool
-	linkedItems         sync.Map
+	BaseAnalyzer
+	linkedItems sync.Map
 }
 
 // CreateTopDirAnalyzer returns Analyzer
 func CreateTopDirAnalyzer() *TopDirAnalyzer {
-	return &TopDirAnalyzer{
-		progress: &common.CurrentProgress{
-			ItemCount: 0,
-			TotalSize: int64(0),
-		},
-		progressChan:     make(chan common.CurrentProgress, 1),
-		progressOutChan:  make(chan common.CurrentProgress, 1),
-		progressDoneChan: make(chan struct{}),
-		doneChan:         make(common.SignalGroup),
-		wait:             (&WaitGroup{}).Init(),
-	}
-}
-
-// SetFollowSymlinks sets whether symlink to files should be followed
-func (a *TopDirAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-// SetShowAnnexedSize sets whether to use annexed size of git-annex files
-func (a *TopDirAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetTimeFilter sets the time filter function for file inclusion
-func (a *TopDirAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
-	a.matchesTimeFilterFn = matchesTimeFilterFn
-}
-
-// SetArchiveBrowsing sets whether browsing of zip/jar/tar archives is enabled
-func (a *TopDirAnalyzer) SetArchiveBrowsing(v bool) {
-	a.archiveBrowsing = v
-}
-
-// SetFileTypeFilter sets the file type filter function
-func (a *TopDirAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// GetProgressChan returns channel for getting progress
-func (a *TopDirAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
-// GetDone returns channel for checking when analysis is done
-func (a *TopDirAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-// ResetProgress returns progress
-func (a *TopDirAnalyzer) ResetProgress() {
-	a.progress = &common.CurrentProgress{}
-	a.progressChan = make(chan common.CurrentProgress, 1)
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
-	a.wait = (&WaitGroup{}).Init()
+	a := &TopDirAnalyzer{}
+	a.Init()
+	return a
 }
 
 // AnalyzeDir analyzes given path
@@ -99,7 +35,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
-	go a.updateProgress()
+	go a.UpdateProgress()
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -289,22 +225,4 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	topDir.AddUsage(totalSize, totalUsage, totalCount+1)
-}
-
-func (a *TopDirAnalyzer) updateProgress() {
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
-		}
-	}
 }
