@@ -255,7 +255,7 @@ func TestTopDirFollowSymlink(t *testing.T) {
 	err := os.Mkdir("test_dir/empty", 0o644)
 	assert.Nil(t, err)
 
-	err = os.Symlink("./test_dir/nested/subnested/file", "./test_dir/file2")
+	err = os.Symlink("nested/subnested/file", "./test_dir/file2")
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
@@ -287,7 +287,7 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 	err := os.Mkdir("test_dir/empty", 0o644)
 	assert.Nil(t, err)
 
-	err = os.Symlink("./test_dir/nested/subnested/file", "./test_dir/nested/file3")
+	err = os.Symlink("subnested/file", "./test_dir/nested/file3")
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
