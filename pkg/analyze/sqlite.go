@@ -335,13 +335,19 @@ func (s *SqliteStorage) RemoveItemAndUpdateStats(id, size, usage, itemCount int6
 	`
 	_, err = tx.Exec(updateAncestorsQuery, id, size, usage, itemCount)
 	if err != nil {
-		_ = tx.Rollback()
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+		}
 		return err
 	}
 
 	// 2. Delete the item and its descendants
 	if err = s.deleteItemTree(tx, id); err != nil {
-		_ = tx.Rollback()
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+		}
 		return err
 	}
 
@@ -918,7 +924,7 @@ type fileStat struct {
 
 // processArchiveEntry tries to expand name/entryPath as a zip or tar archive.
 // Returns the archive *Dir on success, or nil on failure (in which case err is set).
-func (a *SqliteAnalyzer) processArchiveEntry(entryPath string, name string, info os.FileInfo) (*Dir, error) {
+func (a *SqliteAnalyzer) processArchiveEntry(entryPath, name string, info os.FileInfo) (*Dir, error) {
 	if isZipFile(name) {
 		archiveDirZip, errZip := processZipFile(entryPath, info)
 		if errZip != nil {
@@ -940,22 +946,22 @@ func (a *SqliteAnalyzer) processArchiveEntry(entryPath string, name string, info
 
 // processFile resolves a single non-directory entry and returns its stats.
 // It returns nil when the file should be skipped entirely.
-func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntry) (stat fileStat) {
+func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (stat fileStat) {
 	if a.ignoreFileType != nil && a.ignoreFileType(name) {
-		return
+		return stat
 	}
 
 	info, err := f.Info()
 	if err != nil {
 		log.Print(err.Error())
-		return
+		return stat
 	}
 
 	if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
 		infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 		if err != nil {
 			log.Print(err.Error())
-			return
+			return stat
 		}
 		if infoF != nil {
 			info = infoF
@@ -963,7 +969,7 @@ func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntr
 	}
 
 	if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-		return
+		return stat
 	}
 
 	if a.archiveBrowsing && (isZipFile(name) || isTarFile(name)) {
@@ -999,6 +1005,7 @@ func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntr
 	}
 }
 
+// nolint:funlen
 func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	// Start with 4096 for directory's own size/usage, matching Dir.UpdateStats behavior
 	var (
@@ -1066,33 +1073,33 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			continue
 		}
 
-		fs := a.processFile(entryPath, name, f)
-		if fs == (fileStat{}) {
+		stat := a.processFile(entryPath, name, f)
+		if stat == (fileStat{}) {
 			continue
 		}
 
-		if fs.archiveDir != nil {
+		if stat.archiveDir != nil {
 			archiveID, err := a.storage.InsertItem(
 				&dirID,
 				name,
 				true,
-				fs.archiveDir.Size,
-				fs.archiveDir.Usage,
+				stat.archiveDir.Size,
+				stat.archiveDir.Usage,
 				info.ModTime(),
-				fs.archiveDir.ItemCount,
+				stat.archiveDir.ItemCount,
 				0,
-				fs.archiveDir.Flag,
+				stat.archiveDir.Flag,
 			)
 			if err != nil {
 				log.Print(err.Error())
 				continue
 			}
-			a.persistArchive(fs.archiveDir, archiveID)
+			a.persistArchive(stat.archiveDir, archiveID)
 
-			totalSize += fs.size
-			totalUsage += fs.usage
-			filesSize += fs.usage
-			itemCount += fs.itemCount
+			totalSize += stat.size
+			totalUsage += stat.usage
+			filesSize += stat.usage
+			itemCount += stat.itemCount
 			continue
 		}
 
@@ -1100,21 +1107,21 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			&dirID,
 			name,
 			false,
-			fs.size,
-			fs.usage,
+			stat.size,
+			stat.usage,
 			info.ModTime(),
 			1,
-			fs.mli,
-			fs.flag,
+			stat.mli,
+			stat.flag,
 		)
 		if err != nil {
 			log.Print(err.Error())
 			continue
 		}
 
-		totalSize += fs.size
-		totalUsage += fs.usage
-		filesSize += fs.usage
+		totalSize += stat.size
+		totalUsage += stat.usage
+		filesSize += stat.usage
 		itemCount++
 	}
 
