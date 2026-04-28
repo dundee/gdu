@@ -35,6 +35,8 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
+	var subDirChan = make(chan struct{})
+
 	go a.UpdateProgress()
 
 	files, err := os.ReadDir(path)
@@ -66,10 +68,9 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 				Flag: ' ',
 			}
 			topDirs = append(topDirs, topDir)
-			a.wait.Add(1)
 			go func(entryPath string) {
 				a.processSubDir(entryPath, topDir)
-				a.wait.Done()
+				subDirChan <- struct{}{}
 			}(entryPath)
 		} else {
 			var info os.FileInfo
@@ -119,6 +120,10 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		}
 	}
 
+	for i := 0; i < len(topDirs); i++ {
+		<-subDirChan
+	}
+
 	a.wait.Wait()
 
 	for _, topDir := range topDirs {
@@ -148,7 +153,11 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 		totalUsage int64 = 4096
 		totalCount int64
 		info       os.FileInfo
+		dirCount   int
+		subDirChan = make(chan struct{})
 	)
+
+	a.wait.Add(1)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -163,15 +172,15 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			if a.ignoreDir(name, entryPath) {
 				continue
 			}
+			dirCount++
 
-			a.wait.Add(1)
 			go func(entryPath string) {
 				concurrencyLimit <- struct{}{}
 
 				a.processSubDir(entryPath, topDir)
 
+				subDirChan <- struct{}{}
 				<-concurrencyLimit
-				a.wait.Done()
 			}(entryPath)
 		} else {
 			// Apply file type filter if set
@@ -225,4 +234,12 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	topDir.AddUsage(totalSize, totalUsage, totalCount+1)
+
+	go func() {
+		for i := 0; i < dirCount; i++ {
+			<-subDirChan
+		}
+
+		a.wait.Done()
+	}()
 }
