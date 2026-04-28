@@ -29,7 +29,12 @@ type TopDirAnalyzer struct {
 
 // CreateTopDirAnalyzer returns Analyzer
 func CreateTopDirAnalyzer() *TopDirAnalyzer {
-	a := &TopDirAnalyzer{}
+	a := &TopDirAnalyzer{
+		BaseAnalyzer: BaseAnalyzer{
+			ignoreFileType:      func(string) bool { return false },
+			matchesTimeFilterFn: func(time.Time) bool { return true },
+		},
+	}
 	a.Init()
 	return a
 }
@@ -46,7 +51,9 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
 	a.ignoreDir = ignore
-	a.ignoreFileType = fileTypeFilter
+	if fileTypeFilter != nil {
+		a.ignoreFileType = fileTypeFilter
+	}
 
 	var subDirChan = make(chan struct{})
 
@@ -88,7 +95,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		} else {
 			var info os.FileInfo
 			// Apply file type filter if set
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+			if a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 
@@ -100,7 +107,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			// Apply time filter if set
-			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+			if !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
@@ -197,7 +204,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			}(entryPath)
 		} else {
 			// Apply file type filter if set
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
+			if a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 
@@ -211,7 +218,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			}
 
 			// Apply time filter if set
-			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+			if !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
