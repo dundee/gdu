@@ -940,22 +940,22 @@ func (a *SqliteAnalyzer) processArchiveEntry(entryPath string, name string, info
 
 // processFile resolves a single non-directory entry and returns its stats.
 // It returns nil when the file should be skipped entirely.
-func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntry) *fileStat {
+func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntry) (stat fileStat) {
 	if a.ignoreFileType != nil && a.ignoreFileType(name) {
-		return nil
+		return
 	}
 
 	info, err := f.Info()
 	if err != nil {
 		log.Print(err.Error())
-		return nil
+		return
 	}
 
 	if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
 		infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 		if err != nil {
 			log.Print(err.Error())
-			return nil
+			return
 		}
 		if infoF != nil {
 			info = infoF
@@ -963,7 +963,7 @@ func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntr
 	}
 
 	if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-		return nil
+		return
 	}
 
 	if a.archiveBrowsing && (isZipFile(name) || isTarFile(name)) {
@@ -971,7 +971,7 @@ func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntr
 		if err != nil {
 			log.Printf("Failed to process archive %s: %v", entryPath, err)
 		} else {
-			return &fileStat{
+			return fileStat{
 				size:       archiveDir.Size,
 				usage:      archiveDir.Usage,
 				itemCount:  archiveDir.ItemCount,
@@ -991,7 +991,7 @@ func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntr
 		fileFlag = 'H'
 	}
 
-	return &fileStat{
+	return fileStat{
 		size:  fileSize,
 		usage: fileUsage,
 		mli:   fileMli,
@@ -1067,7 +1067,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		}
 
 		fs := a.processFile(entryPath, name, f)
-		if fs == nil {
+		if fs == (fileStat{}) {
 			continue
 		}
 
