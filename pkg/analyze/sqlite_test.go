@@ -693,7 +693,7 @@ func TestSqliteAnalyzerArchiveBrowsing(t *testing.T) {
 	defer fin()
 
 	// Create a zip file
-	err := run_in_bash("zip -r test_dir/test.zip test_dir/nested")
+	err := runInBash("zip -r test_dir/test.zip test_dir/nested")
 	if err != nil {
 		t.Skip("zip command not available")
 	}
@@ -729,7 +729,7 @@ func TestSqliteAnalyzerArchiveBrowsing(t *testing.T) {
 	assert.NotEmpty(t, zipFiles)
 }
 
-func run_in_bash(cmd string) error {
+func runInBash(cmd string) error {
 	const shell = "/bin/bash"
 	return exec.Command(shell, "-c", cmd).Run()
 }

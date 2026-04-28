@@ -335,13 +335,13 @@ func (s *SqliteStorage) RemoveItemAndUpdateStats(id, size, usage, itemCount int6
 	`
 	_, err = tx.Exec(updateAncestorsQuery, id, size, usage, itemCount)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
 	// 2. Delete the item and its descendants
 	if err = s.deleteItemTree(tx, id); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -905,6 +905,100 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 	return rootItem
 }
 
+// fileStat holds stats for a single file entry computed by processFile.
+type fileStat struct {
+	size      int64
+	usage     int64
+	itemCount int64
+	mli       uint64
+	flag      rune
+	// archiveDir is non-nil when the file is an archive that was expanded.
+	archiveDir *Dir
+}
+
+// processArchiveEntry tries to expand name/entryPath as a zip or tar archive.
+// Returns the archive *Dir on success, or nil on failure (in which case err is set).
+func (a *SqliteAnalyzer) processArchiveEntry(entryPath string, name string, info os.FileInfo) (*Dir, error) {
+	if isZipFile(name) {
+		archiveDirZip, errZip := processZipFile(entryPath, info)
+		if errZip != nil {
+			return nil, errZip
+		}
+		uncompressedSize, compressedSize, errSize := getZipFileSize(entryPath)
+		if errSize == nil {
+			archiveDirZip.Size = uncompressedSize
+			archiveDirZip.Usage = compressedSize
+		}
+		return archiveDirZip.Dir, nil
+	}
+	archiveDirTar, errTar := processTarFile(entryPath, info)
+	if errTar != nil {
+		return nil, errTar
+	}
+	return archiveDirTar.Dir, nil
+}
+
+// processFile resolves a single non-directory entry and returns its stats.
+// It returns nil when the file should be skipped entirely.
+func (a *SqliteAnalyzer) processFile(entryPath string, name string, f os.DirEntry) *fileStat {
+	if a.ignoreFileType != nil && a.ignoreFileType(name) {
+		return nil
+	}
+
+	info, err := f.Info()
+	if err != nil {
+		log.Print(err.Error())
+		return nil
+	}
+
+	if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
+		infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
+		if err != nil {
+			log.Print(err.Error())
+			return nil
+		}
+		if infoF != nil {
+			info = infoF
+		}
+	}
+
+	if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+		return nil
+	}
+
+	if a.archiveBrowsing && (isZipFile(name) || isTarFile(name)) {
+		archiveDir, err := a.processArchiveEntry(entryPath, name, info)
+		if err != nil {
+			log.Printf("Failed to process archive %s: %v", entryPath, err)
+		} else {
+			return &fileStat{
+				size:       archiveDir.Size,
+				usage:      archiveDir.Usage,
+				itemCount:  archiveDir.ItemCount,
+				flag:       archiveDir.Flag,
+				archiveDir: archiveDir,
+			}
+		}
+	}
+
+	fileSize := info.Size()
+	fileUsage, fileMli := getSyscallStats(info)
+	fileFlag := getFlag(info)
+
+	if fileMli != 0 && a.storage.HasInode(fileMli) {
+		fileSize = 0
+		fileUsage = 0
+		fileFlag = 'H'
+	}
+
+	return &fileStat{
+		size:  fileSize,
+		usage: fileUsage,
+		mli:   fileMli,
+		flag:  fileFlag,
+	}
+}
+
 func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	// Start with 4096 for directory's own size/usage, matching Dir.UpdateStats behavior
 	var (
@@ -963,136 +1057,65 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 				totalUsage += subItem.usage
 				itemCount += subItem.itemCount
 			}
-		} else {
-			// Apply file type filter
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
-				continue
-			}
+			continue
+		}
 
-			info, err := f.Info()
-			if err != nil {
-				log.Print(err.Error())
-				continue
-			}
+		info, err := f.Info()
+		if err != nil {
+			log.Print(err.Error())
+			continue
+		}
 
-			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
-				if err != nil {
-					log.Print(err.Error())
-					continue
-				}
-				if infoF != nil {
-					info = infoF
-				}
-			}
+		fs := a.processFile(entryPath, name, f)
+		if fs == nil {
+			continue
+		}
 
-			// Apply time filter
-			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-				continue
-			}
-
-			// Apply file type filter
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
-				continue
-			}
-
-			var (
-				fileSize  int64
-				fileUsage int64
-				fileMli   uint64
-				fileFlag  rune
-			)
-
-			if a.archiveBrowsing && (isZipFile(name) || isTarFile(name)) {
-				var (
-					archiveDir *Dir
-					err        error
-				)
-				if isZipFile(name) {
-					archiveDirZip, errZip := processZipFile(entryPath, info)
-					if errZip == nil {
-						uncompressedSize, compressedSize, errSize := getZipFileSize(entryPath)
-						if errSize == nil {
-							archiveDirZip.Size = uncompressedSize
-							archiveDirZip.Usage = compressedSize
-						}
-						archiveDir = archiveDirZip.Dir
-					} else {
-						err = errZip
-					}
-				} else {
-					archiveDirTar, errTar := processTarFile(entryPath, info)
-					if errTar == nil {
-						archiveDir = archiveDirTar.Dir
-					} else {
-						err = errTar
-					}
-				}
-
-				if err != nil {
-					log.Printf("Failed to process archive %s: %v", entryPath, err)
-					fileSize = info.Size()
-					fileUsage, fileMli = getSyscallStats(info)
-					fileFlag = getFlag(info)
-				} else {
-					// Use archive's root entry as the directory entry in database
-					archiveID, err := a.storage.InsertItem(
-						&dirID,
-						name,
-						true,
-						archiveDir.Size,
-						archiveDir.Usage,
-						info.ModTime(),
-						archiveDir.ItemCount,
-						0,
-						archiveDir.Flag,
-					)
-					if err != nil {
-						log.Print(err.Error())
-						continue
-					}
-					a.persistArchive(archiveDir, archiveID)
-
-					totalSize += archiveDir.Size
-					totalUsage += archiveDir.Usage
-					filesSize += archiveDir.Usage
-					itemCount += archiveDir.ItemCount
-					continue
-				}
-			} else {
-				fileSize = info.Size()
-				fileUsage, fileMli = getSyscallStats(info)
-				fileFlag = getFlag(info)
-
-				// Handle hard links: if inode already seen, don't count size
-				if fileMli != 0 && a.storage.HasInode(fileMli) {
-					fileSize = 0
-					fileUsage = 0
-					fileFlag = 'H'
-				}
-			}
-
-			_, err = a.storage.InsertItem(
+		if fs.archiveDir != nil {
+			archiveID, err := a.storage.InsertItem(
 				&dirID,
 				name,
-				false,
-				fileSize,
-				fileUsage,
+				true,
+				fs.archiveDir.Size,
+				fs.archiveDir.Usage,
 				info.ModTime(),
-				1,
-				fileMli,
-				fileFlag,
+				fs.archiveDir.ItemCount,
+				0,
+				fs.archiveDir.Flag,
 			)
 			if err != nil {
 				log.Print(err.Error())
 				continue
 			}
+			a.persistArchive(fs.archiveDir, archiveID)
 
-			totalSize += fileSize
-			totalUsage += fileUsage
-			filesSize += fileUsage
-			itemCount++
+			totalSize += fs.size
+			totalUsage += fs.usage
+			filesSize += fs.usage
+			itemCount += fs.itemCount
+			continue
 		}
+
+		_, err = a.storage.InsertItem(
+			&dirID,
+			name,
+			false,
+			fs.size,
+			fs.usage,
+			info.ModTime(),
+			1,
+			fs.mli,
+			fs.flag,
+		)
+		if err != nil {
+			log.Print(err.Error())
+			continue
+		}
+
+		totalSize += fs.size
+		totalUsage += fs.usage
+		filesSize += fs.usage
+		itemCount++
 	}
 
 	// Update directory with computed stats
@@ -1130,10 +1153,11 @@ func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
 	for _, f := range archiveDir.Files {
 		if f.IsDir() {
 			var subDir *Dir
-			if zipDir, ok := f.(*ZipDir); ok {
-				subDir = zipDir.Dir
-			} else if tarDir, ok := f.(*TarDir); ok {
-				subDir = tarDir.Dir
+			switch v := f.(type) {
+			case *ZipDir:
+				subDir = v.Dir
+			case *TarDir:
+				subDir = v.Dir
 			}
 
 			if subDir == nil {
