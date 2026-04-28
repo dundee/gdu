@@ -515,8 +515,6 @@ func (i *SqliteItem) IsDir() bool {
 
 // GetSize returns the apparent size
 func (i *SqliteItem) GetSize() int64 {
-	i.m.RLock()
-	defer i.m.RUnlock()
 	return i.size
 }
 
@@ -533,8 +531,6 @@ func (i *SqliteItem) GetType() string {
 
 // GetUsage returns the disk usage
 func (i *SqliteItem) GetUsage() int64 {
-	i.m.RLock()
-	defer i.m.RUnlock()
 	return i.usage
 }
 
@@ -545,16 +541,11 @@ func (i *SqliteItem) GetMtime() time.Time {
 
 // GetItemCount returns the item count
 func (i *SqliteItem) GetItemCount() int64 {
-	i.m.RLock()
-	defer i.m.RUnlock()
 	return i.itemCount
 }
 
 // GetParent returns the parent item
 func (i *SqliteItem) GetParent() fs.Item {
-	i.m.Lock()
-	defer i.m.Unlock()
-
 	if i.parent != nil {
 		return i.parent
 	}
@@ -573,16 +564,12 @@ func (i *SqliteItem) GetParent() fs.Item {
 
 // SetParent sets the parent item
 func (i *SqliteItem) SetParent(parent fs.Item) {
-	i.m.Lock()
-	defer i.m.Unlock()
 	i.parent = parent
 }
 
 // GetParentLocked returns the in-memory parent without hitting the database.
 // Used inside RemoveFile where storage.m is already write-locked.
 func (i *SqliteItem) GetParentLocked() *SqliteItem {
-	i.m.RLock()
-	defer i.m.RUnlock()
 	if i.parent != nil {
 		return i.parent.(*SqliteItem)
 	}
@@ -706,8 +693,6 @@ func addSqliteString(buff *[]byte, val string) error {
 
 // GetItemStats returns item statistics - hard links already handled during scan
 func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
-	i.m.RLock()
-	defer i.m.RUnlock()
 	return i.itemCount, i.size, i.usage
 }
 
