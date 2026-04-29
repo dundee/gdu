@@ -173,11 +173,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 		totalUsage int64 = 4096
 		totalCount int64
 		info       os.FileInfo
-		dirCount   int
-		subDirChan = make(chan struct{})
 	)
-
-	a.wait.Add(1)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -195,11 +191,9 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 
 			select {
 			case concurrencyLimit <- struct{}{}:
-				dirCount++
 				a.wait.Add(1)
 				go func(entryPath string) {
 					a.processSubDir(entryPath, topDir)
-					subDirChan <- struct{}{}
 					<-concurrencyLimit
 					a.wait.Done()
 				}(entryPath)
@@ -255,16 +249,9 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	a.progressTotalSize.Add(totalUsage)
 
 	topDir.AddUsage(totalSize, totalUsage, totalCount+1)
-
-	go func() {
-		for i := 0; i < dirCount; i++ {
-			<-subDirChan
-		}
-
-		a.wait.Done()
-	}()
 }
 
+// UpdateProgress updates progress
 func (a *TopDirAnalyzer) UpdateProgress() {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
