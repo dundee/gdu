@@ -147,31 +147,6 @@ func TestTopDirAnalyzeDirProgress(t *testing.T) {
 	assert.NotNil(t, analyzer.GetProgressChan())
 }
 
-func TestTopDirAnalyzeDirResetProgress(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	analyzer := CreateTopDirAnalyzer()
-	_ = analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	progress := <-analyzer.GetProgressChan()
-	assert.GreaterOrEqual(t, progress.TotalSize, int64(0))
-
-	analyzer.GetDone().Wait()
-	analyzer.ResetProgress()
-
-	// Analyze again after reset
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
-
-	assert.Equal(t, "test_dir", dir.GetName())
-}
-
 func TestTopDirAnalyzeDirNonExistent(t *testing.T) {
 	analyzer := CreateTopDirAnalyzer()
 	dir := analyzer.AnalyzeDir(

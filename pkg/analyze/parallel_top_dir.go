@@ -192,16 +192,20 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			if a.ignoreDir(name, entryPath) {
 				continue
 			}
-			dirCount++
 
-			go func(entryPath string) {
-				concurrencyLimit <- struct{}{}
-
+			select {
+			case concurrencyLimit <- struct{}{}:
+				dirCount++
+				a.wait.Add(1)
+				go func(entryPath string) {
+					a.processSubDir(entryPath, topDir)
+					subDirChan <- struct{}{}
+					<-concurrencyLimit
+					a.wait.Done()
+				}(entryPath)
+			default:
 				a.processSubDir(entryPath, topDir)
-
-				subDirChan <- struct{}{}
-				<-concurrencyLimit
-			}(entryPath)
+			}
 		} else {
 			// Apply file type filter if set
 			if a.ignoreFileType(name) {
