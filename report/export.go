@@ -176,17 +176,15 @@ func (ui *UI) updateProgress() {
 
 	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
-	progressChan := ui.Analyzer.GetProgressChan()
 	doneChan := ui.Analyzer.GetDone()
-
-	var progress common.CurrentProgress
 
 	i := 0
 	for {
 		fmt.Fprint(ui.output, emptyRow)
 
+		progress := ui.Analyzer.GetProgress()
+
 		select {
-		case progress = <-progressChan:
 		case <-doneChan:
 			fmt.Fprint(ui.output, "\r")
 			waitingForWrite = true
@@ -204,7 +202,7 @@ func (ui *UI) updateProgress() {
 			fmt.Fprint(ui.output, "Scanning... Total items: "+
 				ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
 				" size: "+
-				ui.formatSize(progress.TotalSize))
+				ui.formatSize(progress.TotalUsage))
 		}
 
 		time.Sleep(100 * time.Millisecond)

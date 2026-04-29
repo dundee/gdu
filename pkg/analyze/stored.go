@@ -61,11 +61,11 @@ func (a *StoredAnalyzer) AnalyzeDir(
 
 func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 	var (
-		file      fs.Item
-		err       error
-		totalSize int64
-		info      os.FileInfo
-		dirCount  int
+		file       fs.Item
+		err        error
+		totalUsage int64
+		info       os.FileInfo
+		dirCount   int
 	)
 
 	a.wait.Add(1)
@@ -180,7 +180,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				if regularFile, ok := file.(*File); ok {
 					setPlatformSpecificAttrs(regularFile, info)
 				}
-				totalSize += file.GetUsage()
+				totalUsage += file.GetUsage()
 				dir.AddFile(file)
 			}
 		}
@@ -193,11 +193,9 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 
 	a.wait.Done()
 
-	a.progressChan <- common.CurrentProgress{
-		CurrentItemName: path,
-		ItemCount:       int64(len(files)),
-		TotalSize:       totalSize,
-	}
+	a.progressCurrentItemName.Store(path)
+	a.progressItemCount.Add(int64(len(files)))
+	a.progressTotalUsage.Add(totalUsage)
 
 	return dir
 }

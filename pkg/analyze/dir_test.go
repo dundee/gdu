@@ -25,8 +25,8 @@ func TestAnalyzeDir(t *testing.T) {
 		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
 	).(*Dir)
 
-	progress := <-analyzer.GetProgressChan()
-	assert.GreaterOrEqual(t, progress.TotalSize, int64(0))
+	progress := analyzer.GetProgress()
+	assert.GreaterOrEqual(t, progress.TotalUsage, int64(0))
 
 	analyzer.GetDone().Wait()
 	analyzer.ResetProgress()

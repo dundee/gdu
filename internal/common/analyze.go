@@ -12,7 +12,7 @@ import (
 type CurrentProgress struct {
 	CurrentItemName string
 	ItemCount       int64
-	TotalSize       int64
+	TotalUsage      int64
 }
 
 // ShouldDirBeIgnored whether path should be ignored
@@ -29,8 +29,8 @@ type Analyzer interface {
 	SetTimeFilter(timeFilter TimeFilter)
 	SetArchiveBrowsing(bool)
 	SetFileTypeFilter(filter ShouldFileBeIgnored)
-	GetProgressChan() chan CurrentProgress
 	GetDone() SignalGroup
+	GetProgress() CurrentProgress
 	ResetProgress()
 }
 

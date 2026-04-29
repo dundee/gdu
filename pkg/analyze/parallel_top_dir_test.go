@@ -144,7 +144,32 @@ func TestTopDirAnalyzeDirProgress(t *testing.T) {
 	analyzer.GetDone().Wait()
 
 	// Just verify the progress channel is accessible and was used
-	assert.NotNil(t, analyzer.GetProgressChan())
+	assert.NotNil(t, analyzer.GetProgress())
+}
+
+func TestTopDirAnalyzeDirResetProgress(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	analyzer := CreateTopDirAnalyzer()
+	_ = analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	)
+
+	progress := analyzer.GetProgress()
+	assert.GreaterOrEqual(t, progress.TotalUsage, int64(0))
+
+	analyzer.GetDone().Wait()
+	analyzer.ResetProgress()
+
+	// Analyze again after reset
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	)
+
+	analyzer.GetDone().Wait()
+
+	assert.Equal(t, "test_dir", dir.GetName())
 }
 
 func TestTopDirAnalyzeDirNonExistent(t *testing.T) {

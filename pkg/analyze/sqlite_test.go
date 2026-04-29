@@ -668,14 +668,14 @@ func TestSqliteAnalyzerSetFileTypeFilter(t *testing.T) {
 	assert.NotNil(t, analyzer.ignoreFileType)
 }
 
-func TestSqliteAnalyzerGetProgressChan(t *testing.T) {
+func TestSqliteAnalyzerGetProgress(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	analyzer, err := CreateSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	progressChan := analyzer.GetProgressChan()
-	assert.NotNil(t, progressChan)
+	progress := analyzer.GetProgress()
+	assert.Equal(t, int64(0), progress.ItemCount)
 }
 
 func TestSqliteAnalyzerGetDone(t *testing.T) {
@@ -741,8 +741,6 @@ func TestSqliteAnalyzerResetProgress(t *testing.T) {
 	defer analyzer.storage.Close()
 
 	analyzer.ResetProgress()
-	assert.NotNil(t, analyzer.progress)
-	assert.NotNil(t, analyzer.progressChan)
 	assert.NotNil(t, analyzer.progressOutChan)
 	assert.NotNil(t, analyzer.doneChan)
 }
@@ -1010,13 +1008,11 @@ func TestSqliteAnalyzerProgress(t *testing.T) {
 		)
 	}()
 
-	// Receive at least one progress update
-	select {
-	case progress := <-analyzer.GetProgressChan():
-		assert.GreaterOrEqual(t, progress.TotalSize, int64(0))
-	case <-time.After(5 * time.Second):
-		t.Fatal("Timeout waiting for progress")
-	}
+	// Wait for analysis to make some progress
+	time.Sleep(200 * time.Millisecond)
+
+	progress := analyzer.GetProgress()
+	assert.GreaterOrEqual(t, progress.TotalUsage, int64(0))
 
 	analyzer.GetDone().Wait()
 }

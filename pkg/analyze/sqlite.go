@@ -1132,11 +1132,9 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 
 	// Report progress (only files in this dir, subdirs already reported themselves)
-	a.progressChan <- common.CurrentProgress{
-		CurrentItemName: path,
-		ItemCount:       int64(len(files)),
-		TotalSize:       filesSize,
-	}
+	a.progressCurrentItemName.Store(path)
+	a.progressItemCount.Add(int64(len(files)))
+	a.progressTotalUsage.Add(filesSize)
 
 	// Return SqliteItem for the directory
 	return &SqliteItem{

@@ -66,9 +66,9 @@ func (a *MockedAnalyzer) AnalyzeDir(
 	return dir
 }
 
-// GetProgressChan returns always Done
-func (a *MockedAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return make(chan common.CurrentProgress)
+// GetProgress returns empty progress
+func (a *MockedAnalyzer) GetProgress() common.CurrentProgress {
+	return common.CurrentProgress{}
 }
 
 // GetDone returns always Done

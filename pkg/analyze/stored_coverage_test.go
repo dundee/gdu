@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStoredAnalyzerGetProgressChan(t *testing.T) {
+func TestStoredAnalyzerGetProgress(t *testing.T) {
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	progressChan := analyzer.GetProgressChan()
-	assert.NotNil(t, progressChan)
+	progress := analyzer.GetProgress()
+	assert.Equal(t, int64(0), progress.ItemCount)
 }
 
 func TestStoredAnalyzerSetFollowSymlinks(t *testing.T) {

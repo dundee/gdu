@@ -72,11 +72,11 @@ func TestAnalyzeDir(t *testing.T) {
 	assert.Equal(t, result, ddd.GetParent())
 }
 
-func TestGetProgressChan(t *testing.T) {
+func TestGetProgress(t *testing.T) {
 	a := &MockedAnalyzer{}
-	ch := a.GetProgressChan()
+	progress := a.GetProgress()
 
-	assert.NotNil(t, ch)
+	assert.Equal(t, int64(0), progress.ItemCount)
 }
 
 func TestGetDone(t *testing.T) {

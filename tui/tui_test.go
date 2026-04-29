@@ -77,8 +77,7 @@ func TestUpdateProgress(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	done := ui.Analyzer.GetDone()
 	done.Broadcast()
-	ui.updateProgress()
-	assert.True(t, true)
+	ui.updateProgress(ui.Analyzer, done)
 }
 
 func TestSetShowDiskProgressBar(t *testing.T) {

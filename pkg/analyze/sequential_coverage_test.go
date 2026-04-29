@@ -30,19 +30,13 @@ func TestSequentialAnalyzerUpdateProgress(t *testing.T) {
 	// Start the progress updater
 	go analyzer.UpdateProgress()
 
-	// Send some progress updates
-	analyzer.progressChan <- struct {
-		CurrentItemName string
-		ItemCount       int64
-		TotalSize       int64
-	}{
-		CurrentItemName: "test",
-		ItemCount:       5,
-		TotalSize:       100,
-	}
+	// Set some progress via atomics
+	analyzer.progressCurrentItemName.Store("test")
+	analyzer.progressItemCount.Add(5)
+	analyzer.progressTotalUsage.Add(100)
 
 	// Wait a bit for the progress to be processed
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Send done signal
 	analyzer.progressDoneChan <- struct{}{}
@@ -57,33 +51,21 @@ func TestSequentialAnalyzerUpdateProgressWithDefaultCase(t *testing.T) {
 	// Start the progress updater
 	go analyzer.UpdateProgress()
 
-	// Send some progress updates
-	analyzer.progressChan <- struct {
-		CurrentItemName string
-		ItemCount       int64
-		TotalSize       int64
-	}{
-		CurrentItemName: "test",
-		ItemCount:       5,
-		TotalSize:       100,
-	}
+	// Set some progress via atomics
+	analyzer.progressCurrentItemName.Store("test")
+	analyzer.progressItemCount.Add(5)
+	analyzer.progressTotalUsage.Add(100)
 
 	// Wait a bit for the progress to be processed
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
-	// Send another progress update to trigger the default case
-	analyzer.progressChan <- struct {
-		CurrentItemName string
-		ItemCount       int64
-		TotalSize       int64
-	}{
-		CurrentItemName: "test2",
-		ItemCount:       3,
-		TotalSize:       50,
-	}
+	// Update progress again
+	analyzer.progressCurrentItemName.Store("test2")
+	analyzer.progressItemCount.Add(3)
+	analyzer.progressTotalUsage.Store(50)
 
 	// Wait a bit for the progress to be processed
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Send done signal
 	analyzer.progressDoneChan <- struct{}{}

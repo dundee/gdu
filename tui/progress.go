@@ -9,23 +9,21 @@ import (
 	"github.com/dundee/gdu/v5/pkg/path"
 )
 
-func (ui *UI) updateProgress() {
+func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGroup) {
 	color := "[white:black:b]"
 	if ui.UseColors {
 		color = "[red:black:b]"
 	}
 
-	progressChan := ui.Analyzer.GetProgressChan()
-	doneChan := ui.Analyzer.GetDone()
 	deviceSize := ui.currentDeviceSize
 	showBar := ui.showDiskProgressBar
 
-	var progress common.CurrentProgress
 	start := time.Now()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 
 	for {
 		select {
-		case progress = <-progressChan:
 		case <-doneChan:
 			if deviceSize > 0 && showBar {
 				clearTerminalProgress()
@@ -36,13 +34,16 @@ func (ui *UI) updateProgress() {
 				ui.progress.SetText("Calculating disk usage...")
 			})
 			return
+		case <-ticker.C:
 		}
 
-		func(itemCount int64, totalSize int64, currentItem string) {
+		progress := analyzer.GetProgress()
+
+		func(itemCount int64, totalUsage int64, currentItem string) {
 			delta := time.Since(start).Round(time.Second)
 
 			if deviceSize > 0 && showBar {
-				percent := int(totalSize * 100 / deviceSize)
+				percent := int(totalUsage * 100 / deviceSize)
 				writeTerminalProgress(percent)
 				if ui.progressBar != nil {
 					ui.progressBar.SetProgress(percent)
@@ -55,16 +56,14 @@ func (ui *UI) updateProgress() {
 					common.FormatNumber(int64(itemCount)) +
 					"[white:black:-], size: " +
 					color +
-					ui.formatSize(totalSize, false, false) +
+					ui.formatSize(totalUsage, false, false) +
 					"[white:black:-], elapsed time: " +
 					color +
 					delta.String() +
 					"[white:black:-]\nCurrent item: [white:black:b]" +
 					path.ShortenPath(currentItem, ui.currentItemNameMaxLen))
 			})
-		}(progress.ItemCount, progress.TotalSize, progress.CurrentItemName)
-
-		time.Sleep(100 * time.Millisecond)
+		}(progress.ItemCount, progress.TotalUsage, progress.CurrentItemName)
 	}
 }
 

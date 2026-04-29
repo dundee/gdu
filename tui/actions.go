@@ -78,7 +78,9 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 	ui.pages.AddPage("progress", flex, true, true)
 
-	go ui.updateProgress()
+	analyzer := ui.Analyzer
+	doneChan := analyzer.GetDone()
+	go ui.updateProgress(analyzer, doneChan)
 
 	go func() {
 		defer debug.FreeOSMemory()

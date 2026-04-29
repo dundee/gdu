@@ -159,10 +159,8 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 		}
 	}
 
-	a.progressChan <- common.CurrentProgress{
-		CurrentItemName: path,
-		ItemCount:       int64(len(files)),
-		TotalSize:       totalSize,
-	}
+	a.progressCurrentItemName.Store(path)
+	a.progressItemCount.Add(int64(len(files)))
+	a.progressTotalUsage.Add(totalSize)
 	return dir
 }

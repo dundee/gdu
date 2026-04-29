@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -22,9 +21,7 @@ var _ common.Analyzer = (*TopDirAnalyzer)(nil)
 // It tries to use only stack for storing state and results.
 type TopDirAnalyzer struct {
 	BaseAnalyzer
-	progressItemCount atomic.Int64
-	progressTotalSize atomic.Int64
-	linkedItems       sync.Map
+	linkedItems sync.Map
 }
 
 // CreateTopDirAnalyzer returns Analyzer
@@ -37,13 +34,6 @@ func CreateTopDirAnalyzer() *TopDirAnalyzer {
 	}
 	a.Init()
 	return a
-}
-
-// ResetProgress returns progress
-func (a *TopDirAnalyzer) ResetProgress() {
-	a.BaseAnalyzer.ResetProgress()
-	a.progressItemCount.Store(0)
-	a.progressTotalSize.Store(0)
 }
 
 // AnalyzeDir analyzes given path
@@ -246,28 +236,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	a.progressItemCount.Add(totalCount)
-	a.progressTotalSize.Add(totalUsage)
+	a.progressTotalUsage.Add(totalUsage)
 
 	topDir.AddUsage(totalSize, totalUsage, totalCount+1)
-}
-
-// UpdateProgress updates progress
-func (a *TopDirAnalyzer) UpdateProgress() {
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case <-ticker.C:
-			progress := common.CurrentProgress{
-				ItemCount: a.progressItemCount.Load(),
-				TotalSize: a.progressTotalSize.Load(),
-			}
-			select {
-			case a.progressOutChan <- progress:
-			default:
-			}
-		}
-	}
 }

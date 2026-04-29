@@ -481,29 +481,21 @@ func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
 		emptyRow += " "
 	}
 
-	progressChan := ui.Analyzer.GetProgressChan()
 	analysisDoneChan := ui.Analyzer.GetDone()
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-
-	var progress common.CurrentProgress
 
 	i := 0
 	for {
 		select {
 		case <-ticker.C:
-			select {
-			case progress = <-progressChan:
-				fmt.Fprint(ui.output, emptyRow)
-				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
-				fmt.Fprint(ui.output, "Scanning... Total items: "+
-					ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
-					" size: "+
-					ui.formatSize(progress.TotalSize))
-			default:
-				// Update only the spinner without clearing the line
-				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
-			}
+			progress := ui.Analyzer.GetProgress()
+			fmt.Fprint(ui.output, emptyRow)
+			fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+			fmt.Fprint(ui.output, "Scanning... Total items: "+
+				ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
+				" size: "+
+				ui.formatSize(progress.TotalUsage))
 			i++
 			i %= progressRunesCount
 		case <-analysisDoneChan:

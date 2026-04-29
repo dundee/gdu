@@ -1,36 +1,40 @@
 package analyze
 
 import (
+	"sync/atomic"
+	"time"
+
 	"github.com/dundee/gdu/v5/internal/common"
 )
 
 // BaseAnalyzer provides common logic for all analyzers
 type BaseAnalyzer struct {
-	progress            *common.CurrentProgress
-	progressChan        chan common.CurrentProgress
-	progressOutChan     chan common.CurrentProgress
-	progressDoneChan    chan struct{}
-	doneChan            common.SignalGroup
-	wait                *WaitGroup
-	ignoreDir           common.ShouldDirBeIgnored
-	ignoreFileType      common.ShouldFileBeIgnored
-	followSymlinks      bool
-	gitAnnexedSize      bool
-	matchesTimeFilterFn common.TimeFilter
-	archiveBrowsing     bool
+	progressOutChan         chan common.CurrentProgress
+	progressDoneChan        chan struct{}
+	progressItemCount       atomic.Int64
+	progressTotalUsage      atomic.Int64
+	progressCurrentItemName atomic.Value
+	doneChan                common.SignalGroup
+	wait                    *WaitGroup
+	ignoreDir               common.ShouldDirBeIgnored
+	ignoreFileType          common.ShouldFileBeIgnored
+	followSymlinks          bool
+	gitAnnexedSize          bool
+	matchesTimeFilterFn     common.TimeFilter
+	archiveBrowsing         bool
+	progressTicker          *time.Ticker
 }
 
 // Init initializes the BaseAnalyzer
 func (a *BaseAnalyzer) Init() {
-	a.progress = &common.CurrentProgress{
-		ItemCount: 0,
-		TotalSize: int64(0),
-	}
-	a.progressChan = make(chan common.CurrentProgress, 1)
 	a.progressOutChan = make(chan common.CurrentProgress, 1)
 	a.progressDoneChan = make(chan struct{})
 	a.doneChan = make(common.SignalGroup)
 	a.wait = (&WaitGroup{}).Init()
+	a.progressItemCount.Store(0)
+	a.progressTotalUsage.Store(0)
+	a.progressCurrentItemName.Store("")
+	a.progressTicker = time.NewTicker(50 * time.Millisecond)
 }
 
 // SetFollowSymlinks sets whether symlink to files should be followed
@@ -58,11 +62,6 @@ func (a *BaseAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
 	a.ignoreFileType = filter
 }
 
-// GetProgressChan returns channel for getting progress
-func (a *BaseAnalyzer) GetProgressChan() chan common.CurrentProgress {
-	return a.progressOutChan
-}
-
 // GetDone returns channel for checking when analysis is done
 func (a *BaseAnalyzer) GetDone() common.SignalGroup {
 	return a.doneChan
@@ -73,21 +72,27 @@ func (a *BaseAnalyzer) ResetProgress() {
 	a.Init()
 }
 
+func (a *BaseAnalyzer) GetProgress() common.CurrentProgress {
+	return common.CurrentProgress{
+		CurrentItemName: a.progressCurrentItemName.Load().(string),
+		ItemCount:       a.progressItemCount.Load(),
+		TotalUsage:      a.progressTotalUsage.Load(),
+	}
+}
+
 // UpdateProgress updates progress
 func (a *BaseAnalyzer) UpdateProgress() {
+	ticker := a.progressTicker
+	defer ticker.Stop()
 	for {
 		select {
 		case <-a.progressDoneChan:
 			return
-		case progress := <-a.progressChan:
-			a.progress.CurrentItemName = progress.CurrentItemName
-			a.progress.ItemCount += progress.ItemCount
-			a.progress.TotalSize += progress.TotalSize
-		}
-
-		select {
-		case a.progressOutChan <- *a.progress:
-		default:
+		case <-ticker.C:
+			select {
+			case a.progressOutChan <- a.GetProgress():
+			default:
+			}
 		}
 	}
 }

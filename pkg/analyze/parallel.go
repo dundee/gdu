@@ -49,7 +49,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
 		file       fs.Item
 		err        error
-		totalSize  int64
+		totalUsage int64
 		info       os.FileInfo
 		subDirChan = make(chan *Dir)
 		dirCount   int
@@ -167,7 +167,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				if regularFile, ok := file.(*File); ok {
 					setPlatformSpecificAttrs(regularFile, info)
 				}
-				totalSize += file.GetUsage()
+				totalUsage += file.GetUsage()
 				dir.AddFile(file)
 			}
 		}
@@ -184,11 +184,9 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		a.wait.Done()
 	}()
 
-	a.progressChan <- common.CurrentProgress{
-		CurrentItemName: path,
-		ItemCount:       int64(len(files)),
-		TotalSize:       totalSize,
-	}
+	a.progressCurrentItemName.Store(path)
+	a.progressItemCount.Add(int64(len(files)))
+	a.progressTotalUsage.Add(totalUsage)
 	return dir
 }
 
