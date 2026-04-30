@@ -836,7 +836,35 @@ func (i *SqliteItem) RLock() func() {
 // SqliteAnalyzer implements Analyzer using SQLite storage
 type SqliteAnalyzer struct {
 	BaseAnalyzer
-	storage *SqliteStorage
+	storage   *SqliteStorage
+	dbWriteMu sync.Mutex
+}
+
+// insertItemLocked is a serialized wrapper around storage.InsertItem.
+// All concurrent goroutines spawned during AnalyzeDir must use this helper
+// because the underlying *sql.Tx and prepared statements are not safe for
+// concurrent use.
+func (a *SqliteAnalyzer) insertItemLocked(
+	parentID *int64, name string, isDir bool, size, usage int64, mtime time.Time,
+	itemCount int64, mli uint64, flag rune,
+) (int64, error) {
+	a.dbWriteMu.Lock()
+	defer a.dbWriteMu.Unlock()
+	return a.storage.InsertItem(parentID, name, isDir, size, usage, mtime, itemCount, mli, flag)
+}
+
+// updateItemLocked is a serialized wrapper around storage.UpdateItem.
+func (a *SqliteAnalyzer) updateItemLocked(id, size, usage, itemCount int64) error {
+	a.dbWriteMu.Lock()
+	defer a.dbWriteMu.Unlock()
+	return a.storage.UpdateItem(id, size, usage, itemCount)
+}
+
+// hasInodeLocked is a serialized wrapper around storage.HasInode.
+func (a *SqliteAnalyzer) hasInodeLocked(mli uint64) bool {
+	a.dbWriteMu.Lock()
+	defer a.dbWriteMu.Unlock()
+	return a.storage.HasInode(mli)
 }
 
 // CreateSqliteAnalyzer creates a new SQLite analyzer
@@ -991,7 +1019,7 @@ func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (sta
 	fileUsage, fileMli := getSyscallStats(info)
 	fileFlag := getFlag(info)
 
-	if fileMli != 0 && a.storage.HasInode(fileMli) {
+	if fileMli != 0 && a.hasInodeLocked(fileMli) {
 		fileSize = 0
 		fileUsage = 0
 		fileFlag = 'H'
@@ -1013,6 +1041,8 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		totalUsage int64 = 4096
 		filesSize  int64 // only files in this directory, for progress reporting
 		itemCount  int64 = 1
+		subDirChan       = make(chan *SqliteItem)
+		dirCount   int
 	)
 
 	a.wait.Add(1)
@@ -1024,14 +1054,16 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 
 	// Get directory info for mtime
-	dirInfo, err := os.Stat(path)
+	dirInfo, statErr := os.Stat(path)
 	var dirMtime time.Time
-	if err == nil {
+	if statErr == nil {
 		dirMtime = dirInfo.ModTime()
 	}
 
+	dirFlag := getDirFlag(err, len(files))
+
 	// Insert directory into database (size/usage will be updated later)
-	dirID, err := a.storage.InsertItem(
+	dirID, err := a.insertItemLocked(
 		parentID,
 		filepath.Base(path),
 		true,
@@ -1040,14 +1072,15 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		dirMtime,
 		1, // item_count will be updated later
 		0,
-		getDirFlag(err, len(files)),
+		dirFlag,
 	)
 	if err != nil {
 		log.Print(err.Error())
 		return nil
 	}
 
-	// Process children
+	// Spawn subdirectory scans in parallel; each goroutine fully completes its
+	// subtree (including DB row finalization) before sending the result back.
 	for _, f := range files {
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
@@ -1056,14 +1089,14 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			if a.ignoreDir(name, entryPath) {
 				continue
 			}
+			dirCount++
 
-			// Process subdirectory recursively
-			subItem := a.processDir(entryPath, &dirID)
-			if subItem != nil {
-				totalSize += subItem.size
-				totalUsage += subItem.usage
-				itemCount += subItem.itemCount
-			}
+			go func(entryPath string) {
+				concurrencyLimit <- struct{}{}
+				sub := a.processDir(entryPath, &dirID)
+				subDirChan <- sub
+				<-concurrencyLimit
+			}(entryPath)
 			continue
 		}
 
@@ -1079,7 +1112,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		}
 
 		if stat.archiveDir != nil {
-			archiveID, err := a.storage.InsertItem(
+			archiveID, err := a.insertItemLocked(
 				&dirID,
 				name,
 				true,
@@ -1103,7 +1136,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			continue
 		}
 
-		_, err = a.storage.InsertItem(
+		_, err = a.insertItemLocked(
 			&dirID,
 			name,
 			false,
@@ -1125,9 +1158,18 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		itemCount++
 	}
 
+	// Aggregate subdirectory results. Each sub is fully finalized when received.
+	for i := 0; i < dirCount; i++ {
+		sub := <-subDirChan
+		if sub != nil {
+			totalSize += sub.size
+			totalUsage += sub.usage
+			itemCount += sub.itemCount
+		}
+	}
+
 	// Update directory with computed stats
-	err = a.storage.UpdateItem(dirID, totalSize, totalUsage, itemCount)
-	if err != nil {
+	if err := a.updateItemLocked(dirID, totalSize, totalUsage, itemCount); err != nil {
 		log.Printf("Error updating item: %v", err)
 	}
 
@@ -1147,7 +1189,7 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		usage:     totalUsage,
 		mtime:     dirMtime,
 		itemCount: itemCount,
-		flag:      getDirFlag(err, len(files)),
+		flag:      dirFlag,
 	}
 }
 
@@ -1169,7 +1211,7 @@ func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
 				continue
 			}
 
-			id, err := a.storage.InsertItem(
+			id, err := a.insertItemLocked(
 				&parentID,
 				f.GetName(),
 				true,
@@ -1186,7 +1228,7 @@ func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
 			}
 			a.persistArchive(subDir, id)
 		} else {
-			_, err := a.storage.InsertItem(
+			_, err := a.insertItemLocked(
 				&parentID,
 				f.GetName(),
 				false,
