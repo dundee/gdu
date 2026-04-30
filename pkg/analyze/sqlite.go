@@ -1048,6 +1048,21 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	a.wait.Add(1)
 	defer a.wait.Done()
 
+	// Hold a concurrency slot only during the scan/insert phase. We must
+	// release it before draining subDirChan, otherwise child goroutines
+	// (which need to acquire a slot themselves) would deadlock once the
+	// global concurrencyLimit is saturated by ancestors waiting on their
+	// own children.
+	concurrencyLimit <- struct{}{}
+	slotReleased := false
+	releaseSlot := func() {
+		if !slotReleased {
+			<-concurrencyLimit
+			slotReleased = true
+		}
+	}
+	defer releaseSlot()
+
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
@@ -1092,10 +1107,8 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			dirCount++
 
 			go func(entryPath string) {
-				concurrencyLimit <- struct{}{}
 				sub := a.processDir(entryPath, &dirID)
 				subDirChan <- sub
-				<-concurrencyLimit
 			}(entryPath)
 			continue
 		}
@@ -1157,6 +1170,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		filesSize += stat.usage
 		itemCount++
 	}
+
+	// Release the concurrency slot before draining subDirChan so children
+	// blocked on concurrencyLimit can make progress.
+	releaseSlot()
 
 	// Aggregate subdirectory results. Each sub is fully finalized when received.
 	for i := 0; i < dirCount; i++ {
