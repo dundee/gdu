@@ -84,8 +84,6 @@ func TestShowItemCountInNonInteractiveModeWithColorsAndFile(t *testing.T) {
 	assert.Regexp(t, regexp.MustCompile(`(?m)\s+1\s+single$`), out)
 }
 
-
-
 func TestShowSummaryApparentSizeForFilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "small.txt")
