@@ -430,6 +430,7 @@ func (a *App) createUI() (UI, error) {
 	return ui, nil
 }
 
+// nolint:gocyclo,funlen // This function is a suite of if statements
 func (a *App) getOptions() []tui.Option {
 	var opts []tui.Option
 
