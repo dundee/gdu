@@ -367,6 +367,10 @@ func TestAnalyzePathWithStyle(t *testing.T) {
 					TextColor:       "black",
 					BackgroundColor: "red",
 				},
+				Marked: ColorStyle{
+					TextColor:       "white",
+					BackgroundColor: "blue",
+				},
 				ProgressModal: ProgressModalOpts{
 					CurrentItemNameMaxLen: 10,
 				},

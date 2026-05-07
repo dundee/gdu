@@ -750,6 +750,8 @@ func TestSetStyles(t *testing.T) {
 
 	ui.SetSelectedBackgroundColor(tcell.ColorRed)
 	ui.SetSelectedTextColor(tcell.ColorRed)
+	ui.SetMarkedTextColor(tcell.ColorRed)
+	ui.SetMarkedBackgroundColor(tcell.ColorRed)
 	ui.SetFooterTextColor("red")
 	ui.SetFooterBackgroundColor("red")
 	ui.SetFooterNumberColor("red")
@@ -760,6 +762,8 @@ func TestSetStyles(t *testing.T) {
 
 	assert.Equal(t, ui.selectedBackgroundColor, tcell.ColorRed)
 	assert.Equal(t, ui.selectedTextColor, tcell.ColorRed)
+	assert.Equal(t, ui.markedTextColor, tcell.ColorRed)
+	assert.Equal(t, ui.markedBackgroundColor, tcell.ColorRed)
 	assert.Equal(t, ui.footerTextColor, "red")
 	assert.Equal(t, ui.footerBackgroundColor, "red")
 	assert.Equal(t, ui.footerNumberColor, "red")
