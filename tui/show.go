@@ -182,8 +182,8 @@ func (ui *UI) showDir() {
 		case ignored:
 			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.SecondaryTextColor))
 		case marked:
-			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.PrimaryTextColor))
-			cell.SetBackgroundColor(tview.Styles.ContrastBackgroundColor)
+			cell.SetStyle(tcell.Style{}.Foreground(ui.markedTextColor))
+			cell.SetBackgroundColor(ui.markedBackgroundColor)
 		default:
 			cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 		}

@@ -208,6 +208,9 @@ style:
     selected-row:
         text-color: black
         background-color: "#ff0000"
+    marked:
+        text-color: white
+        background-color: "#6600cc"
 ```
 
 ## Deletion in background and in parallel (experimental)

@@ -145,6 +145,14 @@ Color of text for the selected row
 
 Background color for the selected row
 
+#### `style.marked.text-color`
+
+Color of text for marked items
+
+#### `style.marked.background-color`
+
+Background color for marked items
+
 #### `style.progress-modal.current-item-path-max-len`
 
 Maximum length of file path for the current item in progress bar.

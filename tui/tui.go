@@ -72,6 +72,8 @@ type UI struct {
 	devices                 []*device.Device
 	selectedTextColor       tcell.Color
 	selectedBackgroundColor tcell.Color
+	markedTextColor         tcell.Color
+	markedBackgroundColor   tcell.Color
 	currentItemNameMaxLen   int
 	activeWorkers           int
 	deleteWorkersCount      int
@@ -141,6 +143,8 @@ func CreateUI(
 		linkedItems:             make(fs.HardLinkedItems, 10),
 		selectedTextColor:       tview.Styles.TitleColor,
 		selectedBackgroundColor: tview.Styles.MoreContrastBackgroundColor,
+		markedTextColor:         tview.Styles.PrimaryTextColor,
+		markedBackgroundColor:   tview.Styles.ContrastBackgroundColor,
 		currentItemNameMaxLen:   70,
 		defaultSortBy:           "size",
 		defaultSortOrder:        "desc",
@@ -233,6 +237,16 @@ func (ui *UI) SetSelectedTextColor(color tcell.Color) {
 // SetSelectedBackgroundColor sets the color for the highlighted selected text
 func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
 	ui.selectedBackgroundColor = color
+}
+
+// SetMarkedTextColor sets the text color for marked items
+func (ui *UI) SetMarkedTextColor(color tcell.Color) {
+	ui.markedTextColor = color
+}
+
+// SetMarkedBackgroundColor sets the background color for marked items
+func (ui *UI) SetMarkedBackgroundColor(color tcell.Color) {
+	ui.markedBackgroundColor = color
 }
 
 // SetFooterTextColor sets the color for the footer text

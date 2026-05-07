@@ -134,6 +134,7 @@ func (f *Flags) ShouldRunInNonInteractiveMode(istty bool) bool {
 type Style struct {
 	Footer        FooterColorStyle    `yaml:"footer"`
 	SelectedRow   ColorStyle          `yaml:"selected-row"`
+	Marked        ColorStyle          `yaml:"marked"`
 	ResultRow     ResultRowColorStyle `yaml:"result-row"`
 	Header        HeaderColorStyle    `yaml:"header"`
 	ProgressModal ProgressModalOpts   `yaml:"progress-modal"`
@@ -440,6 +441,16 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.Style.SelectedRow.BackgroundColor != "" {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
+		})
+	}
+	if a.Flags.Style.Marked.TextColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetMarkedTextColor(tcell.GetColor(a.Flags.Style.Marked.TextColor))
+		})
+	}
+	if a.Flags.Style.Marked.BackgroundColor != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetMarkedBackgroundColor(tcell.GetColor(a.Flags.Style.Marked.BackgroundColor))
 		})
 	}
 	if a.Flags.Style.Footer.TextColor != "" {
