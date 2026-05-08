@@ -109,15 +109,33 @@ func init() {
 	setDefaults()
 }
 
-func initConfig() {
-	setConfigFilePath()
-	data, err := os.ReadFile(af.CfgFile)
+var systemConfigPath = "/etc/gdu.yaml"
+
+func loadConfig(path string) error {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		configErr = err
-		return // config file does not exist, return
+		return err
+	}
+	return yaml.Unmarshal(data, &af)
+}
+
+func initConfig() {
+	// Load system-wide config first (ignored on Windows/Plan9 and when absent).
+	if runtime.GOOS != "windows" && runtime.GOOS != "plan9" {
+		if err := loadConfig(systemConfigPath); err != nil && !os.IsNotExist(err) {
+			configErr = err
+			return
+		}
 	}
 
-	configErr = yaml.Unmarshal(data, &af)
+	// Load user config; its values overwrite whatever the system config set.
+	setConfigFilePath()
+	if err := loadConfig(af.CfgFile); err != nil {
+		if !os.IsNotExist(err) {
+			configErr = err
+		}
+		return
+	}
 }
 
 func setDefaults() {
