@@ -121,7 +121,7 @@ func loadConfig(path string) error {
 
 func initConfig() {
 	// Load system-wide config first (ignored on Windows/Plan9 and when absent).
-	if runtime.GOOS != "windows" && runtime.GOOS != "plan9" {
+	if runtime.GOOS != osWindows && runtime.GOOS != osPlan9 {
 		if err := loadConfig(systemConfigPath); err != nil && !os.IsNotExist(err) {
 			configErr = err
 			return
@@ -213,7 +213,7 @@ func runE(command *cobra.Command, args []string) error {
 		}
 	}
 
-	if runtime.GOOS == "windows" && af.LogFile == "/dev/null" {
+	if runtime.GOOS == osWindows && af.LogFile == "/dev/null" {
 		af.LogFile = "nul"
 	}
 
@@ -241,7 +241,7 @@ func runE(command *cobra.Command, args []string) error {
 	istty := isatty.IsTerminal(os.Stdout.Fd())
 
 	// we are not able to analyze disk usage on Windows and Plan9
-	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
+	if runtime.GOOS == osWindows || runtime.GOOS == osPlan9 {
 		af.ShowApparentSize = true
 	}
 
