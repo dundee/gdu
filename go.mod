@@ -8,7 +8,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.13.9
 	github.com/h2non/filetype v1.1.3
 	github.com/maruel/natural v1.3.0
-	github.com/mattn/go-isatty v0.0.21
+	github.com/mattn/go-isatty v0.0.22
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.42.0
 	github.com/sirupsen/logrus v1.9.4
