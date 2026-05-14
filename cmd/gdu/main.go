@@ -19,6 +19,11 @@ import (
 	"github.com/dundee/gdu/v5/pkg/device"
 )
 
+const (
+	osWindows = "windows"
+	osPlan9   = "plan9"
+)
+
 var (
 	af        *app.Flags
 	configErr error
