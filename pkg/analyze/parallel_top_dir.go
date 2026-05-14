@@ -68,7 +68,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 
 	for _, f := range files {
 		name := f.Name()
-		entryPath := path + pathSep + name
+		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
 			if a.ignoreDir(name, entryPath) {
 				continue
