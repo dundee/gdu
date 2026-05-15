@@ -53,8 +53,8 @@ func TestSimpleDirUpdateStats(t *testing.T) {
 
 	d.UpdateStats(make(fs.HardLinkedItems))
 
-	assert.Equal(t, int64(100+50+300+4096), d.Size)
-	assert.Equal(t, int64(200+80+400+4096), d.Usage)
+	assert.Equal(t, int64(100+50+300), d.Size)
+	assert.Equal(t, int64(200+80+400), d.Usage)
 	assert.Equal(t, int64(1+1+5+1), d.ItemCount)
 }
 
@@ -150,7 +150,7 @@ func TestSimpleDirPanics(t *testing.T) {
 	assert.Panics(t, func() { d.SetParent(nil) })
 	assert.Panics(t, func() { d.GetMultiLinkedInode() })
 	assert.Panics(t, func() { d.EncodeJSON(nil, false) })
-	assert.Panics(t, func() { d.GetItemStats(nil) })
+	assert.Panics(t, func() { d.GetItemStats(nil, false) })
 	assert.Panics(t, func() { d.AddFile(nil) })
 	assert.Panics(t, func() {
 		d.GetFilesLocked(fs.SortBySize, fs.SortAsc)

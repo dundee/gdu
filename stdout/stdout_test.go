@@ -304,7 +304,7 @@ func TestItemRows(t *testing.T) {
 	err := ui.AnalyzePath("test_dir", nil)
 
 	assert.Nil(t, err)
-	assert.Contains(t, output.String(), "KiB")
+	assert.Contains(t, output.String(), "B")
 }
 
 func TestAnalyzePathWithProgress(t *testing.T) {

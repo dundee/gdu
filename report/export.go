@@ -119,7 +119,11 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	go func() {
 		defer wait.Done()
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
-		dir.UpdateStats(make(fs.HardLinkedItems, 10))
+		if ui.IsFilteringFiles() {
+			dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
+		} else {
+			dir.UpdateStats(make(fs.HardLinkedItems, 10))
+		}
 	}()
 
 	wait.Wait()

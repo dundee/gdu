@@ -480,7 +480,7 @@ func TestSqliteItemGetItemStats(t *testing.T) {
 	item, err := storage.GetItemByID(id)
 	assert.NoError(t, err)
 
-	count, size, usage := item.GetItemStats(make(fs.HardLinkedItems))
+	count, size, usage := item.GetItemStats(make(fs.HardLinkedItems), false)
 	assert.Equal(t, int64(5), count)
 	assert.Equal(t, int64(1000), size)
 	assert.Equal(t, int64(2000), usage)

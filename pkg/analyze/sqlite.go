@@ -742,13 +742,13 @@ func addSqliteString(buff *[]byte, val string) error {
 }
 
 // GetItemStats returns item statistics - hard links already handled during scan
-func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
+func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
 	return i.itemCount, i.size, i.usage
 }
 
 // UpdateStats is a no-op for SqliteItem - hard links are handled during scan
-func (i *SqliteItem) UpdateStats(linkedItems fs.HardLinkedItems) {
-}
+func (i *SqliteItem) UpdateStats(linkedItems fs.HardLinkedItems)                  {}
+func (i *SqliteItem) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {}
 
 // AddFile adds a child file (no-op for SQLite items - children are in DB)
 func (i *SqliteItem) AddFile(item fs.Item) {

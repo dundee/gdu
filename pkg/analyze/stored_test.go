@@ -306,5 +306,5 @@ func TestParentDirGetItemStatsPanics(t *testing.T) {
 		}
 	}()
 	dir := &ParentDir{}
-	dir.GetItemStats(nil)
+	dir.GetItemStats(nil, false)
 }

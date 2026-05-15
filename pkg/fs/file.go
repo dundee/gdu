@@ -42,8 +42,9 @@ type Item interface {
 	SetParent(Item)
 	GetMultiLinkedInode() uint64
 	EncodeJSON(writer io.Writer, topLevel bool) error
-	GetItemStats(linkedItems HardLinkedItems) (itemCount int64, size, usage int64)
+	GetItemStats(linkedItems HardLinkedItems, filteringFiles bool) (itemCount int64, size, usage int64)
 	UpdateStats(linkedItems HardLinkedItems)
+	UpdateStatsWithFileFiltering(linkedItems HardLinkedItems)
 	AddFile(Item)
 	GetFiles(SortBy, SortOrder) iter.Seq[Item]
 	GetFilesLocked(SortBy, SortOrder) iter.Seq[Item]

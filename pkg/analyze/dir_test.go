@@ -34,7 +34,7 @@ func TestAnalyzeDir(t *testing.T) {
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
-	assert.Equal(t, int64(7+4096*3), dir.Size)
+	assert.Equal(t, int64(7), dir.Size)
 	assert.Equal(t, int64(5), dir.ItemCount)
 	assert.True(t, dir.IsDir())
 
@@ -98,7 +98,7 @@ func TestFlags(t *testing.T) {
 
 	sort.Sort(sort.Reverse(dir.Files))
 
-	assert.Equal(t, int64(28+4096*4), dir.Size)
+	assert.Equal(t, int64(28+512), dir.Size)
 	assert.Equal(t, int64(7), dir.ItemCount)
 
 	// test file3
@@ -124,8 +124,8 @@ func TestHardlink(t *testing.T) {
 	analyzer.GetDone().Wait()
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
-	assert.Equal(t, int64(7+4096*3), dir.Size) // file2 and file3 are counted just once for size
-	assert.Equal(t, int64(6), dir.ItemCount)   // but twice for item count
+	assert.Equal(t, int64(7), dir.Size)      // file2 and file3 are counted just once for size
+	assert.Equal(t, int64(6), dir.ItemCount) // but twice for item count
 
 	// test file3
 	assert.Equal(t, "file3", dir.Files[0].(*Dir).Files[1].GetName())
@@ -153,7 +153,7 @@ func TestFollowSymlink(t *testing.T) {
 
 	sort.Sort(sort.Reverse(dir.Files))
 
-	assert.Equal(t, int64(9+4096*4), dir.Size)
+	assert.Equal(t, int64(9+512), dir.Size)
 	assert.Equal(t, int64(7), dir.ItemCount)
 
 	// test file3
@@ -190,7 +190,7 @@ func TestGitAnnexSymlink(t *testing.T) {
 
 	sort.Sort(sort.Reverse(dir.Files))
 
-	assert.Equal(t, int64(967858083+7+4096*4), dir.Size)
+	assert.Equal(t, int64(967858083+7+512), dir.Size)
 	assert.Equal(t, int64(7), dir.ItemCount)
 
 	// test file3
@@ -222,7 +222,7 @@ func TestBrokenSymlinkSkipped(t *testing.T) {
 
 	sort.Sort(sort.Reverse(dir.Files))
 
-	assert.Equal(t, int64(7+4096*4), dir.Size)
+	assert.Equal(t, int64(7+512), dir.Size)
 	assert.Equal(t, int64(6), dir.ItemCount)
 
 	assert.Equal(t, '!', dir.Files[0].GetFlag())

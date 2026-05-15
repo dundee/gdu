@@ -159,8 +159,8 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	var (
 		err        error
-		totalSize  int64 = 4096
-		totalUsage int64 = 4096
+		totalSize  int64
+		totalUsage int64
 		totalCount int64
 		info       os.FileInfo
 	)
@@ -179,6 +179,8 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 				continue
 			}
 
+			totalCount++
+
 			select {
 			case concurrencyLimit <- struct{}{}:
 				a.wait.Add(1)
@@ -196,8 +198,6 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 				continue // Skip this file
 			}
 
-			totalCount++
-
 			info, err = f.Info()
 			if err != nil {
 				log.Print(err.Error())
@@ -209,6 +209,8 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			if !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
+
+			totalCount++
 
 			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
@@ -235,8 +237,13 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 		}
 	}
 
+	if len(files) == 0 {
+		totalSize = 512
+		totalUsage = 0
+	}
+
 	a.progressItemCount.Add(totalCount)
 	a.progressTotalUsage.Add(totalUsage)
 
-	topDir.AddUsage(totalSize, totalUsage, totalCount+1)
+	topDir.AddUsage(totalSize, totalUsage, totalCount)
 }

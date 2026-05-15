@@ -219,7 +219,11 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	go func() {
 		defer wait.Done()
 		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
-		dir.UpdateStats(make(fs.HardLinkedItems, 10))
+		if ui.IsFilteringFiles() {
+			dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
+		} else {
+			dir.UpdateStats(make(fs.HardLinkedItems, 10))
+		}
 		updateStatsDone <- struct{}{}
 	}()
 
@@ -267,7 +271,12 @@ func (ui *UI) showDir(dir fs.Item) {
 		sortOrder = fs.SortAsc
 	}
 
-	for file := range dir.GetFiles(fs.SortBySize, sortOrder) {
+	sort := fs.SortBySize
+	if ui.ShowApparentSize {
+		sort = fs.SortByApparentSize
+	}
+
+	for file := range dir.GetFiles(sort, sortOrder) {
 		ui.printItem(file)
 	}
 }
@@ -325,11 +334,6 @@ func (ui *UI) printItem(file fs.Item) {
 		size = file.GetUsage()
 	}
 
-	countToDisplay := file.GetItemCount()
-	if file.IsDir() {
-		countToDisplay--
-	}
-
 	name := file.GetName()
 	if file.IsDir() {
 		name = ui.blue.Sprint("/" + file.GetName())
@@ -341,7 +345,7 @@ func (ui *UI) printItem(file fs.Item) {
 			lineFormat,
 			string(file.GetFlag()),
 			ui.formatSize(size),
-			ui.formatCount(countToDisplay),
+			ui.formatCount(file.GetItemCount()),
 			name,
 		)
 		return
@@ -440,7 +444,11 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		}
 		runtime.GC()
 
-		dir.UpdateStats(make(fs.HardLinkedItems, 10))
+		if ui.IsFilteringFiles() {
+			dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
+		} else {
+			dir.UpdateStats(make(fs.HardLinkedItems, 10))
+		}
 
 		if ui.ShowProgress {
 			doneChan <- struct{}{}

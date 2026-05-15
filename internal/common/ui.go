@@ -20,6 +20,7 @@ type UI struct {
 	ShowProgress          bool
 	ShowApparentSize      bool
 	ShowRelativeSize      bool
+	FilteringFiles        bool
 }
 
 // SetAnalyzer sets analyzer instance
@@ -40,6 +41,7 @@ func (ui *UI) SetShowAnnexedSize(v bool) {
 // SetTimeFilter sets the time filter function for file inclusion
 func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
 	ui.Analyzer.SetTimeFilter(timeFilter)
+	ui.FilteringFiles = true
 }
 
 // SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled

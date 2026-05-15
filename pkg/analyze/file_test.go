@@ -227,7 +227,7 @@ func TestUpdateStats(t *testing.T) {
 
 	dir.UpdateStats(nil)
 
-	assert.Equal(t, int64(4096+5), dir.Size)
+	assert.Equal(t, int64(5), dir.Size)
 	assert.Equal(t, 42, dir.GetMtime().Minute())
 }
 
