@@ -86,7 +86,7 @@ func (d *SimpleDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems)
 	d.updateStats(linkedItems, true)
 }
 
-func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, filteringFiles bool) {
+func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 	var totalSize int64
 	var totalUsage int64
 	var itemCount int64
@@ -102,7 +102,7 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, filteringFiles bool) {
 			}
 		}
 	}
-	if len(d.Files) == 0 || (filteringFiles && itemCount == int64(len(d.Files)+1)) {
+	if len(d.Files) == 0 {
 		d.ItemCount = 0
 		d.Size = 512
 		d.Usage = 0

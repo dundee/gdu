@@ -58,6 +58,19 @@ func TestSimpleDirUpdateStats(t *testing.T) {
 	assert.Equal(t, int64(1+1+5+1), d.ItemCount)
 }
 
+func TestEmptySimpleDirUpdateStats(t *testing.T) {
+	d := &SimpleDir{
+		SimpleFile: SimpleFile{Name: "root", IsDir: true},
+		Files:      []SimpleFile{},
+	}
+
+	d.UpdateStats(make(fs.HardLinkedItems))
+
+	assert.Equal(t, int64(512), d.Size)
+	assert.Equal(t, int64(0), d.Usage)
+	assert.Equal(t, int64(0), d.ItemCount)
+}
+
 func TestSimpleDirUpdateStatsErrorFlag(t *testing.T) {
 	d := &SimpleDir{
 		SimpleFile: SimpleFile{Name: "root", IsDir: true},
