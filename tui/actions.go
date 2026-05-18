@@ -96,7 +96,11 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 			ui.topDir = currentDir
 		}
 
-		ui.topDir.UpdateStats(ui.linkedItems)
+		if ui.IsFilteringFiles() {
+			ui.topDir.UpdateStatsWithFileFiltering(ui.linkedItems)
+		} else {
+			ui.topDir.UpdateStats(ui.linkedItems)
+		}
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.currentDir = currentDir

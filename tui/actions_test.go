@@ -82,8 +82,8 @@ func TestDeviceSelected(t *testing.T) {
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
 }
 
 func TestNilDeviceSelected(t *testing.T) {
@@ -106,14 +106,14 @@ func TestAnalyzePath(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
 }
 
 func TestAnalyzePathBW(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
 }
 
 func TestAnalyzePathWithParentDir(t *testing.T) {
@@ -146,7 +146,7 @@ func TestAnalyzePathWithParentDir(t *testing.T) {
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ddd")
 }
 
 func TestReadAnalysis(t *testing.T) {
@@ -253,7 +253,7 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 	ui.table.Select(3, 0)
 
 	selectedFile := ui.table.GetCell(3, 0).GetReference().(fs.Item)
-	assert.Equal(t, "ddd", selectedFile.GetName())
+	assert.Equal(t, "aaa", selectedFile.GetName())
 
 	res := ui.showFile()
 	assert.Nil(t, res)

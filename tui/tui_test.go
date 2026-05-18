@@ -221,7 +221,7 @@ func TestRescanDir(t *testing.T) {
 
 	assert.Equal(t, 5, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ddd")
 }
 
 func TestDirSelected(t *testing.T) {
@@ -241,10 +241,10 @@ func TestDirSelected(t *testing.T) {
 func TestFileSelected(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
-	ui.fileItemSelected(3, 0)
+	ui.fileItemSelected(0, 0) // does nothing, since it's a file
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
 }
 
 func TestSelectedWithoutCurrentDir(t *testing.T) {

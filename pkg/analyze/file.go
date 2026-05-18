@@ -110,7 +110,7 @@ func CreateFileItem(name string, info os.FileInfo) *File {
 }
 
 // GetItemStats returns 1 as count of items, apparent usage and real usage of this file
-func (f *File) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
+func (f *File) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
 	if f.alreadyCounted(linkedItems) {
 		return 1, 0, 0
 	}
@@ -118,7 +118,8 @@ func (f *File) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, us
 }
 
 // UpdateStats does nothing on file
-func (f *File) UpdateStats(linkedItems fs.HardLinkedItems) {}
+func (f *File) UpdateStats(linkedItems fs.HardLinkedItems)                  {}
+func (f *File) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {}
 
 // GetFiles returns all files in directory
 func (f *File) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
@@ -229,24 +230,37 @@ func (f *Dir) GetPath() string {
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
-	f.UpdateStats(linkedItems)
+func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
+	f.updateStats(linkedItems, filteringFiles)
 	return f.ItemCount, f.GetSize(), f.GetUsage()
 }
 
-// UpdateStats recursively updates size and item count
 func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
-	totalSize := int64(4096)
-	totalUsage := int64(4096)
-	var itemCount int64
+	f.updateStats(linkedItems, false)
+}
+
+func (f *Dir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
+	f.updateStats(linkedItems, true)
+}
+
+// UpdateStats recursively updates size and item count
+func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
+	totalSize := int64(0)
+	totalUsage := int64(0)
+	var itemCount int64 = 1
+	var hasFiles bool
 	for _, entry := range f.Files {
-		count, size, usage := entry.GetItemStats(linkedItems)
+		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
 		totalSize += size
 		totalUsage += usage
 		itemCount += count
 
 		if entry.GetMtime().After(f.Mtime) {
 			f.Mtime = entry.GetMtime()
+		}
+
+		if !entry.IsDir() {
+			hasFiles = true
 		}
 
 		switch entry.GetFlag() {
@@ -256,9 +270,17 @@ func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
 			}
 		}
 	}
-	f.ItemCount = itemCount + 1
-	f.Size = totalSize
-	f.Usage = totalUsage
+
+	// no files, or just empty dirs
+	if len(f.Files) == 0 || (!hasFiles && filteringFiles && itemCount == int64(len(f.Files)+1)) {
+		f.ItemCount = 1
+		f.Size = totalSize + 512
+		f.Usage = 0
+	} else {
+		f.ItemCount = itemCount
+		f.Size = totalSize
+		f.Usage = totalUsage
+	}
 }
 
 // RemoveFile removes item from dir, updates size and item count

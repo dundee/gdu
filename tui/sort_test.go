@@ -13,40 +13,40 @@ func TestAnalyzeByApparentSize(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("size", "desc", true)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "aaa")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
 }
 
 func TestSortByApparentSizeAsc(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("size", "asc", true)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
 }
 
 func TestAnalyzeBySize(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("size", "desc", false)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "aaa")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "aaa")
 }
 
 func TestSortBySizeAsc(t *testing.T) {
 	ui := getAnalyzedPathWithSorting("size", "asc", false)
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "aaa")
-	assert.Contains(t, ui.table.GetCell(2, 0).Text, "bbb")
-	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "aaa")
+	assert.Contains(t, ui.table.GetCell(1, 0).Text, "bbb")
+	assert.Contains(t, ui.table.GetCell(2, 0).Text, "ccc")
+	assert.Contains(t, ui.table.GetCell(3, 0).Text, "ddd")
 }
 
 func TestAnalyzeByName(t *testing.T) {

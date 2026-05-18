@@ -128,8 +128,8 @@ func TestTopDirAnalyzeDirIgnoreFileTypeInSubDir(t *testing.T) {
 	// sub directory should exist but only count keep.txt
 	assert.Equal(t, 1, len(simpleDir.Files))
 	assert.Equal(t, "sub", simpleDir.Files[0].Name)
-	// ItemCount should reflect only the kept file + the dir itself
-	assert.Equal(t, int64(2), simpleDir.Files[0].ItemCount)
+	// ItemCount should reflect only the kept file
+	assert.Equal(t, int64(1), simpleDir.Files[0].ItemCount)
 }
 
 func TestTopDirAnalyzeDirProgress(t *testing.T) {
@@ -274,8 +274,8 @@ func TestTopDirFollowSymlink(t *testing.T) {
 		files = append(files, file)
 	}
 
-	assert.Equal(t, int64(12+4096*4), dir.Size)
-	assert.Equal(t, int64(6), dir.ItemCount)
+	assert.Equal(t, int64(12+512), dir.Size)
+	assert.Equal(t, int64(4), dir.ItemCount)
 
 	// test file3
 	assert.Equal(t, "file2", files[1].GetName())
@@ -306,6 +306,6 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 		files = append(files, file)
 	}
 
-	assert.Equal(t, int64(12+4096*4), dir.Size)
-	assert.Equal(t, int64(7), dir.ItemCount)
+	assert.Equal(t, int64(12+512), dir.Size)
+	assert.Equal(t, int64(5), dir.ItemCount)
 }

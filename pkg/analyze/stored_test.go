@@ -47,7 +47,7 @@ func TestStoredAnalyzer(t *testing.T) {
 
 	a.GetDone().Wait()
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
@@ -306,5 +306,5 @@ func TestParentDirGetItemStatsPanics(t *testing.T) {
 		}
 	}()
 	dir := &ParentDir{}
-	dir.GetItemStats(nil)
+	dir.GetItemStats(nil, false)
 }

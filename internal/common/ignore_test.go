@@ -268,6 +268,11 @@ func TestShouldFileBeIgnoredByType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := &common.UI{}
 			ui.SetIgnoreTypes(tt.ignoreTypes)
+			if len(tt.ignoreTypes) > 0 {
+				assert.True(t, ui.IsFilteringFiles())
+			} else {
+				assert.False(t, ui.IsFilteringFiles())
+			}
 
 			actual := ui.ShouldFileBeIgnoredByType(tt.filename)
 			assert.Equal(t, tt.expectedIgnored, actual)
@@ -337,6 +342,11 @@ func TestShouldFileBeIncludedByType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := &common.UI{}
 			ui.SetIncludeTypes(tt.includeTypes)
+			if len(tt.includeTypes) > 0 {
+				assert.True(t, ui.IsFilteringFiles())
+			} else {
+				assert.False(t, ui.IsFilteringFiles())
+			}
 
 			actual := ui.ShouldFileBeIncludedByType(tt.filename)
 			assert.Equal(t, tt.expectedIncluded, actual)

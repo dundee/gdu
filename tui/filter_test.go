@@ -41,7 +41,7 @@ func TestFiltering(t *testing.T) {
 	ui.filterValue = ""
 	ui.showDir()
 
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc") // nothing is filtered
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd") // nothing is filtered
 	// marking should be dropped after sorting
 	assert.Equal(t, 0, len(ui.markedRows))
 
@@ -53,7 +53,7 @@ func TestFiltering(t *testing.T) {
 	ui.hideFilterInput()
 	ui.showDir()
 
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ccc") // filtering reset
+	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd") // filtering reset
 }
 
 func TestFilteringWithoutCurrentDir(t *testing.T) {

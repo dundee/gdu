@@ -227,8 +227,61 @@ func TestUpdateStats(t *testing.T) {
 
 	dir.UpdateStats(nil)
 
-	assert.Equal(t, int64(4096+5), dir.Size)
+	assert.Equal(t, int64(5), dir.Size)
 	assert.Equal(t, 42, dir.GetMtime().Minute())
+}
+
+func TestUpdateStatsWithFileFiltering(t *testing.T) {
+	dir := Dir{
+		File: &File{
+			Name:  "xxx",
+			Size:  1,
+			Mtime: time.Date(2021, 8, 19, 0, 40, 0, 0, time.UTC),
+		},
+		ItemCount: 1,
+	}
+
+	file := &File{
+		Name:   "yyy.go",
+		Size:   2,
+		Usage:  2048,
+		Mtime:  time.Date(2021, 8, 19, 0, 41, 0, 0, time.UTC),
+		Parent: &dir,
+	}
+	file2 := &File{
+		Name:   "zzz.go",
+		Size:   3,
+		Usage:  1024,
+		Mtime:  time.Date(2021, 8, 19, 0, 42, 0, 0, time.UTC),
+		Parent: &dir,
+	}
+	subdir := &Dir{
+		File: &File{
+			Name:   "subdir",
+			Size:   4,
+			Mtime:  time.Date(2021, 8, 19, 0, 43, 0, 0, time.UTC),
+			Parent: &dir,
+		},
+		ItemCount: 1,
+	}
+	subsubdir := &Dir{
+		File: &File{
+			Name:   "subsubdir",
+			Size:   4,
+			Mtime:  time.Date(2021, 8, 19, 0, 43, 0, 0, time.UTC),
+			Parent: subdir,
+		},
+		ItemCount: 1,
+	}
+	subdir.Files = fs.Files{subsubdir}
+	dir.Files = fs.Files{file, file2, subdir}
+
+	dir.UpdateStatsWithFileFiltering(nil)
+
+	assert.Equal(t, int64(1024+5), dir.Size)
+	assert.Equal(t, int64(4), dir.ItemCount)
+	assert.Equal(t, int64(1024+2048), dir.Usage)
+	assert.Equal(t, 43, dir.GetMtime().Minute())
 }
 
 func TestGetMultiLinkedInode(t *testing.T) {

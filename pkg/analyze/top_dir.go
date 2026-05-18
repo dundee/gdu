@@ -74,12 +74,21 @@ func (d *SimpleDir) GetParent() fs.Item                               { panic("n
 func (d *SimpleDir) SetParent(parent fs.Item)                         { panic("not implemented") }
 func (d *SimpleDir) GetMultiLinkedInode() uint64                      { panic("not implemented") }
 func (d *SimpleDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("not implemented") }
-func (d *SimpleDir) GetItemStats(linkedItems fs.HardLinkedItems) (itemCount, size, usage int64) {
+func (d *SimpleDir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
 	panic("not implemented")
 }
+
 func (d *SimpleDir) UpdateStats(linkedItems fs.HardLinkedItems) {
-	totalSize := int64(4096)
-	totalUsage := int64(4096)
+	d.updateStats(linkedItems, false)
+}
+
+func (d *SimpleDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
+	d.updateStats(linkedItems, true)
+}
+
+func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
+	var totalSize int64
+	var totalUsage int64
 	var itemCount int64
 	for _, entry := range d.Files {
 		totalSize += entry.Size
@@ -93,9 +102,15 @@ func (d *SimpleDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 			}
 		}
 	}
-	d.ItemCount = itemCount + 1
-	d.Size = totalSize
-	d.Usage = totalUsage
+	if len(d.Files) == 0 {
+		d.ItemCount = 0
+		d.Size = 512
+		d.Usage = 0
+	} else {
+		d.ItemCount = itemCount + 1
+		d.Size = totalSize
+		d.Usage = totalUsage
+	}
 }
 func (d *SimpleDir) AddFile(fs.Item) { panic("not implemented") }
 func (d *SimpleDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
