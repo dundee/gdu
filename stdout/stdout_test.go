@@ -266,6 +266,24 @@ func TestAnalyzeSubdir(t *testing.T) {
 	assert.Contains(t, output.String(), "file2")
 }
 
+func TestAnalyzePathWithTypeFiltering(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetIncludeTypes([]string{"go"})
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
+}
+
 func TestAnalyzePathWithColors(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -274,6 +292,7 @@ func TestAnalyzePathWithColors(t *testing.T) {
 	output := bytes.NewBuffer(buff)
 
 	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, "", 0, false, 0)
+	ui.SetIgnoreTypes([]string{"go"})
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 
