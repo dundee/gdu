@@ -125,13 +125,13 @@ func (ui *UI) confirmDeletionMarked(shouldEmpty bool) {
 				strconv.Itoa(len(ui.markedRows)) +
 				"[::-] items?",
 		).
-		AddButtons([]string{"no", "yes", "don't ask me again"}).
+		AddButtons([]string{"yes", "no", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {
 			case 2:
 				ui.askBeforeDelete = false
 				fallthrough
-			case 1:
+			case 0:
 				ui.deleteMarked(shouldEmpty)
 			}
 			ui.pages.RemovePage("confirm")
