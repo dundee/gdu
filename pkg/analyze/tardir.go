@@ -222,12 +222,12 @@ func ensureTarDirExists(dirMap map[string]*TarDir, path, tarPath string, rootDir
 
 	// Ensure parent directory exists first
 	parentPath := filepath.Dir(path)
-	if parentPath != "." && parentPath != "" {
+	if parentPath != "." && parentPath != "" && parentPath != path {
 		ensureTarDirExists(dirMap, parentPath, tarPath, rootDir)
 	}
 
 	var parent *TarDir
-	if parentPath == "" || parentPath == "." {
+	if parentPath == "" || parentPath == "." || parentPath == path {
 		parent = rootDir
 	} else {
 		parent = dirMap[parentPath]

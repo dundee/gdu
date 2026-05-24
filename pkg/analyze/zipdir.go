@@ -144,13 +144,13 @@ func ensureZipDirExists(dirMap map[string]*ZipDir, path, zipPath string, rootDir
 
 	// Ensure parent directory exists
 	parentPath := filepath.Dir(path)
-	if parentPath != "." && parentPath != "" {
+	if parentPath != "." && parentPath != "" && parentPath != path {
 		ensureZipDirExists(dirMap, parentPath, zipPath, rootDir)
 	}
 
 	// Create current directory
 	var parent *ZipDir
-	if parentPath == "" || parentPath == "." {
+	if parentPath == "" || parentPath == "." || parentPath == path {
 		parent = rootDir
 	} else {
 		parent = dirMap[parentPath]
