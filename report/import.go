@@ -13,7 +13,7 @@ import (
 
 // ReadAnalysis reads analysis report from JSON file and returns directory item
 func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
-	var data interface{}
+	var data any
 
 	var buff bytes.Buffer
 	if _, err = buff.ReadFrom(input); err != nil {
@@ -23,7 +23,7 @@ func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
 		return nil, err
 	}
 
-	dataArray, ok := data.([]interface{})
+	dataArray, ok := data.([]any)
 	if !ok {
 		return nil, errors.New("JSON file does not contain top level array")
 	}
@@ -31,7 +31,7 @@ func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
 		return nil, errors.New("top level array must have at least 4 items")
 	}
 
-	items, ok := dataArray[3].([]interface{})
+	items, ok := dataArray[3].([]any)
 	if !ok {
 		return nil, errors.New("array of maps not found in the top level array on 4th position")
 	}
@@ -39,13 +39,17 @@ func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
 	return processDir(items)
 }
 
-func processDir(items []interface{}) (dir *analyze.Dir, err error) {
+func processDir(items []any) (dir *analyze.Dir, err error) {
+	if len(items) == 0 {
+		return nil, errors.New("directory array is empty")
+	}
+
 	dir = &analyze.Dir{
 		File: &analyze.File{
 			Flag: ' ',
 		},
 	}
-	dirMap, ok := items[0].(map[string]interface{})
+	dirMap, ok := items[0].(map[string]any)
 	if !ok {
 		return nil, errors.New("directory item is not a map")
 	}
@@ -67,7 +71,7 @@ func processDir(items []interface{}) (dir *analyze.Dir, err error) {
 
 	for _, v := range items[1:] {
 		switch item := v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			file := &analyze.File{}
 			file.Name = item["name"].(string)
 
@@ -95,7 +99,7 @@ func processDir(items []interface{}) (dir *analyze.Dir, err error) {
 			file.Parent = dir
 
 			dir.AddFile(file)
-		case []interface{}:
+		case []any:
 			subdir, err := processDir(item)
 			if err != nil {
 				return nil, err

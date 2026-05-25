@@ -80,6 +80,14 @@ func TestReadAnalysisWithWrongContent(t *testing.T) {
 	assert.Equal(t, "array of maps not found in the top level array on 4th position", err.Error())
 }
 
+func TestReadAnalysisWithEmptyContent(t *testing.T) {
+	buff := bytes.NewBuffer([]byte(`[1,2,3,[]]`))
+
+	_, err := ReadAnalysis(buff)
+
+	assert.Equal(t, "directory array is empty", err.Error())
+}
+
 func TestReadAnalysisWithEmptyDirContent(t *testing.T) {
 	buff := bytes.NewBuffer([]byte(`[1,2,3,[{}]]`))
 
