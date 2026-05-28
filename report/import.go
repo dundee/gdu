@@ -73,7 +73,11 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 		switch item := v.(type) {
 		case map[string]any:
 			file := &analyze.File{}
-			file.Name = item["name"].(string)
+			name, ok := item["name"].(string)
+			if !ok {
+				return nil, errors.New("file name is not a string")
+			}
+			file.Name = name
 
 			if asize, ok := item["asize"].(float64); ok {
 				file.Size = int64(asize)
