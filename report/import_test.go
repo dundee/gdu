@@ -104,6 +104,14 @@ func TestReadAnalysisWithWrongDirItem(t *testing.T) {
 	assert.Equal(t, "directory item is not a map", err.Error())
 }
 
+func TestReadAnalysisWithWrongName(t *testing.T) {
+	buff := bytes.NewBuffer([]byte(`[1,2,3,[{"name":"/"},{"name":42}]]`))
+
+	_, err := ReadAnalysis(buff)
+
+	assert.Equal(t, "file name is not a string", err.Error())
+}
+
 func TestReadAnalysisWithWrongSubdirItem(t *testing.T) {
 	buff := bytes.NewBuffer([]byte(`[1,2,3,[{"name":"xxx"}, [1,2,3]]]`))
 
