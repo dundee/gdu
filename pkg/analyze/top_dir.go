@@ -64,9 +64,15 @@ func (d *SimpleDir) GetSize() int64 {
 	return d.Size
 }
 
-func (d *SimpleDir) GetPath() string                                  { panic("not implemented") }
+func (d *SimpleDir) IsDir() bool {
+	return true
+}
+
+func (d *SimpleDir) GetPath() string {
+	return d.BasePath + pathSep + d.Name
+}
+
 func (d *SimpleDir) GetFlag() rune                                    { panic("not implemented") }
-func (d *SimpleDir) IsDir() bool                                      { panic("not implemented") }
 func (d *SimpleDir) GetType() string                                  { panic("not implemented") }
 func (d *SimpleDir) GetMtime() time.Time                              { panic("not implemented") }
 func (d *SimpleDir) GetItemCount() int64                              { panic("not implemented") }
@@ -120,10 +126,11 @@ func (d *SimpleDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 
 		for _, file := range d.Files {
 			f := &File{
-				Name:  file.Name,
-				Flag:  file.Flag,
-				Size:  file.Size,
-				Usage: file.Usage,
+				Name:   file.Name,
+				Flag:   file.Flag,
+				Size:   file.Size,
+				Usage:  file.Usage,
+				Parent: d,
 			}
 
 			if file.IsDir {
