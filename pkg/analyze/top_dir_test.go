@@ -135,6 +135,9 @@ func TestSimpleDirGetFilesDirVsFile(t *testing.T) {
 		},
 	}
 
+	assert.True(t, d.IsDir())
+	assert.Equal(t, "root", d.GetName())
+
 	var items []fs.Item
 	for item := range d.GetFiles(fs.SortBySize, fs.SortAsc) {
 		items = append(items, item)
@@ -153,9 +156,7 @@ func TestSimpleDirGetFilesDirVsFile(t *testing.T) {
 func TestSimpleDirPanics(t *testing.T) {
 	d := &SimpleDir{}
 
-	assert.Panics(t, func() { d.GetPath() })
 	assert.Panics(t, func() { d.GetFlag() })
-	assert.Panics(t, func() { d.IsDir() })
 	assert.Panics(t, func() { d.GetType() })
 	assert.Panics(t, func() { d.GetMtime() })
 	assert.Panics(t, func() { d.GetItemCount() })
