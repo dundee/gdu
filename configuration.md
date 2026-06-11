@@ -162,6 +162,10 @@ When the length is reached, the path is shortened with "/.../".
 
 Show size bar without Unicode symbols.
 
+#### `style.show-bar-percentage`
+
+Show the numeric usage percentage (e.g. `61.4%`) next to the size bar in the directory listing.
+
 #### `style.footer.text-color`
 
 Color of text for footer bar

@@ -86,6 +86,7 @@ type UI struct {
 	typeFiltering           bool
 	headerHidden            bool
 	useOldSizeBar           bool
+	showBarPercentage       bool
 	noDelete                bool
 	noViewFile              bool
 	noSpawnShell            bool
@@ -298,6 +299,11 @@ func (ui *UI) SetCurrentItemNameMaxLen(maxLen int) {
 // UseOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)
 func (ui *UI) UseOldSizeBar() {
 	ui.useOldSizeBar = true
+}
+
+// SetShowBarPercentage shows the numeric usage percentage next to the size bar
+func (ui *UI) SetShowBarPercentage() {
+	ui.showBarPercentage = true
 }
 
 // SetChangeCwdFn sets function that can be used to change current working dir
