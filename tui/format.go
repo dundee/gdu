@@ -17,19 +17,32 @@ const (
 	defaultColorBold = "[::b]"
 )
 
-func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignored bool) string {
-	part := 0
-	if !ignored {
-		if ui.ShowApparentSize {
-			if size := item.GetSize(); size > 0 {
-				part = int(float64(size) / float64(maxSize) * 100.0)
-			}
-		} else {
-			if usage := item.GetUsage(); usage > 0 {
-				part = int(float64(usage) / float64(maxUsage) * 100.0)
-			}
+// getUsagePart returns the percentage (0-100) that the given item's size or
+// usage represents relative to the provided maximum.
+func (ui *UI) getUsagePart(item fs.Item, maxUsage, maxSize int64, ignored bool) float64 {
+	if ignored {
+		return 0
+	}
+	if ui.ShowApparentSize {
+		if size := item.GetSize(); size > 0 {
+			return float64(size) / float64(maxSize) * 100.0
+		}
+	} else {
+		if usage := item.GetUsage(); usage > 0 {
+			return float64(usage) / float64(maxUsage) * 100.0
 		}
 	}
+	return 0
+}
+
+// formatUsagePercentage formats the numeric usage percentage shown next to the size bar.
+func formatUsagePercentage(part float64) string {
+	return fmt.Sprintf(" %5.1f%%", part)
+}
+
+func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignored bool) string {
+	partFloat := ui.getUsagePart(item, maxUsage, maxSize, ignored)
+	part := int(partFloat)
 
 	row := string(item.GetFlag())
 
@@ -50,6 +63,9 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 		row += fmt.Sprintf("%15s", ui.formatSize(item.GetUsage(), false, true))
 	}
 
+	if ui.showBarPercentage {
+		row += formatUsagePercentage(partFloat)
+	}
 	if ui.useOldSizeBar {
 		row += " " + getUsageGraphOld(part) + " "
 	} else {
@@ -107,18 +123,8 @@ func (ui *UI) formatCollapsedRow(collapsedPath *CollapsedPath, maxUsage, maxSize
 	// Use the deepest directory's stats for display
 	item := collapsedPath.DeepestDir
 
-	part := 0
-	if !ignored {
-		if ui.ShowApparentSize {
-			if size := item.GetSize(); size > 0 {
-				part = int(float64(size) / float64(maxSize) * 100.0)
-			}
-		} else {
-			if usage := item.GetUsage(); usage > 0 {
-				part = int(float64(usage) / float64(maxUsage) * 100.0)
-			}
-		}
-	}
+	partFloat := ui.getUsagePart(item, maxUsage, maxSize, ignored)
+	part := int(partFloat)
 
 	row := string(item.GetFlag())
 
@@ -139,6 +145,9 @@ func (ui *UI) formatCollapsedRow(collapsedPath *CollapsedPath, maxUsage, maxSize
 		row += fmt.Sprintf("%15s", ui.formatSize(item.GetUsage(), false, true))
 	}
 
+	if ui.showBarPercentage {
+		row += formatUsagePercentage(partFloat)
+	}
 	if ui.useOldSizeBar {
 		row += " " + getUsageGraphOld(part) + " "
 	} else {

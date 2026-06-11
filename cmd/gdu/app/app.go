@@ -139,6 +139,8 @@ type Style struct {
 	Header        HeaderColorStyle    `yaml:"header"`
 	ProgressModal ProgressModalOpts   `yaml:"progress-modal"`
 	UseOldSizeBar bool                `yaml:"use-old-size-bar"`
+	// ShowBarPercentage shows the numeric usage percentage next to the size bar.
+	ShowBarPercentage bool `yaml:"show-bar-percentage"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -502,6 +504,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.Style.UseOldSizeBar || a.Flags.NoUnicode {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.UseOldSizeBar()
+		})
+	}
+	if a.Flags.Style.ShowBarPercentage {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetShowBarPercentage()
 		})
 	}
 	if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {

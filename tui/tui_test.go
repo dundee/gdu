@@ -798,6 +798,18 @@ func TestUseOldSizeBar(t *testing.T) {
 	assert.Equal(t, ui.useOldSizeBar, true)
 }
 
+func TestSetShowBarPercentage(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+
+	ui.SetShowBarPercentage()
+
+	assert.Equal(t, ui.showBarPercentage, true)
+}
+
 func TestSetShowItemCount(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
