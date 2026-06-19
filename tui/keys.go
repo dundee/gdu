@@ -183,12 +183,17 @@ func (ui *UI) quit(printCurrentDirPath bool) {
 	ui.doQuit(printCurrentDirPath)
 }
 
-// shouldConfirmQuit returns true when quitting would discard results from a
-// scan that took a noticeable amount of time.
+// shouldConfirmQuit returns true when quitting would discard the work of a scan
+// that took a noticeable amount of time, whether it is still running or already
+// finished.
 func (ui *UI) shouldConfirmQuit() bool {
-	return ui.confirmQuit &&
-		ui.currentDir != nil &&
-		ui.scanDuration >= confirmQuitMinScanDuration
+	if !ui.confirmQuit {
+		return false
+	}
+	if ui.scanning {
+		return time.Since(ui.scanStart) >= confirmQuitMinScanDuration
+	}
+	return ui.currentDir != nil && ui.scanDuration >= confirmQuitMinScanDuration
 }
 
 func (ui *UI) doQuit(printCurrentDirPath bool) {
@@ -200,13 +205,19 @@ func (ui *UI) doQuit(printCurrentDirPath bool) {
 }
 
 func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
+	var text string
+	if ui.scanning {
+		text = "A scan has been running for " +
+			time.Since(ui.scanStart).Round(time.Second).String() + ".\n\n" +
+			"Do you really want to quit gdu and abandon it?"
+	} else {
+		text = "Do you really want to quit gdu?\n\n" +
+			"This scan took " + ui.scanDuration.Round(time.Second).String() +
+			" and the results are not saved.\n" +
+			"Choose \"no\" and press E to export them first."
+	}
 	modal := tview.NewModal().
-		SetText(
-			"Do you really want to quit gdu?\n\n" +
-				"This scan took " + ui.scanDuration.Round(time.Second).String() +
-				" and the results are not saved.\n" +
-				"Choose \"no\" and press E to export them first.",
-		).
+		SetText(text).
 		AddButtons([]string{"no", "yes", "don't ask me again"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			ui.pages.RemovePage("confirm")

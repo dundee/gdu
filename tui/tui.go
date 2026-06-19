@@ -99,6 +99,8 @@ type UI struct {
 	showDiskProgressBar     bool
 	currentDeviceSize       int64
 	confirmQuit             bool
+	scanning                bool
+	scanStart               time.Time
 	scanDuration            time.Duration
 }
 

@@ -406,6 +406,34 @@ func TestQuitNotRetriggeredWhileConfirmOpen(t *testing.T) {
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
 
+func TestQuitConfirmsDuringLongRunningScan(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	// simulate a scan that is still running and started long ago
+	ui.scanning = true
+	ui.scanStart = time.Now().Add(-10 * time.Second)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.Nil(t, key)
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestQuitImmediateDuringShortRunningScan(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	// a scan that just started should not block quitting
+	ui.scanning = true
+	ui.scanStart = time.Now()
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.Nil(t, key)
+	assert.False(t, ui.pages.HasPage("confirm"))
+}
+
 func TestDoQuitPrintsCurrentDirPath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
