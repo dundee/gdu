@@ -335,8 +335,8 @@ func TestStopWithPrintingPath(t *testing.T) {
 	assert.Equal(t, "test_dir\n", buff.String())
 }
 
-// analyzedUIForQuit returns a UI with a finished scan so quit behaviour can be tested.
-func analyzedUIForQuit(t *testing.T, buff *bytes.Buffer) *UI {
+// analyzedUI returns a UI with a finished scan, ready for preview tests.
+func analyzedUI(t *testing.T, buff *bytes.Buffer) *UI {
 	t.Helper()
 	simScreen := testapp.CreateSimScreen()
 	t.Cleanup(simScreen.Fini)
@@ -357,7 +357,7 @@ func TestQuitConfirmsAfterLongScan(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.scanDuration = 10 * time.Second // simulate a long scan
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
@@ -369,7 +369,7 @@ func TestQuitImmediateAfterShortScan(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.scanDuration = time.Second // below the confirmation threshold
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
@@ -381,7 +381,7 @@ func TestQuitImmediateWhenConfirmDisabled(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.SetConfirmQuit(false)
 	ui.scanDuration = 10 * time.Second
 
@@ -394,7 +394,7 @@ func TestQuitNotRetriggeredWhileConfirmOpen(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.scanDuration = 10 * time.Second
 
 	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0)))
@@ -410,7 +410,7 @@ func TestQuitConfirmsDuringLongRunningScan(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui := analyzedUI(t, &bytes.Buffer{})
 	// simulate a scan that is still running and started long ago
 	ui.scanning = true
 	ui.scanStart = time.Now().Add(-10 * time.Second)
@@ -424,7 +424,7 @@ func TestQuitImmediateDuringShortRunningScan(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui := analyzedUI(t, &bytes.Buffer{})
 	// a scan that just started should not block quitting
 	ui.scanning = true
 	ui.scanStart = time.Now()
@@ -439,10 +439,103 @@ func TestDoQuitPrintsCurrentDirPath(t *testing.T) {
 	defer fin()
 
 	buff := &bytes.Buffer{}
-	ui := analyzedUIForQuit(t, buff)
+	ui := analyzedUI(t, buff)
 
 	ui.doQuit(true)
 	assert.Equal(t, "test_dir\n", buff.String())
+}
+
+func TestEnterAndExitPreview(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+
+	ui.enterPreview()
+	assert.True(t, ui.previewing)
+	assert.NotNil(t, ui.currentDir)
+	assert.False(t, ui.pages.HasPage("progress"))
+
+	// Tab leaves the preview and restores the scanning progress modal
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyTab, 0, 0))
+	assert.Nil(t, key)
+	assert.False(t, ui.previewing)
+	assert.True(t, ui.pages.HasPage("progress"))
+}
+
+func TestTabDuringScanEntersPreview(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	// simulate a scan still in progress: the progress modal is shown
+	ui.pages.AddPage("progress", ui.progressFlex, true, true)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyTab, 0, 0))
+	assert.Nil(t, key)
+	assert.True(t, ui.previewing)
+	assert.False(t, ui.pages.HasPage("progress"))
+}
+
+func TestPreviewIgnoresDestructiveKeys(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	ui.enterPreview()
+
+	// delete must not open a confirmation dialog while previewing
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
+	assert.False(t, ui.pages.HasPage("confirm"))
+	assert.True(t, ui.previewing)
+}
+
+func TestPreviewNavigation(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	ui.enterPreview()
+	root := ui.currentDir
+	rootPath := ui.currentDirPath
+
+	// drill into the first subdirectory
+	ui.table.Select(0, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'l', 0))
+	assert.NotEqual(t, rootPath, ui.currentDirPath)
+	assert.True(t, ui.previewing)
+
+	// go back up to the root
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'h', 0))
+	assert.Equal(t, root, ui.currentDir)
+
+	// at the root, going up again leaves the preview
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'h', 0))
+	assert.False(t, ui.previewing)
+}
+
+func TestEnterPreviewNoopWithoutScan(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+
+	// nothing has been scanned yet -> no tree to preview
+	ui.enterPreview()
+	assert.False(t, ui.previewing)
+}
+
+func TestEnterPreviewNoopWithUnsupportedAnalyzer(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{} // does not expose GetCurrentDir
+
+	ui.enterPreview()
+	assert.False(t, ui.previewing)
 }
 
 func TestSpawnShell(t *testing.T) {

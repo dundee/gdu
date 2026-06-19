@@ -43,9 +43,18 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return ui.handleConfirmation(key)
 	}
 
+	if ui.previewing {
+		return ui.handlePreviewKeys(key)
+	}
+
 	if ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
 		ui.pages.HasPage("emptying") {
+		// allow peeking at the results found so far during a scan
+		if key.Key() == tcell.KeyTab && ui.pages.HasPage("progress") {
+			ui.enterPreview()
+			return nil
+		}
 		return key
 	}
 
@@ -239,6 +248,99 @@ func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
 	modal.SetBorderColor(tcell.ColorDefault)
 
 	ui.pages.AddPage("confirm", modal, true, true)
+}
+
+// enterPreview switches from the scanning progress modal to a read-only,
+// point-in-time view of the directory tree discovered so far. The view does not
+// auto-refresh: pressing Tab again returns to the progress modal, and entering
+// the preview once more takes a fresh snapshot.
+func (ui *UI) enterPreview() {
+	analyzer, ok := ui.Analyzer.(interface{ GetCurrentDir() fs.Item })
+	if !ok {
+		return
+	}
+	root := analyzer.GetCurrentDir()
+	if root == nil {
+		return // nothing scanned yet
+	}
+
+	// compute aggregated sizes on the partial tree using a throwaway hard-link
+	// map so the running scan's accounting is left untouched
+	root.UpdateStats(make(fs.HardLinkedItems))
+
+	ui.previewing = true
+	ui.previewSavedDir = ui.currentDir
+	ui.currentDir = root
+	ui.markedRows = make(map[int]struct{})
+	ui.ignoredRows = make(map[int]struct{})
+	ui.pages.RemovePage("progress")
+	ui.showDir()
+	ui.table.Select(0, 0)
+	ui.app.SetFocus(ui.table)
+}
+
+// exitPreview leaves the mid-scan preview and restores the scanning progress modal.
+func (ui *UI) exitPreview() {
+	ui.previewing = false
+	ui.currentDir = ui.previewSavedDir
+	ui.previewSavedDir = nil
+	if ui.progressFlex != nil {
+		ui.pages.AddPage("progress", ui.progressFlex, true, true)
+	}
+	ui.app.SetFocus(ui.table)
+}
+
+// handlePreviewKeys handles input while a mid-scan preview is shown. Navigation
+// and sorting are allowed; destructive or external actions are intentionally
+// ignored because the tree is still being built.
+func (ui *UI) handlePreviewKeys(key *tcell.EventKey) *tcell.EventKey {
+	if ui.pages.HasPage("help") {
+		return key
+	}
+
+	if key.Key() == tcell.KeyTab || key.Key() == tcell.KeyEsc {
+		ui.exitPreview()
+		return nil
+	}
+	if key.Key() == tcell.KeyLeft {
+		ui.previewLeft()
+		return nil
+	}
+	if key.Key() == tcell.KeyRight {
+		ui.handleRight()
+		return nil
+	}
+
+	switch key.Rune() {
+	case '?':
+		ui.showHelp()
+		return nil
+	case 'h':
+		ui.previewLeft()
+		return nil
+	case 'l':
+		ui.handleRight()
+		return nil
+	case 's', 'C', 'n', 'M':
+		ui.handleSorting(key)
+		return nil
+	case 'a', 'B', 'c', 'm':
+		ui.handleToggles(key)
+		return nil
+	}
+
+	// up/down/pgup/pgdn and Enter are handled by the table itself
+	return key
+}
+
+// previewLeft navigates to the parent dir within the preview, or leaves the
+// preview when already at its root.
+func (ui *UI) previewLeft() {
+	if ui.currentDir == nil || ui.currentDir.GetParent() == nil {
+		ui.exitPreview()
+		return
+	}
+	ui.fileItemSelected(0, 0)
 }
 
 func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {
