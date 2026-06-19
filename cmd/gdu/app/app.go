@@ -83,6 +83,7 @@ type Flags struct {
 	NoDelete           bool     `yaml:"no-delete"`
 	NoViewFile         bool     `yaml:"no-view-file"`
 	NoSpawnShell       bool     `yaml:"no-spawn-shell"`
+	NoConfirmQuit      bool     `yaml:"no-confirm-quit"`
 	FollowSymlinks     bool     `yaml:"follow-symlinks"`
 	Profiling          bool     `yaml:"profiling"`
 	ReadFromStorage    bool     `yaml:"read-from-storage"`
@@ -544,6 +545,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.NoSpawnShell {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetNoSpawnShell()
+		})
+	}
+	if a.Flags.NoConfirmQuit {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetConfirmQuit(false)
 		})
 	}
 	if a.Flags.DeleteInBackground {

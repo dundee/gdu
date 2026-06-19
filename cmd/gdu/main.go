@@ -100,6 +100,7 @@ func init() {
 	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allow deletions")
 	flags.BoolVar(&af.NoViewFile, "no-view-file", false, "Do not allow viewing file contents")
 	flags.BoolVar(&af.NoSpawnShell, "no-spawn-shell", false, "Do not allow spawning shell")
+	flags.BoolVar(&af.NoConfirmQuit, "no-confirm-quit", false, "Do not ask for confirmation before quitting after a long scan")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 	flags.StringVar(
 		&af.Since, "since", "",

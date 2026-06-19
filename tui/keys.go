@@ -150,21 +150,84 @@ func (ui *UI) handleCtrlZ(key *tcell.EventKey) *tcell.EventKey {
 	return key
 }
 
+// confirmQuitMinScanDuration is the scan time above which quitting asks for
+// confirmation, so a long scan is not lost by an accidental key press.
+const confirmQuitMinScanDuration = 3 * time.Second
+
 func (ui *UI) handleQuit(key *tcell.EventKey) *tcell.EventKey {
 	clearTerminalProgress()
 
+	// do not re-trigger quitting while a confirmation dialog is open
+	if ui.pages.HasPage("confirm") {
+		return key
+	}
+
 	switch key.Rune() {
 	case 'Q':
-		ui.app.Stop()
-		ui.printMarkedPaths()
-		fmt.Fprintf(ui.output, "%s\n", ui.currentDirPath)
+		ui.quit(true)
 		return nil
 	case 'q':
-		ui.app.Stop()
-		ui.printMarkedPaths()
+		ui.quit(false)
 		return nil
 	}
 	return key
+}
+
+// quit asks for confirmation when there are scan results worth protecting,
+// otherwise it quits immediately.
+func (ui *UI) quit(printCurrentDirPath bool) {
+	if ui.shouldConfirmQuit() {
+		ui.confirmQuitDialog(printCurrentDirPath)
+		return
+	}
+	ui.doQuit(printCurrentDirPath)
+}
+
+// shouldConfirmQuit returns true when quitting would discard results from a
+// scan that took a noticeable amount of time.
+func (ui *UI) shouldConfirmQuit() bool {
+	return ui.confirmQuit &&
+		ui.currentDir != nil &&
+		ui.scanDuration >= confirmQuitMinScanDuration
+}
+
+func (ui *UI) doQuit(printCurrentDirPath bool) {
+	ui.app.Stop()
+	ui.printMarkedPaths()
+	if printCurrentDirPath {
+		fmt.Fprintf(ui.output, "%s\n", ui.currentDirPath)
+	}
+}
+
+func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
+	modal := tview.NewModal().
+		SetText(
+			"Do you really want to quit gdu?\n\n" +
+				"This scan took " + ui.scanDuration.Round(time.Second).String() +
+				" and the results are not saved.\n" +
+				"Choose \"no\" and press E to export them first.",
+		).
+		AddButtons([]string{"no", "yes", "don't ask me again"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			ui.pages.RemovePage("confirm")
+			ui.app.SetFocus(ui.table)
+			switch buttonIndex {
+			case 2:
+				ui.confirmQuit = false
+				fallthrough
+			case 1:
+				ui.doQuit(printCurrentDirPath)
+			}
+		})
+
+	if !ui.UseColors {
+		modal.SetBackgroundColor(tcell.ColorGray)
+	} else {
+		modal.SetBackgroundColor(tcell.ColorBlack)
+	}
+	modal.SetBorderColor(tcell.ColorDefault)
+
+	ui.pages.AddPage("confirm", modal, true, true)
 }
 
 func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {

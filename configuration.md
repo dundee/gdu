@@ -92,6 +92,10 @@ Do not allow deletions
 
 Do not allow viewing file contents
 
+#### `no-confirm-quit`
+
+Do not ask for confirmation before quitting after a long scan. By default, pressing `q`/`Q` after a scan that took more than a few seconds shows a confirmation dialog so that results are not lost by an accidental key press.
+
 #### `follow-symlinks`
 
 Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
