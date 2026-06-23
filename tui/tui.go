@@ -98,6 +98,10 @@ type UI struct {
 	browseParentDirs        bool
 	showDiskProgressBar     bool
 	currentDeviceSize       int64
+	confirmQuit             bool
+	scanning                bool
+	scanStart               time.Time
+	scanDuration            time.Duration
 }
 
 type deleteQueueItem struct {
@@ -137,6 +141,7 @@ func CreateUI(
 		screen:                  screen,
 		output:                  output,
 		askBeforeDelete:         true,
+		confirmQuit:             true,
 		showItemCount:           false,
 		remover:                 remove.ItemFromDir,
 		emptier:                 remove.EmptyFileFromDir,
@@ -341,6 +346,12 @@ func (ui *UI) StartUILoop() error {
 	}()
 
 	return ui.app.Run()
+}
+
+// SetConfirmQuit sets whether gdu asks for confirmation before quitting
+// after a scan that took a noticeable amount of time
+func (ui *UI) SetConfirmQuit(value bool) {
+	ui.confirmQuit = value
 }
 
 // SetShowItemCount sets the flag to show number of items in directory

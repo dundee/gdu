@@ -98,6 +98,8 @@ non-interactive mode
 
 **\--no-spawn-shell**\[=false\] Do not allow spawning shell
 
+**\--no-confirm-quit**\[=false\] Do not ask for confirmation before quitting after a long scan
+
 **\--no-delete**\[=false\] Do not allow deletions
 
 **\--no-view-file**\[=false\] Do not allow viewing file contents

@@ -30,7 +30,7 @@ var (
                [::b]c     [white:black:-]Show/hide file count
                [::b]m     [white:black:-]Show/hide latest mtime
                [::b]b     [white:black:-]Spawn shell in current directory
-               [::b]q     [white:black:-]Quit gdu
+               [::b]q     [white:black:-]Quit gdu (asks to confirm after a long scan)
                [::b]Q     [white:black:-]Quit gdu and print current directory path
 
 Item under cursor:

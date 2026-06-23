@@ -335,6 +335,116 @@ func TestStopWithPrintingPath(t *testing.T) {
 	assert.Equal(t, "test_dir\n", buff.String())
 }
 
+// analyzedUIForQuit returns a UI with a finished scan so quit behaviour can be tested.
+func analyzedUIForQuit(t *testing.T, buff *bytes.Buffer) *UI {
+	t.Helper()
+	simScreen := testapp.CreateSimScreen()
+	t.Cleanup(simScreen.Fini)
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
+
+	ui.done = make(chan struct{})
+	assert.Nil(t, ui.AnalyzePath("test_dir", nil))
+	<-ui.done // wait for analyzer
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+	return ui
+}
+
+func TestQuitConfirmsAfterLongScan(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui.scanDuration = 10 * time.Second // simulate a long scan
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.Nil(t, key)
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestQuitImmediateAfterShortScan(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui.scanDuration = time.Second // below the confirmation threshold
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.Nil(t, key)
+	assert.False(t, ui.pages.HasPage("confirm"))
+}
+
+func TestQuitImmediateWhenConfirmDisabled(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui.SetConfirmQuit(false)
+	ui.scanDuration = 10 * time.Second
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.Nil(t, key)
+	assert.False(t, ui.pages.HasPage("confirm"))
+}
+
+func TestQuitNotRetriggeredWhileConfirmOpen(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	ui.scanDuration = 10 * time.Second
+
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0)))
+	assert.True(t, ui.pages.HasPage("confirm"))
+
+	// pressing q again must not stack dialogs nor quit; the key passes through
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.NotNil(t, key)
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestQuitConfirmsDuringLongRunningScan(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	// simulate a scan that is still running and started long ago
+	ui.scanning = true
+	ui.scanStart = time.Now().Add(-10 * time.Second)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.Nil(t, key)
+	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func TestQuitImmediateDuringShortRunningScan(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUIForQuit(t, &bytes.Buffer{})
+	// a scan that just started should not block quitting
+	ui.scanning = true
+	ui.scanStart = time.Now()
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
+	assert.Nil(t, key)
+	assert.False(t, ui.pages.HasPage("confirm"))
+}
+
+func TestDoQuitPrintsCurrentDirPath(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := &bytes.Buffer{}
+	ui := analyzedUIForQuit(t, buff)
+
+	ui.doQuit(true)
+	assert.Equal(t, "test_dir\n", buff.String())
+}
+
 func TestSpawnShell(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

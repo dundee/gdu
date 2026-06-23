@@ -60,6 +60,7 @@ Flags:
       --min-age string                Include files with mtime at least DURATION old (e.g., 30d, 1w)
       --mouse                         Use mouse
   -c, --no-color                      Do not use colorized output
+      --no-confirm-quit               Do not ask for confirmation before quitting after a long scan
   -x, --no-cross                      Do not cross filesystem boundaries
       --no-delete                     Do not allow deletions
   -H, --no-hidden                     Ignore hidden directories (beginning with dot)
