@@ -16,7 +16,7 @@ jobs:
       with:
         go-version: 1.26.x
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Run linters
       uses: golangci/golangci-lint-action@v9
       with:
@@ -38,7 +38,7 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Run tests
       run: go test -v -covermode=count ./...
 
@@ -51,7 +51,7 @@ jobs:
       with:
         go-version: 1.26.x
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Calc coverage
       run: |
         go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
