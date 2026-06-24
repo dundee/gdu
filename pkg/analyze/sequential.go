@@ -32,6 +32,7 @@ func (a *SequentialAnalyzer) AnalyzeDir(
 	dir := a.processDir(path)
 
 	dir.BasePath = filepath.Dir(path)
+	a.setCurrentDir(dir)
 
 	a.progressDoneChan <- struct{}{}
 	a.doneChan.Broadcast()

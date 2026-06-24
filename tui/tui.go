@@ -102,6 +102,9 @@ type UI struct {
 	scanning                bool
 	scanStart               time.Time
 	scanDuration            time.Duration
+	previewing              bool
+	previewSavedDir         fs.Item
+	progressFlex            *tview.Flex
 }
 
 type deleteQueueItem struct {
@@ -446,6 +449,12 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.markedRows = make(map[int]struct{})
 	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()
+
+	// while previewing a mid-scan snapshot there is no stable top dir to anchor
+	// the "select last visited" logic to, so just render the navigated dir
+	if ui.previewing {
+		return
+	}
 
 	if row != 0 || origDir.GetPath() == ui.topDir.GetPath() {
 		return

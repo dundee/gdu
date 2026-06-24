@@ -50,6 +50,20 @@ Sort by (twice toggles asc/desc):
                [::b]M     [white:black:-]Sort by mtime (asc/desc)`
 )
 
+// currentDirLabelText builds the breadcrumb label shown above the table,
+// annotated when a mid-scan preview is being displayed.
+func (ui *UI) currentDirLabelText() string {
+	label := "[::b] --- " +
+		tview.Escape(
+			strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix),
+		) +
+		" ---"
+	if ui.previewing {
+		label += "  [::b][yellow]scanning… (preview, Tab to resume)[-]"
+	}
+	return label
+}
+
 // nolint: funlen // Why: complex function
 func (ui *UI) showDir() {
 	var (
@@ -70,11 +84,7 @@ func (ui *UI) showDir() {
 		log.Printf("changing cwd to %s", ui.currentDirPath)
 	}
 
-	ui.currentDirLabel.SetText("[::b] --- " +
-		tview.Escape(
-			strings.TrimPrefix(ui.currentDirPath, build.RootPathPrefix),
-		) +
-		" ---").SetDynamicColors(true)
+	ui.currentDirLabel.SetText(ui.currentDirLabelText()).SetDynamicColors(true)
 
 	ui.table.Clear()
 

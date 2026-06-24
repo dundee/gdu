@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 // BaseAnalyzer provides common logic for all analyzers
@@ -14,6 +15,7 @@ type BaseAnalyzer struct {
 	progressItemCount       atomic.Int64
 	progressTotalUsage      atomic.Int64
 	progressCurrentItemName atomic.Value
+	currentDir              atomic.Value
 	doneChan                common.SignalGroup
 	wait                    *WaitGroup
 	ignoreDir               common.ShouldDirBeIgnored
@@ -34,7 +36,26 @@ func (a *BaseAnalyzer) Init() {
 	a.progressItemCount.Store(0)
 	a.progressTotalUsage.Store(0)
 	a.progressCurrentItemName.Store("")
+	a.currentDir.Store((*Dir)(nil))
 	a.progressTicker = time.NewTicker(50 * time.Millisecond)
+}
+
+// setCurrentDir stores the root directory currently being analyzed so it can be
+// inspected (e.g. previewed) while the scan is still running.
+func (a *BaseAnalyzer) setCurrentDir(dir *Dir) {
+	a.currentDir.Store(dir)
+}
+
+// GetCurrentDir returns the root directory being built by the running analysis,
+// or nil if no analysis has started yet. The returned tree is still being
+// mutated by the analyzer, so callers must only read it through the locked
+// accessors (e.g. GetFilesLocked / UpdateStats).
+func (a *BaseAnalyzer) GetCurrentDir() fs.Item {
+	dir, _ := a.currentDir.Load().(*Dir)
+	if dir == nil {
+		return nil
+	}
+	return dir
 }
 
 // SetFollowSymlinks sets whether symlink to files should be followed

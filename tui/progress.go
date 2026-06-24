@@ -61,7 +61,8 @@ func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGro
 					color +
 					delta.String() +
 					"[white:black:-]\nCurrent item: [white:black:b]" +
-					path.ShortenPath(currentItem, ui.currentItemNameMaxLen))
+					path.ShortenPath(currentItem, ui.currentItemNameMaxLen) +
+					"[white:black:-]\n\nPress Tab to preview results found so far")
 			})
 		}(progress.ItemCount, progress.TotalUsage, progress.CurrentItemName)
 	}

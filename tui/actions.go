@@ -77,6 +77,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("progress", flex, true, true)
+	ui.progressFlex = flex
 
 	analyzer := ui.Analyzer
 	doneChan := analyzer.GetDone()
@@ -110,6 +111,9 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 			if d := time.Since(ui.scanStart); d > ui.scanDuration {
 				ui.scanDuration = d
 			}
+			// the finished scan replaces any mid-scan preview
+			ui.previewing = false
+			ui.previewSavedDir = nil
 			ui.currentDir = currentDir
 			ui.showDir()
 			ui.pages.RemovePage("progress")

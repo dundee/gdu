@@ -162,6 +162,8 @@ type Dir struct {
 
 // AddFile add item to files
 func (f *Dir) AddFile(item fs.Item) {
+	f.m.Lock()
+	defer f.m.Unlock()
 	f.Files = append(f.Files, item)
 }
 
@@ -245,11 +247,19 @@ func (f *Dir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
 
 // UpdateStats recursively updates size and item count
 func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
+	// Snapshot the file list under the read lock so it is safe to compute stats
+	// even while the analyzer is still appending items in another goroutine
+	// (e.g. when previewing a directory mid-scan).
+	f.m.RLock()
+	files := make(fs.Files, len(f.Files))
+	copy(files, f.Files)
+	f.m.RUnlock()
+
 	totalSize := int64(0)
 	totalUsage := int64(0)
 	var itemCount int64 = 1
 	var hasFiles bool
-	for _, entry := range f.Files {
+	for _, entry := range files {
 		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
 		totalSize += size
 		totalUsage += usage
@@ -272,7 +282,7 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	}
 
 	// no files, or just empty dirs
-	if len(f.Files) == 0 || (!hasFiles && filteringFiles && itemCount == int64(len(f.Files)+1)) {
+	if len(files) == 0 || (!hasFiles && filteringFiles && itemCount == int64(len(files)+1)) {
 		f.ItemCount = 1
 		f.Size = totalSize + 512
 		f.Usage = 0
