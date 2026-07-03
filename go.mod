@@ -3,7 +3,7 @@ module github.com/dundee/gdu/v5
 go 1.25.0
 
 require (
-	github.com/dgraph-io/badger/v4 v4.9.1
+	github.com/dgraph-io/badger/v4 v4.9.2
 	github.com/fatih/color v1.19.0
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/h2non/filetype v1.1.3
@@ -44,7 +44,6 @@ require (
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	modernc.org/libc v1.72.3 // indirect
