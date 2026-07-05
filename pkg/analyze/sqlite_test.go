@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 	"time"
@@ -186,7 +187,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Update item
-	err = storage.UpdateItem(id, 500, 1000, 10)
+	err = storage.UpdateItem(id, 500, 1000, 10, ' ')
 	assert.NoError(t, err)
 
 	// Verify update
@@ -217,7 +218,7 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 	}
 
 	// Update during bulk mode
-	err = storage.UpdateItem(rootID, 10000, 20000, 101)
+	err = storage.UpdateItem(rootID, 10000, 20000, 101, ' ')
 	assert.NoError(t, err)
 
 	// End bulk insert
@@ -785,6 +786,51 @@ func TestSqliteAnalyzerAnalyzeDir(t *testing.T) {
 	subnestedFiles := slices.Collect(subnested.GetFiles(fs.SortByName, fs.SortAsc))
 	assert.Equal(t, "file", subnestedFiles[0].GetName())
 	assert.Equal(t, int64(5), subnestedFiles[0].GetSize())
+}
+
+func TestSqliteAnalyzerPropagatesChildPermissionError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod does not make directories unreadable on Windows")
+	}
+
+	rootPath := t.TempDir()
+	outerPath := filepath.Join(rootPath, "outer")
+	restrictedPath := filepath.Join(outerPath, "data")
+
+	err := os.MkdirAll(restrictedPath, 0o755)
+	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(restrictedPath, "file.txt"), []byte("x"), 0o600)
+	assert.NoError(t, err)
+
+	err = os.Chmod(restrictedPath, 0)
+	assert.NoError(t, err)
+	defer os.Chmod(restrictedPath, 0o700)
+
+	if _, err := os.ReadDir(restrictedPath); err == nil {
+		t.Skip("test user can still read chmod 000 directory")
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	assert.NoError(t, err)
+	defer analyzer.storage.Close()
+
+	dir := analyzer.AnalyzeDir(
+		rootPath, func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	).(*SqliteItem)
+
+	analyzer.GetDone().Wait()
+
+	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Len(t, files, 1)
+	outer := files[0].(*SqliteItem)
+	assert.Equal(t, "outer", outer.GetName())
+	assert.Equal(t, '.', outer.GetFlag())
+
+	children := slices.Collect(outer.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Len(t, children, 1)
+	assert.Equal(t, "data", children[0].GetName())
+	assert.Equal(t, '!', children[0].GetFlag())
 }
 
 func TestSqliteAnalyzerIgnoreDir(t *testing.T) {
