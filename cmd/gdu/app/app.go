@@ -381,6 +381,9 @@ func (a *App) createUI() (UI, error) {
 			!a.Flags.NoColor && a.Istty,
 			!a.Flags.NoProgress && a.Istty,
 			a.Flags.UseSIPrefix,
+			a.Flags.Top,
+			a.Flags.Depth,
+			a.Flags.Summarize,
 		)
 	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
 		fixedUnit := ""
