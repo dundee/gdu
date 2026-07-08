@@ -27,6 +27,9 @@ type UI struct {
 	red          *color.Color
 	orange       *color.Color
 	writtenChan  chan struct{}
+	top          int
+	depth        int
+	summarize    bool
 }
 
 // CreateExportUI creates UI for stdout
@@ -36,6 +39,9 @@ func CreateExportUI(
 	useColors bool,
 	showProgress bool,
 	useSIPrefix bool,
+	top int,
+	depth int,
+	summarize bool,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -46,6 +52,9 @@ func CreateExportUI(
 		output:       output,
 		exportOutput: exportOutput,
 		writtenChan:  make(chan struct{}),
+		top:          top,
+		depth:        depth,
+		summarize:    summarize,
 	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
@@ -131,6 +140,78 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	return ui.exportDir(dir, &waitWritten)
 }
 
+func (ui *UI) topDir(dir fs.Item) fs.Item {
+	files := analyze.CollectTopFiles(dir, ui.top)
+
+	topDir := &analyze.Dir{
+		File: &analyze.File{
+			Name:  dir.GetName(),
+			Mtime: dir.GetMtime(),
+		},
+	}
+	if d, ok := dir.(*analyze.Dir); ok {
+		topDir.BasePath = d.BasePath
+	}
+	for _, f := range files {
+		file := *f.(*analyze.File)
+		file.Parent = topDir
+		topDir.AddFile(&file)
+	}
+	topDir.UpdateStats(make(fs.HardLinkedItems, 10))
+	return topDir
+}
+
+func (ui *UI) limitDirByDepth(dir fs.Item, currentDepth int) fs.Item {
+	if d, ok := dir.(*analyze.Dir); ok {
+		limited := &analyze.Dir{
+			File: &analyze.File{
+				Name:   d.GetName(),
+				Mtime:  d.GetMtime(),
+				Parent: d.GetParent(),
+				Size:   d.GetSize(),
+				Usage:  d.GetUsage(),
+			},
+			BasePath:  d.BasePath,
+			ItemCount: d.ItemCount,
+		}
+		if currentDepth == ui.depth {
+			return limited
+		}
+		for f := range d.GetFiles(fs.SortBySize, fs.SortDesc) {
+			if f.IsDir() {
+				child := ui.limitDirByDepth(f, currentDepth+1)
+				if child != nil {
+					child.SetParent(limited)
+					limited.AddFile(child)
+				}
+			} else if currentDepth+1 <= ui.depth {
+				file := *f.(*analyze.File)
+				file.Parent = limited
+				limited.AddFile(&file)
+			}
+		}
+		return limited
+	}
+
+	return dir
+}
+
+func (ui *UI) summarizeDir(dir fs.Item) fs.Item {
+	summary := &analyze.Dir{
+		File: &analyze.File{
+			Name:  dir.GetName(),
+			Mtime: dir.GetMtime(),
+		},
+	}
+	if d, ok := dir.(*analyze.Dir); ok {
+		summary.BasePath = d.BasePath
+		summary.ItemCount = d.ItemCount
+		summary.Size = d.GetSize()
+		summary.Usage = d.GetUsage()
+	}
+	return summary
+}
+
 func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 	// Sorting is now handled by GetFiles with sort parameters
 
@@ -144,6 +225,15 @@ func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 	buff.Write([]byte(`","timestamp":`))
 	buff.Write([]byte(strconv.FormatInt(time.Now().Unix(), 10)))
 	buff.Write([]byte("},\n"))
+
+	switch {
+	case ui.summarize:
+		dir = ui.summarizeDir(dir)
+	case ui.top > 0:
+		dir = ui.topDir(dir)
+	case ui.depth > 0:
+		dir = ui.limitDirByDepth(dir, 0)
+	}
 
 	if err := dir.EncodeJSON(&buff, true); err != nil {
 		return err

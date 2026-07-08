@@ -437,6 +437,76 @@ func TestAnalyzePathWithExport(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAnalyzePathWithExportAndTop(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer func() {
+		os.Remove("output.json")
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputFile: "output.json", Top: 2},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+
+	content, err := os.ReadFile("output.json")
+	assert.Nil(t, err)
+	assert.Contains(t, string(content), `"name":"file"`)
+	assert.Contains(t, string(content), `"name":"file2"`)
+	assert.NotContains(t, string(content), `"name":"nested"`)
+}
+
+func TestAnalyzePathWithExportAndDepth(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer func() {
+		os.Remove("output.json")
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputFile: "output.json", Depth: 1},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+
+	content, err := os.ReadFile("output.json")
+	assert.Nil(t, err)
+	assert.Contains(t, string(content), `"name":"nested"`)
+	assert.NotContains(t, string(content), `"name":"subnested"`)
+}
+
+func TestAnalyzePathWithExportAndSummarize(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer func() {
+		os.Remove("output.json")
+	}()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputFile: "output.json", Summarize: true},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+
+	content, err := os.ReadFile("output.json")
+	assert.Nil(t, err)
+	assert.Contains(t, string(content), "test_dir")
+	assert.NotContains(t, string(content), `"name":"nested"`)
+}
+
 func TestAnalyzePathWithChdir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
