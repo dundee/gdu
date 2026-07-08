@@ -134,7 +134,7 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 	}
 
 	s.updateStmt, err = tx.Prepare(
-		`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
+		`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
 	)
 	if err != nil {
 		s.insertStmt.Close()
@@ -281,17 +281,17 @@ func (s *SqliteStorage) InsertItem(
 }
 
 // UpdateItem updates an existing item's stats
-func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64) error {
+func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64, flag rune) error {
 	var err error
 
 	// Use prepared statement if in bulk mode, otherwise use direct exec
 	if s.updateStmt != nil {
-		_, err = s.updateStmt.Exec(size, usage, itemCount, id)
+		_, err = s.updateStmt.Exec(size, usage, itemCount, string(flag), id)
 	} else {
 		s.m.Lock()
 		_, err = s.db.Exec(
-			`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
-			size, usage, itemCount, id,
+			`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
+			size, usage, itemCount, string(flag), id,
 		)
 		s.m.Unlock()
 	}
@@ -853,11 +853,10 @@ func (a *SqliteAnalyzer) insertItemLocked(
 	return a.storage.InsertItem(parentID, name, isDir, size, usage, mtime, itemCount, mli, flag)
 }
 
-// updateItemLocked is a serialized wrapper around storage.UpdateItem.
-func (a *SqliteAnalyzer) updateItemLocked(id, size, usage, itemCount int64) error {
+func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, flag rune) error {
 	a.dbWriteMu.Lock()
 	defer a.dbWriteMu.Unlock()
-	return a.storage.UpdateItem(id, size, usage, itemCount)
+	return a.storage.UpdateItem(id, size, usage, itemCount, flag)
 }
 
 // hasInodeLocked is a serialized wrapper around storage.HasInode.
@@ -1182,11 +1181,17 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			totalSize += sub.size
 			totalUsage += sub.usage
 			itemCount += sub.itemCount
+			switch sub.flag {
+			case '!', '.':
+				if dirFlag != '!' {
+					dirFlag = '.'
+				}
+			}
 		}
 	}
 
 	// Update directory with computed stats
-	if err := a.updateItemLocked(dirID, totalSize, totalUsage, itemCount); err != nil {
+	if err := a.updateDirLocked(dirID, totalSize, totalUsage, itemCount, dirFlag); err != nil {
 		log.Printf("Error updating item: %v", err)
 	}
 
