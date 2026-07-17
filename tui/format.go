@@ -221,6 +221,9 @@ func (ui *UI) formatSize(size int64, reverseColor, transparentBg bool) string {
 		}
 	}
 
+	if formatted, ok := ui.FormatBlockSize(size); ok {
+		return formatted + color
+	}
 	if ui.UseSIPrefix {
 		return formatWithDecPrefix(size, color)
 	}

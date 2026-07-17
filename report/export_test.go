@@ -18,6 +18,12 @@ func init() {
 	log.SetLevel(log.WarnLevel)
 }
 
+func TestMain(m *testing.M) {
+	os.Unsetenv("BLOCK_SIZE")
+	os.Unsetenv("BLOCKSIZE")
+	os.Exit(m.Run())
+}
+
 func TestAnalyzePath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -430,6 +436,15 @@ func TestFormatSize(t *testing.T) {
 	assert.Contains(t, ui.formatSize(1<<50+1), "PiB")
 	assert.Contains(t, ui.formatSize(1<<60+1), "EiB")
 	assert.Contains(t, ui.formatSize(-1<<10-1), "KiB")
+}
+
+func TestFormatSizeWithBlockSizeEnvironment(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	var output bytes.Buffer
+	var reportOutput bytes.Buffer
+
+	ui := CreateExportUI(&output, &reportOutput, false, true, false, 0, 0, false)
+	assert.Equal(t, "2", ui.formatSize(1025))
 }
 
 func TestFormatSizeDec(t *testing.T) {

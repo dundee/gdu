@@ -105,3 +105,23 @@ func (a *MockedAnalyzer) SetTimeFilter(timeFilter TimeFilter) {}
 func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {
 	a.ArchiveBrowsing = v
 }
+
+func TestBlockSizeEnvironment(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	t.Setenv("BLOCKSIZE", "1MB")
+	ui := &UI{}
+	ui.SetBlockSizeFromEnvironment()
+
+	formatted, ok := ui.FormatBlockSize(1025)
+	assert.True(t, ok)
+	assert.Equal(t, "2", formatted)
+}
+
+func TestParseBlockSizeRejectsInvalidValues(t *testing.T) {
+	for _, value := range []string{"", "0", "-1", "1Z", "16E", "'1"} {
+		t.Run(value, func(t *testing.T) {
+			_, _, ok := parseBlockSize(value)
+			assert.False(t, ok)
+		})
+	}
+}
