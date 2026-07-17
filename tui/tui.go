@@ -100,6 +100,7 @@ type UI struct {
 	currentDeviceSize       int64
 	confirmQuit             bool
 	scanning                bool
+	scanCancelled           bool
 	scanStart               time.Time
 	scanDuration            time.Duration
 	previewing              bool
@@ -327,28 +328,97 @@ func (ui *UI) SetDeleteInParallel() {
 
 // StartUILoop starts tview application
 func (ui *UI) StartUILoop() error {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(
+		signals,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+		syscall.SIGILL,
+		syscall.SIGTRAP,
+		syscall.SIGABRT,
+		syscall.SIGPIPE,
+		syscall.SIGTERM,
+	)
+	defer signal.Stop(signals)
+
+	return ui.runUILoop(signals)
+}
+
+func (ui *UI) runUILoop(signals <-chan os.Signal) error {
+	stopSignals := make(chan struct{})
+	signalsDone := make(chan struct{})
 	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(
-			c,
-			syscall.SIGHUP,
-			syscall.SIGINT,
-			syscall.SIGQUIT,
-			syscall.SIGILL,
-			syscall.SIGTRAP,
-			syscall.SIGABRT,
-			syscall.SIGPIPE,
-			syscall.SIGTERM,
-		)
-		s := <-c
-		log.Printf("Got signal: %s", s)
-		ui.app.QueueUpdateDraw(func() {
-			ui.printMarkedPaths()
-			ui.app.Stop()
-		})
+		defer close(signalsDone)
+		ui.handleSignals(signals, stopSignals)
 	}()
 
-	return ui.app.Run()
+	err := ui.app.Run()
+	close(stopSignals)
+	<-signalsDone
+	return err
+}
+
+func (ui *UI) handleSignals(signals <-chan os.Signal, stop <-chan struct{}) {
+	for {
+		select {
+		case <-stop:
+			return
+		case current, ok := <-signals:
+			if !ok {
+				return
+			}
+			log.Printf("Got signal: %s", current)
+			ui.postSignalEvent(signalEvent(current), stop)
+		}
+	}
+}
+
+func (ui *UI) postSignalEvent(event *tcell.EventKey, stop <-chan struct{}) {
+	if err := ui.screen.PostEvent(event); err == nil {
+		return
+	}
+
+	retry := time.NewTicker(time.Millisecond)
+	defer retry.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-retry.C:
+			if err := ui.screen.PostEvent(event); err == nil {
+				return
+			}
+		}
+	}
+}
+
+func signalEvent(current os.Signal) *tcell.EventKey {
+	modifiers := tcell.ModNone
+	if current == syscall.SIGINT {
+		modifiers = tcell.ModCtrl
+	}
+	return tcell.NewEventKey(tcell.KeyExit, 0, modifiers)
+}
+
+func (ui *UI) handleSignalEvent(event *tcell.EventKey) {
+	if event.Modifiers() == tcell.ModCtrl && (ui.cancelScan() || ui.scanning) {
+		return
+	}
+	ui.printMarkedPaths()
+	ui.app.Stop()
+}
+
+func (ui *UI) cancelScan() bool {
+	if !ui.scanning || ui.scanCancelled {
+		return false
+	}
+
+	ui.Analyzer.Cancel()
+	ui.scanCancelled = true
+	ui.progress.SetTitle(" Stopping scan... ")
+	ui.progress.SetText("Stopping scan and keeping results...")
+	return true
 }
 
 // SetConfirmQuit sets whether gdu asks for confirmation before quitting
@@ -417,7 +487,6 @@ func (ui *UI) resetSorting() {
 }
 
 func (ui *UI) rescanDir() {
-	ui.Analyzer.ResetProgress()
 	ui.linkedItems = make(fs.HardLinkedItems)
 	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.GetParent())
 	if err != nil {

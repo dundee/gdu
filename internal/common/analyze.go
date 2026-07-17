@@ -29,6 +29,7 @@ type Analyzer interface {
 	SetTimeFilter(timeFilter TimeFilter)
 	SetArchiveBrowsing(bool)
 	SetFileTypeFilter(filter ShouldFileBeIgnored)
+	Cancel()
 	GetDone() SignalGroup
 	GetProgress() CurrentProgress
 	ResetProgress()

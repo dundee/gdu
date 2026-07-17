@@ -76,11 +76,14 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 	itemChan := make(chan indexedItem, len(files))
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			currentIndex := itemCount
@@ -89,11 +92,16 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 
 			go func(entryPath string, idx int) {
 				concurrencyLimit <- struct{}{}
+				if a.IsCancelled() {
+					<-concurrencyLimit
+					itemChan <- indexedItem{idx, nil}
+					return
+				}
 				subdir := a.processDir(entryPath)
 				subdir.Parent = dir
 
-				itemChan <- indexedItem{idx, subdir}
 				<-concurrencyLimit
+				itemChan <- indexedItem{idx, subdir}
 			}(entryPath, currentIndex)
 		} else {
 			// Apply file type filter if set
@@ -104,7 +112,7 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 			info, err = f.Info()
 			if err != nil {
 				log.Print(err.Error())
-				dir.Flag = '!'
+				dir.SetFlag('!')
 				continue
 			}
 
@@ -112,7 +120,7 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
 					log.Print(err.Error())
-					dir.Flag = '!'
+					dir.SetFlag('!')
 					continue
 				}
 				if infoF != nil {
@@ -151,8 +159,10 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 		}
 
 		// Add all items in their original order
-		for i := 0; i < itemCount; i++ {
-			dir.AddFile(items[i].item)
+		for i := range itemCount {
+			if items[i].item != nil {
+				dir.AddFile(items[i].item)
+			}
 		}
 
 		a.wait.Done()

@@ -77,7 +77,87 @@ func TestPreviewWhileScanning(t *testing.T) {
 	// 40 dirs * (20 files + nested dir with 20 files) + nested dirs + root
 	assert.Greater(t, dir.GetItemCount(), int64(40*40))
 
-	// the analyzer must expose the same root it returned
+	// the analyzer exposes a point-in-time snapshot of the returned root
 	var _ common.Analyzer = analyzer
 	assert.Equal(t, dir.GetPath(), analyzer.GetCurrentDir().GetPath())
+}
+
+func TestCurrentDirSnapshotCannotOverwriteLiveStats(t *testing.T) {
+	live := &Dir{
+		File:      &File{Name: "root", Size: 100, Usage: 100},
+		Files:     make(fs.Files, 0, 1),
+		ItemCount: 1,
+	}
+	analyzer := CreateAnalyzer()
+	analyzer.setCurrentDir(live)
+
+	snapshot := analyzer.GetCurrentDir()
+	live.AddFile(&File{Name: "complete", Size: 7, Usage: 5, Parent: live})
+	live.UpdateStats(make(fs.HardLinkedItems))
+	snapshot.UpdateStats(make(fs.HardLinkedItems))
+
+	assert.Equal(t, int64(7), live.GetSize())
+	assert.Equal(t, int64(5), live.GetUsage())
+	assert.Equal(t, int64(2), live.GetItemCount())
+	assert.Empty(t, itemNames(snapshot))
+}
+
+func TestCurrentDirSnapshotPreservesArchiveItems(t *testing.T) {
+	live := &Dir{
+		File:     &File{Name: "root"},
+		BasePath: "/tmp",
+		Files:    make(fs.Files, 0, 2),
+	}
+	zipDir := &ZipDir{
+		Dir: &Dir{
+			File:  &File{Name: "archive.zip", Parent: live},
+			Files: make(fs.Files, 0, 1),
+		},
+		zipPath: "/tmp/archive.zip",
+	}
+	zipDir.Files = append(zipDir.Files, &ZipFile{
+		File:      &File{Name: "inside.zip", Parent: zipDir},
+		zipPath:   "/tmp/archive.zip",
+		inZipPath: "inside.zip",
+	})
+	tarDir := &TarDir{
+		Dir: &Dir{
+			File:  &File{Name: "archive.tar", Parent: live},
+			Files: make(fs.Files, 0, 1),
+		},
+		tarPath: "/tmp/archive.tar",
+	}
+	tarDir.Files = append(tarDir.Files, &TarFile{
+		File:      &File{Name: "inside.tar", Parent: tarDir},
+		tarPath:   "/tmp/archive.tar",
+		inTarPath: "inside.tar",
+	})
+	live.Files = append(live.Files, zipDir, tarDir)
+
+	analyzer := CreateAnalyzer()
+	analyzer.setCurrentDir(live)
+	snapshot := analyzer.GetCurrentDir()
+
+	items := make(map[string]fs.Item)
+	for item := range snapshot.GetFiles(fs.SortByName, fs.SortAsc) {
+		items[item.GetName()] = item
+	}
+	zipSnapshot, ok := items["archive.zip"].(*ZipDir)
+	assert.True(t, ok)
+	assert.Equal(t, zipDir.GetType(), zipSnapshot.GetType())
+	assert.Equal(t, zipDir.GetPath(), zipSnapshot.GetPath())
+	for item := range zipSnapshot.GetFiles(fs.SortByName, fs.SortAsc) {
+		_, isZipFile := item.(*ZipFile)
+		assert.True(t, isZipFile)
+		assert.Equal(t, zipDir.Files[0].GetPath(), item.GetPath())
+	}
+	tarSnapshot, ok := items["archive.tar"].(*TarDir)
+	assert.True(t, ok)
+	assert.Equal(t, tarDir.GetType(), tarSnapshot.GetType())
+	assert.Equal(t, tarDir.GetPath(), tarSnapshot.GetPath())
+	for item := range tarSnapshot.GetFiles(fs.SortByName, fs.SortAsc) {
+		_, isTarFile := item.(*TarFile)
+		assert.True(t, isTarFile)
+		assert.Equal(t, tarDir.Files[0].GetPath(), item.GetPath())
+	}
 }

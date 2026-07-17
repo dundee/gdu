@@ -46,6 +46,26 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	return dir
 }
 
+func (a *ParallelAnalyzer) processQueuedDir(path string, parent *Dir, result chan<- *Dir) {
+	concurrencyLimit <- struct{}{}
+	if a.IsCancelled() {
+		<-concurrencyLimit
+		result <- nil
+		return
+	}
+
+	subdir := a.processDir(path)
+	subdir.Parent = parent
+	<-concurrencyLimit
+	result <- subdir
+}
+
+func addSubDir(parent, child *Dir) {
+	if child != nil {
+		parent.AddFile(child)
+	}
+}
+
 func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
 		file       fs.Item
@@ -74,22 +94,18 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	setDirPlatformSpecificAttrs(dir, path)
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			dirCount++
 
-			go func(entryPath string) {
-				concurrencyLimit <- struct{}{}
-				subdir := a.processDir(entryPath)
-				subdir.Parent = dir
-
-				subDirChan <- subdir
-				<-concurrencyLimit
-			}(entryPath)
+			go a.processQueuedDir(entryPath, dir, subDirChan)
 		} else {
 			// Apply file type filter if set
 			if a.ignoreFileType != nil && a.ignoreFileType(name) {
@@ -99,7 +115,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			info, err = f.Info()
 			if err != nil {
 				log.Print(err.Error())
-				dir.Flag = '!'
+				dir.SetFlag('!')
 				continue
 			}
 
@@ -107,7 +123,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
 					log.Print(err.Error())
-					dir.Flag = '!'
+					dir.SetFlag('!')
 					continue
 				}
 				if infoF != nil {
@@ -177,9 +193,9 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	go func() {
 		var sub *Dir
 
-		for i := 0; i < dirCount; i++ {
+		for range dirCount {
 			sub = <-subDirChan
-			dir.AddFile(sub)
+			addSubDir(dir, sub)
 		}
 
 		a.wait.Done()

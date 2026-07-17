@@ -65,10 +65,13 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 	setDirPlatformSpecificAttrs(dir, path)
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			dirCount++
@@ -85,7 +88,7 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 			info, err = f.Info()
 			if err != nil {
 				log.Print(err.Error())
-				dir.Flag = '!'
+				dir.SetFlag('!')
 				continue
 			}
 
@@ -93,7 +96,7 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
 				if err != nil {
 					log.Print(err.Error())
-					dir.Flag = '!'
+					dir.SetFlag('!')
 					continue
 				}
 				if infoF != nil {

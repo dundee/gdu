@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdev"
@@ -78,6 +79,35 @@ func TestUpdateProgress(t *testing.T) {
 	done := ui.Analyzer.GetDone()
 	done.Broadcast()
 	ui.updateProgress(ui.Analyzer, done)
+}
+
+func TestUpdateProgressShowsCancellationHint(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false).(*testapp.MockedApp)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui.progress = ui.header
+	done := make(common.SignalGroup)
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		ui.updateProgress(ui.Analyzer, done)
+	}()
+
+	if !assert.Eventually(t, func() bool {
+		return len(app.GetUpdateDraws()) > 0
+	}, time.Second, 10*time.Millisecond) {
+		done.Broadcast()
+		<-finished
+		return
+	}
+	done.Broadcast()
+	<-finished
+
+	draws := app.GetUpdateDraws()
+	draws[0]()
+	assert.Contains(t, ui.progress.GetText(false), "Press Ctrl+C to stop scanning and keep results")
 }
 
 func TestSetShowDiskProgressBar(t *testing.T) {
@@ -172,6 +202,36 @@ func TestAppRun(t *testing.T) {
 	err := ui.StartUILoop()
 
 	assert.Nil(t, err)
+}
+
+func TestUILoopReturnsWithPendingSignal(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	assert.NoError(t, simScreen.Init())
+	defer simScreen.Fini()
+	screen := &failOnceSignalScreen{
+		Screen:    simScreen,
+		attempted: make(chan struct{}),
+		fail:      true,
+	}
+	app := &signalLifecycleApp{
+		MockedApp:       testapp.CreateMockedApp(false).(*testapp.MockedApp),
+		signalAttempted: screen.attempted,
+	}
+	ui := CreateUI(app, screen, &bytes.Buffer{}, false, true, false, false)
+	signals := make(chan os.Signal, 1)
+	signals <- os.Interrupt
+
+	result := make(chan error, 1)
+	go func() {
+		result <- ui.runUILoop(signals)
+	}()
+
+	select {
+	case err := <-result:
+		assert.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("UI loop did not stop its signal listener")
+	}
 }
 
 func TestAppRunWithErr(t *testing.T) {

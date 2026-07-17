@@ -94,11 +94,13 @@ func TestGetDone(t *testing.T) {
 	}
 }
 
-func TestResetProgress(t *testing.T) {
+func TestResetProgressClearsCancellation(t *testing.T) {
 	a := &MockedAnalyzer{}
-	assert.NotPanics(t, func() {
-		a.ResetProgress()
-	})
+	a.Cancel()
+	assert.True(t, a.IsCancelled())
+
+	a.ResetProgress()
+	assert.False(t, a.IsCancelled())
 }
 
 func TestSetFollowSymlinks(t *testing.T) {
