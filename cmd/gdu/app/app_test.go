@@ -482,6 +482,8 @@ func TestAnalyzePathWithExportAndDepth(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Contains(t, string(content), `"name":"nested"`)
 	assert.NotContains(t, string(content), `"name":"subnested"`)
+	assert.Contains(t, string(content), `"name":"nested","asize":`)
+	assert.Contains(t, string(content), `"items":`)
 }
 
 func TestAnalyzePathWithExportAndSummarize(t *testing.T) {

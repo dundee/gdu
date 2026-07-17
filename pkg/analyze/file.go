@@ -165,10 +165,11 @@ func (f *File) RemoveFileByName(name string) {
 // Dir struct
 type Dir struct {
 	*File
-	BasePath  string
-	Files     fs.Files
-	ItemCount int64
-	m         sync.RWMutex
+	BasePath      string
+	Files         fs.Files
+	ItemCount     int64
+	statsFromJSON bool
+	m             sync.RWMutex
 }
 
 func snapshotDir(source *Dir, parent fs.Item) *Dir {
@@ -268,6 +269,11 @@ func (f *Dir) SetFlag(flag rune) {
 	f.m.Lock()
 	f.Flag = flag
 	f.m.Unlock()
+}
+
+// SetStatsFromJSON marks directory statistics decoded from an export as authoritative.
+func (f *Dir) SetStatsFromJSON() {
+	f.statsFromJSON = true
 }
 
 // GetFiles returns all files in directory as a sorted iterator
@@ -378,6 +384,10 @@ func (f *Dir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
 
 // UpdateStats recursively updates size and item count
 func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
+	if f.statsFromJSON {
+		return
+	}
+
 	// Snapshot the file list under the read lock so it is safe to compute stats
 	// even while the analyzer is still appending items in another goroutine
 	// (e.g. when previewing a directory mid-scan).

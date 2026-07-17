@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
@@ -18,10 +19,10 @@ func init() {
 func TestReadAnalysis(t *testing.T) {
 	buff := bytes.NewBuffer([]byte(`
 		[1,2,{"progname":"gdu","progver":"development","timestamp":1626806293},
-		[{"name":"/home/xxx","mtime":1629333600},
+		[{"name":"/home/xxx","asize":47000000,"dsize":64000000,"items":6,"mtime":1629333600},
 		{"name":"gdu.json","asize":33805233,"dsize":33808384},
 		{"name":"sock","notreg":true},
-		[{"name":"app"},
+		[{"name":"app","asize":10022,"dsize":20480,"items":4},
 		{"name":"app.go","asize":4638,"dsize":8192},
 		{"name":"app_linux_test.go","asize":1410,"dsize":4096},
 		{"name":"app_linux_test2.go","ino":1234,"hlnkc":true,"asize":1410,"dsize":4096},
@@ -34,12 +35,40 @@ func TestReadAnalysis(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "xxx", dir.GetName())
 	assert.Equal(t, "/home/xxx", dir.GetPath())
-	assert.Equal(t, 2021, dir.GetMtime().Year())
-	assert.Equal(t, 2021, dir.Files[3].GetMtime().Year())
+	assert.Equal(t, int64(47000000), dir.GetSize())
+	assert.Equal(t, int64(64000000), dir.GetUsage())
+	assert.Equal(t, int64(6), dir.GetItemCount())
+	assert.Equal(t, int64(10022), dir.Files[2].GetSize())
+	assert.Equal(t, int64(20480), dir.Files[2].GetUsage())
+	assert.Equal(t, int64(4), dir.Files[2].GetItemCount())
 	alt2 := dir.Files[2].(*analyze.Dir).Files[2].(*analyze.File)
 	assert.Equal(t, "app_linux_test2.go", alt2.Name)
 	assert.Equal(t, uint64(1234), alt2.Mli)
 	assert.Equal(t, 'H', alt2.Flag)
+}
+
+func TestReadAnalysisPreservesTruncatedDirectoryStats(t *testing.T) {
+	input := bytes.NewBufferString(`
+		[1,2,{"progname":"gdu","progver":"development","timestamp":0},
+		[{"name":"/root","asize":4096,"dsize":4096,"items":3},
+		[{"name":"summary","asize":4096,"dsize":4096,"items":2}]]]
+	`)
+
+	dir, err := ReadAnalysis(input)
+	assert.NoError(t, err)
+	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+
+	assert.Equal(t, int64(4096), dir.GetSize())
+	assert.Equal(t, int64(4096), dir.GetUsage())
+	assert.Equal(t, int64(3), dir.GetItemCount())
+	summary := dir.Files[0].(*analyze.Dir)
+	assert.Equal(t, int64(4096), summary.GetSize())
+	assert.Equal(t, int64(4096), summary.GetUsage())
+	assert.Equal(t, int64(2), summary.GetItemCount())
+	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
+	assert.Equal(t, int64(4096), dir.GetSize())
+	assert.Equal(t, int64(4096), dir.GetUsage())
+	assert.Equal(t, int64(3), dir.GetItemCount())
 }
 
 func TestReadAnalysisWithEmptyInput(t *testing.T) {
