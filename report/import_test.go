@@ -71,6 +71,21 @@ func TestReadAnalysisPreservesTruncatedDirectoryStats(t *testing.T) {
 	assert.Equal(t, int64(3), dir.GetItemCount())
 }
 
+func TestReadAnalysisRecomputesEmptyDirStats(t *testing.T) {
+	input := bytes.NewBufferString(`
+		[1,2,{"progname":"gdu","progver":"development","timestamp":0},
+		[{"name":"/empty","asize":512,"dsize":0,"items":1}]]
+	`)
+
+	dir, err := ReadAnalysis(input)
+	assert.NoError(t, err)
+	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+
+	assert.Equal(t, int64(512), dir.GetSize())
+	assert.Equal(t, int64(0), dir.GetUsage())
+	assert.Equal(t, int64(1), dir.GetItemCount())
+}
+
 func TestReadAnalysisWithEmptyInput(t *testing.T) {
 	buff := bytes.NewBuffer([]byte(``))
 
