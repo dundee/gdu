@@ -365,12 +365,7 @@ func TestExportToFileWithTop(t *testing.T) {
 	err = ui.StartUILoop()
 	assert.Nil(t, err)
 
-	reportOutput, err = os.OpenFile("output.json", os.O_RDONLY, 0o644)
-	assert.Nil(t, err)
-	_, err = reportOutput.Seek(0, 0)
-	assert.Nil(t, err)
-	buff := make([]byte, 200)
-	_, err = reportOutput.Read(buff)
+	buff, err := os.ReadFile("output.json")
 	assert.Nil(t, err)
 
 	assert.Contains(t, string(buff), `"name":"file"`)

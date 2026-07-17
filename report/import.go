@@ -44,29 +44,10 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 		return nil, errors.New("directory array is empty")
 	}
 
-	dir = &analyze.Dir{
-		File: &analyze.File{
-			Flag: ' ',
-		},
-	}
-	dirMap, ok := items[0].(map[string]any)
-	if !ok {
-		return nil, errors.New("directory item is not a map")
-	}
-	name, ok := dirMap["name"].(string)
-	if !ok {
-		return nil, errors.New("directory name is not a string")
-	}
-	if mtime, ok := dirMap["mtime"].(float64); ok {
-		dir.Mtime = time.Unix(int64(mtime), 0)
-	}
-
-	slashPos := strings.LastIndex(name, "/")
-	if slashPos > -1 {
-		dir.Name = name[slashPos+1:]
-		dir.BasePath = name[:slashPos+1]
-	} else {
-		dir.Name = name
+	var hasSize, hasUsage, hasItemCount bool
+	dir, hasSize, hasUsage, hasItemCount, err = parseDirectoryMetadata(items[0])
+	if err != nil {
+		return nil, err
 	}
 
 	for _, v := range items[1:] {
@@ -112,6 +93,61 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 			dir.AddFile(subdir)
 		}
 	}
+	preserveTruncatedStats(dir, hasSize, hasUsage, hasItemCount)
 
 	return dir, nil
+}
+
+func parseDirectoryMetadata(item any) (
+	dir *analyze.Dir,
+	hasSize bool,
+	hasUsage bool,
+	hasItemCount bool,
+	err error,
+) {
+	dirMap, ok := item.(map[string]any)
+	if !ok {
+		return nil, false, false, false, errors.New("directory item is not a map")
+	}
+	name, ok := dirMap["name"].(string)
+	if !ok {
+		return nil, false, false, false, errors.New("directory name is not a string")
+	}
+
+	dir = &analyze.Dir{File: &analyze.File{Flag: ' '}}
+	if mtime, ok := dirMap["mtime"].(float64); ok {
+		dir.Mtime = time.Unix(int64(mtime), 0)
+	}
+	if asize, ok := dirMap["asize"].(float64); ok {
+		dir.Size = int64(asize)
+		hasSize = true
+	}
+	if dsize, ok := dirMap["dsize"].(float64); ok {
+		dir.Usage = int64(dsize)
+		hasUsage = true
+	}
+	if itemCount, ok := dirMap["items"].(float64); ok {
+		dir.ItemCount = int64(itemCount)
+		hasItemCount = true
+	}
+
+	slashPos := strings.LastIndex(name, "/")
+	if slashPos > -1 {
+		dir.Name = name[slashPos+1:]
+		dir.BasePath = name[:slashPos+1]
+	} else {
+		dir.Name = name
+	}
+
+	return dir, hasSize, hasUsage, hasItemCount, nil
+}
+
+func preserveTruncatedStats(dir *analyze.Dir, hasSize, hasUsage, hasItemCount bool) {
+	if !hasSize || !hasUsage || !hasItemCount || len(dir.Files) != 0 {
+		return
+	}
+	if dir.Size == 512 && dir.Usage == 0 && dir.ItemCount == 1 {
+		return
+	}
+	dir.SetStatsFromJSON()
 }
