@@ -420,8 +420,9 @@ func (ui *UI) exportAnalysis() {
 			ui.showErrFromGo("Error creating file", err)
 			return
 		}
+		defer file.Close()
 
-		if err = ui.topDir.EncodeJSON(&buff, true); err != nil {
+		if err = ui.topDir.EncodeJSON(&buff, true, nil); err != nil {
 			ui.showErrFromGo("Error encoding JSON", err)
 			return
 		}

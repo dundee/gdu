@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -56,6 +57,7 @@ type Flags struct {
 	LogFile            string   `yaml:"log-file"`
 	InputFile          string   `yaml:"input-file"`
 	OutputFile         string   `yaml:"output-file"`
+	OutputAttrs        string   `yaml:"output-attrs"`
 	IgnoreFromFile     string   `yaml:"ignore-from-file"`
 	IgnoreDirs         []string `yaml:"ignore-dirs"`
 	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
@@ -221,13 +223,21 @@ func (a *App) Run() error {
 		return fmt.Errorf("--interactive and --non-interactive cannot be used at once")
 	}
 
+	outputAttributes, err := gfs.ParseJSONAttributes(a.Flags.OutputAttrs)
+	if err != nil {
+		return err
+	}
+	if a.Flags.OutputAttrs != "" && a.Flags.OutputFile == "" {
+		return errors.New("--output-attrs requires --output-file")
+	}
+
 	path := a.getPath()
-	path, err := filepath.Abs(path)
+	path, err = filepath.Abs(path)
 	if err != nil {
 		return err
 	}
 
-	ui, err = a.createUI()
+	ui, err = a.createUI(outputAttributes)
 	if err != nil {
 		return err
 	}
@@ -360,7 +370,7 @@ func (a *App) setTimeFilters(ui UI) error {
 	return nil
 }
 
-func (a *App) createUI() (UI, error) {
+func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 	var ui UI
 	var err error
 
@@ -384,6 +394,7 @@ func (a *App) createUI() (UI, error) {
 			a.Flags.Top,
 			a.Flags.Depth,
 			a.Flags.Summarize,
+			outputAttributes,
 		)
 	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
 		fixedUnit := ""

@@ -235,7 +235,7 @@ func TestParentDirEncodeJSONPanics(t *testing.T) {
 		}
 	}()
 	dir := &ParentDir{}
-	err := dir.EncodeJSON(nil, false)
+	err := dir.EncodeJSON(nil, false, nil)
 	assert.NoError(t, err)
 }
 
