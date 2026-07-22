@@ -651,14 +651,12 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 		return err
 	}
 
-	if i.GetSize() > 0 {
-		buff = append(buff, []byte(`,"asize":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
-	}
-	if i.GetUsage() > 0 {
-		buff = append(buff, []byte(`,"dsize":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
-	}
+	buff = append(buff, []byte(`,"asize":`)...)
+	buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
+	buff = append(buff, []byte(`,"dsize":`)...)
+	buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
+	buff = append(buff, []byte(`,"items":`)...)
+	buff = append(buff, []byte(strconv.FormatInt(i.GetItemCount(), 10))...)
 	if !i.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)

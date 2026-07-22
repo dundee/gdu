@@ -598,9 +598,24 @@ func TestSqliteItemEncodeJSON(t *testing.T) {
 	err = root.EncodeJSON(&buf, false)
 	assert.NoError(t, err)
 
-	expected := `[{"name":"root","asize":100,"dsize":200,"mtime":1600000000},
+	expected := `[{"name":"root","asize":100,"dsize":200,"items":2,"mtime":1600000000},
 {"name":"file.txt","asize":10,"dsize":20,"mtime":1600000000}]`
 	assert.Equal(t, expected, buf.String())
+}
+
+func TestSqliteItemEncodeEmptyDirJSON(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	rootID, _ := storage.InsertItem(nil, "empty", true, 0, 0, time.Time{}, 0, 0, ' ')
+	root, _ := storage.GetItemByID(rootID)
+
+	var buf bytes.Buffer
+	err = root.EncodeJSON(&buf, false)
+	assert.NoError(t, err)
+	assert.Equal(t, "[{\"name\":\"empty\",\"asize\":0,\"dsize\":0,\"items\":0}\n]", buf.String())
 }
 
 func TestCreateSqliteAnalyzer(t *testing.T) {

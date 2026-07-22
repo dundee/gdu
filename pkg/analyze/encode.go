@@ -22,6 +22,12 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool) error {
 		}
 	}
 
+	buff = append(buff, []byte(`,"asize":`)...)
+	buff = append(buff, []byte(strconv.FormatInt(f.GetSize(), 10))...)
+	buff = append(buff, []byte(`,"dsize":`)...)
+	buff = append(buff, []byte(strconv.FormatInt(f.GetUsage(), 10))...)
+	buff = append(buff, []byte(`,"items":`)...)
+	buff = append(buff, []byte(strconv.FormatInt(f.GetItemCount(), 10))...)
 	if !f.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)

@@ -381,3 +381,26 @@ func TestAddFilePanicsOnFile(t *testing.T) {
 		file.AddFile(file)
 	})
 }
+
+func TestStatsFromJSONArePreserved(t *testing.T) {
+	dir := &Dir{
+		File: &File{
+			Name:  "summary",
+			Size:  4096,
+			Usage: 2048,
+		},
+		ItemCount: 2,
+	}
+	dir.SetStatsFromJSON()
+
+	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+	assert.Equal(t, int64(4096), dir.GetSize())
+	assert.Equal(t, int64(2048), dir.GetUsage())
+	assert.Equal(t, int64(2), dir.GetItemCount())
+
+	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
+	count, size, usage := dir.GetItemStats(make(fs.HardLinkedItems, 10), true)
+	assert.Equal(t, int64(2), count)
+	assert.Equal(t, int64(4096), size)
+	assert.Equal(t, int64(2048), usage)
+}
