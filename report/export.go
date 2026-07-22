@@ -56,6 +56,9 @@ func CreateExportUI(
 		depth:        depth,
 		summarize:    summarize,
 	}
+	if !useSIPrefix {
+		ui.SetBlockSizeFromEnvironment()
+	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
 
@@ -306,6 +309,9 @@ func (ui *UI) updateProgress() {
 }
 
 func (ui *UI) formatSize(size int64) string {
+	if formatted, ok := ui.FormatBlockSize(size); ok {
+		return ui.orange.Sprint(formatted)
+	}
 	if ui.UseSIPrefix {
 		return ui.formatWithDecPrefix(size)
 	}

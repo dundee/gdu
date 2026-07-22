@@ -166,6 +166,9 @@ func CreateUI(
 		deleteQueue:             make(chan deleteQueueItem, 1000),
 		deleteWorkersCount:      3 * runtime.GOMAXPROCS(0),
 	}
+	if !useSIPrefix {
+		ui.SetBlockSizeFromEnvironment()
+	}
 	for _, o := range opts {
 		o(ui)
 	}

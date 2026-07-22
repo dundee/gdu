@@ -144,6 +144,8 @@ When `--top` or `--depth` flags are used, the full directory tree is built in me
 
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag.
 
+Gdu honors `BLOCK_SIZE` and `BLOCKSIZE` in terminal output. `BLOCK_SIZE` takes precedence; both accept GNU coreutils block-size values such as `1K`, `kB`, `human-readable`, and `si`. Explicit size-format flags override these environment variables. Exported JSON always retains raw byte values.
+
 Hard links are counted only once.
 
 ## File flags
