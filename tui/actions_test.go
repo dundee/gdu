@@ -5,8 +5,10 @@ import (
 	"errors"
 	"os"
 	"slices"
+	"sync"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -114,6 +116,63 @@ func TestAnalyzePathBW(t *testing.T) {
 
 	assert.Equal(t, 4, ui.table.GetRowCount())
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd")
+}
+
+func TestCtrlCDuringScanShowsPartialResults(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	analyzer := &blockingAnalyzer{
+		started:   make(chan struct{}),
+		cancelled: make(chan struct{}),
+		done:      make(common.SignalGroup),
+	}
+	ui.Analyzer = analyzer
+	ui.done = make(chan struct{})
+
+	assert.NoError(t, ui.AnalyzePath("test_dir", nil))
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
+	assert.Nil(t, key)
+	assert.True(t, ui.scanCancelled)
+	<-ui.done
+	for _, draw := range app.(*testapp.MockedApp).GetUpdateDraws() {
+		draw()
+	}
+
+	assert.False(t, ui.scanCancelled)
+	assert.False(t, ui.pages.HasPage("progress"))
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	assert.Equal(t, 4, ui.table.GetRowCount())
+}
+
+type blockingAnalyzer struct {
+	testanalyze.MockedAnalyzer
+	started   chan struct{}
+	cancelled chan struct{}
+	done      common.SignalGroup
+	once      sync.Once
+}
+
+func (a *blockingAnalyzer) AnalyzeDir(
+	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
+) fs.Item {
+	close(a.started)
+	<-a.cancelled
+	defer a.done.Broadcast()
+	return a.MockedAnalyzer.AnalyzeDir(path, ignore, fileTypeFilter)
+}
+
+func (a *blockingAnalyzer) Cancel() {
+	a.once.Do(func() {
+		close(a.cancelled)
+	})
+}
+
+func (a *blockingAnalyzer) GetDone() common.SignalGroup {
+	return a.done
 }
 
 func TestAnalyzePathWithParentDir(t *testing.T) {

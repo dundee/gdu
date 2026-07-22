@@ -89,6 +89,8 @@ func (a *MockedAnalyzer) GetDone() SignalGroup {
 // ResetProgress does nothing
 func (a *MockedAnalyzer) ResetProgress() {}
 
+func (a *MockedAnalyzer) Cancel() {}
+
 // SetFollowSymlinks does nothing
 func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {
 	a.FollowSymlinks = v

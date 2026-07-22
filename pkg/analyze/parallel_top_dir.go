@@ -67,10 +67,13 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	var topDirs []*TopDir
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			topDir := &TopDir{
@@ -172,10 +175,13 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := path + pathSep + name
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 

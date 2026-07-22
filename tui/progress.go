@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/path"
 )
 
 func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGroup) {
@@ -39,7 +38,7 @@ func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGro
 
 		progress := analyzer.GetProgress()
 
-		func(itemCount int64, totalUsage int64, currentItem string) {
+		func(itemCount int64, totalUsage int64) {
 			delta := time.Since(start).Round(time.Second)
 
 			if deviceSize > 0 && showBar {
@@ -60,11 +59,10 @@ func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGro
 					"[white:black:-], elapsed time: " +
 					color +
 					delta.String() +
-					"[white:black:-]\nCurrent item: [white:black:b]" +
-					path.ShortenPath(currentItem, ui.currentItemNameMaxLen) +
-					"[white:black:-]\n\nPress Tab to preview results found so far")
+					"[white:black:-]\n\nPress Tab to preview results found so far\n" +
+					"Press Ctrl+C to stop scanning and keep results")
 			})
-		}(progress.ItemCount, progress.TotalUsage, progress.CurrentItemName)
+		}(progress.ItemCount, progress.TotalUsage)
 	}
 }
 

@@ -1062,6 +1062,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 	defer releaseSlot()
 
+	if parentID != nil && a.IsCancelled() {
+		return nil
+	}
+
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
@@ -1096,11 +1100,14 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	// Spawn subdirectory scans in parallel; each goroutine fully completes its
 	// subtree (including DB row finalization) before sending the result back.
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			dirCount++
@@ -1220,6 +1227,9 @@ func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
 		return
 	}
 	for _, f := range archiveDir.Files {
+		if a.IsCancelled() {
+			return
+		}
 		if f.IsDir() {
 			var subDir *Dir
 			switch v := f.(type) {
