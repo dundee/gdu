@@ -1,8 +1,10 @@
 package fs
 
 import (
+	"fmt"
 	"io"
 	"iter"
+	"strings"
 	"time"
 
 	"github.com/maruel/natural"
@@ -27,6 +29,39 @@ const (
 	SortDesc
 )
 
+// JSONAttributes selects optional attributes written to an analysis export.
+// A nil set preserves the complete legacy export.
+type JSONAttributes map[string]struct{}
+
+// ParseJSONAttributes parses the comma-separated --output-attrs value.
+func ParseJSONAttributes(value string) (JSONAttributes, error) {
+	if value == "" {
+		return nil, nil
+	}
+
+	attributes := make(JSONAttributes)
+	for _, attribute := range strings.Split(value, ",") {
+		attribute = strings.TrimSpace(attribute)
+		switch attribute {
+		case "name", "asize", "dsize", "mtime", "notreg":
+			attributes[attribute] = struct{}{}
+		default:
+			return nil, fmt.Errorf("unknown JSON output attribute %q", attribute)
+		}
+	}
+
+	return attributes, nil
+}
+
+// Includes reports whether an optional JSON attribute should be written.
+func (attributes JSONAttributes) Includes(attribute string) bool {
+	if attributes == nil {
+		return true
+	}
+	_, ok := attributes[attribute]
+	return ok
+}
+
 // Item is a FS item (file or dir)
 type Item interface {
 	GetPath() string
@@ -41,7 +76,7 @@ type Item interface {
 	GetParent() Item
 	SetParent(Item)
 	GetMultiLinkedInode() uint64
-	EncodeJSON(writer io.Writer, topLevel bool) error
+	EncodeJSON(writer io.Writer, topLevel bool, attributes JSONAttributes) error
 	GetItemStats(linkedItems HardLinkedItems, filteringFiles bool) (itemCount int64, size, usage int64)
 	UpdateStats(linkedItems HardLinkedItems)
 	UpdateStatsWithFileFiltering(linkedItems HardLinkedItems)

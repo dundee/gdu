@@ -38,8 +38,8 @@ func (tf *TarFile) GetType() string {
 }
 
 // EncodeJSON encodes tar file to JSON
-func (tf *TarFile) EncodeJSON(writer io.Writer, topLevel bool) error {
-	return tf.File.EncodeJSON(writer, topLevel)
+func (tf *TarFile) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
+	return tf.File.EncodeJSON(writer, topLevel, attributes)
 }
 
 // GetType returns type of tar directory
@@ -53,8 +53,8 @@ func (td *TarDir) IsDir() bool {
 }
 
 // EncodeJSON encodes tar directory to JSON
-func (td *TarDir) EncodeJSON(writer io.Writer, topLevel bool) error {
-	return td.Dir.EncodeJSON(writer, topLevel)
+func (td *TarDir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
+	return td.Dir.EncodeJSON(writer, topLevel, attributes)
 }
 
 // GetPath returns the virtual path for tar directory

@@ -383,7 +383,7 @@ func TestTarFileEncodeJSON(t *testing.T) {
 		inTarPath: "x.txt",
 	}
 	var buf bytes.Buffer
-	assert.NoError(t, tf.EncodeJSON(&buf, false))
+	assert.NoError(t, tf.EncodeJSON(&buf, false, nil))
 	assert.NotEmpty(t, buf.String())
 }
 
@@ -403,7 +403,7 @@ func TestTarDirEncodeJSON(t *testing.T) {
 		tarPath: "/a.tar",
 	}
 	var buf bytes.Buffer
-	assert.NoError(t, td.EncodeJSON(&buf, true))
+	assert.NoError(t, td.EncodeJSON(&buf, true, nil))
 	assert.NotEmpty(t, buf.String())
 }
 

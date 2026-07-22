@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"regexp"
@@ -435,6 +436,75 @@ func TestAnalyzePathWithExport(t *testing.T) {
 
 	assert.NotEmpty(t, out)
 	assert.Nil(t, err)
+}
+
+func TestAnalyzePathWithCustomizedExport(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	defer os.Remove("output.json")
+
+	out, err := runApp(
+		&Flags{
+			LogFile:     "/dev/null",
+			OutputFile:  "output.json",
+			OutputAttrs: "asize,dsize",
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.NoError(t, err)
+
+	content, err := os.ReadFile("output.json")
+	assert.NoError(t, err)
+
+	var report []any
+	assert.NoError(t, json.Unmarshal(content, &report))
+	assertOutputAttributes(t, report[3])
+}
+
+func assertOutputAttributes(t *testing.T, value any) {
+	t.Helper()
+
+	switch value := value.(type) {
+	case []any:
+		for _, child := range value {
+			assertOutputAttributes(t, child)
+		}
+	case map[string]any:
+		assert.Contains(t, value, "name")
+		for attribute := range value {
+			assert.Contains(t, []string{"name", "asize", "dsize"}, attribute)
+		}
+	default:
+		t.Fatalf("unexpected JSON value %T", value)
+	}
+}
+
+func TestOutputAttributesRequireExport(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputAttrs: "asize"},
+		nil,
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.EqualError(t, err, "--output-attrs requires --output-file")
+}
+
+func TestOutputAttributesRejectUnknownAttribute(t *testing.T) {
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", OutputFile: "output.json", OutputAttrs: "size"},
+		nil,
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.EqualError(t, err, `unknown JSON output attribute "size"`)
 }
 
 func TestAnalyzePathWithExportAndTop(t *testing.T) {

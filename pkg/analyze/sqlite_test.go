@@ -595,12 +595,57 @@ func TestSqliteItemEncodeJSON(t *testing.T) {
 	root, _ := storage.GetItemByID(rootID)
 
 	var buf bytes.Buffer
-	err = root.EncodeJSON(&buf, false)
+	err = root.EncodeJSON(&buf, false, nil)
 	assert.NoError(t, err)
 
 	expected := `[{"name":"root","asize":100,"dsize":200,"mtime":1600000000},
 {"name":"file.txt","asize":10,"dsize":20,"mtime":1600000000}]`
 	assert.Equal(t, expected, buf.String())
+}
+
+func TestSqliteItemEncodeJSONWithSelectedAttributes(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	mtime := time.Unix(1600000000, 0)
+	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, mtime, 2, 0, ' ')
+	storage.InsertItem(&rootID, "file.txt", false, 10, 20, mtime, 1, 0, ' ')
+
+	root, _ := storage.GetItemByID(rootID)
+	var buf bytes.Buffer
+	err = root.EncodeJSON(&buf, false, fs.JSONAttributes{"asize": {}, "dsize": {}})
+
+	assert.NoError(t, err)
+	assert.Equal(t, `[{"name":"root","asize":100,"dsize":200},
+{"name":"file.txt","asize":10,"dsize":20}]`, buf.String())
+}
+
+func TestSqliteItemEncodeJSONWithSpecialAttributes(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	mtime := time.Unix(1600000000, 0)
+	rootID, _ := storage.InsertItem(nil, "root", true, 0, 0, mtime, 3, 0, ' ')
+	storage.InsertItem(&rootID, "other", false, 0, 0, mtime, 1, 0, '@')
+	storage.InsertItem(&rootID, "link", false, 0, 0, mtime, 1, 123, 'H')
+
+	root, _ := storage.GetItemByID(rootID)
+	var buf bytes.Buffer
+	err = root.EncodeJSON(&buf, false, nil)
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `"notreg":true`)
+	assert.Contains(t, buf.String(), `"ino":123,"hlnkc":true`)
+
+	buf.Reset()
+	err = root.EncodeJSON(&buf, false, fs.JSONAttributes{"notreg": {}})
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `"notreg":true`)
+	assert.NotContains(t, buf.String(), `"ino"`)
+	assert.NotContains(t, buf.String(), `"mtime"`)
 }
 
 func TestCreateSqliteAnalyzer(t *testing.T) {

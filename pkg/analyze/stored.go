@@ -418,19 +418,19 @@ type ParentDir struct {
 func (p *ParentDir) GetPath() string {
 	return p.Path
 }
-func (p *ParentDir) GetName() string                                  { panic("must not be called") }
-func (p *ParentDir) GetFlag() rune                                    { panic("must not be called") }
-func (p *ParentDir) IsDir() bool                                      { panic("must not be called") }
-func (p *ParentDir) GetSize() int64                                   { panic("must not be called") }
-func (p *ParentDir) GetType() string                                  { panic("must not be called") }
-func (p *ParentDir) GetUsage() int64                                  { panic("must not be called") }
-func (p *ParentDir) GetMtime() time.Time                              { panic("must not be called") }
-func (p *ParentDir) GetItemCount() int64                              { panic("must not be called") }
-func (p *ParentDir) GetParent() fs.Item                               { panic("must not be called") }
-func (p *ParentDir) SetParent(fs.Item)                                { panic("must not be called") }
-func (p *ParentDir) GetMultiLinkedInode() uint64                      { panic("must not be called") }
-func (p *ParentDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("must not be called") }
-func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)       { panic("must not be called") }
+func (p *ParentDir) GetName() string                                     { panic("must not be called") }
+func (p *ParentDir) GetFlag() rune                                       { panic("must not be called") }
+func (p *ParentDir) IsDir() bool                                         { panic("must not be called") }
+func (p *ParentDir) GetSize() int64                                      { panic("must not be called") }
+func (p *ParentDir) GetType() string                                     { panic("must not be called") }
+func (p *ParentDir) GetUsage() int64                                     { panic("must not be called") }
+func (p *ParentDir) GetMtime() time.Time                                 { panic("must not be called") }
+func (p *ParentDir) GetItemCount() int64                                 { panic("must not be called") }
+func (p *ParentDir) GetParent() fs.Item                                  { panic("must not be called") }
+func (p *ParentDir) SetParent(fs.Item)                                   { panic("must not be called") }
+func (p *ParentDir) GetMultiLinkedInode() uint64                         { panic("must not be called") }
+func (p *ParentDir) EncodeJSON(io.Writer, bool, fs.JSONAttributes) error { panic("must not be called") }
+func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)          { panic("must not be called") }
 func (p *ParentDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
 	panic("must not be called")
 }

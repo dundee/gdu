@@ -58,11 +58,39 @@ func TestEncode(t *testing.T) {
 	subdir.Files = fs.Files{file, file2, file3}
 
 	var buff bytes.Buffer
-	err := dir.EncodeJSON(&buff, true)
+	err := dir.EncodeJSON(&buff, true, nil)
 
 	assert.Nil(t, err)
 	assert.Contains(t, buff.String(), `"name":"nested"`)
 	assert.Contains(t, buff.String(), `"mtime":1629333600`)
 	assert.Contains(t, buff.String(), `"ino":1234`)
 	assert.Contains(t, buff.String(), `"hlnkc":true`)
+}
+
+func TestEncodeSelectedAttributes(t *testing.T) {
+	dir := &Dir{
+		File: &File{
+			Name:  "test_dir",
+			Size:  10,
+			Usage: 18,
+			Mtime: time.Date(2021, 8, 19, 0, 40, 0, 0, time.UTC),
+		},
+		BasePath: ".",
+	}
+	dir.AddFile(&File{
+		Name:  "file",
+		Size:  3,
+		Usage: 4,
+		Mtime: time.Date(2021, 8, 19, 0, 40, 0, 0, time.UTC),
+		Flag:  '@',
+	})
+
+	var buff bytes.Buffer
+	err := dir.EncodeJSON(&buff, true, fs.JSONAttributes{"asize": {}, "dsize": {}})
+
+	assert.NoError(t, err)
+	assert.Contains(t, buff.String(), `"name":"test_dir","asize":10,"dsize":18`)
+	assert.Contains(t, buff.String(), `"name":"file","asize":3,"dsize":4`)
+	assert.NotContains(t, buff.String(), `"mtime"`)
+	assert.NotContains(t, buff.String(), `"notreg"`)
 }

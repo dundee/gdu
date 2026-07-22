@@ -22,14 +22,15 @@ import (
 // UI struct
 type UI struct {
 	*common.UI
-	output       io.Writer
-	exportOutput io.Writer
-	red          *color.Color
-	orange       *color.Color
-	writtenChan  chan struct{}
-	top          int
-	depth        int
-	summarize    bool
+	output           io.Writer
+	exportOutput     io.Writer
+	red              *color.Color
+	orange           *color.Color
+	writtenChan      chan struct{}
+	outputAttributes fs.JSONAttributes
+	top              int
+	depth            int
+	summarize        bool
 }
 
 // CreateExportUI creates UI for stdout
@@ -42,6 +43,7 @@ func CreateExportUI(
 	top int,
 	depth int,
 	summarize bool,
+	outputAttributes fs.JSONAttributes,
 ) *UI {
 	ui := &UI{
 		UI: &common.UI{
@@ -49,12 +51,13 @@ func CreateExportUI(
 			Analyzer:     analyze.CreateAnalyzer(),
 			UseSIPrefix:  useSIPrefix,
 		},
-		output:       output,
-		exportOutput: exportOutput,
-		writtenChan:  make(chan struct{}),
-		top:          top,
-		depth:        depth,
-		summarize:    summarize,
+		output:           output,
+		exportOutput:     exportOutput,
+		writtenChan:      make(chan struct{}),
+		outputAttributes: outputAttributes,
+		top:              top,
+		depth:            depth,
+		summarize:        summarize,
 	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
@@ -235,7 +238,7 @@ func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 		dir = ui.limitDirByDepth(dir, 0)
 	}
 
-	if err := dir.EncodeJSON(&buff, true); err != nil {
+	if err := dir.EncodeJSON(&buff, true, ui.outputAttributes); err != nil {
 		return err
 	}
 	if _, err = buff.Write([]byte("]\n")); err != nil {

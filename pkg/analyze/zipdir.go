@@ -35,9 +35,9 @@ func (zf *ZipFile) GetType() string {
 }
 
 // EncodeJSON encodes zip file to JSON
-func (zf *ZipFile) EncodeJSON(writer io.Writer, topLevel bool) error {
+func (zf *ZipFile) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	// Use the embedded File's EncodeJSON method
-	return zf.File.EncodeJSON(writer, topLevel)
+	return zf.File.EncodeJSON(writer, topLevel, attributes)
 }
 
 // GetType returns type of zip directory
@@ -51,9 +51,9 @@ func (zd *ZipDir) IsDir() bool {
 }
 
 // EncodeJSON encodes zip directory to JSON
-func (zd *ZipDir) EncodeJSON(writer io.Writer, topLevel bool) error {
+func (zd *ZipDir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	// Use the embedded Dir's EncodeJSON method
-	return zd.Dir.EncodeJSON(writer, topLevel)
+	return zd.Dir.EncodeJSON(writer, topLevel, attributes)
 }
 
 // GetPath returns the virtual path for zip directory

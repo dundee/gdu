@@ -2,7 +2,10 @@ package tui
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testanalyze"
@@ -13,6 +16,15 @@ import (
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
 )
+
+type errorExportItem struct {
+	*analyze.Dir
+	err error
+}
+
+func (item errorExportItem) EncodeJSON(io.Writer, bool, fs.JSONAttributes) error {
+	return item.err
+}
 
 func TestConfirmExport(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
@@ -70,6 +82,24 @@ func TestExportAnalysis(t *testing.T) {
 	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
 		f()
 	}
+}
+
+func TestExportAnalysisHandlesEncodeError(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui.done = make(chan struct{})
+	ui.exportName = filepath.Join(t.TempDir(), "export.json")
+	ui.topDir = errorExportItem{err: errors.New("encode failed")}
+
+	ui.exportAnalysis()
+	<-ui.done
+
+	for _, draw := range app.(*testapp.MockedApp).GetUpdateDraws() {
+		draw()
+	}
+	assert.True(t, ui.pages.HasPage("error"))
 }
 
 func TestExportAnalysisEsc(t *testing.T) {
