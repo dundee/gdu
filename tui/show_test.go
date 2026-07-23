@@ -11,6 +11,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestHelpMoveToTrash(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+
+	helpText := ui.formatHelpTextFor()
+
+	assert.True(t, strings.Contains(helpText, "Move file or directory to trash"))
+	assert.False(t, strings.Contains(helpText, "Move file or directory to trash (disabled)"))
+}
+
 func TestHelpNoSpawnShell(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
