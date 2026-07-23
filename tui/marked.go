@@ -22,15 +22,8 @@ func (ui *UI) fileItemMarked(row int) {
 	ui.table.Select(min(row+1, ui.table.GetRowCount()-1), 0)
 }
 
-func (ui *UI) deleteMarked(shouldEmpty bool) {
-	var action, acting string
-	if shouldEmpty {
-		action = actionEmpty
-		acting = actingEmpty
-	} else {
-		action = actionDelete
-		acting = actingDelete
-	}
+func (ui *UI) deleteMarked(action DeleteAction) {
+	acting := action.Acting()
 
 	var currentDir fs.Item
 	var markedItems []fs.Item
@@ -40,7 +33,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 	}
 
 	if ui.deleteInBackground {
-		ui.queueForDeletion(markedItems, shouldEmpty)
+		ui.queueForDeletion(markedItems, action)
 		return
 	}
 
@@ -62,14 +55,21 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 				)
 			})
 
-			if shouldEmpty && !one.IsDir() {
-				deleteFun = ui.emptier
-			} else {
+			switch action {
+			case ActionEmpty:
+				if !one.IsDir() {
+					deleteFun = ui.emptier
+				} else {
+					deleteFun = ui.remover
+				}
+			case ActionMoveToTrash:
+				deleteFun = ui.trasher
+			case ActionDelete:
 				deleteFun = ui.remover
 			}
 
 			var deleteItems []fs.Item
-			if shouldEmpty && one.IsDir() {
+			if action == ActionEmpty && one.IsDir() {
 				currentDir = one
 				for file := range currentDir.GetFiles(fs.SortBySize, fs.SortDesc) {
 					deleteItems = append(deleteItems, file)
@@ -81,7 +81,7 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 
 			for _, item := range deleteItems {
 				if err := deleteFun(currentDir, item); err != nil {
-					msg := "Can't " + action + " " + tview.Escape(one.GetName())
+					msg := "Can't " + action.Verb() + " " + tview.Escape(one.GetName())
 					ui.app.QueueUpdateDraw(func() {
 						ui.pages.RemovePage(acting)
 						ui.showErr(msg, err)
@@ -110,18 +110,11 @@ func (ui *UI) deleteMarked(shouldEmpty bool) {
 	}()
 }
 
-func (ui *UI) confirmDeletionMarked(shouldEmpty bool) {
-	var action string
-	if shouldEmpty {
-		action = actionEmpty
-	} else {
-		action = actionDelete
-	}
-
+func (ui *UI) confirmDeletionMarked(action DeleteAction) {
 	modal := tview.NewModal().
 		SetText(
 			"Are you sure you want to " +
-				action + " [::b]" +
+				action.Verb() + " [::b]" +
 				strconv.Itoa(len(ui.markedRows)) +
 				"[::-] items?",
 		).
@@ -132,7 +125,7 @@ func (ui *UI) confirmDeletionMarked(shouldEmpty bool) {
 				ui.askBeforeDelete = false
 				fallthrough
 			case 1:
-				ui.deleteMarked(shouldEmpty)
+				ui.deleteMarked(action)
 			}
 			ui.pages.RemovePage("confirm")
 		})

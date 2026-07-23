@@ -36,6 +36,7 @@ var (
 Item under cursor:
                [::b]d     [white:black:-]Delete file or directory
                [::b]e     [white:black:-]Empty file or directory
+               [::b]D     [white:black:-]Move file or directory to trash
 			   [::b]space [white:black:-]Mark file or directory for deletion
 			   [::b]p     [white:black:-]Print marked items paths to stdout after quitting
 			   [::b]I     [white:black:-]Ignore file or directory
@@ -389,7 +390,8 @@ func (ui *UI) formatHelpTextFor() string {
 		}
 
 		isFound := (strings.Contains(line, "Empty file or directory") ||
-			strings.Contains(line, "Delete file or directory"))
+			strings.Contains(line, "Delete file or directory") ||
+			strings.Contains(line, "Move file or directory to trash"))
 
 		if ui.noDelete && isFound {
 			lines[i] += helpDisabledSuffix

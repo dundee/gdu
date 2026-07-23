@@ -49,7 +49,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 	if ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
-		ui.pages.HasPage("emptying") {
+		ui.pages.HasPage("emptying") ||
+		ui.pages.HasPage("moving to trash") {
 		// allow peeking at the results found so far during a scan
 		if key.Key() == tcell.KeyTab && ui.pages.HasPage("progress") {
 			ui.enterPreview()
@@ -422,13 +423,19 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 			ui.showErr("Deletion is not supported in archives", nil)
 			return nil
 		}
-		ui.handleDelete(false)
+		ui.handleDelete(ActionDelete)
 	case 'e':
 		if ui.isInArchive() {
 			ui.showErr("Deletion is not supported in archives", nil)
 			return nil
 		}
-		ui.handleDelete(true)
+		ui.handleDelete(ActionEmpty)
+	case 'D':
+		if ui.isInArchive() {
+			ui.showErr("Deletion is not supported in archives", nil)
+			return nil
+		}
+		ui.handleDelete(ActionMoveToTrash)
 	case 'v':
 		if ui.isInArchive() {
 			ui.showErr("Viewing content is not supported in archives", nil)
@@ -578,7 +585,7 @@ func (ui *UI) handleRight() {
 	}
 }
 
-func (ui *UI) handleDelete(shouldEmpty bool) {
+func (ui *UI) handleDelete(action DeleteAction) {
 	if ui.currentDir == nil {
 		return
 	}
@@ -590,9 +597,9 @@ func (ui *UI) handleDelete(shouldEmpty bool) {
 	}
 
 	if ui.askBeforeDelete {
-		ui.confirmDeletion(shouldEmpty)
+		ui.confirmDeletion(action)
 	} else {
-		ui.delete(shouldEmpty)
+		ui.delete(action)
 	}
 }
 
