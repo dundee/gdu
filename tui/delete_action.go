@@ -15,9 +15,10 @@ func (a DeleteAction) Verb() string {
 		return "empty"
 	case ActionMoveToTrash:
 		return "move to trash"
-	default:
+	case ActionDelete:
 		return "delete"
 	}
+	return "delete"
 }
 
 func (a DeleteAction) Acting() string {
@@ -26,7 +27,8 @@ func (a DeleteAction) Acting() string {
 		return "emptying"
 	case ActionMoveToTrash:
 		return "moving to trash"
-	default:
+	case ActionDelete:
 		return "deleting"
 	}
+	return "deleting"
 }

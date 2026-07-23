@@ -67,7 +67,7 @@ func trashDir() (string, error) {
 	return filepath.Join(home, ".local", "share", "Trash"), nil
 }
 
-func reserveTrashInfo(filesDir, infoDir, base, absSrc string) (string, string, error) {
+func reserveTrashInfo(filesDir, infoDir, base, absSrc string) (name, infoPath string, err error) {
 	for attempt := 0; attempt <= 10000; attempt++ {
 		candidate := base
 		if attempt > 0 {
@@ -117,7 +117,7 @@ func writeTrashInfo(infoPath, absSrc string) error {
 		return err
 	}
 
-	if _, err := io.WriteString(file, content); err != nil {
+	if _, err := file.WriteString(content); err != nil {
 		_ = file.Close()
 		_ = os.Remove(infoPath)
 		return err
