@@ -49,7 +49,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 	if ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
-		ui.pages.HasPage("emptying") {
+		ui.pages.HasPage("emptying") ||
+		ui.pages.HasPage("moving to trash") {
 		// allow peeking at the results found so far during a scan
 		if key.Key() == tcell.KeyTab && ui.pages.HasPage("progress") {
 			ui.enterPreview()
