@@ -243,7 +243,7 @@ func (ui *UI) deleteSelected(action DeleteAction) {
 		}
 	case ActionMoveToTrash:
 		deleteFun = ui.trasher
-	default:
+	case ActionDelete:
 		deleteFun = ui.remover
 	}
 	go func() {

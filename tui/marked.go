@@ -64,7 +64,7 @@ func (ui *UI) deleteMarked(action DeleteAction) {
 				}
 			case ActionMoveToTrash:
 				deleteFun = ui.trasher
-			default:
+			case ActionDelete:
 				deleteFun = ui.remover
 			}
 
