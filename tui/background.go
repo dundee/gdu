@@ -5,10 +5,10 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) queueForDeletion(items []fs.Item, shouldEmpty bool) {
+func (ui *UI) queueForDeletion(items []fs.Item, action DeleteAction) {
 	go func() {
 		for _, item := range items {
-			ui.deleteQueue <- deleteQueueItem{item: item, shouldEmpty: shouldEmpty}
+			ui.deleteQueue <- deleteQueueItem{item: item, action: action}
 		}
 	}()
 
@@ -24,23 +24,16 @@ func (ui *UI) deleteWorker() {
 	}()
 
 	for item := range ui.deleteQueue {
-		ui.deleteItem(item.item, item.shouldEmpty)
+		ui.deleteItem(item.item, item.action)
 	}
 }
 
-func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
+func (ui *UI) deleteItem(item fs.Item, action DeleteAction) {
 	ui.increaseActiveWorkers()
 	defer ui.decreaseActiveWorkers()
 
-	var action, acting string
-	if shouldEmpty {
-		action = actionEmpty
-	} else {
-		action = actionDelete
-	}
-
 	var deleteFun func(fs.Item, fs.Item) error
-	if shouldEmpty && !item.IsDir() {
+	if action == ActionEmpty && !item.IsDir() {
 		deleteFun = ui.emptier
 	} else {
 		deleteFun = ui.remover
@@ -48,7 +41,7 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 
 	var parentDir fs.Item
 	var deleteItems []fs.Item
-	if shouldEmpty && item.IsDir() {
+	if action == ActionEmpty && item.IsDir() {
 		parentDir = item
 		for file := range item.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
 			deleteItems = append(deleteItems, file)
@@ -60,9 +53,9 @@ func (ui *UI) deleteItem(item fs.Item, shouldEmpty bool) {
 
 	for _, toDelete := range deleteItems {
 		if err := deleteFun(parentDir, toDelete); err != nil {
-			msg := "Can't " + action + " " + tview.Escape(toDelete.GetName())
+			msg := "Can't " + action.Verb() + " " + tview.Escape(toDelete.GetName())
 			ui.app.QueueUpdateDraw(func() {
-				ui.pages.RemovePage(acting)
+				ui.pages.RemovePage(action.Acting())
 				ui.showErr(msg, err)
 			})
 			if ui.done != nil {

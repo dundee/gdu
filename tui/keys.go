@@ -422,13 +422,13 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 			ui.showErr("Deletion is not supported in archives", nil)
 			return nil
 		}
-		ui.handleDelete(false)
+		ui.handleDelete(ActionDelete)
 	case 'e':
 		if ui.isInArchive() {
 			ui.showErr("Deletion is not supported in archives", nil)
 			return nil
 		}
-		ui.handleDelete(true)
+		ui.handleDelete(ActionEmpty)
 	case 'v':
 		if ui.isInArchive() {
 			ui.showErr("Viewing content is not supported in archives", nil)
@@ -578,7 +578,7 @@ func (ui *UI) handleRight() {
 	}
 }
 
-func (ui *UI) handleDelete(shouldEmpty bool) {
+func (ui *UI) handleDelete(action DeleteAction) {
 	if ui.currentDir == nil {
 		return
 	}
@@ -590,9 +590,9 @@ func (ui *UI) handleDelete(shouldEmpty bool) {
 	}
 
 	if ui.askBeforeDelete {
-		ui.confirmDeletion(shouldEmpty)
+		ui.confirmDeletion(action)
 	} else {
-		ui.delete(shouldEmpty)
+		ui.delete(action)
 	}
 }
 
