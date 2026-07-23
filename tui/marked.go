@@ -55,9 +55,16 @@ func (ui *UI) deleteMarked(action DeleteAction) {
 				)
 			})
 
-			if action == ActionEmpty && !one.IsDir() {
-				deleteFun = ui.emptier
-			} else {
+			switch action {
+			case ActionEmpty:
+				if !one.IsDir() {
+					deleteFun = ui.emptier
+				} else {
+					deleteFun = ui.remover
+				}
+			case ActionMoveToTrash:
+				deleteFun = ui.trasher
+			default:
 				deleteFun = ui.remover
 			}
 

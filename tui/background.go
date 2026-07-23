@@ -33,9 +33,16 @@ func (ui *UI) deleteItem(item fs.Item, action DeleteAction) {
 	defer ui.decreaseActiveWorkers()
 
 	var deleteFun func(fs.Item, fs.Item) error
-	if action == ActionEmpty && !item.IsDir() {
-		deleteFun = ui.emptier
-	} else {
+	switch action {
+	case ActionEmpty:
+		if !item.IsDir() {
+			deleteFun = ui.emptier
+		} else {
+			deleteFun = ui.remover
+		}
+	case ActionMoveToTrash:
+		deleteFun = ui.trasher
+	default:
 		deleteFun = ui.remover
 	}
 

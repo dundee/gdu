@@ -230,9 +230,16 @@ func (ui *UI) deleteSelected(action DeleteAction) {
 	}
 
 	var deleteFun func(fs.Item, fs.Item) error
-	if action == ActionEmpty && !selectedItem.IsDir() {
-		deleteFun = ui.emptier
-	} else {
+	switch action {
+	case ActionEmpty:
+		if !selectedItem.IsDir() {
+			deleteFun = ui.emptier
+		} else {
+			deleteFun = ui.remover
+		}
+	case ActionMoveToTrash:
+		deleteFun = ui.trasher
+	default:
 		deleteFun = ui.remover
 	}
 	go func() {

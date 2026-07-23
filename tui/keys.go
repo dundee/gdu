@@ -429,6 +429,12 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		ui.handleDelete(ActionEmpty)
+	case 'D':
+		if ui.isInArchive() {
+			ui.showErr("Deletion is not supported in archives", nil)
+			return nil
+		}
+		ui.handleDelete(ActionMoveToTrash)
 	case 'v':
 		if ui.isInArchive() {
 			ui.showErr("Viewing content is not supported in archives", nil)

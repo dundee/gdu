@@ -47,6 +47,7 @@ type UI struct {
 	done                    chan struct{}
 	remover                 func(fs.Item, fs.Item) error
 	emptier                 func(fs.Item, fs.Item) error
+	trasher                 func(fs.Item, fs.Item) error
 	exec                    func(argv0 string, argv []string, envv []string) error
 	changeCwdFn             func(string) error
 	linkedItems             fs.HardLinkedItems
@@ -148,6 +149,7 @@ func CreateUI(
 		showItemCount:           false,
 		remover:                 remove.ItemFromDir,
 		emptier:                 remove.EmptyFileFromDir,
+		trasher:                 remove.MoveItemToTrash,
 		exec:                    Execute,
 		linkedItems:             make(fs.HardLinkedItems, 10),
 		selectedTextColor:       tview.Styles.TitleColor,
