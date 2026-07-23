@@ -3,9 +3,11 @@
 package remove
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -130,4 +132,77 @@ func TestMoveItemToTrashNameConflict(t *testing.T) {
 
 	assert.Equal(t, 0, len(subdir.Files))
 	assert.Equal(t, int64(1), subdir.ItemCount)
+}
+
+func TestReserveTrashInfoUsesUniqueNamesConcurrently(t *testing.T) {
+	trashRoot := t.TempDir()
+	filesDir := filepath.Join(trashRoot, "files")
+	infoDir := filepath.Join(trashRoot, "info")
+	require.NoError(t, os.MkdirAll(filesDir, 0o700))
+	require.NoError(t, os.MkdirAll(infoDir, 0o700))
+
+	const workers = 16
+	start := make(chan struct{})
+	names := make(chan string, workers)
+	errs := make(chan error, workers)
+
+	var wg sync.WaitGroup
+	for i := range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+
+			name, _, err := reserveTrashInfo(
+				filesDir,
+				infoDir,
+				"same-name",
+				filepath.Join("/source", fmt.Sprintf("%d", i), "same-name"),
+			)
+			if err != nil {
+				errs <- err
+				return
+			}
+			names <- name
+		}()
+	}
+
+	close(start)
+	wg.Wait()
+	close(names)
+	close(errs)
+
+	for err := range errs {
+		require.NoError(t, err)
+	}
+
+	uniqueNames := make(map[string]struct{}, workers)
+	for name := range names {
+		uniqueNames[name] = struct{}{}
+	}
+	assert.Len(t, uniqueNames, workers)
+
+	entries, err := os.ReadDir(infoDir)
+	require.NoError(t, err)
+	assert.Len(t, entries, workers)
+}
+
+func TestCopyRecursivelyPreservesSymlink(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "target")
+	src := filepath.Join(root, "link")
+	dst := filepath.Join(root, "copied-link")
+
+	require.NoError(t, os.WriteFile(target, []byte("target contents"), 0o600))
+	require.NoError(t, os.Symlink("target", src))
+
+	require.NoError(t, copyRecursively(src, dst))
+
+	info, err := os.Lstat(dst)
+	require.NoError(t, err)
+	assert.NotZero(t, info.Mode()&os.ModeSymlink)
+
+	linkTarget, err := os.Readlink(dst)
+	require.NoError(t, err)
+	assert.Equal(t, "target", linkTarget)
 }

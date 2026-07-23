@@ -28,22 +28,17 @@ func MoveItemToTrash(dir, item fs.Item) error {
 		return err
 	}
 
-	base := item.GetName()
-	destName, err := uniqueTrashName(filesDir, infoDir, base)
-	if err != nil {
-		return err
-	}
-	destPath := filepath.Join(filesDir, destName)
-	infoPath := filepath.Join(infoDir, destName+".trashinfo")
-
 	absSrc, err := filepath.Abs(item.GetPath())
 	if err != nil {
 		return err
 	}
 
-	if err := writeTrashInfo(infoPath, absSrc); err != nil {
+	destName, infoPath, err := reserveTrashInfo(filesDir, infoDir, item.GetName(), absSrc)
+	if err != nil {
 		return err
 	}
+	destPath := filepath.Join(filesDir, destName)
+
 	if err := movePath(absSrc, destPath); err != nil {
 		_ = os.Remove(infoPath)
 		return err
@@ -64,23 +59,43 @@ func trashDir() (string, error) {
 	return filepath.Join(home, ".local", "share", "Trash"), nil
 }
 
-func uniqueTrashName(filesDir, infoDir, base string) (string, error) {
-	candidate := base
-	for i := 1; ; i++ {
-		_, errF := os.Stat(filepath.Join(filesDir, candidate))
-		_, errI := os.Stat(filepath.Join(infoDir, candidate+".trashinfo"))
-		if os.IsNotExist(errF) && os.IsNotExist(errI) {
-			return candidate, nil
+func reserveTrashInfo(filesDir, infoDir, base, absSrc string) (string, string, error) {
+	for attempt := 0; attempt <= 10000; attempt++ {
+		candidate := base
+		if attempt > 0 {
+			candidate = fmt.Sprintf("%s.%d", base, attempt+1)
 		}
-		if i == 1 {
-			candidate = base + ".2"
-		} else {
-			candidate = fmt.Sprintf("%s.%d", base, i+1)
+
+		destPath := filepath.Join(filesDir, candidate)
+		if _, err := os.Lstat(destPath); err == nil {
+			continue
+		} else if !os.IsNotExist(err) {
+			return "", "", err
 		}
-		if i > 10000 {
-			return "", fmt.Errorf("could not find unique trash name for %s", base)
+
+		infoPath := filepath.Join(infoDir, candidate+".trashinfo")
+		err := writeTrashInfo(infoPath, absSrc)
+		if os.IsExist(err) {
+			continue
 		}
+		if err != nil {
+			return "", "", err
+		}
+
+		// The exclusive trashinfo file reserves this name among compliant
+		// trash implementations. Recheck files/ to avoid clobbering stale
+		// entries that have no corresponding trashinfo file.
+		if _, err := os.Lstat(destPath); os.IsNotExist(err) {
+			return candidate, infoPath, nil
+		} else if err != nil {
+			_ = os.Remove(infoPath)
+			return "", "", err
+		}
+
+		_ = os.Remove(infoPath)
 	}
+
+	return "", "", fmt.Errorf("could not find unique trash name for %s", base)
 }
 
 func writeTrashInfo(infoPath, absSrc string) error {
@@ -88,7 +103,22 @@ func writeTrashInfo(infoPath, absSrc string) error {
 		escapeTrashPath(absSrc),
 		time.Now().Format("2006-01-02T15:04:05"),
 	)
-	return os.WriteFile(infoPath, []byte(content), 0o600)
+
+	file, err := os.OpenFile(infoPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.WriteString(file, content); err != nil {
+		_ = file.Close()
+		_ = os.Remove(infoPath)
+		return err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(infoPath)
+		return err
+	}
+	return nil
 }
 
 func escapeTrashPath(p string) string {
@@ -122,12 +152,12 @@ func movePath(src, dst string) error {
 }
 
 func copyRecursively(src, dst string) error {
-	info, err := os.Stat(src)
+	info, err := os.Lstat(src)
 	if err != nil {
 		return err
 	}
 	if info.IsDir() {
-		if err := os.MkdirAll(dst, info.Mode()); err != nil {
+		if err := os.Mkdir(dst, info.Mode().Perm()); err != nil {
 			return err
 		}
 		entries, err := os.ReadDir(src)
@@ -141,16 +171,29 @@ func copyRecursively(src, dst string) error {
 		}
 		return nil
 	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(src)
+		if err != nil {
+			return err
+		}
+		return os.Symlink(target, dst)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("unsupported file type %s: %s", info.Mode().Type(), src)
+	}
+
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm())
 	if err != nil {
 		return err
 	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
+	if _, err := io.Copy(out, in); err != nil {
+		_ = out.Close()
+		return err
+	}
+	return out.Close()
 }
