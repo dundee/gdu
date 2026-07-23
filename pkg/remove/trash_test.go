@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -224,4 +225,211 @@ func TestMovePathDoesNotOverwriteExisting(t *testing.T) {
 
 	_, err = os.Stat(src)
 	assert.NoError(t, err)
+}
+
+func TestTrashDirUsesHomeWhenXDGUnset(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", "")
+	dir, err := trashDir()
+	require.NoError(t, err)
+	home, err := os.UserHomeDir()
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(home, ".local", "share", "Trash"), dir)
+}
+
+func TestEscapeTrashPathPercentEncodesUnsafeBytes(t *testing.T) {
+	got := escapeTrashPath("/tmp/has space/%and\n")
+	assert.Equal(t, "/tmp/has%20space/%25and%0A", got)
+}
+
+func TestIsEXDEV(t *testing.T) {
+	assert.True(t, isEXDEV(syscall.EXDEV))
+	assert.True(t, isEXDEV(&os.PathError{Op: "rename", Err: syscall.EXDEV}))
+	assert.False(t, isEXDEV(os.ErrExist))
+}
+
+func TestCopyRecursivelyCopiesRegularFileAndDirectory(t *testing.T) {
+	root := t.TempDir()
+	srcDir := filepath.Join(root, "src")
+	dstDir := filepath.Join(root, "dst")
+	require.NoError(t, os.Mkdir(srcDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("hello"), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(srcDir, "sub"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "sub", "b.txt"), []byte("world"), 0o600))
+
+	require.NoError(t, copyRecursively(srcDir, dstDir))
+
+	data, err := os.ReadFile(filepath.Join(dstDir, "a.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(data))
+	data, err = os.ReadFile(filepath.Join(dstDir, "sub", "b.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "world", string(data))
+}
+
+func TestCopyRecursivelyMissingSource(t *testing.T) {
+	err := copyRecursively(filepath.Join(t.TempDir(), "missing"), filepath.Join(t.TempDir(), "dst"))
+	require.Error(t, err)
+}
+
+func TestMovePathFallsBackOnEXDEV(t *testing.T) {
+	orig := renameNoReplaceFn
+	t.Cleanup(func() { renameNoReplaceFn = orig })
+	renameNoReplaceFn = func(oldpath, newpath string) error {
+		return &os.PathError{Op: "rename", Path: oldpath, Err: syscall.EXDEV}
+	}
+
+	root := t.TempDir()
+	src := filepath.Join(root, "src")
+	dst := filepath.Join(root, "dst")
+	require.NoError(t, os.WriteFile(src, []byte("payload"), 0o600))
+
+	require.NoError(t, movePath(src, dst))
+
+	data, err := os.ReadFile(dst)
+	require.NoError(t, err)
+	assert.Equal(t, "payload", string(data))
+	_, err = os.Stat(src)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestMovePathEXDEVCleanupOnCopyFailure(t *testing.T) {
+	orig := renameNoReplaceFn
+	t.Cleanup(func() { renameNoReplaceFn = orig })
+	renameNoReplaceFn = func(oldpath, newpath string) error {
+		return &os.PathError{Op: "rename", Path: oldpath, Err: syscall.EXDEV}
+	}
+
+	root := t.TempDir()
+	src := filepath.Join(root, "missing-src")
+	dst := filepath.Join(root, "dst")
+
+	err := movePath(src, dst)
+	require.Error(t, err)
+	_, err = os.Stat(dst)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestMoveItemToTrashRetriesWhenDestinationAppears(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	xdg := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", xdg)
+
+	orig := renameNoReplaceFn
+	t.Cleanup(func() { renameNoReplaceFn = orig })
+	attempts := 0
+	renameNoReplaceFn = func(oldpath, newpath string) error {
+		attempts++
+		if attempts == 1 {
+			return os.ErrExist
+		}
+		return renameNoReplace(oldpath, newpath)
+	}
+
+	dir := &analyze.Dir{
+		File: &analyze.File{
+			Name:  "test_dir",
+			Size:  5,
+			Usage: 12,
+		},
+		ItemCount: 3,
+		BasePath:  ".",
+	}
+	subdir := &analyze.Dir{
+		File: &analyze.File{
+			Name:   "nested",
+			Size:   4,
+			Usage:  8,
+			Parent: dir,
+		},
+		ItemCount: 2,
+	}
+	file := &analyze.File{
+		Name:   "file2",
+		Size:   3,
+		Usage:  4,
+		Parent: subdir,
+	}
+	dir.Files = fs.Files{subdir}
+	subdir.Files = fs.Files{file}
+
+	require.NoError(t, MoveItemToTrash(subdir, file))
+	assert.GreaterOrEqual(t, attempts, 2)
+
+	_, err := os.Stat("test_dir/nested/file2")
+	assert.True(t, os.IsNotExist(err))
+	assert.Equal(t, 0, len(subdir.Files))
+}
+
+func TestReserveTrashInfoSkipsExistingTrashinfo(t *testing.T) {
+	trashRoot := t.TempDir()
+	filesDir := filepath.Join(trashRoot, "files")
+	infoDir := filepath.Join(trashRoot, "info")
+	require.NoError(t, os.MkdirAll(filesDir, 0o700))
+	require.NoError(t, os.MkdirAll(infoDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(infoDir, "item.trashinfo"), []byte("stale"), 0o600))
+
+	name, infoPath, err := reserveTrashInfo(filesDir, infoDir, "item", "/tmp/item")
+	require.NoError(t, err)
+	assert.Equal(t, "item.2", name)
+	assert.Equal(t, filepath.Join(infoDir, "item.2.trashinfo"), infoPath)
+}
+
+func TestMoveItemToTrashPropagatesMoveErrors(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	xdg := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", xdg)
+
+	orig := renameNoReplaceFn
+	t.Cleanup(func() { renameNoReplaceFn = orig })
+	renameNoReplaceFn = func(oldpath, newpath string) error {
+		return os.ErrPermission
+	}
+
+	dir := &analyze.Dir{
+		File:      &analyze.File{Name: "test_dir", Size: 5, Usage: 12},
+		ItemCount: 3,
+		BasePath:  ".",
+	}
+	subdir := &analyze.Dir{
+		File:      &analyze.File{Name: "nested", Size: 4, Usage: 8, Parent: dir},
+		ItemCount: 2,
+	}
+	file := &analyze.File{Name: "file2", Size: 3, Usage: 4, Parent: subdir}
+	dir.Files = fs.Files{subdir}
+	subdir.Files = fs.Files{file}
+
+	err := MoveItemToTrash(subdir, file)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, os.ErrPermission)
+	assert.FileExists(t, "test_dir/nested/file2")
+	assert.Len(t, subdir.Files, 1)
+}
+
+func TestCopyRecursivelyRejectsExistingDestination(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "src")
+	dst := filepath.Join(root, "dst")
+	require.NoError(t, os.WriteFile(src, []byte("new"), 0o600))
+	require.NoError(t, os.WriteFile(dst, []byte("old"), 0o600))
+
+	err := copyRecursively(src, dst)
+	require.Error(t, err)
+	data, err := os.ReadFile(dst)
+	require.NoError(t, err)
+	assert.Equal(t, "old", string(data))
+}
+
+func TestCopyRecursivelyMkdirFailsWhenDestinationIsFile(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "src")
+	dst := filepath.Join(root, "dst")
+	require.NoError(t, os.Mkdir(src, 0o700))
+	require.NoError(t, os.WriteFile(dst, []byte("file"), 0o600))
+
+	err := copyRecursively(src, dst)
+	require.Error(t, err)
 }

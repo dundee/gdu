@@ -413,6 +413,34 @@ func TestDeleteSelectedInBackground(t *testing.T) {
 	assert.NoDirExists(t, "test_dir/nested")
 }
 
+func TestMoveToTrashSelectedInBackground(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.done = make(chan struct{})
+	ui.SetDeleteInBackground()
+	var trashed string
+	ui.trasher = func(dir, item fs.Item) error {
+		trashed = item.GetName()
+		dir.RemoveFile(item)
+		return nil
+	}
+
+	assert.Equal(t, 1, ui.table.GetRowCount())
+	ui.table.Select(0, 0)
+	ui.deleteSelected(ActionMoveToTrash)
+
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.Equal(t, "nested", trashed)
+	assert.Equal(t, 0, ui.table.GetRowCount())
+}
+
 func TestDeleteSelectedInBackgroundAndParallel(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
