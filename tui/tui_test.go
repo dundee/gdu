@@ -351,7 +351,7 @@ func TestConfirmDeletion(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	ui.table.Select(1, 0)
-	ui.confirmDeletion(false)
+	ui.confirmDeletion(ActionDelete)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -360,7 +360,7 @@ func TestConfirmDeletionBW(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
 	ui.table.Select(1, 0)
-	ui.confirmDeletion(false)
+	ui.confirmDeletion(ActionDelete)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -369,7 +369,7 @@ func TestConfirmEmpty(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, false, true, true)
 
 	ui.table.Select(1, 0)
-	ui.confirmDeletion(true)
+	ui.confirmDeletion(ActionEmpty)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -379,7 +379,7 @@ func TestConfirmEmptyMarked(t *testing.T) {
 
 	ui.table.Select(1, 0)
 	ui.markedRows[1] = struct{}{}
-	ui.confirmDeletion(true)
+	ui.confirmDeletion(ActionEmpty)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -389,7 +389,7 @@ func TestConfirmDeletionMarked(t *testing.T) {
 
 	ui.table.Select(1, 0)
 	ui.markedRows[1] = struct{}{}
-	ui.confirmDeletion(false)
+	ui.confirmDeletion(ActionDelete)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -399,7 +399,7 @@ func TestConfirmDeletionMarkedBW(t *testing.T) {
 
 	ui.table.Select(1, 0)
 	ui.markedRows[1] = struct{}{}
-	ui.confirmDeletion(false)
+	ui.confirmDeletion(ActionDelete)
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
@@ -415,7 +415,7 @@ func TestDeleteSelected(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected(false)
+	ui.deleteSelected(ActionDelete)
 
 	<-ui.done
 
@@ -438,7 +438,7 @@ func TestDeleteSelectedInParallel(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected(false)
+	ui.deleteSelected(ActionDelete)
 
 	<-ui.done
 
@@ -462,7 +462,7 @@ func TestDeleteSelectedInBackground(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected(false)
+	ui.deleteSelected(ActionDelete)
 
 	<-ui.done
 
@@ -487,7 +487,7 @@ func TestDeleteSelectedInBackgroundAndParallel(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected(false)
+	ui.deleteSelected(ActionDelete)
 
 	<-ui.done
 
@@ -510,7 +510,7 @@ func TestDeleteSelectedInBackgroundBW(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected(false)
+	ui.deleteSelected(ActionDelete)
 
 	<-ui.done
 
@@ -533,7 +533,7 @@ func TestEmptyDirInBackground(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.deleteSelected(true)
+	ui.deleteSelected(ActionEmpty)
 
 	<-ui.done
 
@@ -558,7 +558,7 @@ func TestEmptyFileInBackground(t *testing.T) {
 	ui.fileItemSelected(0, 0) // nested
 	ui.table.Select(2, 0)
 
-	ui.deleteSelected(true)
+	ui.deleteSelected(ActionEmpty)
 
 	<-ui.done
 
@@ -587,7 +587,7 @@ func TestDeleteSelectedWithErr(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.delete(false)
+	ui.delete(ActionDelete)
 
 	<-ui.done
 
@@ -611,7 +611,7 @@ func TestDeleteSelectedInBackgroundWithErr(t *testing.T) {
 
 	ui.table.Select(0, 0)
 
-	ui.delete(false)
+	ui.delete(ActionDelete)
 
 	<-ui.done
 
@@ -643,7 +643,7 @@ func TestDeleteMarkedWithErr(t *testing.T) {
 	ui.table.Select(0, 0)
 	ui.markedRows[0] = struct{}{}
 
-	ui.deleteMarked(false)
+	ui.deleteMarked(ActionDelete)
 
 	<-ui.done
 
@@ -669,7 +669,7 @@ func TestDeleteMarkedInBackground(t *testing.T) {
 	ui.markedRows[1] = struct{}{} // subnested
 	ui.markedRows[2] = struct{}{} // file2
 
-	ui.deleteMarked(false)
+	ui.deleteMarked(ActionDelete)
 
 	<-ui.done // wait for deletion of subnested
 	<-ui.done // wait for deletion of file2
@@ -698,7 +698,7 @@ func TestDeleteMarkedInBackgroundWithStorage(t *testing.T) {
 	ui.markedRows[1] = struct{}{} // subnested
 	ui.markedRows[2] = struct{}{} // file2
 
-	ui.deleteMarked(false)
+	ui.deleteMarked(ActionDelete)
 
 	<-ui.done // wait for deletion of subnested
 	<-ui.done // wait for deletion of file2
@@ -728,7 +728,7 @@ func TestDeleteMarkedInBackgroundWithStorageAndParallel(t *testing.T) {
 	ui.markedRows[1] = struct{}{} // subnested
 	ui.markedRows[2] = struct{}{} // file2
 
-	ui.deleteMarked(false)
+	ui.deleteMarked(ActionDelete)
 
 	<-ui.done // wait for deletion of subnested
 	<-ui.done // wait for deletion of file2
@@ -755,7 +755,7 @@ func TestDeleteMarkedInBackgroundWithErr(t *testing.T) {
 	ui.table.Select(0, 0)
 	ui.markedRows[0] = struct{}{}
 
-	ui.deleteMarked(false)
+	ui.deleteMarked(ActionDelete)
 
 	<-ui.done
 
@@ -989,7 +989,7 @@ func TestConfirmDeletionSelectedButtonOrder(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	ui.table.Select(1, 0)
-	ui.confirmDeletionSelected(false)
+	ui.confirmDeletionSelected(ActionDelete)
 
 	// Verify confirmation page is created
 	assert.True(t, ui.pages.HasPage("confirm"))
@@ -1006,7 +1006,7 @@ func TestConfirmDeletionSelectedSafeDefault(t *testing.T) {
 	ui.table.Select(0, 0)
 
 	// Create confirmation dialog
-	ui.confirmDeletionSelected(false)
+	ui.confirmDeletionSelected(ActionDelete)
 
 	// Verify that the confirmation dialog exists with safer defaults
 	assert.DirExists(t, "test_dir/nested")
@@ -1025,7 +1025,7 @@ func TestConfirmDeletionButtonIndexMapping(t *testing.T) {
 	ui.table.Select(0, 0)
 
 	// Test that deletion still works when explicitly called
-	ui.deleteSelected(false)
+	ui.deleteSelected(ActionDelete)
 
 	<-ui.done
 
@@ -1040,7 +1040,7 @@ func TestConfirmEmptySelectedSafeDefault(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, true)
 
 	ui.table.Select(1, 0)
-	ui.confirmDeletionSelected(true)
+	ui.confirmDeletionSelected(ActionEmpty)
 
 	// Verify empty confirmation dialog is created safely
 	assert.True(t, ui.pages.HasPage("confirm"))
@@ -1051,7 +1051,7 @@ func TestConfirmDeletionMarkedSafeDefault(t *testing.T) {
 
 	ui.table.Select(1, 0)
 	ui.markedRows[1] = struct{}{}
-	ui.confirmDeletionMarked(false)
+	ui.confirmDeletionMarked(ActionDelete)
 
 	// Verify marked deletion confirmation dialog is created safely
 	assert.True(t, ui.pages.HasPage("confirm"))
@@ -1062,7 +1062,7 @@ func TestConfirmEmptyMarkedSafeDefault(t *testing.T) {
 
 	ui.table.Select(1, 0)
 	ui.markedRows[1] = struct{}{}
-	ui.confirmDeletionMarked(true)
+	ui.confirmDeletionMarked(ActionEmpty)
 
 	// Verify marked empty confirmation dialog is created safely
 	assert.True(t, ui.pages.HasPage("confirm"))
@@ -1078,8 +1078,8 @@ func TestSaferConfirmationPreventDataLoss(t *testing.T) {
 	ui.table.Select(0, 0)
 
 	// Test that creating confirmation dialog doesn't accidentally trigger deletion
-	ui.confirmDeletionSelected(false)
-	ui.confirmDeletionSelected(true) // empty
+	ui.confirmDeletionSelected(ActionDelete)
+	ui.confirmDeletionSelected(ActionEmpty) // empty
 
 	// Directory should still exist - no accidental deletion
 	assert.DirExists(t, "test_dir/nested")
@@ -1097,7 +1097,7 @@ func TestConfirmDeletionSelectedCase1(t *testing.T) {
 	ui.table.Select(0, 0)
 
 	// Test case 1 branch (yes button at index 1) by directly calling deleteSelected
-	ui.deleteSelected(false)
+	ui.deleteSelected(ActionDelete)
 
 	<-ui.done
 
@@ -1119,7 +1119,7 @@ func TestConfirmDeletionMarkedCase1(t *testing.T) {
 	ui.markedRows[1] = struct{}{} // subnested
 
 	// Test case 1 branch (yes button at index 1) by directly calling deleteMarked
-	ui.deleteMarked(false)
+	ui.deleteMarked(ActionDelete)
 
 	<-ui.done
 
