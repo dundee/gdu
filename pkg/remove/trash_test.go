@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 
@@ -66,9 +65,10 @@ func TestMoveItemToTrash(t *testing.T) {
 	data, err := os.ReadFile(infoPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "[Trash Info]")
-	assert.Contains(t, string(data), "Path=")
 	assert.Contains(t, string(data), "DeletionDate=")
-	assert.True(t, strings.Contains(string(data), "file2") || strings.Contains(string(data), "nested"))
+	wantPath, err := filepath.Abs("test_dir/nested/file2")
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "Path="+escapeTrashPath(wantPath))
 
 	assert.Equal(t, 0, len(subdir.Files))
 	assert.Equal(t, int64(1), subdir.ItemCount)
@@ -205,4 +205,23 @@ func TestCopyRecursivelyPreservesSymlink(t *testing.T) {
 	linkTarget, err := os.Readlink(dst)
 	require.NoError(t, err)
 	assert.Equal(t, "target", linkTarget)
+}
+
+func TestMovePathDoesNotOverwriteExisting(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "src")
+	dst := filepath.Join(root, "dst")
+	require.NoError(t, os.WriteFile(src, []byte("new"), 0o600))
+	require.NoError(t, os.WriteFile(dst, []byte("old"), 0o600))
+
+	err := movePath(src, dst)
+	require.Error(t, err)
+	assert.True(t, os.IsExist(err))
+
+	data, err := os.ReadFile(dst)
+	require.NoError(t, err)
+	assert.Equal(t, "old", string(data))
+
+	_, err = os.Stat(src)
+	assert.NoError(t, err)
 }

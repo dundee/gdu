@@ -33,19 +33,27 @@ func MoveItemToTrash(dir, item fs.Item) error {
 		return err
 	}
 
-	destName, infoPath, err := reserveTrashInfo(filesDir, infoDir, item.GetName(), absSrc)
-	if err != nil {
-		return err
-	}
-	destPath := filepath.Join(filesDir, destName)
+	for range 10001 {
+		destName, infoPath, err := reserveTrashInfo(filesDir, infoDir, item.GetName(), absSrc)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(filesDir, destName)
 
-	if err := movePath(absSrc, destPath); err != nil {
-		_ = os.Remove(infoPath)
-		return err
+		if err := movePath(absSrc, destPath); err != nil {
+			_ = os.Remove(infoPath)
+			if os.IsExist(err) {
+				// Destination appeared after reservation; pick another name.
+				continue
+			}
+			return err
+		}
+
+		dir.RemoveFile(item)
+		return nil
 	}
 
-	dir.RemoveFile(item)
-	return nil
+	return fmt.Errorf("could not find unique trash name for %s", item.GetName())
 }
 
 func trashDir() (string, error) {
@@ -137,11 +145,11 @@ func escapeTrashPath(p string) string {
 }
 
 func movePath(src, dst string) error {
-	err := os.Rename(src, dst)
+	err := renameNoReplace(src, dst)
 	if err == nil {
 		return nil
 	}
-	if !isEXDEV(err) {
+	if os.IsExist(err) || !isEXDEV(err) {
 		return err
 	}
 	if err := copyRecursively(src, dst); err != nil {
