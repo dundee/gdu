@@ -1623,6 +1623,11 @@ func TestBlockedActionsInArchive(t *testing.T) {
 	assert.True(t, ui.pages.HasPage("error"))
 	ui.pages.RemovePage("error")
 
+	// Test 'D' (move to trash)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'D', 0))
+	assert.True(t, ui.pages.HasPage("error"))
+	ui.pages.RemovePage("error")
+
 	// Test 'v' (view)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'v', 0))
 	assert.True(t, ui.pages.HasPage("error"))

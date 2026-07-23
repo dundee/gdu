@@ -18,6 +18,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -961,6 +962,65 @@ func TestConfirmDeletionSelectedButtonOrder(t *testing.T) {
 
 	// Verify confirmation page is created
 	assert.True(t, ui.pages.HasPage("confirm"))
+}
+
+func selectConfirmationYes(t *testing.T, ui *UI) {
+	t.Helper()
+	_, primitive := ui.pages.GetFrontPage()
+	modal, ok := primitive.(*tview.Modal)
+	if !assert.True(t, ok) {
+		return
+	}
+	var setFocus func(tview.Primitive)
+	setFocus = func(p tview.Primitive) {
+		p.Focus(setFocus)
+	}
+	modal.SetFocus(1)
+	modal.Focus(setFocus)
+	modal.InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), setFocus)
+}
+
+func TestConfirmMoveToTrashSelectedYes(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.done = make(chan struct{})
+	var trashed string
+	ui.trasher = func(dir, item fs.Item) error {
+		trashed = item.GetName()
+		dir.RemoveFile(item)
+		return nil
+	}
+	ui.table.Select(0, 0)
+	selected := ui.table.GetCell(0, 0).GetReference().(fs.Item).GetName()
+
+	ui.confirmDeletionSelected(ActionMoveToTrash)
+	selectConfirmationYes(t, ui)
+	<-ui.done
+
+	assert.Equal(t, selected, trashed)
+}
+
+func TestConfirmMoveToTrashMarkedYes(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.done = make(chan struct{})
+	var trashed string
+	ui.trasher = func(dir, item fs.Item) error {
+		trashed = item.GetName()
+		dir.RemoveFile(item)
+		return nil
+	}
+	ui.markedRows[0] = struct{}{}
+
+	ui.confirmDeletionMarked(ActionMoveToTrash)
+	selectConfirmationYes(t, ui)
+	<-ui.done
+
+	assert.Equal(t, "nested", trashed)
 }
 
 func TestConfirmDeletionSelectedSafeDefault(t *testing.T) {

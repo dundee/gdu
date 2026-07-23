@@ -18,6 +18,13 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
+func mockTrashOS(t *testing.T, configure func(*trashOSOps)) {
+	t.Helper()
+	original := trashOS
+	t.Cleanup(func() { trashOS = original })
+	configure(&trashOS)
+}
+
 func TestMoveItemToTrash(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -272,11 +279,11 @@ func TestCopyRecursivelyMissingSource(t *testing.T) {
 }
 
 func TestMovePathFallsBackOnEXDEV(t *testing.T) {
-	orig := renameNoReplaceFn
-	t.Cleanup(func() { renameNoReplaceFn = orig })
-	renameNoReplaceFn = func(oldpath, newpath string) error {
-		return &os.PathError{Op: "rename", Path: oldpath, Err: syscall.EXDEV}
-	}
+	mockTrashOS(t, func(ops *trashOSOps) {
+		ops.rename = func(oldpath, newpath string) error {
+			return &os.PathError{Op: "rename", Path: oldpath, Err: syscall.EXDEV}
+		}
+	})
 
 	root := t.TempDir()
 	src := filepath.Join(root, "src")
@@ -293,11 +300,11 @@ func TestMovePathFallsBackOnEXDEV(t *testing.T) {
 }
 
 func TestMovePathEXDEVCleanupOnCopyFailure(t *testing.T) {
-	orig := renameNoReplaceFn
-	t.Cleanup(func() { renameNoReplaceFn = orig })
-	renameNoReplaceFn = func(oldpath, newpath string) error {
-		return &os.PathError{Op: "rename", Path: oldpath, Err: syscall.EXDEV}
-	}
+	mockTrashOS(t, func(ops *trashOSOps) {
+		ops.rename = func(oldpath, newpath string) error {
+			return &os.PathError{Op: "rename", Path: oldpath, Err: syscall.EXDEV}
+		}
+	})
 
 	root := t.TempDir()
 	src := filepath.Join(root, "missing-src")
@@ -316,16 +323,16 @@ func TestMoveItemToTrashRetriesWhenDestinationAppears(t *testing.T) {
 	xdg := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", xdg)
 
-	orig := renameNoReplaceFn
-	t.Cleanup(func() { renameNoReplaceFn = orig })
 	attempts := 0
-	renameNoReplaceFn = func(oldpath, newpath string) error {
-		attempts++
-		if attempts == 1 {
-			return os.ErrExist
+	mockTrashOS(t, func(ops *trashOSOps) {
+		ops.rename = func(oldpath, newpath string) error {
+			attempts++
+			if attempts == 1 {
+				return os.ErrExist
+			}
+			return renameNoReplace(oldpath, newpath)
 		}
-		return renameNoReplace(oldpath, newpath)
-	}
+	})
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -383,11 +390,11 @@ func TestMoveItemToTrashPropagatesMoveErrors(t *testing.T) {
 	xdg := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", xdg)
 
-	orig := renameNoReplaceFn
-	t.Cleanup(func() { renameNoReplaceFn = orig })
-	renameNoReplaceFn = func(oldpath, newpath string) error {
-		return os.ErrPermission
-	}
+	mockTrashOS(t, func(ops *trashOSOps) {
+		ops.rename = func(oldpath, newpath string) error {
+			return os.ErrPermission
+		}
+	})
 
 	dir := &analyze.Dir{
 		File:      &analyze.File{Name: "test_dir", Size: 5, Usage: 12},
