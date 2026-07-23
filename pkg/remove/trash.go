@@ -145,7 +145,7 @@ func escapeTrashPath(p string) string {
 }
 
 func movePath(src, dst string) error {
-	err := renameNoReplace(src, dst)
+	err := renameNoReplaceFn(src, dst)
 	if err == nil {
 		return nil
 	}
@@ -158,6 +158,9 @@ func movePath(src, dst string) error {
 	}
 	return os.RemoveAll(src)
 }
+
+// renameNoReplaceFn is the platform rename used by movePath; tests may override it.
+var renameNoReplaceFn = renameNoReplace
 
 func copyRecursively(src, dst string) error {
 	info, err := os.Lstat(src)
