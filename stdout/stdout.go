@@ -74,6 +74,8 @@ func CreateStdoutUI(
 	}
 	if fixedUnit != "" {
 		ui.SetFixedUnit(fixedUnit)
+	} else if !noPrefix && !useSIPrefix {
+		ui.SetBlockSizeFromEnvironment()
 	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
@@ -560,6 +562,9 @@ func (ui *UI) formatCount(count int64) string {
 func (ui *UI) formatSize(size int64) string {
 	if ui.noPrefix {
 		return ui.orange.Sprintf("%d", size)
+	}
+	if formatted, ok := ui.FormatBlockSize(size); ok {
+		return ui.orange.Sprint(formatted)
 	}
 	if ui.fixedBase > 0 {
 		val := float64(size) / ui.fixedBase

@@ -2,12 +2,19 @@ package tui
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	os.Unsetenv("BLOCK_SIZE")
+	os.Unsetenv("BLOCKSIZE")
+	os.Exit(m.Run())
+}
 
 func TestFormatSize(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
@@ -24,6 +31,15 @@ func TestFormatSize(t *testing.T) {
 	assert.Equal(t, "1.0[white:black:-] PiB", ui.formatSize(1<<50, false, false))
 	assert.Equal(t, "1.0[white:black:-] EiB", ui.formatSize(1<<60, false, false))
 	assert.Equal(t, "-1.0[white:black:-] KiB", ui.formatSize(-1<<10, false, false))
+}
+
+func TestFormatSizeWithBlockSizeEnvironment(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	ui := CreateUI(testapp.CreateMockedApp(true), simScreen, &bytes.Buffer{}, false, false, false, false)
+	assert.Equal(t, "2[white:black:-]", ui.formatSize(1025, false, false))
 }
 
 func TestFormatSizeDec(t *testing.T) {

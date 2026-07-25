@@ -22,6 +22,12 @@ func init() {
 	log.SetLevel(log.WarnLevel)
 }
 
+func TestMain(m *testing.M) {
+	os.Unsetenv("BLOCK_SIZE")
+	os.Unsetenv("BLOCKSIZE")
+	os.Exit(m.Run())
+}
+
 func TestAnalyzePath(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -665,4 +671,57 @@ func TestAnalyzePathWithTopDirAnalyzer(t *testing.T) {
 	err = ui.StartUILoop()
 	assert.Nil(t, err)
 	assert.Contains(t, output.String(), "nested")
+}
+
+func TestBlockSizeEnvironment(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	t.Setenv("BLOCKSIZE", "1MB")
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+	assert.Equal(t, "2", ui.formatSize(1025))
+}
+
+func TestBlockSizeEnvironmentFormats(t *testing.T) {
+	tests := []struct {
+		name      string
+		blockSize string
+		size      int64
+		expected  string
+	}{
+		{name: "decimal suffix", blockSize: "kB", size: 1025, expected: "2kB"},
+		{name: "numeric suffix", blockSize: "2kB", size: 1025, expected: "1"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("BLOCK_SIZE", test.blockSize)
+			t.Setenv("BLOCKSIZE", "")
+			ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+			assert.Equal(t, test.expected, ui.formatSize(test.size))
+		})
+	}
+}
+
+func TestBlockSizeEnvironmentHumanReadableModes(t *testing.T) {
+	t.Run("binary", func(t *testing.T) {
+		t.Setenv("BLOCK_SIZE", "human-readable")
+		ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+		assert.Equal(t, "1.0 KiB", ui.formatSize(1025))
+	})
+	t.Run("si", func(t *testing.T) {
+		t.Setenv("BLOCK_SIZE", "si")
+		ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+		assert.Equal(t, "1.0 kB", ui.formatSize(1025))
+	})
+}
+
+func TestBlockSizeEnvironmentIsOverriddenByFlags(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, true, "", 0, false, 0)
+	assert.Equal(t, "1025", ui.formatSize(1025))
+}
+
+func TestBlockSizeEnvironmentSIFlagOverridesEnvironment(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, true, false, "", 0, false, 0)
+	assert.Equal(t, "1.0 kB", ui.formatSize(1025))
 }
