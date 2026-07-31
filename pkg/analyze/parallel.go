@@ -131,6 +131,12 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
+			// Read symlink target for display
+			var symlinkTarget string
+			if f.Type()&os.ModeSymlink != 0 {
+				symlinkTarget, _ = os.Readlink(entryPath)
+			}
+
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
@@ -172,10 +178,11 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				}
 			default:
 				file = &File{
-					Name:   name,
-					Flag:   getFlag(info),
-					Size:   info.Size(),
-					Parent: dir,
+					Name:    name,
+					Flag:    getFlag(info),
+					Size:    info.Size(),
+					Parent:  dir,
+					Symlink: symlinkTarget,
 				}
 			}
 

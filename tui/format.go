@@ -115,6 +115,14 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 		}
 	}
 	row += tview.Escape(item.GetName())
+
+	// Display symlink target
+	if si, ok := item.(interface{ GetSymlinkTarget() string }); ok {
+		if target := si.GetSymlinkTarget(); target != "" {
+			row += defaultColor + " -> " + tview.Escape(target)
+		}
+	}
+
 	return row
 }
 

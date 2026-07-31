@@ -341,6 +341,13 @@ func (ui *UI) printItem(file fs.Item) {
 		name = ui.blue.Sprint("/" + file.GetName())
 	}
 
+	// Append symlink target
+	if si, ok := file.(interface{ GetSymlinkTarget() string }); ok {
+		if target := si.GetSymlinkTarget(); target != "" {
+			name += " -> " + target
+		}
+	}
+
 	if ui.showItemCnt {
 		fmt.Fprintf(
 			ui.output,

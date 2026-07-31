@@ -18,13 +18,14 @@ var fileFlagMu sync.RWMutex
 
 // File struct
 type File struct {
-	Mtime  time.Time
-	Parent fs.Item
-	Name   string
-	Size   int64
-	Usage  int64
-	Mli    uint64
-	Flag   rune
+	Mtime   time.Time
+	Parent  fs.Item
+	Name    string
+	Symlink string
+	Size    int64
+	Usage   int64
+	Mli     uint64
+	Flag    rune
 }
 
 // GetName returns name of dir
@@ -79,9 +80,17 @@ func (f *File) GetType() string {
 	fileFlagMu.RLock()
 	defer fileFlagMu.RUnlock()
 	if f.Flag == '@' {
+		if f.Symlink != "" {
+			return "Symlink"
+		}
 		return "Other"
 	}
 	return "File"
+}
+
+// GetSymlinkTarget returns the target of a symlink, or empty string
+func (f *File) GetSymlinkTarget() string {
+	return f.Symlink
 }
 
 // GetItemCount returns 1 for file

@@ -306,7 +306,17 @@ func (ui *UI) showInfo() {
 	content += tview.Escape(
 		strings.TrimPrefix(selectedFile.GetPath(), build.RootPathPrefix),
 	) + "\n"
-	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n\n"
+	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n"
+
+	// Display symlink target
+	if si, ok := selectedFile.(interface{ GetSymlinkTarget() string }); ok {
+		if target := si.GetSymlinkTarget(); target != "" {
+			content += "[::b]Target:[::-] " + tview.Escape(target) + "\n"
+			linesCount++
+		}
+	}
+
+	content += "\n"
 
 	content += "   [::b]Disk usage:[::-] "
 	content += numberColor + ui.formatSize(selectedFile.GetUsage(), false, true)

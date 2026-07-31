@@ -142,6 +142,12 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				}
 			}
 
+			// Read symlink target for display
+			var symlinkTarget string
+			if f.Type()&os.ModeSymlink != 0 {
+				symlinkTarget, _ = os.Readlink(entryPath)
+			}
+
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
@@ -171,10 +177,11 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				}
 			} else {
 				file = &File{
-					Name:   name,
-					Flag:   getFlag(info),
-					Size:   info.Size(),
-					Parent: parent,
+					Name:    name,
+					Flag:    getFlag(info),
+					Size:    info.Size(),
+					Parent:  parent,
+					Symlink: symlinkTarget,
 				}
 			}
 
