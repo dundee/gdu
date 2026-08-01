@@ -107,6 +107,19 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 		row += " "
 	}
 
+	// Display symlink name in cyan/aqua (like ls --color) and target
+	if si, ok := item.(interface{ GetSymlinkTarget() string }); ok {
+		if target := si.GetSymlinkTarget(); target != "" {
+			if ui.UseColors && !marked && !ignored {
+				row += "[aqua::b]" + tview.Escape(item.GetName())
+			} else {
+				row += tview.Escape(item.GetName())
+			}
+			row += defaultColor + " -> " + tview.Escape(target)
+			return row
+		}
+	}
+
 	if item.IsDir() {
 		if ui.UseColors && !marked && !ignored {
 			row += fmt.Sprintf("[%s::b]/", ui.resultRow.DirectoryColor)
@@ -115,13 +128,6 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 		}
 	}
 	row += tview.Escape(item.GetName())
-
-	// Display symlink target
-	if si, ok := item.(interface{ GetSymlinkTarget() string }); ok {
-		if target := si.GetSymlinkTarget(); target != "" {
-			row += defaultColor + " -> " + tview.Escape(target)
-		}
-	}
 
 	return row
 }

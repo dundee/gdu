@@ -25,6 +25,7 @@ type UI struct {
 	red         *color.Color
 	orange      *color.Color
 	blue        *color.Color
+	cyan        *color.Color
 	showItemCnt bool
 	top         int
 	depth       int
@@ -80,6 +81,7 @@ func CreateStdoutUI(
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
 	ui.blue = color.New(color.FgBlue).Add(color.Bold)
+	ui.cyan = color.New(color.FgCyan).Add(color.Bold)
 
 	if ui.top > 0 || ui.depth > 0 {
 		ui.Analyzer = analyze.CreateAnalyzer()
@@ -341,10 +343,10 @@ func (ui *UI) printItem(file fs.Item) {
 		name = ui.blue.Sprint("/" + file.GetName())
 	}
 
-	// Append symlink target
+	// Append symlink target with cyan name (like ls --color)
 	if si, ok := file.(interface{ GetSymlinkTarget() string }); ok {
 		if target := si.GetSymlinkTarget(); target != "" {
-			name += " -> " + target
+			name = ui.cyan.Sprint(file.GetName()) + " -> " + target
 		}
 	}
 
