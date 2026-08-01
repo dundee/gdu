@@ -108,16 +108,8 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 	}
 
 	// Display symlink name in cyan/aqua (like ls --color) and target
-	if si, ok := item.(interface{ GetSymlinkTarget() string }); ok {
-		if target := si.GetSymlinkTarget(); target != "" {
-			if ui.UseColors && !marked && !ignored {
-				row += "[aqua::b]" + tview.Escape(item.GetName())
-			} else {
-				row += tview.Escape(item.GetName())
-			}
-			row += defaultColor + " -> " + tview.Escape(target)
-			return row
-		}
+	if name := ui.formatItemName(item, marked, ignored); name != "" {
+		return row + name
 	}
 
 	if item.IsDir() {
@@ -130,6 +122,27 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 	row += tview.Escape(item.GetName())
 
 	return row
+}
+
+// formatItemName returns formatted name for special item types (e.g. symlinks).
+// Returns empty string if the item has no special formatting.
+func (ui *UI) formatItemName(item fs.Item, marked, ignored bool) string {
+	si, ok := item.(interface{ GetSymlinkTarget() string })
+	if !ok {
+		return ""
+	}
+	target := si.GetSymlinkTarget()
+	if target == "" {
+		return ""
+	}
+
+	var name string
+	if ui.UseColors && !marked && !ignored {
+		name = "[aqua::b]" + tview.Escape(item.GetName())
+	} else {
+		name = tview.Escape(item.GetName())
+	}
+	return name + defaultColor + " -> " + tview.Escape(target)
 }
 
 // formatCollapsedRow formats a collapsed directory path for display
