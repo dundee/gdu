@@ -107,7 +107,9 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 			// Read symlink target for display
 			var symlinkTarget string
 			if f.Type()&os.ModeSymlink != 0 {
-				symlinkTarget, _ = os.Readlink(entryPath)
+				if target, err := os.Readlink(entryPath); err == nil {
+					symlinkTarget = target
+				}
 			}
 
 			// Apply time filter if set
