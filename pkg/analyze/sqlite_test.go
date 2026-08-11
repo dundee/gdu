@@ -15,6 +15,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewSqliteStorage(t *testing.T) {
@@ -449,6 +450,65 @@ func TestSqliteItemGetFilesLocked(t *testing.T) {
 	files := slices.Collect(root.GetFilesLocked(fs.SortByName, fs.SortAsc))
 	assert.Len(t, files, 1)
 	assert.Equal(t, "file.txt", files[0].GetName())
+}
+
+func TestSnapshotSqliteItemTree(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, storage.Close()) })
+
+	rootID, err := storage.InsertItem(nil, "root", true, 100, 200, time.Now(), 2, 0, ' ')
+	require.NoError(t, err)
+	_, err = storage.InsertItem(&rootID, "file.txt", false, 10, 20, time.Now(), 1, 0, ' ')
+	require.NoError(t, err)
+	root, err := storage.GetItemByID(rootID)
+	require.NoError(t, err)
+
+	snapshot, ok := snapshotItem(root, nil).(*Dir)
+	require.True(t, ok)
+	require.Len(t, snapshot.Files, 1)
+	assert.Equal(t, "root", snapshot.GetName())
+	assert.Equal(t, "file.txt", snapshot.Files[0].GetName())
+	assert.Same(t, snapshot, snapshot.Files[0].GetParent())
+}
+
+func TestSqliteAnalyzerCancellationStopsArchivePersistence(t *testing.T) {
+	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
+
+	parentID, err := analyzer.storage.InsertItem(nil, "archive.zip", true, 0, 0, time.Now(), 1, 0, ' ')
+	require.NoError(t, err)
+	archive := &Dir{
+		File:  &File{Name: "archive.zip"},
+		Files: fs.Files{&File{Name: "must-not-be-persisted"}},
+	}
+
+	analyzer.Cancel()
+	analyzer.persistArchive(archive, parentID)
+
+	children, err := analyzer.storage.GetChildren(parentID)
+	require.NoError(t, err)
+	assert.Empty(t, children)
+}
+
+func TestSqliteAnalyzerPreemptiveCancellationSkipsChildDirectory(t *testing.T) {
+	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
+
+	parentID, err := analyzer.storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
+	require.NoError(t, err)
+	childPath := filepath.Join(t.TempDir(), "unscanned")
+	require.NoError(t, os.Mkdir(childPath, 0o700))
+
+	analyzer.Cancel()
+	assert.Nil(t, analyzer.processDir(childPath, &parentID))
+
+	children, err := analyzer.storage.GetChildren(parentID)
+	require.NoError(t, err)
+	assert.Empty(t, children)
 }
 
 func TestSqliteItemRLock(t *testing.T) {

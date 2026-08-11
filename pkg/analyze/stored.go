@@ -91,10 +91,13 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 	setDirPlatformSpecificAttrs(dir.Dir, path)
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			dirCount++

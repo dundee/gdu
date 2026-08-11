@@ -79,15 +79,18 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	ui.pages.AddPage("progress", flex, true, true)
 	ui.progressFlex = flex
 
+	ui.Analyzer.ResetProgress()
+
 	analyzer := ui.Analyzer
 	doneChan := analyzer.GetDone()
 	go ui.updateProgress(analyzer, doneChan)
 
 	ui.scanStart = time.Now()
 	ui.scanning = true
+	ui.scanCancelled = false
 	go func() {
 		defer debug.FreeOSMemory()
-		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
+		currentDir := analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
 
 		if parentDir != nil {
 			currentDir.SetParent(parentDir)
@@ -107,6 +110,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.scanning = false
+			ui.scanCancelled = false
 			// remember the longest scan so we can guard against accidental quits
 			if d := time.Since(ui.scanStart); d > ui.scanDuration {
 				ui.scanDuration = d

@@ -15,6 +15,11 @@ var analyzeParentPath = func(ui *UI, path string, parentDir fs.Item) error {
 }
 
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
+	if key.Key() == tcell.KeyExit {
+		ui.handleSignalEvent(key)
+		return nil
+	}
+
 	if ui.handleCtrlZ(key) == nil {
 		return nil
 	}
@@ -41,6 +46,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 
 	if ui.pages.HasPage("confirm") {
 		return ui.handleConfirmation(key)
+	}
+
+	if key.Key() == tcell.KeyCtrlC && ui.cancelScan() {
+		return nil
 	}
 
 	if ui.previewing {

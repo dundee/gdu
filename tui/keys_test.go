@@ -477,6 +477,40 @@ func TestTabDuringScanEntersPreview(t *testing.T) {
 	assert.False(t, ui.pages.HasPage("progress"))
 }
 
+func TestCtrlCDuringScanCancelsAnalyzer(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
+
+	assert.Nil(t, key)
+	assert.True(t, ui.scanCancelled)
+	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.Equal(t, " Stopping scan... ", ui.progress.GetTitle())
+}
+
+func TestCtrlCDuringScanPreviewCancelsAnalyzer(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.enterPreview()
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
+
+	assert.Nil(t, key)
+	assert.True(t, ui.scanCancelled)
+	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+}
+
 func TestPreviewIgnoresDestructiveKeys(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

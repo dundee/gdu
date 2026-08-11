@@ -11,6 +11,11 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
+// fileFlagMu protects the mutable Flag field on published File values. File
+// keeps its fields public for compatibility, so hard-link accounting can
+// update Flag after a file has been exposed to preview readers.
+var fileFlagMu sync.RWMutex
+
 // File struct
 type File struct {
 	Mtime  time.Time
@@ -49,6 +54,8 @@ func (f *File) GetPath() string {
 
 // GetFlag returns flag of the file
 func (f *File) GetFlag() rune {
+	fileFlagMu.RLock()
+	defer fileFlagMu.RUnlock()
 	return f.Flag
 }
 
@@ -69,6 +76,8 @@ func (f *File) GetMtime() time.Time {
 
 // GetType returns name type of item
 func (f *File) GetType() string {
+	fileFlagMu.RLock()
+	defer fileFlagMu.RUnlock()
 	if f.Flag == '@' {
 		return "Other"
 	}
@@ -89,7 +98,9 @@ func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
 	mli := f.Mli
 	counted := false
 	if mli > 0 {
+		fileFlagMu.Lock()
 		f.Flag = 'H'
+		fileFlagMu.Unlock()
 		if _, ok := linkedItems[mli]; ok {
 			counted = true
 		}
@@ -160,11 +171,103 @@ type Dir struct {
 	m         sync.RWMutex
 }
 
+func snapshotDir(source *Dir, parent fs.Item) *Dir {
+	source.m.RLock()
+	snapshot := &Dir{
+		File: &File{
+			Mtime:  source.Mtime,
+			Parent: parent,
+			Name:   source.Name,
+			Size:   source.Size,
+			Usage:  source.Usage,
+			Mli:    source.Mli,
+			Flag:   source.Flag,
+		},
+		BasePath:  source.BasePath,
+		Files:     make(fs.Files, 0, len(source.Files)),
+		ItemCount: source.ItemCount,
+	}
+	children := append(fs.Files(nil), source.Files...)
+	source.m.RUnlock()
+
+	for _, child := range children {
+		snapshot.Files = append(snapshot.Files, snapshotItem(child, snapshot))
+	}
+	return snapshot
+}
+
+func snapshotItem(source, parent fs.Item) fs.Item {
+	switch item := source.(type) {
+	case *ZipDir:
+		snapshot := &ZipDir{Dir: snapshotDir(item.Dir, parent), zipPath: item.zipPath}
+		reparentSnapshotChildren(snapshot.Dir, snapshot)
+		return snapshot
+	case *TarDir:
+		snapshot := &TarDir{Dir: snapshotDir(item.Dir, parent), tarPath: item.tarPath}
+		reparentSnapshotChildren(snapshot.Dir, snapshot)
+		return snapshot
+	case *ZipFile:
+		return &ZipFile{
+			File:      snapshotFile(item.File, parent),
+			zipPath:   item.zipPath,
+			inZipPath: item.inZipPath,
+		}
+	case *TarFile:
+		return &TarFile{
+			File:      snapshotFile(item.File, parent),
+			tarPath:   item.tarPath,
+			inTarPath: item.inTarPath,
+		}
+	case *Dir:
+		return snapshotDir(item, parent)
+	case *File:
+		return snapshotFile(item, parent)
+	}
+
+	if source.IsDir() {
+		snapshot := &Dir{
+			File:      snapshotFile(source, parent),
+			Files:     make(fs.Files, 0),
+			ItemCount: source.GetItemCount(),
+		}
+		for child := range source.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+			snapshot.Files = append(snapshot.Files, snapshotItem(child, snapshot))
+		}
+		return snapshot
+	}
+	return snapshotFile(source, parent)
+}
+
+func reparentSnapshotChildren(dir *Dir, parent fs.Item) {
+	for _, child := range dir.Files {
+		child.SetParent(parent)
+	}
+}
+
+func snapshotFile(source, parent fs.Item) *File {
+	return &File{
+		Mtime:  source.GetMtime(),
+		Parent: parent,
+		Name:   source.GetName(),
+		Size:   source.GetSize(),
+		Usage:  source.GetUsage(),
+		Mli:    source.GetMultiLinkedInode(),
+		Flag:   source.GetFlag(),
+	}
+}
+
 // AddFile add item to files
 func (f *Dir) AddFile(item fs.Item) {
 	f.m.Lock()
 	defer f.m.Unlock()
 	f.Files = append(f.Files, item)
+}
+
+// SetFlag updates the directory flag while preserving snapshot consistency.
+func (f *Dir) SetFlag(flag rune) {
+	f.m.Lock()
+	f.Flag = flag
+	f.m.Unlock()
 }
 
 // GetFiles returns all files in directory as a sorted iterator
@@ -208,6 +311,34 @@ func (f *Dir) GetType() string {
 	return "Directory"
 }
 
+// GetFlag returns the current directory flag.
+func (f *Dir) GetFlag() rune {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Flag
+}
+
+// GetSize returns the current apparent size.
+func (f *Dir) GetSize() int64 {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Size
+}
+
+// GetUsage returns the current disk usage.
+func (f *Dir) GetUsage() int64 {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Usage
+}
+
+// GetMtime returns the current modification time.
+func (f *Dir) GetMtime() time.Time {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Mtime
+}
+
 // GetItemCount returns number of files in dir
 func (f *Dir) GetItemCount() int64 {
 	f.m.RLock()
@@ -234,7 +365,7 @@ func (f *Dir) GetPath() string {
 // GetItemStats returns item count, apparent usage and real usage of this dir
 func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
 	f.updateStats(linkedItems, filteringFiles)
-	return f.ItemCount, f.GetSize(), f.GetUsage()
+	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }
 
 func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
@@ -253,6 +384,8 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	f.m.RLock()
 	files := make(fs.Files, len(f.Files))
 	copy(files, f.Files)
+	mtime := f.Mtime
+	flag := f.Flag
 	f.m.RUnlock()
 
 	totalSize := int64(0)
@@ -265,8 +398,9 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 		totalUsage += usage
 		itemCount += count
 
-		if entry.GetMtime().After(f.Mtime) {
-			f.Mtime = entry.GetMtime()
+		entryMtime := entry.GetMtime()
+		if entryMtime.After(mtime) {
+			mtime = entryMtime
 		}
 
 		if !entry.IsDir() {
@@ -275,11 +409,16 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 
 		switch entry.GetFlag() {
 		case '!', '.':
-			if f.Flag != '!' {
-				f.Flag = '.'
+			if flag != '!' {
+				flag = '.'
 			}
 		}
 	}
+
+	f.m.Lock()
+	defer f.m.Unlock()
+	f.Mtime = mtime
+	f.Flag = flag
 
 	// no files, or just empty dirs
 	if len(files) == 0 || (!hasFiles && filteringFiles && itemCount == int64(len(files)+1)) {
