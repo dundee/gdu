@@ -209,7 +209,7 @@ func (ui *UI) doQuit(printCurrentDirPath bool) {
 	ui.app.Stop()
 	ui.printMarkedPaths()
 	if printCurrentDirPath {
-		fmt.Fprintf(ui.output, "%s\n", ui.currentDirPath)
+		fmt.Fprintf(ui.output, "%s\n", sanitizePathForDisplay(ui.currentDirPath))
 	}
 }
 
