@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
+	"unicode"
 
 	log "github.com/sirupsen/logrus"
 
@@ -639,9 +641,23 @@ func (ui *UI) isDeleteAllowedWithFilter() bool {
 	return false
 }
 
+// sanitizePathForDisplay replaces control characters (which can include
+// terminal escape sequences) with the Unicode replacement character. A
+// scanned directory entry's name has no character restrictions, and these
+// paths are printed to the real terminal after the tview screen has
+// stopped, bypassing tview's own protective rendering entirely.
+func sanitizePathForDisplay(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return '�'
+		}
+		return r
+	}, s)
+}
+
 // printMarkedPaths prints the paths of the marked items to the output
 func (ui *UI) printMarkedPaths() {
 	for _, path := range ui.markedPaths {
-		fmt.Fprintf(ui.output, "%s\n", path)
+		fmt.Fprintf(ui.output, "%s\n", sanitizePathForDisplay(path))
 	}
 }
