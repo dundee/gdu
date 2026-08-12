@@ -2,6 +2,7 @@ package webui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -47,12 +48,14 @@ func (ui *UI) StartUILoop() error {
 		<-sig
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(ctx)
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Printf("webui: shutdown: %s", err)
+		}
 		close(shutdownDone)
 	}()
 
 	err = srv.Serve(listener)
-	if err == http.ErrServerClosed {
+	if errors.Is(err, http.ErrServerClosed) {
 		<-shutdownDone
 		return nil
 	}

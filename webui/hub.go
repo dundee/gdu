@@ -17,13 +17,13 @@ func newHub() *hub {
 
 // subscribe registers a new subscriber and returns its channel plus the last
 // broadcast message (empty if none yet).
-func (h *hub) subscribe() (chan string, string) {
-	ch := make(chan string, 8)
+func (h *hub) subscribe() (events chan string, last string) {
+	events = make(chan string, 8)
 	h.mu.Lock()
-	h.subs[ch] = struct{}{}
-	last := h.last
+	h.subs[events] = struct{}{}
+	last = h.last
 	h.mu.Unlock()
-	return ch, last
+	return events, last
 }
 
 // unsubscribe removes a subscriber and closes its channel.

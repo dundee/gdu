@@ -2,8 +2,11 @@ package webui
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // statusResponse describes the current scan state and display preferences.
@@ -72,10 +75,10 @@ func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 
 	node, err := ui.findNode(path)
 	if err != nil {
-		switch err {
-		case errOutsideRoot:
+		switch {
+		case errors.Is(err, errOutsideRoot):
 			writeError(w, http.StatusForbidden, err.Error())
-		case errNotFound:
+		case errors.Is(err, errNotFound):
 			writeError(w, http.StatusNotFound, err.Error())
 		default:
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -144,7 +147,9 @@ func (ui *UI) handleEvents(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		log.Printf("webui: encoding response: %s", err)
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
