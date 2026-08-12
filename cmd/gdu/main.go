@@ -111,6 +111,11 @@ func init() {
 	flags.StringVar(&af.MaxAge, "max-age", "", "Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)")
 	flags.StringVar(&af.MinAge, "min-age", "", "Include files with mtime at least DURATION old (e.g., 30d, 1w)")
 
+	flags.BoolVar(&af.Web, "web", false, "Run the web UI (serves a browser interface instead of the terminal UI)")
+	flags.StringVar(&af.WebConfig.Listen, "web-listen", "",
+		"Address for the web UI to listen on (default: localhost with a random free port)")
+	flags.BoolVar(&af.WebConfig.OpenBrowser, "web-open", true, "Open the web UI in the default browser on start")
+
 	initConfig()
 	setDefaults()
 }
@@ -251,7 +256,7 @@ func runE(command *cobra.Command, args []string) error {
 		af.ShowApparentSize = true
 	}
 
-	if !af.ShouldRunInNonInteractiveMode(istty) {
+	if !af.Web && !af.ShouldRunInNonInteractiveMode(istty) {
 		screen, err = tcell.NewScreen()
 		if err != nil {
 			return fmt.Errorf("error creating screen: %w", err)

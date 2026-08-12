@@ -25,6 +25,7 @@ import (
 	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
+	"github.com/dundee/gdu/v5/webui"
 )
 
 // UI is common interface for both terminal UI and text output
@@ -104,6 +105,15 @@ type Flags struct {
 	ArchiveBrowsing    bool     `yaml:"archive-browsing"`
 	CollapsePath       bool     `yaml:"collapse-path"`
 	BrowseParentDirs   bool     `yaml:"browse-parent-dirs"`
+	Web                bool      `yaml:"-"`
+	WebConfig          WebConfig `yaml:"web"`
+}
+
+// WebConfig defines the web UI options that can be set from the config file.
+type WebConfig struct {
+	Listen      string `yaml:"listen"`
+	OpenBrowser bool   `yaml:"open-browser"`
+	Browser     string `yaml:"browser"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -365,6 +375,17 @@ func (a *App) createUI() (UI, error) {
 	var err error
 
 	switch {
+	case a.Flags.Web:
+		ui = webui.CreateUI(
+			a.Writer,
+			a.Flags.WebConfig.Listen,
+			a.Flags.WebConfig.OpenBrowser,
+			a.Flags.WebConfig.Browser,
+			!a.Flags.NoColor,
+			a.Flags.ShowApparentSize,
+			a.Flags.ShowRelativeSize,
+			a.Flags.UseSIPrefix,
+		)
 	case a.Flags.OutputFile != "":
 		var output io.Writer
 		if a.Flags.OutputFile == "-" {

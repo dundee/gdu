@@ -27,7 +27,7 @@ vendor: go.mod go.sum
 
 tarball: vendor
 	-mkdir dist
-	$(TAR) czf dist/$(NAMEVER).tgz --transform "s,^,$(NAMEVER)/," --exclude dist --exclude test_dir --exclude coverage.txt *
+	$(TAR) czf dist/$(NAMEVER).tgz --transform "s,^,$(NAMEVER)/," --anchored --exclude dist --exclude test_dir --exclude coverage.txt --exclude webui/frontend/node_modules *
 
 build:
 	@echo "Version: " $(VERSION)
@@ -38,6 +38,12 @@ build-static:
 	@echo "Version: " $(VERSION)
 	mkdir -p dist
 	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
+
+# build-web compiles and minifies the React web UI into webui/dist, which is
+# committed and embedded into the binary. Requires Node.js. Pure-Go builds
+# (build/build-static/build-all) do not need this; they use the committed dist.
+build-web:
+	cd webui/frontend && npm ci && npm run build
 
 build-docker:
 	@echo "Version: " $(VERSION)
@@ -192,4 +198,4 @@ install-dev-dependencies:
 	$(GOBIN) install honnef.co/go/gotraceui/cmd/gotraceui@latest
 	$(GOBIN) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2
 
-.PHONY: run build build-static build-all test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
+.PHONY: run build build-static build-all build-web test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
