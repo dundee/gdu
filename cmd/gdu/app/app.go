@@ -25,6 +25,7 @@ import (
 	"github.com/dundee/gdu/v5/report"
 	"github.com/dundee/gdu/v5/stdout"
 	"github.com/dundee/gdu/v5/tui"
+	"github.com/dundee/gdu/v5/webui"
 )
 
 // UI is common interface for both terminal UI and text output
@@ -50,60 +51,69 @@ type UI interface {
 
 // Flags define flags accepted by Run
 type Flags struct {
-	Style              Style    `yaml:"style"`
-	Sorting            Sorting  `yaml:"sorting"`
-	CfgFile            string   `yaml:"-"`
-	LogFile            string   `yaml:"log-file"`
-	InputFile          string   `yaml:"input-file"`
-	OutputFile         string   `yaml:"output-file"`
-	IgnoreFromFile     string   `yaml:"ignore-from-file"`
-	IgnoreDirs         []string `yaml:"ignore-dirs"`
-	IgnoreDirPatterns  []string `yaml:"ignore-dir-patterns"`
-	TypeFilter         []string `yaml:"type"`
-	ExcludeTypeFilter  []string `yaml:"exclude-type"`
-	MaxCores           int      `yaml:"max-cores"`
-	Top                int      `yaml:"top"`
-	Depth              int      `yaml:"depth"`
-	SequentialScanning bool     `yaml:"sequential-scanning"`
-	ShowDisks          bool     `yaml:"-"`
-	ShowApparentSize   bool     `yaml:"show-apparent-size"`
-	ShowRelativeSize   bool     `yaml:"show-relative-size"`
-	ShowAnnexedSize    bool     `yaml:"show-annexed-size"`
-	ShowVersion        bool     `yaml:"-"`
-	ShowItemCount      bool     `yaml:"show-item-count"`
-	ShowMTime          bool     `yaml:"show-mtime"`
-	NoColor            bool     `yaml:"no-color"`
-	Mouse              bool     `yaml:"mouse"`
-	NonInteractive     bool     `yaml:"non-interactive"`
-	Interactive        bool     `yaml:"interactive"`
-	NoProgress         bool     `yaml:"no-progress"`
-	NoUnicode          bool     `yaml:"no-unicode"`
-	NoCross            bool     `yaml:"no-cross"`
-	NoHidden           bool     `yaml:"no-hidden"`
-	NoDelete           bool     `yaml:"no-delete"`
-	NoViewFile         bool     `yaml:"no-view-file"`
-	NoSpawnShell       bool     `yaml:"no-spawn-shell"`
-	NoConfirmQuit      bool     `yaml:"no-confirm-quit"`
-	FollowSymlinks     bool     `yaml:"follow-symlinks"`
-	Profiling          bool     `yaml:"profiling"`
-	ReadFromStorage    bool     `yaml:"read-from-storage"`
-	DbPath             string   `yaml:"db"`
-	Summarize          bool     `yaml:"summarize"`
-	UseSIPrefix        bool     `yaml:"use-si-prefix"`
-	NoPrefix           bool     `yaml:"no-prefix"`
-	ShowInKiB          bool     `yaml:"show-in-kib"`
-	WriteConfig        bool     `yaml:"-"`
-	ReverseSort        bool     `yaml:"reverse-sort"`
-	ChangeCwd          bool     `yaml:"change-cwd"`
-	DeleteInBackground bool     `yaml:"delete-in-background"`
-	DeleteInParallel   bool     `yaml:"delete-in-parallel"`
-	Since              string   `yaml:"since"`
-	Until              string   `yaml:"until"`
-	MaxAge             string   `yaml:"max-age"`
-	MinAge             string   `yaml:"min-age"`
-	ArchiveBrowsing    bool     `yaml:"archive-browsing"`
-	CollapsePath       bool     `yaml:"collapse-path"`
-	BrowseParentDirs   bool     `yaml:"browse-parent-dirs"`
+	Style              Style     `yaml:"style"`
+	Sorting            Sorting   `yaml:"sorting"`
+	CfgFile            string    `yaml:"-"`
+	LogFile            string    `yaml:"log-file"`
+	InputFile          string    `yaml:"input-file"`
+	OutputFile         string    `yaml:"output-file"`
+	IgnoreFromFile     string    `yaml:"ignore-from-file"`
+	IgnoreDirs         []string  `yaml:"ignore-dirs"`
+	IgnoreDirPatterns  []string  `yaml:"ignore-dir-patterns"`
+	TypeFilter         []string  `yaml:"type"`
+	ExcludeTypeFilter  []string  `yaml:"exclude-type"`
+	MaxCores           int       `yaml:"max-cores"`
+	Top                int       `yaml:"top"`
+	Depth              int       `yaml:"depth"`
+	SequentialScanning bool      `yaml:"sequential-scanning"`
+	ShowDisks          bool      `yaml:"-"`
+	ShowApparentSize   bool      `yaml:"show-apparent-size"`
+	ShowRelativeSize   bool      `yaml:"show-relative-size"`
+	ShowAnnexedSize    bool      `yaml:"show-annexed-size"`
+	ShowVersion        bool      `yaml:"-"`
+	ShowItemCount      bool      `yaml:"show-item-count"`
+	ShowMTime          bool      `yaml:"show-mtime"`
+	NoColor            bool      `yaml:"no-color"`
+	Mouse              bool      `yaml:"mouse"`
+	NonInteractive     bool      `yaml:"non-interactive"`
+	Interactive        bool      `yaml:"interactive"`
+	NoProgress         bool      `yaml:"no-progress"`
+	NoUnicode          bool      `yaml:"no-unicode"`
+	NoCross            bool      `yaml:"no-cross"`
+	NoHidden           bool      `yaml:"no-hidden"`
+	NoDelete           bool      `yaml:"no-delete"`
+	NoViewFile         bool      `yaml:"no-view-file"`
+	NoSpawnShell       bool      `yaml:"no-spawn-shell"`
+	NoConfirmQuit      bool      `yaml:"no-confirm-quit"`
+	FollowSymlinks     bool      `yaml:"follow-symlinks"`
+	Profiling          bool      `yaml:"profiling"`
+	ReadFromStorage    bool      `yaml:"read-from-storage"`
+	DbPath             string    `yaml:"db"`
+	Summarize          bool      `yaml:"summarize"`
+	UseSIPrefix        bool      `yaml:"use-si-prefix"`
+	NoPrefix           bool      `yaml:"no-prefix"`
+	ShowInKiB          bool      `yaml:"show-in-kib"`
+	WriteConfig        bool      `yaml:"-"`
+	ReverseSort        bool      `yaml:"reverse-sort"`
+	ChangeCwd          bool      `yaml:"change-cwd"`
+	DeleteInBackground bool      `yaml:"delete-in-background"`
+	DeleteInParallel   bool      `yaml:"delete-in-parallel"`
+	Since              string    `yaml:"since"`
+	Until              string    `yaml:"until"`
+	MaxAge             string    `yaml:"max-age"`
+	MinAge             string    `yaml:"min-age"`
+	ArchiveBrowsing    bool      `yaml:"archive-browsing"`
+	CollapsePath       bool      `yaml:"collapse-path"`
+	BrowseParentDirs   bool      `yaml:"browse-parent-dirs"`
+	Web                bool      `yaml:"-"`
+	WebConfig          WebConfig `yaml:"web"`
+}
+
+// WebConfig defines the web UI options that can be set from the config file.
+type WebConfig struct {
+	Listen      string `yaml:"listen"`
+	OpenBrowser bool   `yaml:"open-browser"`
+	Browser     string `yaml:"browser"`
 }
 
 // ShouldRunInNonInteractiveMode checks if the application should run in non-interactive mode
@@ -365,6 +375,17 @@ func (a *App) createUI() (UI, error) {
 	var err error
 
 	switch {
+	case a.Flags.Web:
+		ui = webui.CreateUI(
+			a.Writer,
+			a.Flags.WebConfig.Listen,
+			a.Flags.WebConfig.OpenBrowser,
+			a.Flags.WebConfig.Browser,
+			!a.Flags.NoColor,
+			a.Flags.ShowApparentSize,
+			a.Flags.ShowRelativeSize,
+			a.Flags.UseSIPrefix,
+		)
 	case a.Flags.OutputFile != "":
 		var output io.Writer
 		if a.Flags.OutputFile == "-" {
