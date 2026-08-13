@@ -643,6 +643,13 @@ func (a *App) runAction(ui UI, path string) error {
 			return fmt.Errorf("reading analysis: %w", err)
 		}
 	default:
+		// Do not materialize dataless files on macOS. Without this, scanning
+		// an iCloud Drive / Google Drive / OneDrive tree is orders of
+		// magnitude slower. This is a no-op on other platforms.
+		if err := gfs.PreventDatalessMaterialization(); err != nil {
+			log.Printf("Could not prevent dataless materialization: %s", err)
+		}
+
 		if build.RootPathPrefix != "" {
 			path = build.RootPathPrefix + path
 		}
