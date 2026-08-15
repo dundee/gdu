@@ -58,6 +58,19 @@ host2:/dir2/ /mnt/dir2 nfs rw,relatime,vers=3,rsize=524288,wsize=524288,namlen=2
 	assert.Nil(t, err)
 }
 
+func TestMalformedMountsLinesAreSkipped(t *testing.T) {
+	mounts, err := readMountsFile(strings.NewReader(`
+/dev/nvme0n1p1
+/dev/nvme0n1p2 /boot
+/dev/nvme0n1p3 /home ext4 rw,relatime 0 0`))
+
+	assert.Nil(t, err)
+	assert.Len(t, mounts, 1)
+	assert.Equal(t, "/dev/nvme0n1p3", mounts[0].Name)
+	assert.Equal(t, "/home", mounts[0].MountPoint)
+	assert.Equal(t, "ext4", mounts[0].Fstype)
+}
+
 func TestMountsWithSpaces(t *testing.T) {
 	// nolint: lll // Why: Test data
 	mounts, _ := readMountsFile(strings.NewReader(`host1:/dir1/ /mnt/dir\040with\040spaces nfs4 rw,nosuid,nodev,noatime,nodiratime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=192.168.1.1,fsc,local_lock=none,addr=192.168.1.2 0 0

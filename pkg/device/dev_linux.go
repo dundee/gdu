@@ -56,6 +56,11 @@ func readMountsFile(file io.Reader) (mounts Devices, err error) {
 		line := scanner.Text()
 		parts := strings.Fields(line)
 
+		// skip malformed lines, a valid entry has at least device, mount point and fstype
+		if len(parts) < 3 {
+			continue
+		}
+
 		device := &Device{
 			Name:       parts[0],
 			MountPoint: unescapeString(parts[1]),
