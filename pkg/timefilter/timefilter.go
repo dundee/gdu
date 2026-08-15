@@ -117,9 +117,9 @@ func (tf *TimeFilter) FormatForDisplay(loc *time.Location) string {
 
 	for _, until := range tf.until {
 		if until.instant != nil {
-			parts = append(parts, "until=", until.instant.In(loc).Format(time.RFC3339))
+			parts = append(parts, "until="+until.instant.In(loc).Format(time.RFC3339))
 		} else if until.dateOnly != nil {
-			parts = append(parts, "until=", until.dateOnly.Format("2006-01-02")+" (date-only)")
+			parts = append(parts, "until="+until.dateOnly.Format("2006-01-02")+" (date-only)")
 		}
 	}
 
