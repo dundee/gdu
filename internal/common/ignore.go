@@ -32,7 +32,7 @@ func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
 		paths[i] = "(" + path + ")"
 	}
 
-	ignore := `^` + strings.Join(paths, "|") + `$`
+	ignore := `^(?:` + strings.Join(paths, "|") + `)$`
 	return regexp.Compile(ignore)
 }
 
