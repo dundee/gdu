@@ -52,6 +52,38 @@ func TestInteractiveFlagCanBeSet(t *testing.T) {
 	}
 }
 
+func TestSetConfigFilePathWithSpaces(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "dir with spaces")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatalf("could not create temp dir: %v", err)
+	}
+	path := filepath.Join(dir, "my config.yaml")
+
+	origArgs := os.Args
+	origErr := configErr
+	origAf := af
+	t.Cleanup(func() {
+		os.Args = origArgs
+		configErr = origErr
+		af = origAf
+	})
+
+	for _, args := range [][]string{
+		{"gdu", "--config-file=" + path},
+		{"gdu", "--config-file", path},
+	} {
+		af = &app.Flags{}
+		configErr = nil
+		os.Args = args
+
+		setConfigFilePath()
+
+		if af.CfgFile != path {
+			t.Errorf("expected config file path %q for args %v, got %q", path, args, af.CfgFile)
+		}
+	}
+}
+
 func TestInitConfigMalformedSystemConfig(t *testing.T) {
 	// Write invalid YAML to a temp file and point systemConfigPath at it.
 	tmp := filepath.Join(t.TempDir(), "gdu.yaml")
