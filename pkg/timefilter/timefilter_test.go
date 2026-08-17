@@ -1,6 +1,7 @@
 package timefilter
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -627,6 +628,49 @@ func TestTimeFilterIncludeByTimeFilter(t *testing.T) {
 				t.Errorf("Expected include=%v, got include=%v", tt.expectInclude, result)
 			}
 		})
+	}
+}
+
+func TestFormatForDisplayUntilDateOnly(t *testing.T) {
+	loc, err := time.LoadLocation("America/Vancouver")
+	if err != nil {
+		t.Fatalf("Failed to load timezone: %v", err)
+	}
+
+	now := time.Date(2025, 8, 11, 12, 0, 0, 0, loc)
+
+	filter, err := NewTimeFilter("", "2026-08-01", "", "", now, loc)
+	if err != nil {
+		t.Fatalf("Failed to create time filter: %v", err)
+	}
+
+	result := filter.FormatForDisplay(loc)
+	expected := " Filtered by: time=mtime; until=2026-08-01 (date-only)"
+	if result != expected {
+		t.Errorf("Expected %q, got %q", expected, result)
+	}
+	if strings.Contains(result, "; ;") || strings.Contains(result, "until=;") {
+		t.Errorf("Result contains stray separator: %q", result)
+	}
+}
+
+func TestFormatForDisplayUntilInstant(t *testing.T) {
+	loc, err := time.LoadLocation("America/Vancouver")
+	if err != nil {
+		t.Fatalf("Failed to load timezone: %v", err)
+	}
+
+	now := time.Date(2025, 8, 11, 12, 0, 0, 0, loc)
+
+	filter, err := NewTimeFilter("", "2026-08-01T10:00:00Z", "", "", now, loc)
+	if err != nil {
+		t.Fatalf("Failed to create time filter: %v", err)
+	}
+
+	result := filter.FormatForDisplay(time.UTC)
+	expected := " Filtered by: time=mtime; until=2026-08-01T10:00:00Z"
+	if result != expected {
+		t.Errorf("Expected %q, got %q", expected, result)
 	}
 }
 
