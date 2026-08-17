@@ -41,7 +41,7 @@ type Item interface {
 	GetParent() Item
 	SetParent(Item)
 	GetMultiLinkedInode() uint64
-	EncodeJSON(writer io.Writer, topLevel bool) error
+	EncodeJSON(writer io.Writer, topLevel bool, attributes JSONAttributes) error
 	GetItemStats(linkedItems HardLinkedItems, filteringFiles bool) (itemCount int64, size, usage int64)
 	UpdateStats(linkedItems HardLinkedItems)
 	UpdateStatsWithFileFiltering(linkedItems HardLinkedItems)

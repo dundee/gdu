@@ -72,14 +72,14 @@ func (d *SimpleDir) GetPath() string {
 	return d.BasePath + pathSep + d.Name
 }
 
-func (d *SimpleDir) GetFlag() rune                                    { panic("not implemented") }
-func (d *SimpleDir) GetType() string                                  { panic("not implemented") }
-func (d *SimpleDir) GetMtime() time.Time                              { panic("not implemented") }
-func (d *SimpleDir) GetItemCount() int64                              { panic("not implemented") }
-func (d *SimpleDir) GetParent() fs.Item                               { panic("not implemented") }
-func (d *SimpleDir) SetParent(parent fs.Item)                         { panic("not implemented") }
-func (d *SimpleDir) GetMultiLinkedInode() uint64                      { panic("not implemented") }
-func (d *SimpleDir) EncodeJSON(writer io.Writer, topLevel bool) error { panic("not implemented") }
+func (d *SimpleDir) GetFlag() rune                                       { panic("not implemented") }
+func (d *SimpleDir) GetType() string                                     { panic("not implemented") }
+func (d *SimpleDir) GetMtime() time.Time                                 { panic("not implemented") }
+func (d *SimpleDir) GetItemCount() int64                                 { panic("not implemented") }
+func (d *SimpleDir) GetParent() fs.Item                                  { panic("not implemented") }
+func (d *SimpleDir) SetParent(parent fs.Item)                            { panic("not implemented") }
+func (d *SimpleDir) GetMultiLinkedInode() uint64                         { panic("not implemented") }
+func (d *SimpleDir) EncodeJSON(io.Writer, bool, fs.JSONAttributes) error { panic("not implemented") }
 func (d *SimpleDir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
 	panic("not implemented")
 }

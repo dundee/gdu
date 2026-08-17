@@ -632,14 +632,14 @@ func (i *SqliteItem) GetMultiLinkedInode() uint64 {
 }
 
 // EncodeJSON encodes the item to JSON
-func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
+func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	if i.isDir {
-		return i.encodeDirJSON(writer, topLevel)
+		return i.encodeDirJSON(writer, topLevel, attributes)
 	}
-	return i.encodeFileJSON(writer)
+	return i.encodeFileJSON(writer, attributes)
 }
 
-func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
+func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	buff := make([]byte, 0, 128)
 	buff = append(buff, []byte(`[{"name":`)...)
 
@@ -651,13 +651,22 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 		return err
 	}
 
-	buff = append(buff, []byte(`,"asize":`)...)
-	buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
-	buff = append(buff, []byte(`,"dsize":`)...)
-	buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
-	buff = append(buff, []byte(`,"items":`)...)
-	buff = append(buff, []byte(strconv.FormatInt(i.GetItemCount(), 10))...)
-	if !i.GetMtime().IsZero() {
+	// Directory summary stats (asize, dsize, items) are written by default so
+	// they can be preserved on import. When --output-attrs is supplied, each is
+	// emitted only if explicitly selected.
+	if attributes.Includes("asize") {
+		buff = append(buff, []byte(`,"asize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
+	}
+	if attributes.Includes("dsize") {
+		buff = append(buff, []byte(`,"dsize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
+	}
+	if attributes.Includes("items") {
+		buff = append(buff, []byte(`,"items":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetItemCount(), 10))...)
+	}
+	if attributes.Includes("mtime") && !i.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
 	}
@@ -685,7 +694,7 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 			}
 		}
 		child.parent = i
-		if err := child.EncodeJSON(writer, false); err != nil {
+		if err := child.EncodeJSON(writer, false, attributes); err != nil {
 			return err
 		}
 	}
@@ -696,29 +705,29 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 	return nil
 }
 
-func (i *SqliteItem) encodeFileJSON(writer io.Writer) error {
+func (i *SqliteItem) encodeFileJSON(writer io.Writer, attributes fs.JSONAttributes) error {
 	buff := make([]byte, 0, 128)
 	buff = append(buff, []byte(`{"name":`)...)
 	if err := addSqliteString(&buff, i.GetName()); err != nil {
 		return err
 	}
-	if i.GetSize() > 0 {
+	if attributes.Includes("asize") && i.GetSize() > 0 {
 		buff = append(buff, []byte(`,"asize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
 	}
-	if i.GetUsage() > 0 {
+	if attributes.Includes("dsize") && i.GetUsage() > 0 {
 		buff = append(buff, []byte(`,"dsize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
 	}
-	if !i.GetMtime().IsZero() {
+	if attributes.Includes("mtime") && !i.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
 	}
 
-	if i.flag == '@' {
+	if attributes.Includes("notreg") && i.flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
 	}
-	if i.flag == 'H' {
+	if attributes == nil && i.flag == 'H' {
 		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(i.mli, 10)+`,"hlnkc":true`)...)
 	}
 
