@@ -309,7 +309,7 @@ func (ui *UI) showInfo() {
 	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n"
 
 	// Display symlink target
-	if line := symlinkTargetInfoLine(selectedFile); line != "" {
+	if line := ui.symlinkTargetInfoLine(selectedFile); line != "" {
 		content += line
 		linesCount++
 	}
@@ -346,8 +346,12 @@ func (ui *UI) showInfo() {
 }
 
 // symlinkTargetInfoLine returns the "Target:" info-panel line for a symlink
-// item, or an empty string when the item has no symlink target.
-func symlinkTargetInfoLine(item fs.Item) string {
+// item, or an empty string when symlink-target display is disabled or the item
+// has no symlink target.
+func (ui *UI) symlinkTargetInfoLine(item fs.Item) string {
+	if !ui.showSymlinkTarget {
+		return ""
+	}
 	si, ok := item.(fs.SymlinkItem)
 	if !ok {
 		return ""

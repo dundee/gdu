@@ -47,6 +47,7 @@ type UI interface {
 	SetTimeFilter(timeFilter common.TimeFilter)
 	SetArchiveBrowsing(value bool)
 	SetCollapsePath(value bool)
+	SetShowSymlinkTarget(value bool)
 	StartUILoop() error
 }
 
@@ -106,6 +107,7 @@ type Flags struct {
 	MinAge             string    `yaml:"min-age"`
 	ArchiveBrowsing    bool      `yaml:"archive-browsing"`
 	CollapsePath       bool      `yaml:"collapse-path"`
+	ShowSymlinkTarget  bool      `yaml:"show-symlink-target"`
 	BrowseParentDirs   bool      `yaml:"browse-parent-dirs"`
 	Web                bool      `yaml:"-"`
 	WebConfig          WebConfig `yaml:"web"`
@@ -442,6 +444,9 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 		if a.Flags.ShowItemCount {
 			stdoutUI.SetShowItemCount()
 		}
+		if a.Flags.ShowSymlinkTarget {
+			stdoutUI.SetShowSymlinkTarget(true)
+		}
 		ui = stdoutUI
 	default:
 		opts := a.getOptions()
@@ -565,6 +570,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.ShowMTime {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetShowMTime()
+		})
+	}
+	if a.Flags.ShowSymlinkTarget {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetShowSymlinkTarget(true)
 		})
 	}
 	if a.Flags.NoDelete {

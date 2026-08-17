@@ -87,6 +87,10 @@ func (ui *UI) SetCollapsePath(value bool) {
 	ui.collapsePath = value
 }
 
+// SetShowSymlinkTarget is a no-op for the web UI (rendering is browser-side).
+func (ui *UI) SetShowSymlinkTarget(value bool) {
+}
+
 // ListDevices loads mounted devices so they can be served to the browser.
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	ui.getter = getter

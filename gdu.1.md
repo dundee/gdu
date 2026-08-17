@@ -84,6 +84,8 @@ non-interactive mode
 
 **-M**, **\--show-mtime**\[=false\] Show latest mtime of items in directory
 
+**\--show-symlink-target**\[=false\] Show symlink target (name -> target) in the file list
+
 **\--archive-browsing**\[=false\] Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
 
 **\--depth**\[=0\] Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored)

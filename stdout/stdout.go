@@ -22,18 +22,19 @@ import (
 type UI struct {
 	output io.Writer
 	*common.UI
-	red         *color.Color
-	orange      *color.Color
-	blue        *color.Color
-	cyan        *color.Color
-	showItemCnt bool
-	top         int
-	depth       int
-	summarize   bool
-	noPrefix    bool
-	fixedBase   float64
-	fixedSuffix string
-	reverseSort bool
+	red               *color.Color
+	orange            *color.Color
+	blue              *color.Color
+	cyan              *color.Color
+	showItemCnt       bool
+	showSymlinkTarget bool
+	top               int
+	depth             int
+	summarize         bool
+	noPrefix          bool
+	fixedBase         float64
+	fixedSuffix       string
+	reverseSort       bool
 }
 
 var (
@@ -117,6 +118,11 @@ func (ui *UI) SetFixedUnit(unitChar string) {
 
 func (ui *UI) SetShowItemCount() {
 	ui.showItemCnt = true
+}
+
+// SetShowSymlinkTarget enables displaying the symlink target (name -> target).
+func (ui *UI) SetShowSymlinkTarget(value bool) {
+	ui.showSymlinkTarget = value
 }
 
 func (ui *UI) UseOldProgressRunes() {
@@ -344,9 +350,11 @@ func (ui *UI) printItem(file fs.Item) {
 	}
 
 	// Append symlink target with cyan name (like ls --color)
-	if si, ok := file.(fs.SymlinkItem); ok {
-		if target := si.GetSymlinkTarget(); target != "" {
-			name = ui.cyan.Sprint(file.GetName()) + " -> " + target
+	if ui.showSymlinkTarget {
+		if si, ok := file.(fs.SymlinkItem); ok {
+			if target := si.GetSymlinkTarget(); target != "" {
+				name = ui.cyan.Sprint(file.GetName()) + " -> " + target
+			}
 		}
 	}
 
