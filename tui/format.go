@@ -127,7 +127,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 // formatItemName returns formatted name for special item types (e.g. symlinks).
 // Returns empty string if the item has no special formatting.
 func (ui *UI) formatItemName(item fs.Item, marked, ignored bool) string {
-	si, ok := item.(interface{ GetSymlinkTarget() string })
+	si, ok := item.(fs.SymlinkItem)
 	if !ok {
 		return ""
 	}

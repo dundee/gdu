@@ -134,10 +134,11 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 			}
 
 			file = &File{
-				Name:   name,
-				Flag:   getFlag(info),
-				Size:   info.Size(),
-				Parent: dir,
+				Name:    name,
+				Flag:    getFlag(info),
+				Size:    info.Size(),
+				Parent:  dir,
+				Symlink: readSymlinkTarget(f.Type(), entryPath),
 			}
 			setPlatformSpecificAttrs(file, info)
 

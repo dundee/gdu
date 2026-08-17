@@ -16,6 +16,8 @@ import (
 // update Flag after a file has been exposed to preview readers.
 var fileFlagMu sync.RWMutex
 
+var _ fs.SymlinkItem = (*File)(nil)
+
 // File struct
 type File struct {
 	Mtime   time.Time

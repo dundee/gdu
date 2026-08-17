@@ -40,3 +40,25 @@ func TestFormatSymlinkRow(t *testing.T) {
 		t.Error("symlink row should contain '-> usr/bin'")
 	}
 }
+
+func TestSymlinkTargetInfoLine(t *testing.T) {
+	symlink := &analyze.File{
+		Name:    "bin",
+		Flag:    '@',
+		Symlink: "usr/bin",
+	}
+	line := symlinkTargetInfoLine(symlink)
+	if !bytes.Contains([]byte(line), []byte("Target:")) {
+		t.Errorf("info line should contain 'Target:', got %q", line)
+	}
+	if !bytes.Contains([]byte(line), []byte("usr/bin")) {
+		t.Errorf("info line should contain 'usr/bin', got %q", line)
+	}
+}
+
+func TestSymlinkTargetInfoLineForNonSymlink(t *testing.T) {
+	regular := &analyze.File{Name: "file", Size: 5}
+	if line := symlinkTargetInfoLine(regular); line != "" {
+		t.Errorf("non-symlink should produce empty info line, got %q", line)
+	}
+}

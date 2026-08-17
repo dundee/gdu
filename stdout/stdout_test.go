@@ -725,3 +725,21 @@ func TestBlockSizeEnvironmentSIFlagOverridesEnvironment(t *testing.T) {
 	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, true, false, "", 0, false, 0)
 	assert.Equal(t, "1.0 kB", ui.formatSize(1025))
 }
+
+func TestPrintItemShowsSymlinkTarget(t *testing.T) {
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+
+	dir := &analyze.Dir{File: &analyze.File{Name: "test_dir"}}
+	symlink := &analyze.File{
+		Name:    "bin",
+		Parent:  dir,
+		Size:    7,
+		Flag:    '@',
+		Symlink: "usr/bin",
+	}
+
+	ui.printItem(symlink)
+
+	assert.Contains(t, output.String(), "bin -> usr/bin")
+}

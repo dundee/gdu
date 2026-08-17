@@ -309,11 +309,9 @@ func (ui *UI) showInfo() {
 	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n"
 
 	// Display symlink target
-	if si, ok := selectedFile.(interface{ GetSymlinkTarget() string }); ok {
-		if target := si.GetSymlinkTarget(); target != "" {
-			content += "[::b]Target:[::-] " + tview.Escape(target) + "\n"
-			linesCount++
-		}
+	if line := symlinkTargetInfoLine(selectedFile); line != "" {
+		content += line
+		linesCount++
 	}
 
 	content += "\n"
@@ -345,6 +343,20 @@ func (ui *UI) showInfo() {
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("info", flex, true, true)
+}
+
+// symlinkTargetInfoLine returns the "Target:" info-panel line for a symlink
+// item, or an empty string when the item has no symlink target.
+func symlinkTargetInfoLine(item fs.Item) string {
+	si, ok := item.(fs.SymlinkItem)
+	if !ok {
+		return ""
+	}
+	target := si.GetSymlinkTarget()
+	if target == "" {
+		return ""
+	}
+	return "[::b]Target:[::-] " + tview.Escape(target) + "\n"
 }
 
 func (ui *UI) openItem() {

@@ -116,19 +116,11 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 				}
 			}
 
-			// Read symlink target for display
-			var symlinkTarget string
-			if f.Type()&os.ModeSymlink != 0 {
-				if target, err := os.Readlink(entryPath); err == nil {
-					symlinkTarget = target
-				}
-			}
-
 			file := SimpleFile{
 				Name:    name,
 				Flag:    getFlag(info),
 				Size:    info.Size(),
-				Symlink: symlinkTarget,
+				Symlink: readSymlinkTarget(f.Type(), entryPath),
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info)

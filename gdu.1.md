@@ -135,7 +135,8 @@ flag with following meaning:
 
 **\@**
 
-:  File is symlink or socket.
+:  File is symlink or socket. Symlinks are shown as *name -> target*
+   (the link target is displayed next to the name, like *ls -l*).
 
 **H**
 

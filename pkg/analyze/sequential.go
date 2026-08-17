@@ -104,13 +104,7 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
-			// Read symlink target for display
-			var symlinkTarget string
-			if f.Type()&os.ModeSymlink != 0 {
-				if target, err := os.Readlink(entryPath); err == nil {
-					symlinkTarget = target
-				}
-			}
+			symlinkTarget := readSymlinkTarget(f.Type(), entryPath)
 
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {

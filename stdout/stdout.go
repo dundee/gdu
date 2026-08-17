@@ -344,7 +344,7 @@ func (ui *UI) printItem(file fs.Item) {
 	}
 
 	// Append symlink target with cyan name (like ls --color)
-	if si, ok := file.(interface{ GetSymlinkTarget() string }); ok {
+	if si, ok := file.(fs.SymlinkItem); ok {
 		if target := si.GetSymlinkTarget(); target != "" {
 			name = ui.cyan.Sprint(file.GetName()) + " -> " + target
 		}

@@ -142,13 +142,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 				}
 			}
 
-			// Read symlink target for display
-			var symlinkTarget string
-			if f.Type()&os.ModeSymlink != 0 {
-				if target, err := os.Readlink(entryPath); err == nil {
-					symlinkTarget = target
-				}
-			}
+			symlinkTarget := readSymlinkTarget(f.Type(), entryPath)
 
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
