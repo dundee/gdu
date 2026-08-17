@@ -49,6 +49,7 @@ type UI struct {
 	done                    chan struct{}
 	remover                 func(fs.Item, fs.Item) error
 	emptier                 func(fs.Item, fs.Item) error
+	trasher                 func(fs.Item, fs.Item) error
 	exec                    func(argv0 string, argv []string, envv []string) error
 	changeCwdFn             func(string) error
 	linkedItems             fs.HardLinkedItems
@@ -111,8 +112,8 @@ type UI struct {
 }
 
 type deleteQueueItem struct {
-	item        fs.Item
-	shouldEmpty bool
+	item   fs.Item
+	action DeleteAction
 }
 
 // ResultRow is a struct for a row in the result table
@@ -151,6 +152,7 @@ func CreateUI(
 		showItemCount:           false,
 		remover:                 remove.ItemFromDir,
 		emptier:                 remove.EmptyFileFromDir,
+		trasher:                 remove.MoveItemToTrash,
 		exec:                    Execute,
 		linkedItems:             make(fs.HardLinkedItems, 10),
 		selectedTextColor:       tview.Styles.TitleColor,
@@ -586,7 +588,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	}
 }
 
-func (ui *UI) confirmDeletion(shouldEmpty bool) {
+func (ui *UI) confirmDeletion(action DeleteAction) {
 	if ui.noDelete {
 		previousHeaderText := ui.header.GetText(false)
 
@@ -621,25 +623,19 @@ func (ui *UI) confirmDeletion(shouldEmpty bool) {
 	}
 
 	if len(ui.markedRows) > 0 {
-		ui.confirmDeletionMarked(shouldEmpty)
+		ui.confirmDeletionMarked(action)
 	} else {
-		ui.confirmDeletionSelected(shouldEmpty)
+		ui.confirmDeletionSelected(action)
 	}
 }
 
-func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
+func (ui *UI) confirmDeletionSelected(action DeleteAction) {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	var action string
-	if shouldEmpty {
-		action = "empty"
-	} else {
-		action = "delete"
-	}
 	modal := tview.NewModal().
 		SetText(
 			"Are you sure you want to " +
-				action +
+				action.Verb() +
 				" \"" +
 				tview.Escape(selectedFile.GetName()) +
 				"\"?",
@@ -651,7 +647,7 @@ func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
 				ui.askBeforeDelete = false
 				fallthrough
 			case 1:
-				ui.deleteSelected(shouldEmpty)
+				ui.deleteSelected(action)
 			}
 			ui.pages.RemovePage("confirm")
 		})
