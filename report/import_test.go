@@ -86,6 +86,27 @@ func TestReadAnalysisRecomputesEmptyDirStats(t *testing.T) {
 	assert.Equal(t, int64(1), dir.GetItemCount())
 }
 
+// A depth-truncated directory that held real content exports with items >= 2,
+// so even when its apparent size coincides with the empty-dir placeholder its
+// stats must be preserved (not recomputed to zero). This pins the items == 1
+// discriminator in HasEmptyDirPlaceholderStats as intentional.
+func TestReadAnalysisPreservesTruncatedDirWithPlaceholderSize(t *testing.T) {
+	input := bytes.NewBufferString(`
+		[1,2,{"progname":"gdu","progver":"development","timestamp":0},
+		[{"name":"/root","asize":1024,"dsize":0,"items":3},
+		[{"name":"truncated","asize":512,"dsize":0,"items":2}]]]
+	`)
+
+	dir, err := ReadAnalysis(input)
+	assert.NoError(t, err)
+	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+
+	truncated := dir.Files[0].(*analyze.Dir)
+	assert.Equal(t, int64(512), truncated.GetSize())
+	assert.Equal(t, int64(0), truncated.GetUsage())
+	assert.Equal(t, int64(2), truncated.GetItemCount())
+}
+
 func TestReadAnalysisWithEmptyInput(t *testing.T) {
 	buff := bytes.NewBuffer([]byte(``))
 

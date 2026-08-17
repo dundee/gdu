@@ -146,7 +146,11 @@ func preserveTruncatedStats(dir *analyze.Dir, hasSize, hasUsage, hasItemCount bo
 	if !hasSize || !hasUsage || !hasItemCount || len(dir.Files) != 0 {
 		return
 	}
-	if dir.Size == 512 && dir.Usage == 0 && dir.ItemCount == 1 {
+	// A leaf directory whose imported stats match the empty-dir placeholder
+	// carries nothing worth pinning: recomputation reproduces the same values.
+	// Only genuinely-empty leaves reach this point with placeholder stats;
+	// depth-truncated directories that held content export with items >= 2.
+	if dir.HasEmptyDirPlaceholderStats() {
 		return
 	}
 	dir.SetStatsFromJSON()

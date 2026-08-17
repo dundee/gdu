@@ -162,6 +162,13 @@ func (f *File) RemoveFileByName(name string) {
 	panic("RemoveFileByName should not be called on file")
 }
 
+// EmptyDirSize is the apparent size gdu assigns to a directory that has no
+// counted children. It is a fixed sentinel (not the real filesystem block
+// size) written by updateStats, SimpleDir.UpdateStats and the parallel top-dir
+// analyzer, and recognised again on import. Keep every producer and consumer
+// of this value referencing this constant so they can never drift apart.
+const EmptyDirSize int64 = 512
+
 // Dir struct
 type Dir struct {
 	*File
@@ -274,6 +281,19 @@ func (f *Dir) SetFlag(flag rune) {
 // SetStatsFromJSON marks directory statistics decoded from an export as authoritative.
 func (f *Dir) SetStatsFromJSON() {
 	f.statsFromJSON = true
+}
+
+// HasEmptyDirPlaceholderStats reports whether this directory's stats are
+// indistinguishable from the placeholder updateStats produces for a directory
+// with no counted children (see EmptyDirSize). Such stats carry no information
+// worth pinning from an import: recomputation reproduces exactly the same
+// values, so callers should let updateStats run rather than preserving them.
+//
+// The items == 1 check is load-bearing: a depth-truncated directory that held
+// real content always exports with ItemCount >= 2, so it can never be mistaken
+// for a placeholder and its stats are always preserved.
+func (f *Dir) HasEmptyDirPlaceholderStats() bool {
+	return f.Size == EmptyDirSize && f.Usage == 0 && f.ItemCount == 1
 }
 
 // GetFiles returns all files in directory as a sorted iterator
@@ -433,7 +453,7 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	// no files, or just empty dirs
 	if len(files) == 0 || (!hasFiles && filteringFiles && itemCount == int64(len(files)+1)) {
 		f.ItemCount = 1
-		f.Size = totalSize + 512
+		f.Size = totalSize + EmptyDirSize
 		f.Usage = 0
 	} else {
 		f.ItemCount = itemCount
