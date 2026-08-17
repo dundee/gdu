@@ -244,7 +244,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	if len(files) == 0 {
-		totalSize = 512
+		totalSize = EmptyDirSize
 		totalUsage = 0
 	}
 

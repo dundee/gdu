@@ -110,7 +110,7 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 	}
 	if len(d.Files) == 0 {
 		d.ItemCount = 0
-		d.Size = 512
+		d.Size = EmptyDirSize
 		d.Usage = 0
 	} else {
 		d.ItemCount = itemCount + 1

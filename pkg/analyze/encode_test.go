@@ -65,4 +65,16 @@ func TestEncode(t *testing.T) {
 	assert.Contains(t, buff.String(), `"mtime":1629333600`)
 	assert.Contains(t, buff.String(), `"ino":1234`)
 	assert.Contains(t, buff.String(), `"hlnkc":true`)
+	assert.Contains(t, buff.String(), `"asize":10,"dsize":18,"items":4`)
+	assert.Contains(t, buff.String(), `"name":"nested","asize":9,"dsize":14,"items":3`)
+}
+
+func TestEncodeEmptyDir(t *testing.T) {
+	dir := &Dir{File: &File{Name: "empty"}}
+
+	var buff bytes.Buffer
+	err := dir.EncodeJSON(&buff, false)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "[{\"name\":\"empty\",\"asize\":0,\"dsize\":0,\"items\":0}\n]", buff.String())
 }
