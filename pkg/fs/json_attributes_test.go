@@ -6,37 +6,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseJSONAttributes(t *testing.T) {
-	tests := []struct {
-		name     string
-		value    string
-		included []string
-		excluded []string
-		valid    bool
-	}{
-		{name: "default", valid: true, included: []string{"asize", "dsize", "items", "mtime", "notreg"}},
-		{name: "selected", value: "asize, dsize", valid: true, included: []string{"asize", "dsize"}, excluded: []string{"items", "mtime", "notreg"}},
-		{name: "name", value: "name", valid: true, excluded: []string{"asize", "dsize", "items", "mtime", "notreg"}},
-		{name: "items", value: "items", valid: true, included: []string{"items"}, excluded: []string{"asize", "dsize", "mtime", "notreg"}},
-		{name: "unknown", value: "size", valid: false},
-		{name: "empty selection", value: "asize,", valid: false},
-	}
+func TestJSONAttributesIncludes(t *testing.T) {
+	t.Run("nil set includes every attribute", func(t *testing.T) {
+		var attributes JSONAttributes
+		assert.True(t, attributes.Includes("asize"))
+		assert.True(t, attributes.Includes("anything"))
+	})
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			attributes, err := ParseJSONAttributes(test.value)
-			if !test.valid {
-				assert.ErrorContains(t, err, "unknown JSON output attribute")
-				return
-			}
+	t.Run("empty set includes nothing", func(t *testing.T) {
+		attributes := JSONAttributes{}
+		assert.False(t, attributes.Includes("asize"))
+	})
 
-			assert.NoError(t, err)
-			for _, attribute := range test.included {
-				assert.True(t, attributes.Includes(attribute))
-			}
-			for _, attribute := range test.excluded {
-				assert.False(t, attributes.Includes(attribute))
-			}
-		})
-	}
+	t.Run("selected set includes only its members", func(t *testing.T) {
+		attributes := JSONAttributes{"asize": {}, "dsize": {}}
+		assert.True(t, attributes.Includes("asize"))
+		assert.True(t, attributes.Includes("dsize"))
+		assert.False(t, attributes.Includes("items"))
+	})
 }

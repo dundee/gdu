@@ -233,7 +233,7 @@ func (a *App) Run() error {
 		return fmt.Errorf("--interactive and --non-interactive cannot be used at once")
 	}
 
-	outputAttributes, err := gfs.ParseJSONAttributes(a.Flags.OutputAttrs)
+	outputAttributes, err := parseJSONAttributes(a.Flags.OutputAttrs)
 	if err != nil {
 		return err
 	}
