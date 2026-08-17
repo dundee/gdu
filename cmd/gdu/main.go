@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -175,13 +174,15 @@ func setDefaults() {
 }
 
 func setConfigFilePath() {
-	command := strings.Join(os.Args, " ")
-	if strings.Contains(command, "--config-file") {
-		re := regexp.MustCompile("--config-file[= ]([^ ]+)")
-		parts := re.FindStringSubmatch(command)
-
-		if len(parts) > 1 {
-			af.CfgFile = parts[1]
+	// Read the arguments one by one instead of joining them, so that paths
+	// containing spaces are not truncated.
+	for i, arg := range os.Args {
+		if value, found := strings.CutPrefix(arg, "--config-file="); found {
+			af.CfgFile = value
+			return
+		}
+		if arg == "--config-file" && i+1 < len(os.Args) {
+			af.CfgFile = os.Args[i+1]
 			return
 		}
 	}
