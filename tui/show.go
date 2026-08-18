@@ -43,6 +43,7 @@ Item under cursor:
                [::b]v     [white:black:-]Show content of file
                [::b]o     [white:black:-]Open file or directory in external program
                [::b]i     [white:black:-]Show info about item
+               [::b]y     [white:black:-]Copy path of item under cursor to clipboard
 
 Sort by (twice toggles asc/desc):
                [::b]n     [white:black:-]Sort by name (asc/desc)
