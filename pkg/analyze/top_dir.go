@@ -39,6 +39,7 @@ func (d *TopDir) SetFlag(flag rune) {
 
 type SimpleFile struct {
 	Name      string
+	Symlink   string
 	Flag      rune
 	Size      int64
 	Usage     int64
@@ -126,11 +127,12 @@ func (d *SimpleDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 
 		for _, file := range d.Files {
 			f := &File{
-				Name:   file.Name,
-				Flag:   file.Flag,
-				Size:   file.Size,
-				Usage:  file.Usage,
-				Parent: d,
+				Name:    file.Name,
+				Flag:    file.Flag,
+				Size:    file.Size,
+				Usage:   file.Usage,
+				Parent:  d,
+				Symlink: file.Symlink,
 			}
 
 			if file.IsDir {

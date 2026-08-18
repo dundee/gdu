@@ -81,6 +81,7 @@ Flags:
   -C, --show-item-count               Show number of items in directory
   -M, --show-mtime                    Show latest mtime of items in directory
   -B, --show-relative-size            Show relative size
+      --show-symlink-target           Show symlink target (name -> target) in the file list
       --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
       --since string                  Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)
   -s, --summarize                     Show only a total in non-interactive mode
@@ -191,7 +192,7 @@ flag with following meaning:
 
 * `.` An error occurred while reading a subdirectory, size may be not correct.
 
-* `@` File is symlink or socket.
+* `@` File is symlink or socket. Symlinks are shown as `name -> target` (the link target is displayed next to the name, like `ls -l`).
 
 * `H` Same file was already counted (hard link).
 

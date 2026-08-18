@@ -53,6 +53,13 @@ type Item interface {
 	RLock() func()
 }
 
+// SymlinkItem is an optional interface implemented by items that carry a
+// symlink target. Consumers type-assert an Item to it to display the target
+// (e.g. "name -> target"); items that are not symlinks return an empty string.
+type SymlinkItem interface {
+	GetSymlinkTarget() string
+}
+
 // Files - slice of pointers to File
 type Files []Item
 

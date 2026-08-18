@@ -117,9 +117,10 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			file := SimpleFile{
-				Name: name,
-				Flag: getFlag(info),
-				Size: info.Size(),
+				Name:    name,
+				Flag:    getFlag(info),
+				Size:    info.Size(),
+				Symlink: readSymlinkTarget(f.Type(), entryPath),
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info)

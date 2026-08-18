@@ -104,6 +104,8 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				}
 			}
 
+			symlinkTarget := readSymlinkTarget(f.Type(), entryPath)
+
 			// Apply time filter if set
 			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
@@ -145,10 +147,11 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 				}
 			default:
 				file = &File{
-					Name:   name,
-					Flag:   getFlag(info),
-					Size:   info.Size(),
-					Parent: dir,
+					Name:    name,
+					Flag:    getFlag(info),
+					Size:    info.Size(),
+					Parent:  dir,
+					Symlink: symlinkTarget,
 				}
 			}
 

@@ -8,6 +8,20 @@ import (
 	"github.com/dundee/gdu/v5/pkg/annex"
 )
 
+// readSymlinkTarget returns the target path of the entry at path if it is a
+// symlink, or an empty string otherwise (including when the link cannot be
+// read). The mode is taken from the directory entry to avoid an extra stat.
+func readSymlinkTarget(mode os.FileMode, path string) string {
+	if mode&os.ModeSymlink == 0 {
+		return ""
+	}
+	target, err := os.Readlink(path)
+	if err != nil {
+		return ""
+	}
+	return target
+}
+
 func followSymlink(path string, gitAnnexedSize bool) (tInfo os.FileInfo, err error) {
 	target, err := filepath.EvalSymlinks(path)
 	if err != nil {

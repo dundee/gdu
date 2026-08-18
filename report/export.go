@@ -81,6 +81,10 @@ func (ui *UI) StartUILoop() error {
 func (ui *UI) SetCollapsePath(value bool) {
 }
 
+// SetShowSymlinkTarget is a no-op for the export UI (no rendered file list)
+func (ui *UI) SetShowSymlinkTarget(value bool) {
+}
+
 // ListDevices lists mounted devices and shows their disk usage
 func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	return errors.New("exporting devices list is not supported")

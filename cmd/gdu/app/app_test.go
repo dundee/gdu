@@ -794,9 +794,10 @@ func (m *uiTimeFilterMock) SetAnalyzer(analyzer common.Analyzer)              {}
 func (m *uiTimeFilterMock) SetTimeFilter(timeFilter common.TimeFilter) {
 	m.timeFilter = timeFilter
 }
-func (m *uiTimeFilterMock) SetArchiveBrowsing(value bool) {}
-func (m *uiTimeFilterMock) SetCollapsePath(value bool)    {}
-func (m *uiTimeFilterMock) StartUILoop() error            { return nil }
+func (m *uiTimeFilterMock) SetArchiveBrowsing(value bool)   {}
+func (m *uiTimeFilterMock) SetCollapsePath(value bool)      {}
+func (m *uiTimeFilterMock) SetShowSymlinkTarget(value bool) {}
+func (m *uiTimeFilterMock) StartUILoop() error              { return nil }
 
 func TestSetTimeFiltersInvalid(t *testing.T) {
 	a := &App{Flags: &Flags{Since: "not-a-date"}}

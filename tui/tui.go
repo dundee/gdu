@@ -84,6 +84,7 @@ type UI struct {
 	workersMut              sync.Mutex
 	askBeforeDelete         bool
 	showItemCount           bool
+	showSymlinkTarget       bool
 	showMtime               bool
 	filtering               bool
 	typeFiltering           bool
@@ -442,6 +443,11 @@ func (ui *UI) SetShowItemCount() {
 // SetShowMTime sets the flag to show last modification time of items in directory
 func (ui *UI) SetShowMTime() {
 	ui.showMtime = true
+}
+
+// SetShowSymlinkTarget enables displaying the symlink target (name -> target)
+func (ui *UI) SetShowSymlinkTarget(value bool) {
+	ui.showSymlinkTarget = value
 }
 
 // SetNoDelete disables all write operations

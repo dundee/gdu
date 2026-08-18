@@ -306,7 +306,15 @@ func (ui *UI) showInfo() {
 	content += tview.Escape(
 		strings.TrimPrefix(selectedFile.GetPath(), build.RootPathPrefix),
 	) + "\n"
-	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n\n"
+	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n"
+
+	// Display symlink target
+	if line := ui.symlinkTargetInfoLine(selectedFile); line != "" {
+		content += line
+		linesCount++
+	}
+
+	content += "\n"
 
 	content += "   [::b]Disk usage:[::-] "
 	content += numberColor + ui.formatSize(selectedFile.GetUsage(), false, true)
@@ -335,6 +343,24 @@ func (ui *UI) showInfo() {
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("info", flex, true, true)
+}
+
+// symlinkTargetInfoLine returns the "Target:" info-panel line for a symlink
+// item, or an empty string when symlink-target display is disabled or the item
+// has no symlink target.
+func (ui *UI) symlinkTargetInfoLine(item fs.Item) string {
+	if !ui.showSymlinkTarget {
+		return ""
+	}
+	si, ok := item.(fs.SymlinkItem)
+	if !ok {
+		return ""
+	}
+	target := si.GetSymlinkTarget()
+	if target == "" {
+		return ""
+	}
+	return "[::b]Target:[::-] " + tview.Escape(target) + "\n"
 }
 
 func (ui *UI) openItem() {

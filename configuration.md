@@ -56,6 +56,10 @@ Show relative size
 
 Show number of items in directory
 
+#### `show-symlink-target`
+
+Show symlink target (`name -> target`) in the file list. Disabled by default.
+
 #### `no-color`
 
 Do not use colorized output

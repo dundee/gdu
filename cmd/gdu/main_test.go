@@ -30,6 +30,31 @@ func TestNoViewFileFlagCanBeSet(t *testing.T) {
 	}
 }
 
+func TestShowSymlinkTargetFlagRegistered(t *testing.T) {
+	flag := rootCmd.Flags().Lookup("show-symlink-target")
+	if flag == nil {
+		t.Fatal("expected show-symlink-target flag to be registered")
+	}
+	if flag.DefValue != "false" {
+		t.Fatalf("expected show-symlink-target to default to false, got %q", flag.DefValue)
+	}
+}
+
+func TestShowSymlinkTargetFlagCanBeSet(t *testing.T) {
+	t.Cleanup(func() {
+		_ = rootCmd.Flags().Set("show-symlink-target", "false")
+	})
+
+	err := rootCmd.Flags().Set("show-symlink-target", "true")
+	if err != nil {
+		t.Fatalf("expected setting show-symlink-target flag to succeed: %v", err)
+	}
+
+	if !af.ShowSymlinkTarget {
+		t.Fatal("expected ShowSymlinkTarget to be true after setting flag")
+	}
+}
+
 func TestInteractiveFlagRegistered(t *testing.T) {
 	flag := rootCmd.Flags().Lookup("interactive")
 	if flag == nil {
