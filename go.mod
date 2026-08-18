@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/dgraph-io/badger/v4 v4.9.2
+	github.com/ebitengine/purego v0.10.2
 	github.com/fatih/color v1.19.0
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/h2non/filetype v1.1.3

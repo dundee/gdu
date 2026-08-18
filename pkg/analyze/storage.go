@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/dundee/gdu/v5/internal/common"
@@ -28,8 +29,7 @@ type Storage struct {
 	storagePath string
 	topDir      string
 	m           sync.RWMutex
-	counter     int
-	counterM    sync.Mutex
+	counter     atomic.Int64
 }
 
 // NewStorage returns new instance of badger storage
@@ -137,13 +137,11 @@ func (s *Storage) GetDirForPath(path string) (item fs.Item, err error) {
 }
 
 func (s *Storage) checkCount() {
-	s.counterM.Lock()
-	defer s.counterM.Unlock()
-	s.counter++
-	if s.counter >= 10000 {
+	s.counter.Add(1)
+	if s.counter.Load() >= 10000 {
 		s.m.Lock()
 		defer s.m.Unlock()
-		s.counter = 0
+		s.counter.Store(0)
 		s.db.Close()
 		s.Open()
 	}

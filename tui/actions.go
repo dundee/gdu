@@ -28,12 +28,6 @@ import (
 const (
 	defaultLinesCount = 500
 	linesThreshold    = 20
-
-	actionEmpty  = "empty"
-	actionDelete = "delete"
-
-	actingEmpty  = "emptying"
-	actingDelete = "deleting"
 )
 
 // ListDevices lists mounted devices and shows their disk usage
@@ -79,15 +73,18 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	ui.pages.AddPage("progress", flex, true, true)
 	ui.progressFlex = flex
 
+	ui.Analyzer.ResetProgress()
+
 	analyzer := ui.Analyzer
 	doneChan := analyzer.GetDone()
 	go ui.updateProgress(analyzer, doneChan)
 
 	ui.scanStart = time.Now()
 	ui.scanning = true
+	ui.scanCancelled = false
 	go func() {
 		defer debug.FreeOSMemory()
-		currentDir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
+		currentDir := analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
 
 		if parentDir != nil {
 			currentDir.SetParent(parentDir)
@@ -107,6 +104,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 		ui.app.QueueUpdateDraw(func() {
 			ui.scanning = false
+			ui.scanCancelled = false
 			// remember the longest scan so we can guard against accidental quits
 			if d := time.Since(ui.scanStart); d > ui.scanDuration {
 				ui.scanDuration = d
@@ -197,31 +195,24 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	return nil
 }
 
-func (ui *UI) delete(shouldEmpty bool) {
+func (ui *UI) delete(action DeleteAction) {
 	if len(ui.markedRows) > 0 {
-		ui.deleteMarked(shouldEmpty)
+		ui.deleteMarked(action)
 	} else {
-		ui.deleteSelected(shouldEmpty)
+		ui.deleteSelected(action)
 	}
 }
 
-func (ui *UI) deleteSelected(shouldEmpty bool) {
+func (ui *UI) deleteSelected(action DeleteAction) {
 	row, column := ui.table.GetSelection()
 	selectedItem := ui.table.GetCell(row, column).GetReference().(fs.Item)
 
 	if ui.deleteInBackground {
-		ui.queueForDeletion([]fs.Item{selectedItem}, shouldEmpty)
+		ui.queueForDeletion([]fs.Item{selectedItem}, action)
 		return
 	}
 
-	var action, acting string
-	if shouldEmpty {
-		action = actionEmpty
-		acting = actingEmpty
-	} else {
-		action = actionDelete
-		acting = actingDelete
-	}
+	acting := action.Acting()
 	modal := tview.NewModal().SetText(
 		cases.Title(language.English).String(acting) +
 			" " +
@@ -232,7 +223,7 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 
 	var currentDir fs.Item
 	var deleteItems []fs.Item
-	if shouldEmpty && selectedItem.IsDir() {
+	if action == ActionEmpty && selectedItem.IsDir() {
 		currentDir = selectedItem
 		for file := range currentDir.GetFiles(fs.SortBySize, fs.SortDesc) {
 			deleteItems = append(deleteItems, file)
@@ -243,15 +234,22 @@ func (ui *UI) deleteSelected(shouldEmpty bool) {
 	}
 
 	var deleteFun func(fs.Item, fs.Item) error
-	if shouldEmpty && !selectedItem.IsDir() {
-		deleteFun = ui.emptier
-	} else {
+	switch action {
+	case ActionEmpty:
+		if !selectedItem.IsDir() {
+			deleteFun = ui.emptier
+		} else {
+			deleteFun = ui.remover
+		}
+	case ActionMoveToTrash:
+		deleteFun = ui.trasher
+	case ActionDelete:
 		deleteFun = ui.remover
 	}
 	go func() {
 		for _, item := range deleteItems {
 			if err := deleteFun(currentDir, item); err != nil {
-				msg := "Can't " + action + " " + tview.Escape(selectedItem.GetName())
+				msg := "Can't " + action.Verb() + " " + tview.Escape(selectedItem.GetName())
 				ui.app.QueueUpdateDraw(func() {
 					ui.pages.RemovePage(acting)
 					ui.showErr(msg, err)
@@ -308,7 +306,15 @@ func (ui *UI) showInfo() {
 	content += tview.Escape(
 		strings.TrimPrefix(selectedFile.GetPath(), build.RootPathPrefix),
 	) + "\n"
-	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n\n"
+	content += "[::b]Type:[::-] " + selectedFile.GetType() + "\n"
+
+	// Display symlink target
+	if line := ui.symlinkTargetInfoLine(selectedFile); line != "" {
+		content += line
+		linesCount++
+	}
+
+	content += "\n"
 
 	content += "   [::b]Disk usage:[::-] "
 	content += numberColor + ui.formatSize(selectedFile.GetUsage(), false, true)
@@ -337,6 +343,24 @@ func (ui *UI) showInfo() {
 		AddItem(nil, 0, 1, false)
 
 	ui.pages.AddPage("info", flex, true, true)
+}
+
+// symlinkTargetInfoLine returns the "Target:" info-panel line for a symlink
+// item, or an empty string when symlink-target display is disabled or the item
+// has no symlink target.
+func (ui *UI) symlinkTargetInfoLine(item fs.Item) string {
+	if !ui.showSymlinkTarget {
+		return ""
+	}
+	si, ok := item.(fs.SymlinkItem)
+	if !ok {
+		return ""
+	}
+	target := si.GetSymlinkTarget()
+	if target == "" {
+		return ""
+	}
+	return "[::b]Target:[::-] " + tview.Escape(target) + "\n"
 }
 
 func (ui *UI) openItem() {
@@ -420,8 +444,9 @@ func (ui *UI) exportAnalysis() {
 			ui.showErrFromGo("Error creating file", err)
 			return
 		}
+		defer file.Close()
 
-		if err = ui.topDir.EncodeJSON(&buff, true); err != nil {
+		if err = ui.topDir.EncodeJSON(&buff, true, nil); err != nil {
 			ui.showErrFromGo("Error encoding JSON", err)
 			return
 		}

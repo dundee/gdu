@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewSqliteStorage(t *testing.T) {
@@ -186,7 +188,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Update item
-	err = storage.UpdateItem(id, 500, 1000, 10)
+	err = storage.UpdateItem(id, 500, 1000, 10, ' ')
 	assert.NoError(t, err)
 
 	// Verify update
@@ -217,7 +219,7 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 	}
 
 	// Update during bulk mode
-	err = storage.UpdateItem(rootID, 10000, 20000, 101)
+	err = storage.UpdateItem(rootID, 10000, 20000, 101, ' ')
 	assert.NoError(t, err)
 
 	// End bulk insert
@@ -450,6 +452,65 @@ func TestSqliteItemGetFilesLocked(t *testing.T) {
 	assert.Equal(t, "file.txt", files[0].GetName())
 }
 
+func TestSnapshotSqliteItemTree(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, storage.Close()) })
+
+	rootID, err := storage.InsertItem(nil, "root", true, 100, 200, time.Now(), 2, 0, ' ')
+	require.NoError(t, err)
+	_, err = storage.InsertItem(&rootID, "file.txt", false, 10, 20, time.Now(), 1, 0, ' ')
+	require.NoError(t, err)
+	root, err := storage.GetItemByID(rootID)
+	require.NoError(t, err)
+
+	snapshot, ok := snapshotItem(root, nil).(*Dir)
+	require.True(t, ok)
+	require.Len(t, snapshot.Files, 1)
+	assert.Equal(t, "root", snapshot.GetName())
+	assert.Equal(t, "file.txt", snapshot.Files[0].GetName())
+	assert.Same(t, snapshot, snapshot.Files[0].GetParent())
+}
+
+func TestSqliteAnalyzerCancellationStopsArchivePersistence(t *testing.T) {
+	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
+
+	parentID, err := analyzer.storage.InsertItem(nil, "archive.zip", true, 0, 0, time.Now(), 1, 0, ' ')
+	require.NoError(t, err)
+	archive := &Dir{
+		File:  &File{Name: "archive.zip"},
+		Files: fs.Files{&File{Name: "must-not-be-persisted"}},
+	}
+
+	analyzer.Cancel()
+	analyzer.persistArchive(archive, parentID)
+
+	children, err := analyzer.storage.GetChildren(parentID)
+	require.NoError(t, err)
+	assert.Empty(t, children)
+}
+
+func TestSqliteAnalyzerPreemptiveCancellationSkipsChildDirectory(t *testing.T) {
+	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
+
+	parentID, err := analyzer.storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
+	require.NoError(t, err)
+	childPath := filepath.Join(t.TempDir(), "unscanned")
+	require.NoError(t, os.Mkdir(childPath, 0o700))
+
+	analyzer.Cancel()
+	assert.Nil(t, analyzer.processDir(childPath, &parentID))
+
+	children, err := analyzer.storage.GetChildren(parentID)
+	require.NoError(t, err)
+	assert.Empty(t, children)
+}
+
 func TestSqliteItemRLock(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	storage, err := NewSqliteStorage(dbPath)
@@ -594,12 +655,72 @@ func TestSqliteItemEncodeJSON(t *testing.T) {
 	root, _ := storage.GetItemByID(rootID)
 
 	var buf bytes.Buffer
-	err = root.EncodeJSON(&buf, false)
+	err = root.EncodeJSON(&buf, false, nil)
 	assert.NoError(t, err)
 
-	expected := `[{"name":"root","asize":100,"dsize":200,"mtime":1600000000},
+	expected := `[{"name":"root","asize":100,"dsize":200,"items":2,"mtime":1600000000},
 {"name":"file.txt","asize":10,"dsize":20,"mtime":1600000000}]`
 	assert.Equal(t, expected, buf.String())
+}
+
+func TestSqliteItemEncodeEmptyDirJSON(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	rootID, _ := storage.InsertItem(nil, "empty", true, 0, 0, time.Time{}, 0, 0, ' ')
+	root, _ := storage.GetItemByID(rootID)
+
+	var buf bytes.Buffer
+	err = root.EncodeJSON(&buf, false, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "[{\"name\":\"empty\",\"asize\":0,\"dsize\":0,\"items\":0}\n]", buf.String())
+}
+
+func TestSqliteItemEncodeJSONWithSelectedAttributes(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	mtime := time.Unix(1600000000, 0)
+	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, mtime, 2, 0, ' ')
+	storage.InsertItem(&rootID, "file.txt", false, 10, 20, mtime, 1, 0, ' ')
+
+	root, _ := storage.GetItemByID(rootID)
+	var buf bytes.Buffer
+	err = root.EncodeJSON(&buf, false, fs.JSONAttributes{"asize": {}, "dsize": {}})
+
+	assert.NoError(t, err)
+	assert.Equal(t, `[{"name":"root","asize":100,"dsize":200},
+{"name":"file.txt","asize":10,"dsize":20}]`, buf.String())
+}
+
+func TestSqliteItemEncodeJSONWithSpecialAttributes(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	storage, err := NewSqliteStorage(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	mtime := time.Unix(1600000000, 0)
+	rootID, _ := storage.InsertItem(nil, "root", true, 0, 0, mtime, 3, 0, ' ')
+	storage.InsertItem(&rootID, "other", false, 0, 0, mtime, 1, 0, '@')
+	storage.InsertItem(&rootID, "link", false, 0, 0, mtime, 1, 123, 'H')
+
+	root, _ := storage.GetItemByID(rootID)
+	var buf bytes.Buffer
+	err = root.EncodeJSON(&buf, false, nil)
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `"notreg":true`)
+	assert.Contains(t, buf.String(), `"ino":123,"hlnkc":true`)
+
+	buf.Reset()
+	err = root.EncodeJSON(&buf, false, fs.JSONAttributes{"notreg": {}})
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `"notreg":true`)
+	assert.NotContains(t, buf.String(), `"ino"`)
+	assert.NotContains(t, buf.String(), `"mtime"`)
 }
 
 func TestCreateSqliteAnalyzer(t *testing.T) {
@@ -785,6 +906,51 @@ func TestSqliteAnalyzerAnalyzeDir(t *testing.T) {
 	subnestedFiles := slices.Collect(subnested.GetFiles(fs.SortByName, fs.SortAsc))
 	assert.Equal(t, "file", subnestedFiles[0].GetName())
 	assert.Equal(t, int64(5), subnestedFiles[0].GetSize())
+}
+
+func TestSqliteAnalyzerPropagatesChildPermissionError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod does not make directories unreadable on Windows")
+	}
+
+	rootPath := t.TempDir()
+	outerPath := filepath.Join(rootPath, "outer")
+	restrictedPath := filepath.Join(outerPath, "data")
+
+	err := os.MkdirAll(restrictedPath, 0o755)
+	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(restrictedPath, "file.txt"), []byte("x"), 0o600)
+	assert.NoError(t, err)
+
+	err = os.Chmod(restrictedPath, 0)
+	assert.NoError(t, err)
+	defer os.Chmod(restrictedPath, 0o700)
+
+	if _, err := os.ReadDir(restrictedPath); err == nil {
+		t.Skip("test user can still read chmod 000 directory")
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	assert.NoError(t, err)
+	defer analyzer.storage.Close()
+
+	dir := analyzer.AnalyzeDir(
+		rootPath, func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	).(*SqliteItem)
+
+	analyzer.GetDone().Wait()
+
+	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Len(t, files, 1)
+	outer := files[0].(*SqliteItem)
+	assert.Equal(t, "outer", outer.GetName())
+	assert.Equal(t, '.', outer.GetFlag())
+
+	children := slices.Collect(outer.GetFiles(fs.SortByName, fs.SortAsc))
+	assert.Len(t, children, 1)
+	assert.Equal(t, "data", children[0].GetName())
+	assert.Equal(t, '!', children[0].GetFlag())
 }
 
 func TestSqliteAnalyzerIgnoreDir(t *testing.T) {

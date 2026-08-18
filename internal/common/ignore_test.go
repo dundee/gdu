@@ -22,6 +22,22 @@ func TestCreateIgnorePattern(t *testing.T) {
 	assert.True(t, re.MatchString("aa"))
 }
 
+func TestCreateIgnorePatternAnchoredSingleRelative(t *testing.T) {
+	re, err := common.CreateIgnorePattern([]string{"test_dir/abc"})
+
+	assert.Nil(t, err)
+	assert.True(t, re.MatchString("test_dir/abc"))
+	assert.False(t, re.MatchString("test_dir/abcdef"))
+}
+
+func TestCreateIgnorePatternAnchoredMiddleAlternative(t *testing.T) {
+	re, err := common.CreateIgnorePattern([]string{"aaa", `foo\.bak`, "ccc"})
+
+	assert.Nil(t, err)
+	assert.True(t, re.MatchString("foo.bak"))
+	assert.False(t, re.MatchString("xfoo.baky"))
+}
+
 func TestCreateIgnorePatternWithErr(t *testing.T) {
 	re, err := common.CreateIgnorePattern([]string{"[[["})
 

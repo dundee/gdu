@@ -165,7 +165,7 @@ func TestSimpleDirPanics(t *testing.T) {
 	assert.Panics(t, func() { d.GetParent() })
 	assert.Panics(t, func() { d.SetParent(nil) })
 	assert.Panics(t, func() { d.GetMultiLinkedInode() })
-	assert.Panics(t, func() { d.EncodeJSON(nil, false) })
+	assert.Panics(t, func() { d.EncodeJSON(nil, false, nil) })
 	assert.Panics(t, func() { d.GetItemStats(nil, false) })
 	assert.Panics(t, func() { d.AddFile(nil) })
 	assert.Panics(t, func() {

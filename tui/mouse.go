@@ -17,6 +17,7 @@ func (ui *UI) onMouse(event *tcell.EventMouse, action tview.MouseAction) (*tcell
 		ui.pages.HasPage("progress") ||
 		ui.pages.HasPage("deleting") ||
 		ui.pages.HasPage("emptying") ||
+		ui.pages.HasPage("moving to trash") ||
 		ui.pages.HasPage("help") {
 		return nil, action
 	}

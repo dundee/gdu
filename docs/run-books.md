@@ -8,6 +8,6 @@
 1. `make`
 1. `git push --tags`
 1. `git push`
-1. relase is created on Github from the tag, or `make release`
+1. release is created on GitHub from the tag, or `make release`
 1. update `gdu.spec`
 1. Release snapcraft, AUR, ...

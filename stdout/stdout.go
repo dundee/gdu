@@ -22,17 +22,19 @@ import (
 type UI struct {
 	output io.Writer
 	*common.UI
-	red         *color.Color
-	orange      *color.Color
-	blue        *color.Color
-	showItemCnt bool
-	top         int
-	depth       int
-	summarize   bool
-	noPrefix    bool
-	fixedBase   float64
-	fixedSuffix string
-	reverseSort bool
+	red               *color.Color
+	orange            *color.Color
+	blue              *color.Color
+	cyan              *color.Color
+	showItemCnt       bool
+	showSymlinkTarget bool
+	top               int
+	depth             int
+	summarize         bool
+	noPrefix          bool
+	fixedBase         float64
+	fixedSuffix       string
+	reverseSort       bool
 }
 
 var (
@@ -74,10 +76,13 @@ func CreateStdoutUI(
 	}
 	if fixedUnit != "" {
 		ui.SetFixedUnit(fixedUnit)
+	} else if !noPrefix && !useSIPrefix {
+		ui.SetBlockSizeFromEnvironment()
 	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
 	ui.blue = color.New(color.FgBlue).Add(color.Bold)
+	ui.cyan = color.New(color.FgCyan).Add(color.Bold)
 
 	if ui.top > 0 || ui.depth > 0 {
 		ui.Analyzer = analyze.CreateAnalyzer()
@@ -113,6 +118,11 @@ func (ui *UI) SetFixedUnit(unitChar string) {
 
 func (ui *UI) SetShowItemCount() {
 	ui.showItemCnt = true
+}
+
+// SetShowSymlinkTarget enables displaying the symlink target (name -> target).
+func (ui *UI) SetShowSymlinkTarget(value bool) {
+	ui.showSymlinkTarget = value
 }
 
 func (ui *UI) UseOldProgressRunes() {
@@ -339,6 +349,15 @@ func (ui *UI) printItem(file fs.Item) {
 		name = ui.blue.Sprint("/" + file.GetName())
 	}
 
+	// Append symlink target with cyan name (like ls --color)
+	if ui.showSymlinkTarget {
+		if si, ok := file.(fs.SymlinkItem); ok {
+			if target := si.GetSymlinkTarget(); target != "" {
+				name = ui.cyan.Sprint(file.GetName()) + " -> " + target
+			}
+		}
+	}
+
 	if ui.showItemCnt {
 		fmt.Fprintf(
 			ui.output,
@@ -560,6 +579,9 @@ func (ui *UI) formatCount(count int64) string {
 func (ui *UI) formatSize(size int64) string {
 	if ui.noPrefix {
 		return ui.orange.Sprintf("%d", size)
+	}
+	if formatted, ok := ui.FormatBlockSize(size); ok {
+		return ui.orange.Sprint(formatted)
 	}
 	if ui.fixedBase > 0 {
 		val := float64(size) / ui.fixedBase

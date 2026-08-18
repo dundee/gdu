@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
+	"unicode"
 
 	log "github.com/sirupsen/logrus"
 
@@ -47,6 +49,7 @@ type UI struct {
 	done                    chan struct{}
 	remover                 func(fs.Item, fs.Item) error
 	emptier                 func(fs.Item, fs.Item) error
+	trasher                 func(fs.Item, fs.Item) error
 	exec                    func(argv0 string, argv []string, envv []string) error
 	changeCwdFn             func(string) error
 	linkedItems             fs.HardLinkedItems
@@ -81,6 +84,7 @@ type UI struct {
 	workersMut              sync.Mutex
 	askBeforeDelete         bool
 	showItemCount           bool
+	showSymlinkTarget       bool
 	showMtime               bool
 	filtering               bool
 	typeFiltering           bool
@@ -100,6 +104,7 @@ type UI struct {
 	currentDeviceSize       int64
 	confirmQuit             bool
 	scanning                bool
+	scanCancelled           bool
 	scanStart               time.Time
 	scanDuration            time.Duration
 	previewing              bool
@@ -108,8 +113,8 @@ type UI struct {
 }
 
 type deleteQueueItem struct {
-	item        fs.Item
-	shouldEmpty bool
+	item   fs.Item
+	action DeleteAction
 }
 
 // ResultRow is a struct for a row in the result table
@@ -148,6 +153,7 @@ func CreateUI(
 		showItemCount:           false,
 		remover:                 remove.ItemFromDir,
 		emptier:                 remove.EmptyFileFromDir,
+		trasher:                 remove.MoveItemToTrash,
 		exec:                    Execute,
 		linkedItems:             make(fs.HardLinkedItems, 10),
 		selectedTextColor:       tview.Styles.TitleColor,
@@ -165,6 +171,9 @@ func CreateUI(
 		noSpawnShell:            false,
 		deleteQueue:             make(chan deleteQueueItem, 1000),
 		deleteWorkersCount:      3 * runtime.GOMAXPROCS(0),
+	}
+	if !useSIPrefix {
+		ui.SetBlockSizeFromEnvironment()
 	}
 	for _, o := range opts {
 		o(ui)
@@ -327,28 +336,97 @@ func (ui *UI) SetDeleteInParallel() {
 
 // StartUILoop starts tview application
 func (ui *UI) StartUILoop() error {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(
+		signals,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+		syscall.SIGILL,
+		syscall.SIGTRAP,
+		syscall.SIGABRT,
+		syscall.SIGPIPE,
+		syscall.SIGTERM,
+	)
+	defer signal.Stop(signals)
+
+	return ui.runUILoop(signals)
+}
+
+func (ui *UI) runUILoop(signals <-chan os.Signal) error {
+	stopSignals := make(chan struct{})
+	signalsDone := make(chan struct{})
 	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(
-			c,
-			syscall.SIGHUP,
-			syscall.SIGINT,
-			syscall.SIGQUIT,
-			syscall.SIGILL,
-			syscall.SIGTRAP,
-			syscall.SIGABRT,
-			syscall.SIGPIPE,
-			syscall.SIGTERM,
-		)
-		s := <-c
-		log.Printf("Got signal: %s", s)
-		ui.app.QueueUpdateDraw(func() {
-			ui.printMarkedPaths()
-			ui.app.Stop()
-		})
+		defer close(signalsDone)
+		ui.handleSignals(signals, stopSignals)
 	}()
 
-	return ui.app.Run()
+	err := ui.app.Run()
+	close(stopSignals)
+	<-signalsDone
+	return err
+}
+
+func (ui *UI) handleSignals(signals <-chan os.Signal, stop <-chan struct{}) {
+	for {
+		select {
+		case <-stop:
+			return
+		case current, ok := <-signals:
+			if !ok {
+				return
+			}
+			log.Printf("Got signal: %s", current)
+			ui.postSignalEvent(signalEvent(current), stop)
+		}
+	}
+}
+
+func (ui *UI) postSignalEvent(event *tcell.EventKey, stop <-chan struct{}) {
+	if err := ui.screen.PostEvent(event); err == nil {
+		return
+	}
+
+	retry := time.NewTicker(time.Millisecond)
+	defer retry.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-retry.C:
+			if err := ui.screen.PostEvent(event); err == nil {
+				return
+			}
+		}
+	}
+}
+
+func signalEvent(current os.Signal) *tcell.EventKey {
+	modifiers := tcell.ModNone
+	if current == syscall.SIGINT {
+		modifiers = tcell.ModCtrl
+	}
+	return tcell.NewEventKey(tcell.KeyExit, 0, modifiers)
+}
+
+func (ui *UI) handleSignalEvent(event *tcell.EventKey) {
+	if event.Modifiers() == tcell.ModCtrl && (ui.cancelScan() || ui.scanning) {
+		return
+	}
+	ui.printMarkedPaths()
+	ui.app.Stop()
+}
+
+func (ui *UI) cancelScan() bool {
+	if !ui.scanning || ui.scanCancelled {
+		return false
+	}
+
+	ui.Analyzer.Cancel()
+	ui.scanCancelled = true
+	ui.progress.SetTitle(" Stopping scan... ")
+	ui.progress.SetText("Stopping scan and keeping results...")
+	return true
 }
 
 // SetConfirmQuit sets whether gdu asks for confirmation before quitting
@@ -365,6 +443,11 @@ func (ui *UI) SetShowItemCount() {
 // SetShowMTime sets the flag to show last modification time of items in directory
 func (ui *UI) SetShowMTime() {
 	ui.showMtime = true
+}
+
+// SetShowSymlinkTarget enables displaying the symlink target (name -> target)
+func (ui *UI) SetShowSymlinkTarget(value bool) {
+	ui.showSymlinkTarget = value
 }
 
 // SetNoDelete disables all write operations
@@ -417,7 +500,6 @@ func (ui *UI) resetSorting() {
 }
 
 func (ui *UI) rescanDir() {
-	ui.Analyzer.ResetProgress()
 	ui.linkedItems = make(fs.HardLinkedItems)
 	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.GetParent())
 	if err != nil {
@@ -512,7 +594,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	}
 }
 
-func (ui *UI) confirmDeletion(shouldEmpty bool) {
+func (ui *UI) confirmDeletion(action DeleteAction) {
 	if ui.noDelete {
 		previousHeaderText := ui.header.GetText(false)
 
@@ -547,25 +629,19 @@ func (ui *UI) confirmDeletion(shouldEmpty bool) {
 	}
 
 	if len(ui.markedRows) > 0 {
-		ui.confirmDeletionMarked(shouldEmpty)
+		ui.confirmDeletionMarked(action)
 	} else {
-		ui.confirmDeletionSelected(shouldEmpty)
+		ui.confirmDeletionSelected(action)
 	}
 }
 
-func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
+func (ui *UI) confirmDeletionSelected(action DeleteAction) {
 	row, column := ui.table.GetSelection()
 	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	var action string
-	if shouldEmpty {
-		action = "empty"
-	} else {
-		action = "delete"
-	}
 	modal := tview.NewModal().
 		SetText(
 			"Are you sure you want to " +
-				action +
+				action.Verb() +
 				" \"" +
 				tview.Escape(selectedFile.GetName()) +
 				"\"?",
@@ -577,7 +653,7 @@ func (ui *UI) confirmDeletionSelected(shouldEmpty bool) {
 				ui.askBeforeDelete = false
 				fallthrough
 			case 1:
-				ui.deleteSelected(shouldEmpty)
+				ui.deleteSelected(action)
 			}
 			ui.pages.RemovePage("confirm")
 		})
@@ -636,9 +712,23 @@ func (ui *UI) isDeleteAllowedWithFilter() bool {
 	return false
 }
 
+// sanitizePathForDisplay replaces control characters (which can include
+// terminal escape sequences) with the Unicode replacement character. A
+// scanned directory entry's name has no character restrictions, and these
+// paths are printed to the real terminal after the tview screen has
+// stopped, bypassing tview's own protective rendering entirely.
+func sanitizePathForDisplay(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return '�'
+		}
+		return r
+	}, s)
+}
+
 // printMarkedPaths prints the paths of the marked items to the output
 func (ui *UI) printMarkedPaths() {
 	for _, path := range ui.markedPaths {
-		fmt.Fprintf(ui.output, "%s\n", path)
+		fmt.Fprintf(ui.output, "%s\n", sanitizePathForDisplay(path))
 	}
 }

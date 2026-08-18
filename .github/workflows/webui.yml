@@ -1,0 +1,47 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+name: web UI
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
+
+      - name: Install Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.26.x
+
+      - name: Install frontend dependencies
+        working-directory: webui/frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: webui/frontend
+        run: npm test
+
+      - name: Build frontend
+        working-directory: webui/frontend
+        run: npm run build
+
+      - name: Verify committed bundle is up to date
+        run: |
+          if ! git diff --exit-code -- webui/dist; then
+            echo "::error::webui/dist is out of date. Run 'make build-web' and commit the result."
+            exit 1
+          fi
+
+      - name: Verify Go build embeds the UI
+        run: go build ./...

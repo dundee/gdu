@@ -67,10 +67,13 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	var topDirs []*TopDir
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			topDir := &TopDir{
@@ -114,9 +117,10 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			file := SimpleFile{
-				Name: name,
-				Flag: getFlag(info),
-				Size: info.Size(),
+				Name:    name,
+				Flag:    getFlag(info),
+				Size:    info.Size(),
+				Symlink: readSymlinkTarget(f.Type(), entryPath),
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info)
@@ -172,10 +176,13 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := path + pathSep + name
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 
@@ -238,7 +245,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	if len(files) == 0 {
-		totalSize = 512
+		totalSize = EmptyDirSize
 		totalUsage = 0
 	}
 

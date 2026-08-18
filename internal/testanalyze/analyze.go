@@ -2,6 +2,7 @@ package testanalyze
 
 import (
 	"errors"
+	"sync/atomic"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -11,7 +12,9 @@ import (
 )
 
 // MockedAnalyzer returns dir with files with different size exponents
-type MockedAnalyzer struct{}
+type MockedAnalyzer struct {
+	cancelled atomic.Bool
+}
 
 // AnalyzeDir returns dir with files with different size exponents
 func (a *MockedAnalyzer) AnalyzeDir(
@@ -78,8 +81,20 @@ func (a *MockedAnalyzer) GetDone() common.SignalGroup {
 	return c
 }
 
-// ResetProgress does nothing
-func (a *MockedAnalyzer) ResetProgress() {}
+// ResetProgress clears cancellation state for a subsequent analysis.
+func (a *MockedAnalyzer) ResetProgress() {
+	a.cancelled.Store(false)
+}
+
+// Cancel records a cancellation request.
+func (a *MockedAnalyzer) Cancel() {
+	a.cancelled.Store(true)
+}
+
+// IsCancelled reports whether cancellation was requested.
+func (a *MockedAnalyzer) IsCancelled() bool {
+	return a.cancelled.Load()
+}
 
 // SetFollowSymlinks does nothing
 func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {}

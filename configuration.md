@@ -56,6 +56,10 @@ Show relative size
 
 Show number of items in directory
 
+#### `show-symlink-target`
+
+Show symlink target (`name -> target`) in the file list. Disabled by default.
+
 #### `no-color`
 
 Do not use colorized output
@@ -139,6 +143,19 @@ Delete items in parallel, which might increase the speed of deletion
 #### `browse-parent-dirs`
 
 Allow navigating above the launch directory by pressing the left arrow key. When enabled, pressing left at the top-level directory will rescan and open its parent directory. Disabled by default.
+
+
+#### `web.listen`
+
+Address the web UI (`--web`) listens on, e.g. `localhost:8080`. When empty (the default), Gdu binds to `localhost` on a random free port. Binding to a non-loopback address exposes file names and sizes to other hosts on the network and prints a warning.
+
+#### `web.open-browser`
+
+Whether the web UI opens in the default browser on start. Enabled by default. The URL is always printed regardless of this setting. Can be overridden on the command line with `--web-open=false`.
+
+#### `web.browser`
+
+Override the command used to open the browser (the URL is appended as the final argument), e.g. `firefox --new-window`. When empty (the default), the operating system's default handler is used.
 
 
 #### `style.selected-row.text-color`

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"io"
 	"strconv"
+
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 // EncodeJSON writes JSON representation of dir
-func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool) error {
+func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	buff := make([]byte, 0, 20)
 
 	buff = append(buff, []byte(`[{"name":`)...)
@@ -22,7 +24,22 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool) error {
 		}
 	}
 
-	if !f.GetMtime().IsZero() {
+	// Directory summary stats (asize, dsize, items) are written by default so
+	// they can be preserved on import. When --output-attrs is supplied, each is
+	// emitted only if explicitly selected.
+	if attributes.Includes("asize") {
+		buff = append(buff, []byte(`,"asize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(f.GetSize(), 10))...)
+	}
+	if attributes.Includes("dsize") {
+		buff = append(buff, []byte(`,"dsize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(f.GetUsage(), 10))...)
+	}
+	if attributes.Includes("items") {
+		buff = append(buff, []byte(`,"items":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(f.GetItemCount(), 10))...)
+	}
+	if attributes.Includes("mtime") && !f.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)
 	}
@@ -43,7 +60,7 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool) error {
 				return err
 			}
 		}
-		err := item.EncodeJSON(writer, false)
+		err := item.EncodeJSON(writer, false, attributes)
 		if err != nil {
 			return err
 		}
@@ -56,30 +73,30 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool) error {
 }
 
 // EncodeJSON writes JSON representation of file
-func (f *File) EncodeJSON(writer io.Writer, topLevel bool) error {
+func (f *File) EncodeJSON(writer io.Writer, _ bool, attributes fs.JSONAttributes) error {
 	buff := make([]byte, 0, 20)
 
 	buff = append(buff, []byte(`{"name":`)...)
 	if err := addString(&buff, f.GetName()); err != nil {
 		return err
 	}
-	if f.GetSize() > 0 {
+	if attributes.Includes("asize") && f.GetSize() > 0 {
 		buff = append(buff, []byte(`,"asize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetSize(), 10))...)
 	}
-	if f.GetUsage() > 0 {
+	if attributes.Includes("dsize") && f.GetUsage() > 0 {
 		buff = append(buff, []byte(`,"dsize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetUsage(), 10))...)
 	}
-	if !f.GetMtime().IsZero() {
+	if attributes.Includes("mtime") && !f.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)
 	}
 
-	if f.Flag == '@' {
+	if attributes.Includes("notreg") && f.Flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
 	}
-	if f.Flag == 'H' {
+	if attributes == nil && f.Flag == 'H' {
 		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(f.Mli, 10)+`,"hlnkc":true`)...)
 	}
 

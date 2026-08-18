@@ -31,7 +31,7 @@ func TestZipFileEncodeJSON(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := zipFile.EncodeJSON(&buf, false)
+	err := zipFile.EncodeJSON(&buf, false, nil)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 }
@@ -47,7 +47,7 @@ func TestZipDirEncodeJSON(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := zipDir.EncodeJSON(&buf, false)
+	err := zipDir.EncodeJSON(&buf, false, nil)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, buf.String())
 }

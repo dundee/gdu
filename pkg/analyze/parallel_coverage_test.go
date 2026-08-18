@@ -2,11 +2,14 @@ package analyze
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParallelAnalyzerSetFollowSymlinks(t *testing.T) {
@@ -131,4 +134,56 @@ func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 	assert.Equal(t, "test_dir", dir.Name)
 	// Should have fewer items since nested directory was ignored
 	assert.Less(t, dir.ItemCount, int64(5))
+}
+
+func TestAnalyzersMarkFilesystemErrors(t *testing.T) {
+	factories := []struct {
+		name string
+		new  func() common.Analyzer
+	}{
+		{name: "parallel", new: func() common.Analyzer { return CreateAnalyzer() }},
+		{name: "stable parallel", new: func() common.Analyzer { return CreateStableOrderAnalyzer() }},
+		{name: "sequential", new: func() common.Analyzer { return CreateSeqAnalyzer() }},
+	}
+
+	for _, factory := range factories {
+		t.Run(factory.name, func(t *testing.T) {
+			t.Run("disappeared file", func(t *testing.T) {
+				root := t.TempDir()
+				filePath := filepath.Join(root, "removed-during-scan")
+				require.NoError(t, os.WriteFile(filePath, []byte("data"), 0o600))
+
+				var removeErr error
+				dir := factory.new().AnalyzeDir(
+					root,
+					func(_, _ string) bool { return false },
+					func(string) bool {
+						removeErr = os.Remove(filePath)
+						return false
+					},
+				)
+
+				require.NoError(t, removeErr)
+				assert.Equal(t, '!', dir.GetFlag())
+			})
+
+			t.Run("broken symlink", func(t *testing.T) {
+				root := t.TempDir()
+				err := os.Symlink(filepath.Join(root, "missing-target"), filepath.Join(root, "broken-link"))
+				if err != nil {
+					t.Skipf("creating symlink: %v", err)
+				}
+
+				analyzer := factory.new()
+				analyzer.SetFollowSymlinks(true)
+				dir := analyzer.AnalyzeDir(
+					root,
+					func(_, _ string) bool { return false },
+					func(string) bool { return false },
+				)
+
+				assert.Equal(t, '!', dir.GetFlag())
+			})
+		})
+	}
 }

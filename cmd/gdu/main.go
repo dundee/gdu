@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -49,6 +48,7 @@ func init() {
 	flags.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
+	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg)")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
 	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
@@ -78,6 +78,7 @@ func init() {
 	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Use existing database instead of re-scanning")
 	flags.BoolVar(&af.ArchiveBrowsing, "archive-browsing", false, "Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)")
 	flags.BoolVar(&af.CollapsePath, "collapse-path", false, "Collapse single-child directory chains")
+	flags.BoolVar(&af.ShowSymlinkTarget, "show-symlink-target", false, "Show symlink target (name -> target) in the file list")
 
 	flags.BoolVarP(&af.ShowDisks, "show-disks", "d", false, "Show all mounted disks")
 	flags.BoolVarP(&af.ShowApparentSize, "show-apparent-size", "a", false, "Show apparent size")
@@ -110,6 +111,11 @@ func init() {
 	flags.StringVar(&af.Until, "until", "", "Include files with mtime <= WHEN. WHEN accepts RFC3339 timestamp or date only YYYY-MM-DD")
 	flags.StringVar(&af.MaxAge, "max-age", "", "Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)")
 	flags.StringVar(&af.MinAge, "min-age", "", "Include files with mtime at least DURATION old (e.g., 30d, 1w)")
+
+	flags.BoolVar(&af.Web, "web", false, "Run the web UI (serves a browser interface instead of the terminal UI)")
+	flags.StringVar(&af.WebConfig.Listen, "web-listen", "",
+		"Address for the web UI to listen on (default: localhost with a random free port)")
+	flags.BoolVar(&af.WebConfig.OpenBrowser, "web-open", true, "Open the web UI in the default browser on start")
 
 	initConfig()
 	setDefaults()
@@ -169,13 +175,15 @@ func setDefaults() {
 }
 
 func setConfigFilePath() {
-	command := strings.Join(os.Args, " ")
-	if strings.Contains(command, "--config-file") {
-		re := regexp.MustCompile("--config-file[= ]([^ ]+)")
-		parts := re.FindStringSubmatch(command)
-
-		if len(parts) > 1 {
-			af.CfgFile = parts[1]
+	// Read the arguments one by one instead of joining them, so that paths
+	// containing spaces are not truncated.
+	for i, arg := range os.Args {
+		if value, found := strings.CutPrefix(arg, "--config-file="); found {
+			af.CfgFile = value
+			return
+		}
+		if arg == "--config-file" && i+1 < len(os.Args) {
+			af.CfgFile = os.Args[i+1]
 			return
 		}
 	}
@@ -251,7 +259,7 @@ func runE(command *cobra.Command, args []string) error {
 		af.ShowApparentSize = true
 	}
 
-	if !af.ShouldRunInNonInteractiveMode(istty) {
+	if !af.Web && !af.ShouldRunInNonInteractiveMode(istty) {
 		screen, err = tcell.NewScreen()
 		if err != nil {
 			return fmt.Errorf("error creating screen: %w", err)

@@ -134,7 +134,7 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 	}
 
 	s.updateStmt, err = tx.Prepare(
-		`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
+		`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
 	)
 	if err != nil {
 		s.insertStmt.Close()
@@ -281,17 +281,17 @@ func (s *SqliteStorage) InsertItem(
 }
 
 // UpdateItem updates an existing item's stats
-func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64) error {
+func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64, flag rune) error {
 	var err error
 
 	// Use prepared statement if in bulk mode, otherwise use direct exec
 	if s.updateStmt != nil {
-		_, err = s.updateStmt.Exec(size, usage, itemCount, id)
+		_, err = s.updateStmt.Exec(size, usage, itemCount, string(flag), id)
 	} else {
 		s.m.Lock()
 		_, err = s.db.Exec(
-			`UPDATE items SET size = ?, usage = ?, item_count = ? WHERE id = ?`,
-			size, usage, itemCount, id,
+			`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
+			size, usage, itemCount, string(flag), id,
 		)
 		s.m.Unlock()
 	}
@@ -632,14 +632,14 @@ func (i *SqliteItem) GetMultiLinkedInode() uint64 {
 }
 
 // EncodeJSON encodes the item to JSON
-func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool) error {
+func (i *SqliteItem) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	if i.isDir {
-		return i.encodeDirJSON(writer, topLevel)
+		return i.encodeDirJSON(writer, topLevel, attributes)
 	}
-	return i.encodeFileJSON(writer)
+	return i.encodeFileJSON(writer, attributes)
 }
 
-func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
+func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	buff := make([]byte, 0, 128)
 	buff = append(buff, []byte(`[{"name":`)...)
 
@@ -651,15 +651,22 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 		return err
 	}
 
-	if i.GetSize() > 0 {
+	// Directory summary stats (asize, dsize, items) are written by default so
+	// they can be preserved on import. When --output-attrs is supplied, each is
+	// emitted only if explicitly selected.
+	if attributes.Includes("asize") {
 		buff = append(buff, []byte(`,"asize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
 	}
-	if i.GetUsage() > 0 {
+	if attributes.Includes("dsize") {
 		buff = append(buff, []byte(`,"dsize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
 	}
-	if !i.GetMtime().IsZero() {
+	if attributes.Includes("items") {
+		buff = append(buff, []byte(`,"items":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(i.GetItemCount(), 10))...)
+	}
+	if attributes.Includes("mtime") && !i.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
 	}
@@ -687,7 +694,7 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 			}
 		}
 		child.parent = i
-		if err := child.EncodeJSON(writer, false); err != nil {
+		if err := child.EncodeJSON(writer, false, attributes); err != nil {
 			return err
 		}
 	}
@@ -698,29 +705,29 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool) error {
 	return nil
 }
 
-func (i *SqliteItem) encodeFileJSON(writer io.Writer) error {
+func (i *SqliteItem) encodeFileJSON(writer io.Writer, attributes fs.JSONAttributes) error {
 	buff := make([]byte, 0, 128)
 	buff = append(buff, []byte(`{"name":`)...)
 	if err := addSqliteString(&buff, i.GetName()); err != nil {
 		return err
 	}
-	if i.GetSize() > 0 {
+	if attributes.Includes("asize") && i.GetSize() > 0 {
 		buff = append(buff, []byte(`,"asize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
 	}
-	if i.GetUsage() > 0 {
+	if attributes.Includes("dsize") && i.GetUsage() > 0 {
 		buff = append(buff, []byte(`,"dsize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
 	}
-	if !i.GetMtime().IsZero() {
+	if attributes.Includes("mtime") && !i.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
 	}
 
-	if i.flag == '@' {
+	if attributes.Includes("notreg") && i.flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
 	}
-	if i.flag == 'H' {
+	if attributes == nil && i.flag == 'H' {
 		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(i.mli, 10)+`,"hlnkc":true`)...)
 	}
 
@@ -853,11 +860,10 @@ func (a *SqliteAnalyzer) insertItemLocked(
 	return a.storage.InsertItem(parentID, name, isDir, size, usage, mtime, itemCount, mli, flag)
 }
 
-// updateItemLocked is a serialized wrapper around storage.UpdateItem.
-func (a *SqliteAnalyzer) updateItemLocked(id, size, usage, itemCount int64) error {
+func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, flag rune) error {
 	a.dbWriteMu.Lock()
 	defer a.dbWriteMu.Unlock()
-	return a.storage.UpdateItem(id, size, usage, itemCount)
+	return a.storage.UpdateItem(id, size, usage, itemCount, flag)
 }
 
 // hasInodeLocked is a serialized wrapper around storage.HasInode.
@@ -1063,6 +1069,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 	defer releaseSlot()
 
+	if parentID != nil && a.IsCancelled() {
+		return nil
+	}
+
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
@@ -1097,11 +1107,14 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	// Spawn subdirectory scans in parallel; each goroutine fully completes its
 	// subtree (including DB row finalization) before sending the result back.
 	for _, f := range files {
+		if a.IsCancelled() {
+			break
+		}
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 
 		if f.IsDir() {
-			if a.ignoreDir(name, entryPath) {
+			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			dirCount++
@@ -1182,11 +1195,17 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			totalSize += sub.size
 			totalUsage += sub.usage
 			itemCount += sub.itemCount
+			switch sub.flag {
+			case '!', '.':
+				if dirFlag != '!' {
+					dirFlag = '.'
+				}
+			}
 		}
 	}
 
 	// Update directory with computed stats
-	if err := a.updateItemLocked(dirID, totalSize, totalUsage, itemCount); err != nil {
+	if err := a.updateDirLocked(dirID, totalSize, totalUsage, itemCount, dirFlag); err != nil {
 		log.Printf("Error updating item: %v", err)
 	}
 
@@ -1215,6 +1234,9 @@ func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
 		return
 	}
 	for _, f := range archiveDir.Files {
+		if a.IsCancelled() {
+			return
+		}
 		if f.IsDir() {
 			var subDir *Dir
 			switch v := f.(type) {
