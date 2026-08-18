@@ -70,6 +70,7 @@ Flags:
   -u, --no-unicode                    Do not use Unicode symbols (for size bar)
       --no-view-file                  Do not allow viewing file contents
   -n, --non-interactive               Do not run in interactive mode
+      --output-attrs string           Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg)
   -o, --output-file string            Export all info into file as JSON
   -r, --read-from-storage             Use existing database instead of re-scanning
       --reverse-sort                  Reverse sorting order (smallest to largest) in non-interactive mode
