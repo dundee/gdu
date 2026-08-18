@@ -485,6 +485,8 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.openItem()
 	case 'i':
 		ui.showInfo()
+	case 'y':
+		ui.copySelectedPath()
 	case 'a', 'B', 'c', 'm':
 		ui.handleToggles(key)
 	case 'r':

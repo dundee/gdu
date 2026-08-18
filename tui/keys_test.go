@@ -1724,3 +1724,69 @@ func TestPrintMarked(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
 	assert.NotEmpty(t, buff.String())
 }
+
+func TestCopyPathToClipboard(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+
+	origWrite := clipboardWriteAll
+	defer func() { clipboardWriteAll = origWrite }()
+	var copied string
+	called := false
+	clipboardWriteAll = func(text string) error {
+		called = true
+		copied = text
+		return nil
+	}
+
+	ui.done = make(chan struct{})
+	assert.Nil(t, ui.AnalyzePath("test_dir", nil))
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	ui.table.Select(0, 0)
+	row, column := ui.table.GetSelection()
+	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
+
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'y', 0))
+
+	assert.True(t, called)
+	assert.Equal(t, selectedFile.GetPath(), copied)
+}
+
+func TestCopyPathToClipboardError(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+
+	origWrite := clipboardWriteAll
+	defer func() { clipboardWriteAll = origWrite }()
+	clipboardWriteAll = func(text string) error {
+		return errors.New("no clipboard here")
+	}
+
+	ui.done = make(chan struct{})
+	assert.Nil(t, ui.AnalyzePath("test_dir", nil))
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	ui.table.Select(0, 0)
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'y', 0))
+
+	assert.True(t, ui.pages.HasPage("error"))
+}
