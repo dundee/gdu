@@ -1,5 +1,5 @@
 Name:           gdu
-Version:        5.34.0
+Version:        5.37.0
 Release:        1
 Summary:        Pretty fast disk usage analyzer written in Go
 
@@ -52,6 +52,36 @@ install -Dpm 0755 %{name}.1 $RPM_BUILD_ROOT%{_mandir}/man1/gdu.1
 %{_mandir}/man1/gdu.1.gz
 
 %changelog
+* Tue Aug 18 2026 Daniel Milde - 5.37.0-1
+- feat: add web UI by @dundee in #617
+- feat: preview results found so far during a scan (Tab) by @ultranity in #594
+- feat: stop scanning and keep partial results by @ShivamB25 in #606
+- feat: show symlink target by @yurenchen000 in #612
+- feat: move items to XDG trash with D key by @phaethix in #608
+- feat: config option to change colors for marked items by @dundee in #566
+- feat: load /etc/gdu.yaml as system-wide config by @graysky2 in #567
+- feat: show numeric percentage on usage bars by @dundee in #590
+- feat: confirm before quitting when a long scan would be lost by @ultranity in #593
+- feat: honor block size environment variables by @ShivamB25 in #604
+- feat: customize JSON export attributes by @ShivamB25 in #605
+- feat: excluding OneDrive online file storage sizes by @tpill90 in #609
+- fix: various import, export and analyzer fixes by @dundee and others
+* Wed Apr 29 2026 Daniel Milde - 5.36.1-1
+- perf: top dir analyzer optimizations by @dundee in #562
+- perf: replace progress channel with atomic counters and ticker polling in all analyzers by @dundee in #563
+- refactor: analyzers and improve SQLite backend by @dundee in #549
+- fix: improve SQLite storage and analyzer implementation by @dundee in #541
+* Sun Apr 27 2026 Daniel Milde - 5.36.0-1
+- feat: top-dir analyzer for non-interactive mode by @dundee in #557
+- feat: implement deletion, JSON encoding, and query optimizations for SQLite storage by @dundee in #536
+* Tue Mar 31 2026 Daniel Milde - 5.35.0-1
+- feat: show progress bar when analysing the whole disk/partition by @dundee in #523
+- feat: print marked items to stdout by @dundee in #528
+- feat: add support for browsing tar archives by @dundee in #513
+- feat: force interactive mode by @dundee in #533
+- fix: create parent dir for sqlite db by @dundee in #511
+- fix: use smaller value log file size for 32bit systems by @dundee in #519
+- fix: make itemCount 64bit by @dundee in #520
 * Mon Mar 9 2026 Daniel Milde - 5.34.0-1
 - feat: add interactive file type filtering via -T key by @ShivamB25 in #493
 - feat: allow navigating above launch directory by @ShivamB25 in #494
