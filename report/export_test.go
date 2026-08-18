@@ -1,10 +1,12 @@
 package report
 
 import (
+	"archive/tar"
 	"bytes"
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -100,6 +102,35 @@ func TestAnalyzePathWithTopAndTypeFilter(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotContains(t, reportOutput.String(), `"name":"file"`)
 	assert.NotContains(t, reportOutput.String(), `"name":"file2"`)
+}
+
+func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
+	dir := t.TempDir()
+
+	archive, err := os.Create(filepath.Join(dir, "archive.tar"))
+	assert.Nil(t, err)
+	tw := tar.NewWriter(archive)
+	assert.Nil(t, tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeReg, Name: "inside.txt", Size: 11, Mode: 0o644,
+	}))
+	_, err = tw.Write([]byte("hello world"))
+	assert.Nil(t, err)
+	assert.Nil(t, tw.Close())
+	assert.Nil(t, archive.Close())
+
+	var output, reportOutput bytes.Buffer
+
+	ui := CreateExportUI(&output, &reportOutput, false, false, false, 5, 0, false, nil)
+	ui.SetArchiveBrowsing(true)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+
+	// Files inside an archive are not *analyze.File, so collecting the top
+	// items used to panic instead of exporting them.
+	assert.NotPanics(t, func() {
+		err = ui.AnalyzePath(dir, nil)
+	})
+	assert.Nil(t, err)
+	assert.Contains(t, reportOutput.String(), `"name":"inside.txt"`)
 }
 
 func TestAnalyzePathWithDepth(t *testing.T) {
