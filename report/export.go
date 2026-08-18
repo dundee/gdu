@@ -163,9 +163,18 @@ func (ui *UI) topDir(dir fs.Item) fs.Item {
 		topDir.BasePath = d.BasePath
 	}
 	for _, f := range files {
-		file := *f.(*analyze.File)
-		file.Parent = topDir
-		topDir.AddFile(&file)
+		// CollectTopFiles can return any fs.Item implementation (files stored in
+		// SQLite/BadgerDB, entries inside browsed archives, ...), so copy the
+		// attributes through the interface instead of type-asserting *analyze.File.
+		topDir.AddFile(&analyze.File{
+			Name:   f.GetName(),
+			Flag:   f.GetFlag(),
+			Size:   f.GetSize(),
+			Usage:  f.GetUsage(),
+			Mtime:  f.GetMtime(),
+			Mli:    f.GetMultiLinkedInode(),
+			Parent: topDir,
+		})
 	}
 	topDir.UpdateStats(make(fs.HardLinkedItems, 10))
 	return topDir
