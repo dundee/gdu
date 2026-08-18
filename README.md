@@ -192,7 +192,7 @@ flag with following meaning:
 
 * `.` An error occurred while reading a subdirectory, size may be not correct.
 
-* `@` File is symlink or socket. Symlinks are shown as `name -> target` (the link target is displayed next to the name, like `ls -l`).
+* `@` File is symlink or socket. Symlinks can be shown as `name -> target` (the link target is displayed next to the name, like `ls -l`).
 
 * `H` Same file was already counted (hard link).
 
