@@ -12,7 +12,7 @@ require (
 	github.com/mattn/go-isatty v0.0.22
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.42.0
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/ulikunitz/xz v0.5.15
