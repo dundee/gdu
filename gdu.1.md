@@ -102,6 +102,8 @@ non-interactive mode
 
 **\--no-confirm-quit**\[=false\] Do not ask for confirmation before quitting after a long scan
 
+**\--trash-command**=\"\" Command used to move items to trash instead of the built-in XDG trash (the item path is appended, e.g. \"trash-put\" or \"gio trash\")
+
 **\--no-delete**\[=false\] Do not allow deletions
 
 **\--no-view-file**\[=false\] Do not allow viewing file contents

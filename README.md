@@ -87,6 +87,7 @@ Flags:
       --since string                  Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)
   -s, --summarize                     Show only a total in non-interactive mode
   -t, --top int                       Show only top X largest files in non-interactive mode
+      --trash-command string          Command used to move items to trash instead of the built-in XDG trash (the item path is appended, e.g. "trash-put" or "gio trash")
   -T, --type strings                  File types to include (e.g., --type yaml,json)
       --until string                  Include files with mtime <= WHEN. WHEN accepts RFC3339 timestamp or date only YYYY-MM-DD
   -v, --version                       Print version
