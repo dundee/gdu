@@ -140,6 +140,10 @@ Delete items in the background, not blocking the UI from work
 
 Delete items in parallel, which might increase the speed of deletion
 
+#### `trash-command`
+
+Command used to move items to trash (with the `D` key) instead of the built-in XDG trash. The item path is appended as the last argument, so `trash-put` runs as `trash-put <path>`. This lets Gdu defer to a preferred trash tool and trash directory, for example `trash-put --trash-dir ~/.myTrash` or `gio trash`.
+
 #### `browse-parent-dirs`
 
 Allow navigating above the launch directory by pressing the left arrow key. When enabled, pressing left at the top-level directory will rescan and open its parent directory. Disabled by default.

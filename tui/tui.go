@@ -494,6 +494,13 @@ func (ui *UI) SetDeleteInBackground() {
 	go ui.updateStatusWorker()
 }
 
+// SetTrashCommand configures an external command used to move items to trash
+// instead of the built-in XDG trash. The item path is appended as the last
+// argument when the command runs.
+func (ui *UI) SetTrashCommand(command []string) {
+	ui.trasher = remove.TrashByCommand(command)
+}
+
 func (ui *UI) resetSorting() {
 	ui.sortBy = ui.defaultSortBy
 	ui.sortOrder = ui.defaultSortOrder
