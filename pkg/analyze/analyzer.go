@@ -84,6 +84,20 @@ func (a *BaseAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
 	a.ignoreFileType = filter
 }
 
+// isFilteringFiles reports whether a file-level filter is active. It mirrors
+// common.UI.IsFilteringFiles, which is what decides between UpdateStats and
+// UpdateStatsWithFileFiltering, so analyzers that finalize stats during the
+// scan can apply the same empty-directory rule (see resolveDirStats).
+//
+// This relies on the convention that a nil filter means "no filtering":
+// common.UI.CreateFileTypeFilter returns nil rather than a predicate that
+// accepts everything, and SetTimeFilter is only called when a time filter was
+// actually requested. Callers must not pass an always-false filter to mean
+// "unfiltered", or a filtered scan's accounting will be applied to it.
+func (a *BaseAnalyzer) isFilteringFiles() bool {
+	return a.ignoreFileType != nil || a.matchesTimeFilterFn != nil
+}
+
 // GetDone returns channel for checking when analysis is done
 func (a *BaseAnalyzer) GetDone() common.SignalGroup {
 	return a.doneChan

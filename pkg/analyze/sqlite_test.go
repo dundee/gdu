@@ -885,8 +885,9 @@ func TestSqliteAnalyzerAnalyzeDir(t *testing.T) {
 	assert.Equal(t, "test_dir", dir.GetName())
 	assert.True(t, dir.IsDir())
 	assert.Equal(t, int64(5), dir.GetItemCount())
-	// Size should include directory overhead + file sizes: 4096*3 + 7 bytes
-	assert.Equal(t, int64(7+4096*3), dir.GetSize())
+	// Size is the sum of the file sizes; gdu does not charge a directory for
+	// its own block. Must match the parallel analyzer (see dir_test.go).
+	assert.Equal(t, int64(7), dir.GetSize())
 
 	// Test dir tree
 	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
@@ -988,9 +989,12 @@ func TestSqliteAnalyzerIgnoreFileType(t *testing.T) {
 
 	analyzer.GetDone().Wait()
 
-	// Only directories should remain
+	// Every file was filtered out, so the whole tree is nothing but empty
+	// directories and collapses to a single item, exactly as
+	// Dir.UpdateStatsWithFileFiltering does (see resolveDirStats).
 	assert.Equal(t, "test_dir", dir.GetName())
-	assert.Equal(t, int64(3), dir.GetItemCount()) // test_dir, nested, subnested
+	assert.Equal(t, int64(1), dir.GetItemCount())
+	assert.Equal(t, int64(0), dir.GetUsage())
 }
 
 func TestSqliteAnalyzerHardlinks(t *testing.T) {
@@ -1013,7 +1017,7 @@ func TestSqliteAnalyzerHardlinks(t *testing.T) {
 	analyzer.GetDone().Wait()
 
 	// file2 and file3 are counted just once for size but twice for item count
-	assert.Equal(t, int64(7+4096*3), dir.GetSize())
+	assert.Equal(t, int64(7), dir.GetSize())
 	assert.Equal(t, int64(6), dir.GetItemCount())
 
 	// Check hard link flag
@@ -1120,8 +1124,9 @@ func TestSqliteAnalyzerTimeFilter(t *testing.T) {
 
 	analyzer.GetDone().Wait()
 
-	// Only directories should remain
-	assert.Equal(t, int64(3), dir.GetItemCount()) // test_dir, nested, subnested
+	// As above: nothing survives the filter, so the tree collapses to one item.
+	assert.Equal(t, int64(1), dir.GetItemCount())
+	assert.Equal(t, int64(0), dir.GetUsage())
 }
 
 func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
