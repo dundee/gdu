@@ -84,6 +84,75 @@ func TestPartialTreeLockedAccessors(t *testing.T) {
 	}
 }
 
+// TestRemoveFileUpdatesAncestorsUnderTheirOwnLock removes files from a child
+// directory while the root is read through its synchronized accessors. The
+// removal walks up the tree subtracting from every ancestor, so under -race
+// this catches ancestor stats being written while only the child is locked.
+func TestRemoveFileUpdatesAncestorsUnderTheirOwnLock(t *testing.T) {
+	const fileCount = 128
+
+	root := &Dir{
+		File:  &File{Name: "root"},
+		Files: make(fs.Files, 0, 1),
+	}
+	child := &Dir{
+		File:  &File{Name: "child", Parent: root},
+		Files: make(fs.Files, 0, fileCount),
+	}
+	root.AddFile(child)
+	for i := range fileCount {
+		child.AddFile(&File{
+			Name:   fmt.Sprintf("file-%03d", i),
+			Size:   1,
+			Usage:  1,
+			Parent: child,
+		})
+	}
+	root.UpdateStats(make(fs.HardLinkedItems))
+
+	doomed := make(fs.Files, 0, fileCount)
+	for item := range child.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		doomed = append(doomed, item)
+	}
+
+	stop := make(chan struct{})
+	var workers sync.WaitGroup
+
+	workers.Add(1)
+	go func() {
+		defer workers.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			readLockedTree(root)
+			runtime.Gosched()
+		}
+	}()
+
+	for _, item := range doomed {
+		child.RemoveFile(item)
+		runtime.Gosched()
+	}
+	close(stop)
+	workers.Wait()
+
+	if got, want := child.GetItemCount(), int64(1); got != want {
+		t.Fatalf("child item count = %d, want %d", got, want)
+	}
+	if got, want := root.GetItemCount(), int64(2); got != want {
+		t.Fatalf("root item count = %d, want %d", got, want)
+	}
+	if got, want := root.GetSize(), int64(0); got != want {
+		t.Fatalf("root size = %d, want %d", got, want)
+	}
+	if got, want := root.GetUsage(), int64(0); got != want {
+		t.Fatalf("root usage = %d, want %d", got, want)
+	}
+}
+
 // readLockedTree mirrors preview traversal: every mutable directory is read
 // through GetFilesLocked and its synchronized scalar accessors.
 func readLockedTree(root *Dir) {

@@ -5,7 +5,6 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -103,14 +102,12 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			dirCount++
 
 			subdir := &StoredDir{
-				&Dir{
+				Dir: &Dir{
 					File: &File{
 						Name: name,
 					},
 					BasePath: path,
 				},
-				nil,
-				sync.Mutex{},
 			}
 			dir.AddFile(subdir)
 
@@ -207,10 +204,14 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 }
 
 // StoredDir implements Dir item stored on disk
+//
+// It follows the same locking protocol as the embedded Dir: every mutable
+// field, including cachedFiles, is read and written under Dir.m, so readers
+// calling the synchronized accessors (GetSize, GetUsage, GetFlag, GetMtime,
+// GetItemCount) never observe a partially applied stats update.
 type StoredDir struct {
 	*Dir
 	cachedFiles fs.Files
-	dbLock      sync.Mutex
 }
 
 // GetParent returns parent dir
@@ -219,10 +220,11 @@ func (f *StoredDir) GetParent() fs.Item {
 		return nil
 	}
 
-	if !DefaultStorage.IsOpen() {
-		closeFn := DefaultStorage.Open()
-		defer closeFn()
-	}
+	// Storage.Open is reference counted, so taking a reference unconditionally
+	// is both cheap and free of the check-then-open race that an IsOpen guard
+	// has: another goroutine could close the database between the two.
+	closeFn := DefaultStorage.Open()
+	defer closeFn()
 
 	dir, err := DefaultStorage.GetDirForPath(f.BasePath)
 	if err != nil {
@@ -249,32 +251,36 @@ func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 
 // loadFiles loads files from storage or returns cached files
 func (f *StoredDir) loadFiles() fs.Files {
-	if f.cachedFiles != nil {
-		// Return a copy to avoid modifying cached slice
-		result := make(fs.Files, len(f.cachedFiles))
-		copy(result, f.cachedFiles)
-		return result
+	f.m.RLock()
+	if cached := copyFiles(f.cachedFiles); cached != nil {
+		f.m.RUnlock()
+		return cached
 	}
+	f.m.RUnlock()
 
-	if !DefaultStorage.IsOpen() {
-		f.dbLock.Lock()
-		defer f.dbLock.Unlock()
-		closeFn := DefaultStorage.Open()
-		defer closeFn()
+	closeFn := DefaultStorage.Open()
+	defer closeFn()
+
+	// The write lock covers both f.Files and f.cachedFiles for the whole load,
+	// so a concurrent updateStats cannot observe a half-filled cache.
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if cached := copyFiles(f.cachedFiles); cached != nil {
+		// another goroutine populated the cache while we were unlocked
+		return cached
 	}
 
 	var files fs.Files
 	for _, file := range f.Files {
 		if file.IsDir() {
 			dir := &StoredDir{
-				&Dir{
+				Dir: &Dir{
 					File: &File{
 						Name: file.GetName(),
 					},
 					BasePath: f.GetPath(),
 				},
-				nil,
-				sync.Mutex{},
 			}
 
 			err := DefaultStorage.LoadDir(dir)
@@ -288,7 +294,16 @@ func (f *StoredDir) loadFiles() fs.Files {
 	}
 
 	f.cachedFiles = files
-	// Return a copy to avoid modifying cached slice
+	return copyFiles(files)
+}
+
+// copyFiles returns a copy of files so callers cannot mutate the cached slice.
+// It returns nil for a nil input, letting callers use the result to distinguish
+// "not cached" from "cached but empty".
+func copyFiles(files fs.Files) fs.Files {
+	if files == nil {
+		return nil
+	}
 	result := make(fs.Files, len(files))
 	copy(result, files)
 	return result
@@ -297,23 +312,32 @@ func (f *StoredDir) loadFiles() fs.Files {
 // RemoveFile removes file from stored directory
 // It also updates size and item count of parent directories
 func (f *StoredDir) RemoveFile(item fs.Item) {
-	if !DefaultStorage.IsOpen() {
-		f.dbLock.Lock()
-		defer f.dbLock.Unlock()
-		closeFn := DefaultStorage.Open()
-		defer closeFn()
-	}
+	closeFn := DefaultStorage.Open()
+	defer closeFn()
 
+	f.m.Lock()
 	f.Files = f.Files.Remove(item)
 	f.cachedFiles = nil
+	f.m.Unlock()
+
+	f.subtractStats(item)
+}
+
+// subtractStats removes item's totals from this dir and every ancestor,
+// persisting each one. Every directory is updated and stored under its own
+// write lock so readers never see the stats and the stored copy disagree.
+func (f *StoredDir) subtractStats(item fs.Item) {
+	itemCount, size, usage := item.GetItemCount(), item.GetSize(), item.GetUsage()
 
 	cur := f
 	for {
-		cur.ItemCount -= item.GetItemCount()
-		cur.Size -= item.GetSize()
-		cur.Usage -= item.GetUsage()
-
+		cur.m.Lock()
+		cur.ItemCount -= itemCount
+		cur.Size -= size
+		cur.Usage -= usage
 		err := DefaultStorage.StoreDir(cur)
+		cur.m.Unlock()
+
 		if err != nil {
 			log.Print(err.Error())
 		}
@@ -329,7 +353,7 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 // GetItemStats returns item count, apparent usage and real usage of this dir
 func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
 	f.updateStats(linkedItems, filteringFiles)
-	return f.ItemCount, f.GetSize(), f.GetUsage()
+	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }
 
 func (f *StoredDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
@@ -342,15 +366,21 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 }
 
 func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
-	if !DefaultStorage.IsOpen() {
-		closeFn := DefaultStorage.Open()
-		defer closeFn()
-	}
+	closeFn := DefaultStorage.Open()
+	defer closeFn()
+
+	// Drop the cache and snapshot the fields we accumulate into, so the stats
+	// are computed from locals while no lock is held. Recursing into
+	// entry.GetItemStats below must not happen under f.m.
+	f.m.Lock()
+	f.cachedFiles = nil
+	mtime := f.Mtime
+	flag := f.Flag
+	f.m.Unlock()
 
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int64
-	f.cachedFiles = nil
 	files := f.loadFiles()
 	for _, entry := range files {
 		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
@@ -358,61 +388,53 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 		totalUsage += usage
 		itemCount += count
 
-		if entry.GetMtime().After(f.Mtime) {
-			f.Mtime = entry.GetMtime()
+		entryMtime := entry.GetMtime()
+		if entryMtime.After(mtime) {
+			mtime = entryMtime
 		}
 
 		switch entry.GetFlag() {
 		case '!', '.':
-			if f.Flag != '!' {
-				f.Flag = '.'
+			if flag != '!' {
+				flag = '.'
 			}
 		}
 	}
+
+	// Commit and persist under one write lock so neither a concurrent reader
+	// nor the gob encoder can observe a half-updated directory.
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	f.Mtime = mtime
+	f.Flag = flag
 	f.cachedFiles = nil
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize
 	f.Usage = totalUsage
-	err := DefaultStorage.StoreDir(f)
-	if err != nil {
+
+	if err := DefaultStorage.StoreDir(f); err != nil {
 		log.Print(err.Error())
 	}
 }
 
 // RemoveFileByName removes file by name from stored directory
 func (f *StoredDir) RemoveFileByName(name string) {
-	if !DefaultStorage.IsOpen() {
-		f.dbLock.Lock()
-		defer f.dbLock.Unlock()
-		closeFn := DefaultStorage.Open()
-		defer closeFn()
-	}
+	closeFn := DefaultStorage.Open()
+	defer closeFn()
 
+	f.m.Lock()
 	idx, ok := f.Files.FindByName(name)
 	if !ok {
+		f.m.Unlock()
 		return
 	}
 	item := f.Files[idx]
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
 	f.cachedFiles = nil
+	f.m.Unlock()
 
-	cur := f
-	for {
-		cur.ItemCount -= item.GetItemCount()
-		cur.Size -= item.GetSize()
-		cur.Usage -= item.GetUsage()
-
-		err := DefaultStorage.StoreDir(cur)
-		if err != nil {
-			log.Print(err.Error())
-		}
-
-		parent := cur.GetParent()
-		if parent == nil {
-			break
-		}
-		cur = parent.(*StoredDir)
-	}
+	f.subtractStats(item)
 }
 
 // ParentDir represents parent directory of single file

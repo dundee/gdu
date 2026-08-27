@@ -476,20 +476,32 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 // RemoveFile removes item from dir, updates size and item count
 func (f *Dir) RemoveFile(item fs.Item) {
 	f.m.Lock()
-	defer f.m.Unlock()
-
 	f.Files = f.Files.Remove(item)
+	f.m.Unlock()
+
+	f.subtractStats(item)
+}
+
+// subtractStats removes item's totals from this dir and every ancestor. Each
+// directory is updated under its own lock, because holding only this dir's
+// mutex would leave the ancestors' writes unsynchronized against readers
+// calling GetSize, GetUsage or GetItemCount on them.
+func (f *Dir) subtractStats(item fs.Item) {
+	itemCount, size, usage := item.GetItemCount(), item.GetSize(), item.GetUsage()
 
 	cur := f
 	for {
-		cur.ItemCount -= item.GetItemCount()
-		cur.Size -= item.GetSize()
-		cur.Usage -= item.GetUsage()
+		cur.m.Lock()
+		cur.ItemCount -= itemCount
+		cur.Size -= size
+		cur.Usage -= usage
+		parent := cur.Parent
+		cur.m.Unlock()
 
-		if cur.Parent == nil {
+		if parent == nil {
 			break
 		}
-		cur = cur.Parent.(*Dir)
+		cur = parent.(*Dir)
 	}
 }
 
@@ -525,24 +537,14 @@ func (f *Dir) RLock() func() {
 // RemoveFileByName removes item by name from dir
 func (f *Dir) RemoveFileByName(name string) {
 	f.m.Lock()
-	defer f.m.Unlock()
-
 	idx, ok := f.Files.FindByName(name)
 	if !ok {
+		f.m.Unlock()
 		return
 	}
 	item := f.Files[idx]
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
+	f.m.Unlock()
 
-	cur := f
-	for {
-		cur.ItemCount -= item.GetItemCount()
-		cur.Size -= item.GetSize()
-		cur.Usage -= item.GetUsage()
-
-		if cur.Parent == nil {
-			break
-		}
-		cur = cur.Parent.(*Dir)
-	}
+	f.subtractStats(item)
 }
