@@ -5,6 +5,7 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -205,13 +206,21 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 
 // StoredDir implements Dir item stored on disk
 //
-// It follows the same locking protocol as the embedded Dir: every mutable
-// field, including cachedFiles, is read and written under Dir.m, so readers
-// calling the synchronized accessors (GetSize, GetUsage, GetFlag, GetMtime,
-// GetItemCount) never observe a partially applied stats update.
+// The stat fields inherited from Dir follow Dir's locking protocol: they are
+// written under Dir.m, so readers calling the synchronized accessors (GetSize,
+// GetUsage, GetFlag, GetMtime, GetItemCount) never observe a partially applied
+// stats update.
+//
+// cachedFiles gets its own leaf mutex rather than sharing Dir.m, because
+// loadFiles runs underneath GetFiles, and GetFiles is the caller-locked half
+// of the fs.Item contract: callers such as the TUI hold RLock across the whole
+// iteration (see tui.(*UI).showDir). Taking Dir.m in loadFiles would therefore
+// re-enter a lock the caller already holds, which sync.RWMutex does not allow.
+// cacheLock is never held while Dir.m is held, so the two cannot deadlock.
 type StoredDir struct {
 	*Dir
 	cachedFiles fs.Files
+	cacheLock   sync.Mutex
 }
 
 // GetParent returns parent dir
@@ -250,29 +259,40 @@ func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 }
 
 // loadFiles loads files from storage or returns cached files
+//
+// Like Dir.GetFiles, this reads f.Files without taking Dir.m: it is reached
+// through GetFiles, whose callers are the ones holding the read lock.
 func (f *StoredDir) loadFiles() fs.Files {
+	return f.materializeFiles(f.Files)
+}
+
+// loadFilesLocked is the self-locking counterpart of loadFiles, mirroring the
+// GetFiles / GetFilesLocked split on Dir. Callers that do not already hold the
+// read lock use this so the entry list cannot change underneath them.
+func (f *StoredDir) loadFilesLocked() fs.Files {
 	f.m.RLock()
-	if cached := copyFiles(f.cachedFiles); cached != nil {
-		f.m.RUnlock()
-		return cached
-	}
+	entries := copyFiles(f.Files)
 	f.m.RUnlock()
 
+	return f.materializeFiles(entries)
+}
+
+// materializeFiles turns raw stored entries into usable items, reading child
+// directories back out of storage, and memoizes the result in cachedFiles.
+// Only cachedFiles is synchronized here, under its own leaf mutex.
+func (f *StoredDir) materializeFiles(entries fs.Files) fs.Files {
 	closeFn := DefaultStorage.Open()
 	defer closeFn()
 
-	// The write lock covers both f.Files and f.cachedFiles for the whole load,
-	// so a concurrent updateStats cannot observe a half-filled cache.
-	f.m.Lock()
-	defer f.m.Unlock()
+	f.cacheLock.Lock()
+	defer f.cacheLock.Unlock()
 
 	if cached := copyFiles(f.cachedFiles); cached != nil {
-		// another goroutine populated the cache while we were unlocked
 		return cached
 	}
 
 	var files fs.Files
-	for _, file := range f.Files {
+	for _, file := range entries {
 		if file.IsDir() {
 			dir := &StoredDir{
 				Dir: &Dir{
@@ -317,10 +337,18 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 
 	f.m.Lock()
 	f.Files = f.Files.Remove(item)
-	f.cachedFiles = nil
 	f.m.Unlock()
+	f.invalidateCache()
 
 	f.subtractStats(item)
+}
+
+// invalidateCache drops the loaded children so the next loadFiles re-reads
+// them from storage.
+func (f *StoredDir) invalidateCache() {
+	f.cacheLock.Lock()
+	f.cachedFiles = nil
+	f.cacheLock.Unlock()
 }
 
 // subtractStats removes item's totals from this dir and every ancestor,
@@ -372,16 +400,17 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 	// Drop the cache and snapshot the fields we accumulate into, so the stats
 	// are computed from locals while no lock is held. Recursing into
 	// entry.GetItemStats below must not happen under f.m.
-	f.m.Lock()
-	f.cachedFiles = nil
+	f.invalidateCache()
+
+	f.m.RLock()
 	mtime := f.Mtime
 	flag := f.Flag
-	f.m.Unlock()
+	f.m.RUnlock()
 
 	totalSize := int64(4096)
 	totalUsage := int64(4096)
 	var itemCount int64
-	files := f.loadFiles()
+	files := f.loadFilesLocked()
 	for _, entry := range files {
 		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
 		totalSize += size
@@ -401,6 +430,8 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 		}
 	}
 
+	f.invalidateCache()
+
 	// Commit and persist under one write lock so neither a concurrent reader
 	// nor the gob encoder can observe a half-updated directory.
 	f.m.Lock()
@@ -408,7 +439,6 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 
 	f.Mtime = mtime
 	f.Flag = flag
-	f.cachedFiles = nil
 	f.ItemCount = itemCount + 1
 	f.Size = totalSize
 	f.Usage = totalUsage
@@ -431,8 +461,8 @@ func (f *StoredDir) RemoveFileByName(name string) {
 	}
 	item := f.Files[idx]
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
-	f.cachedFiles = nil
 	f.m.Unlock()
+	f.invalidateCache()
 
 	f.subtractStats(item)
 }

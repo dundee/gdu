@@ -4,6 +4,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -96,6 +97,53 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 
 	assert.False(t, DefaultStorage.IsOpen(), "every reference must be released again")
 	assert.Positive(t, dir.GetSize())
+}
+
+// TestStoredDirGetFilesUnderCallerHeldReadLock pins the caller-locked half of
+// the fs.Item contract: tui.(*UI).showDir holds RLock across the whole
+// GetFiles iteration, so loading children lazily must not re-enter Dir.m.
+// sync.RWMutex is not reentrant, so a write lock there self-deadlocks, and
+// even a read lock deadlocks once a writer has queued behind the caller.
+func TestStoredDirGetFilesUnderCallerHeldReadLock(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	analyzer := CreateStoredAnalyzer(t.TempDir())
+	dir := analyzer.AnalyzeDir(
+		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	).(*StoredDir)
+	analyzer.GetDone().Wait()
+
+	dir.UpdateStats(make(fs.HardLinkedItems))
+
+	done := make(chan int, 1)
+	go func() {
+		unlock := dir.RLock()
+		defer unlock()
+
+		// Queue a writer on the very mutex the caller holds for reading, so
+		// the read-lock variant of the bug is covered too.
+		queued := make(chan struct{})
+		go func() {
+			close(queued)
+			dir.SetFlag('!')
+		}()
+		<-queued
+		time.Sleep(50 * time.Millisecond)
+
+		var count int
+		for range dir.GetFiles(fs.SortByName, fs.SortAsc) {
+			count++
+		}
+		done <- count
+	}()
+
+	select {
+	case count := <-done:
+		assert.Positive(t, count)
+	case <-time.After(30 * time.Second):
+		t.Fatal("GetFiles deadlocked while the caller held the directory read lock")
+	}
 }
 
 // readLockedStoredDir mirrors a UI traversal: every scalar accessor plus the
