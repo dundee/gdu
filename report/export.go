@@ -19,6 +19,8 @@ import (
 	"github.com/fatih/color"
 )
 
+const clearTerminalLine = "\r\x1b[2K"
+
 // UI struct
 type UI struct {
 	*common.UI
@@ -273,27 +275,22 @@ func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 func (ui *UI) updateProgress() {
 	waitingForWrite := false
 
-	emptyRow := "\r"
-	for j := 0; j < 100; j++ {
-		emptyRow += " "
-	}
-
 	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
 	doneChan := ui.Analyzer.GetDone()
 
 	i := 0
 	for {
-		fmt.Fprint(ui.output, emptyRow)
+		fmt.Fprint(ui.output, clearTerminalLine)
 
 		progress := ui.Analyzer.GetProgress()
 
 		select {
 		case <-doneChan:
-			fmt.Fprint(ui.output, "\r")
+			fmt.Fprint(ui.output, clearTerminalLine)
 			waitingForWrite = true
 		case <-ui.writtenChan:
-			fmt.Fprint(ui.output, "\r")
+			fmt.Fprint(ui.output, clearTerminalLine)
 			return
 		default:
 		}
