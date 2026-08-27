@@ -403,32 +403,12 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 	f.invalidateCache()
 
 	f.m.RLock()
-	mtime := f.Mtime
-	flag := f.Flag
+	curMtime := f.Mtime
+	curFlag := f.Flag
 	f.m.RUnlock()
 
-	totalSize := int64(4096)
-	totalUsage := int64(4096)
-	var itemCount int64
 	files := f.loadFilesLocked()
-	for _, entry := range files {
-		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
-		totalSize += size
-		totalUsage += usage
-		itemCount += count
-
-		entryMtime := entry.GetMtime()
-		if entryMtime.After(mtime) {
-			mtime = entryMtime
-		}
-
-		switch entry.GetFlag() {
-		case '!', '.':
-			if flag != '!' {
-				flag = '.'
-			}
-		}
-	}
+	totals, mtime, flag := aggregateDirEntries(files, curMtime, curFlag, linkedItems, filteringFiles)
 
 	f.invalidateCache()
 
@@ -439,9 +419,7 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 
 	f.Mtime = mtime
 	f.Flag = flag
-	f.ItemCount = itemCount + 1
-	f.Size = totalSize
-	f.Usage = totalUsage
+	f.ItemCount, f.Size, f.Usage = resolveDirStats(totals, filteringFiles)
 
 	if err := DefaultStorage.StoreDir(f); err != nil {
 		log.Print(err.Error())

@@ -1041,13 +1041,13 @@ func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (sta
 
 // nolint:funlen
 func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
-	// Start with 4096 for directory's own size/usage, matching Dir.UpdateStats behavior
+	// This analyzer aggregates as it scans rather than via a later updateStats
+	// pass, but it must land on the same numbers: totals cover the children
+	// only, and resolveDirStats applies the empty-directory rule at the end.
 	var (
-		totalSize  int64 = 4096
-		totalUsage int64 = 4096
+		totals     = dirTotals{itemCount: 1}
 		filesSize  int64 // only files in this directory, for progress reporting
-		itemCount  int64 = 1
-		subDirChan       = make(chan *SqliteItem)
+		subDirChan = make(chan *SqliteItem)
 		dirCount   int
 	)
 
@@ -1155,10 +1155,11 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			}
 			a.persistArchive(stat.archiveDir, archiveID)
 
-			totalSize += stat.size
-			totalUsage += stat.usage
+			totals.size += stat.size
+			totals.usage += stat.usage
+			totals.itemCount += stat.itemCount
+			totals.entries++
 			filesSize += stat.usage
-			itemCount += stat.itemCount
 			continue
 		}
 
@@ -1178,10 +1179,12 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			continue
 		}
 
-		totalSize += stat.size
-		totalUsage += stat.usage
+		totals.size += stat.size
+		totals.usage += stat.usage
+		totals.itemCount++
+		totals.entries++
+		totals.hasFiles = true
 		filesSize += stat.usage
-		itemCount++
 	}
 
 	// Release the concurrency slot before draining subDirChan so children
@@ -1192,9 +1195,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	for i := 0; i < dirCount; i++ {
 		sub := <-subDirChan
 		if sub != nil {
-			totalSize += sub.size
-			totalUsage += sub.usage
-			itemCount += sub.itemCount
+			totals.size += sub.size
+			totals.usage += sub.usage
+			totals.itemCount += sub.itemCount
+			totals.entries++
 			switch sub.flag {
 			case '!', '.':
 				if dirFlag != '!' {
@@ -1203,6 +1207,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			}
 		}
 	}
+
+	// Files excluded by a type or time filter were never counted above, so the
+	// empty-directory rule sees exactly the entries that survived filtering.
+	itemCount, totalSize, totalUsage := resolveDirStats(totals, a.isFilteringFiles())
 
 	// Update directory with computed stats
 	if err := a.updateDirLocked(dirID, totalSize, totalUsage, itemCount, dirFlag); err != nil {

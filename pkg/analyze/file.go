@@ -180,6 +180,78 @@ func (f *File) RemoveFileByName(name string) {
 // of this value referencing this constant so they can never drift apart.
 const EmptyDirSize int64 = 512
 
+// dirTotals is the aggregate of a directory's counted children, before gdu's
+// empty-directory rule is applied.
+//
+// itemCount includes the directory itself, so it starts at 1. entries is the
+// number of children that were counted, and hasFiles records whether any of
+// them was not itself a directory.
+type dirTotals struct {
+	size      int64
+	usage     int64
+	itemCount int64
+	entries   int
+	hasFiles  bool
+}
+
+// resolveDirStats applies gdu's empty-directory rule to a directory's
+// aggregated child totals.
+//
+// A directory that counted no children — or, when file filtering is active,
+// one whose entries are all themselves empty directories — reports EmptyDirSize
+// as its apparent size and zero real usage. gdu deliberately does not charge a
+// directory for the block the filesystem allocates to it, so a tree containing
+// nothing but empty directories reports no disk usage at all.
+//
+// This is the single definition of that rule. Every analyzer must route through
+// it, otherwise the numbers gdu reports depend on which analyzer produced them.
+func resolveDirStats(totals dirTotals, filteringFiles bool) (itemCount, size, usage int64) {
+	onlyEmptyDirs := !totals.hasFiles && filteringFiles &&
+		totals.itemCount == int64(totals.entries+1)
+
+	if totals.entries == 0 || onlyEmptyDirs {
+		return 1, totals.size + EmptyDirSize, 0
+	}
+	return totals.itemCount, totals.size, totals.usage
+}
+
+// aggregateDirEntries folds the stats of entries into the totals their parent
+// directory should report, and returns the parent's mtime and flag updated from
+// its children. mtime and flag are seeded with the parent's current values.
+func aggregateDirEntries(
+	entries fs.Files,
+	mtime time.Time,
+	flag rune,
+	linkedItems fs.HardLinkedItems,
+	filteringFiles bool,
+) (totals dirTotals, newMtime time.Time, newFlag rune) {
+	totals = dirTotals{itemCount: 1, entries: len(entries)}
+
+	for _, entry := range entries {
+		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
+		totals.size += size
+		totals.usage += usage
+		totals.itemCount += count
+
+		if entryMtime := entry.GetMtime(); entryMtime.After(mtime) {
+			mtime = entryMtime
+		}
+
+		if !entry.IsDir() {
+			totals.hasFiles = true
+		}
+
+		switch entry.GetFlag() {
+		case '!', '.':
+			if flag != '!' {
+				flag = '.'
+			}
+		}
+	}
+
+	return totals, mtime, flag
+}
+
 // Dir struct
 type Dir struct {
 	*File
@@ -429,48 +501,13 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	flag := f.Flag
 	f.m.RUnlock()
 
-	totalSize := int64(0)
-	totalUsage := int64(0)
-	var itemCount int64 = 1
-	var hasFiles bool
-	for _, entry := range files {
-		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
-		totalSize += size
-		totalUsage += usage
-		itemCount += count
-
-		entryMtime := entry.GetMtime()
-		if entryMtime.After(mtime) {
-			mtime = entryMtime
-		}
-
-		if !entry.IsDir() {
-			hasFiles = true
-		}
-
-		switch entry.GetFlag() {
-		case '!', '.':
-			if flag != '!' {
-				flag = '.'
-			}
-		}
-	}
+	totals, mtime, flag := aggregateDirEntries(files, mtime, flag, linkedItems, filteringFiles)
 
 	f.m.Lock()
 	defer f.m.Unlock()
 	f.Mtime = mtime
 	f.Flag = flag
-
-	// no files, or just empty dirs
-	if len(files) == 0 || (!hasFiles && filteringFiles && itemCount == int64(len(files)+1)) {
-		f.ItemCount = 1
-		f.Size = totalSize + EmptyDirSize
-		f.Usage = 0
-	} else {
-		f.ItemCount = itemCount
-		f.Size = totalSize
-		f.Usage = totalUsage
-	}
+	f.ItemCount, f.Size, f.Usage = resolveDirStats(totals, filteringFiles)
 }
 
 // RemoveFile removes item from dir, updates size and item count

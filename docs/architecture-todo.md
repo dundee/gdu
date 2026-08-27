@@ -70,20 +70,23 @@ _analyzer_, _Item_, _Dir_, _storage strategy_, _hard-link tracker_.
 
 ---
 
-## P2 — Collapse the empty-directory size to a single constant
+## P2 — Collapse the empty-directory size to a single constant — **mostly done**
 
 **Strength: Strong** (cheap, high-correctness)
 
-- **Files:** `pkg/analyze/file.go:181` (`EmptyDirSize = 512`, documented as _the_ single
-  source), but raw `4096` is hardcoded in `stored.go:350-351`, `sqlite.go:1046-1047`,
-  `zipdir.go:164-165`, `tardir.go:241-242`; `parallel_top_dir.go:248` and `top_dir.go:114`
-  do use the constant.
-- **Problem:** The doc block on `EmptyDirSize` promises "every producer and consumer
-  references this constant" — already violated in five places, and the value even differs
-  (512 vs 4096). Directory size therefore depends on which analyzer ran.
-- **Solution:** Route every producer through the constant (or an explicit
-  `dirOwnSize`/`emptyDirSize` pair if the 512-vs-4096 split is intentional — decide and
-  document it, then reference it everywhere).
+- **Files:** `pkg/analyze/file.go` — `EmptyDirSize`, `dirTotals`, `resolveDirStats` and
+  `aggregateDirEntries` are now the single definition of directory accounting.
+  `Dir.updateStats`, `StoredDir.updateStats` and `SqliteAnalyzer.processDir` all route
+  through it; `parallel_top_dir.go` and `top_dir.go` already used the constant.
+- **Was:** raw `4096` hardcoded as the directory's own size _and usage_ in
+  `stored.go` and `sqlite.go`, so `--db` scans charged every directory 4096 bytes of disk
+  usage that the in-memory analyzer did not. An empty directory reported 4096/4096 instead
+  of 512/0, and the error compounded up the tree. Fixed, with
+  `TestEmptyDirStatsAcrossAnalyzers` locking parity across all five analyzers.
+- **Remaining:** `zipdir.go:164-165` and `tardir.go:241-242` still seed synthetic archive
+  directories with `Size: 4096, Usage: 4096`. These are dead values — `Dir.updateStats`
+  overwrites them — but they are misleading and should be dropped or set from
+  `EmptyDirSize`.
 - **Benefits:** _Locality_ — one number, one place; removes silent per-analyzer divergence.
 
 ---
