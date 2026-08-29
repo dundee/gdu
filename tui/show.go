@@ -39,6 +39,7 @@ Item under cursor:
                [::b]D     [white:black:-]Move file or directory to trash
 			   [::b]space [white:black:-]Mark file or directory for deletion
 			   [::b]p     [white:black:-]Print marked items paths to stdout after quitting
+			   [::b]y     [white:black:-]Copy path of file or directory to clipboard
 			   [::b]I     [white:black:-]Ignore file or directory
                [::b]v     [white:black:-]Show content of file
                [::b]o     [white:black:-]Open file or directory in external program

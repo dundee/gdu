@@ -23,6 +23,17 @@ func TestHelpMoveToTrash(t *testing.T) {
 	assert.False(t, strings.Contains(helpText, "Move file or directory to trash (disabled)"))
 }
 
+func TestHelpListsCopyPath(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	defer simScreen.Fini()
+
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+
+	helpText := ui.formatHelpTextFor()
+
+	assert.True(t, strings.Contains(helpText, "Copy path of file or directory to clipboard"))
+}
+
 func TestHelpNoSpawnShell(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()

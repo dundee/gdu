@@ -373,9 +373,9 @@ func (ui *UI) openItem() {
 	openBinary := "xdg-open"
 
 	switch runtime.GOOS {
-	case "darwin":
+	case osDarwin:
 		openBinary = "open"
-	case "windows":
+	case osWindows:
 		openBinary = "explorer"
 	}
 

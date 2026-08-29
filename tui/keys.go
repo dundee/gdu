@@ -507,6 +507,9 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 	case 'p':
 		ui.printMarked()
 		return nil
+	case 'y':
+		ui.copySelectedPath()
+		return nil
 	case 'I':
 		ui.ignoreItem()
 	}
