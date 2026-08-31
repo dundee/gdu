@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -39,6 +40,7 @@ Item under cursor:
                [::b]D     [white:black:-]Move file or directory to trash
 			   [::b]space [white:black:-]Mark file or directory for deletion
 			   [::b]p     [white:black:-]Print marked items paths to stdout after quitting
+			   [::b]y     [white:black:-]Copy path of file or directory to clipboard
 			   [::b]I     [white:black:-]Ignore file or directory
                [::b]v     [white:black:-]Show content of file
                [::b]o     [white:black:-]Open file or directory in external program
@@ -346,6 +348,24 @@ func (ui *UI) showErrFromGo(msg string, err error) {
 	ui.app.QueueUpdateDraw(func() {
 		ui.showErr(msg, err)
 	})
+}
+
+// messageTimeout is how long a transient status message stays in the header.
+const messageTimeout = 2 * time.Second
+
+// showMessage briefly replaces the header text with a status message and
+// restores the previous text afterwards.
+func (ui *UI) showMessage(message string) {
+	previousText := ui.header.GetText(false)
+	ui.header.SetText(message)
+
+	go func() {
+		time.Sleep(messageTimeout)
+		ui.app.QueueUpdateDraw(func() {
+			ui.header.Clear()
+			ui.header.SetText(previousText)
+		})
+	}()
 }
 
 func (ui *UI) showHelp() {

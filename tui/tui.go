@@ -596,19 +596,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 
 func (ui *UI) confirmDeletion(action DeleteAction) {
 	if ui.noDelete {
-		previousHeaderText := ui.header.GetText(false)
-
-		// show feedback to user
-		ui.header.SetText(" Deletion is disabled!")
-
-		go func() {
-			time.Sleep(2 * time.Second)
-			ui.app.QueueUpdateDraw(func() {
-				ui.header.Clear()
-				ui.header.SetText(previousHeaderText)
-			})
-		}()
-
+		ui.showMessage(" Deletion is disabled!")
 		return
 	}
 
