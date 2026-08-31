@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -347,6 +348,24 @@ func (ui *UI) showErrFromGo(msg string, err error) {
 	ui.app.QueueUpdateDraw(func() {
 		ui.showErr(msg, err)
 	})
+}
+
+// messageTimeout is how long a transient status message stays in the header.
+const messageTimeout = 2 * time.Second
+
+// showMessage briefly replaces the header text with a status message and
+// restores the previous text afterwards.
+func (ui *UI) showMessage(message string) {
+	previousText := ui.header.GetText(false)
+	ui.header.SetText(message)
+
+	go func() {
+		time.Sleep(messageTimeout)
+		ui.app.QueueUpdateDraw(func() {
+			ui.header.Clear()
+			ui.header.SetText(previousText)
+		})
+	}()
 }
 
 func (ui *UI) showHelp() {

@@ -27,47 +27,49 @@ func lookPathFor(names ...string) func(string) (string, error) {
 
 func TestClipboardCommand(t *testing.T) {
 	for name, tt := range map[string]struct {
-		goos     string
-		wayland  bool
-		lookPath func(string) (string, error)
-		want     []string
-		wantOK   bool
+		env    clipboardEnv
+		want   []string
+		wantOK bool
 	}{
 		"darwin uses pbcopy": {
-			goos: osDarwin, lookPath: lookPathFor("pbcopy"),
+			env:  clipboardEnv{goos: osDarwin, lookPath: lookPathFor("pbcopy")},
 			want: []string{"/usr/bin/pbcopy"}, wantOK: true,
 		},
 		"windows uses clip": {
-			goos: osWindows, lookPath: lookPathFor("clip"),
+			env:  clipboardEnv{goos: osWindows, lookPath: lookPathFor("clip")},
 			want: []string{"/usr/bin/clip"}, wantOK: true,
 		},
 		"linux uses xclip": {
-			goos: osLinux, lookPath: lookPathFor("xclip", "xsel"),
+			env:  clipboardEnv{goos: "linux", lookPath: lookPathFor("xclip", "xsel")},
 			want: []string{"/usr/bin/xclip", "-selection", "clipboard"}, wantOK: true,
 		},
 		"linux falls back to xsel": {
-			goos: osLinux, lookPath: lookPathFor("xsel"),
+			env:  clipboardEnv{goos: "linux", lookPath: lookPathFor("xsel")},
 			want: []string{"/usr/bin/xsel", "--clipboard", "--input"}, wantOK: true,
 		},
+		"freebsd uses the same tools as linux": {
+			env:  clipboardEnv{goos: "freebsd", lookPath: lookPathFor("xclip")},
+			want: []string{"/usr/bin/xclip", "-selection", "clipboard"}, wantOK: true,
+		},
 		"wayland session prefers wl-copy": {
-			goos: osLinux, wayland: true, lookPath: lookPathFor("wl-copy", "xclip"),
+			env:  clipboardEnv{goos: "linux", wayland: true, lookPath: lookPathFor("wl-copy", "xclip")},
 			want: []string{"/usr/bin/wl-copy"}, wantOK: true,
 		},
 		"without wayland session prefers xclip over wl-copy": {
-			goos: osLinux, wayland: false, lookPath: lookPathFor("wl-copy", "xclip"),
+			env:  clipboardEnv{goos: "linux", wayland: false, lookPath: lookPathFor("wl-copy", "xclip")},
 			want: []string{"/usr/bin/xclip", "-selection", "clipboard"}, wantOK: true,
 		},
 		"falls back to wl-copy when only tool": {
-			goos: osLinux, wayland: false, lookPath: lookPathFor("wl-copy"),
+			env:  clipboardEnv{goos: "linux", wayland: false, lookPath: lookPathFor("wl-copy")},
 			want: []string{"/usr/bin/wl-copy"}, wantOK: true,
 		},
 		"no tool available": {
-			goos: osLinux, lookPath: lookPathFor(),
+			env:  clipboardEnv{goos: "linux", lookPath: lookPathFor()},
 			want: nil, wantOK: false,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, ok := clipboardCommand(tt.goos, tt.wayland, tt.lookPath)
+			got, ok := tt.env.command()
 			assert.Equal(t, tt.wantOK, ok)
 			assert.Equal(t, tt.want, got)
 		})

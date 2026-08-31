@@ -5,59 +5,74 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-// messageTimeout is how long a transient status message stays in the header.
-const messageTimeout = 2 * time.Second
-
 // Operating system identifiers as reported by runtime.GOOS.
 const (
 	osDarwin  = "darwin"
 	osWindows = "windows"
-	osLinux   = "linux"
 )
 
 var errClipboardUnavailable = errors.New("no clipboard tool found")
 
-// clipboardCommand returns the command and arguments used to write text to the
-// system clipboard for the given operating system. lookPath reports which tools
-// are installed and wayland selects the preferred Linux/BSD tool ordering. The
-// returned bool is false when no supported tool is available, for example on a
-// headless machine.
-func clipboardCommand(
-	goos string,
-	wayland bool,
-	lookPath func(string) (string, error),
-) ([]string, bool) {
-	type candidate struct {
-		name string
-		args []string
-	}
+// clipboardTool is an external program able to write the clipboard, together
+// with the arguments it needs to target the clipboard selection.
+type clipboardTool struct {
+	name string
+	args []string
+}
 
-	var candidates []candidate
-	switch goos {
+var (
+	pbcopy = clipboardTool{name: "pbcopy"}
+	clip   = clipboardTool{name: "clip"}
+	xclip  = clipboardTool{name: "xclip", args: []string{"-selection", "clipboard"}}
+	xsel   = clipboardTool{name: "xsel", args: []string{"--clipboard", "--input"}}
+	wlCopy = clipboardTool{name: "wl-copy"}
+)
+
+// clipboardEnv is the part of the environment that decides which clipboard tool
+// gdu uses. It exists so the choice can be tested without a real desktop
+// session: lookPath reports which tools are installed, and wayland selects the
+// preferred Linux/BSD tool ordering.
+type clipboardEnv struct {
+	goos     string
+	wayland  bool
+	lookPath func(string) (string, error)
+}
+
+// currentClipboardEnv describes the environment gdu is actually running in.
+func currentClipboardEnv() clipboardEnv {
+	return clipboardEnv{
+		goos:     runtime.GOOS,
+		wayland:  os.Getenv("WAYLAND_DISPLAY") != "",
+		lookPath: exec.LookPath,
+	}
+}
+
+// command returns the command and arguments used to write text to the system
+// clipboard in this environment. The returned bool is false when no supported
+// tool is available, for example on a headless machine.
+func (env clipboardEnv) command() ([]string, bool) {
+	var candidates []clipboardTool
+	switch env.goos {
 	case osDarwin:
-		candidates = []candidate{{name: "pbcopy"}}
+		candidates = []clipboardTool{pbcopy}
 	case osWindows:
-		candidates = []candidate{{name: "clip"}}
+		candidates = []clipboardTool{clip}
 	default:
-		xclip := candidate{name: "xclip", args: []string{"-selection", "clipboard"}}
-		xsel := candidate{name: "xsel", args: []string{"--clipboard", "--input"}}
-		wlCopy := candidate{name: "wl-copy"}
-		if wayland {
-			candidates = []candidate{wlCopy, xclip, xsel}
+		if env.wayland {
+			candidates = []clipboardTool{wlCopy, xclip, xsel}
 		} else {
-			candidates = []candidate{xclip, xsel, wlCopy}
+			candidates = []clipboardTool{xclip, xsel, wlCopy}
 		}
 	}
 
 	for _, c := range candidates {
-		if path, err := lookPath(c.name); err == nil {
+		if path, err := env.lookPath(c.name); err == nil {
 			return append([]string{path}, c.args...), true
 		}
 	}
@@ -65,7 +80,7 @@ func clipboardCommand(
 }
 
 func copyToClipboard(text string) error {
-	argv, ok := clipboardCommand(runtime.GOOS, os.Getenv("WAYLAND_DISPLAY") != "", exec.LookPath)
+	argv, ok := currentClipboardEnv().command()
 	if !ok {
 		return errClipboardUnavailable
 	}
@@ -98,19 +113,4 @@ func (ui *UI) copySelectedPath() {
 	}
 
 	ui.showMessage(" Path copied to clipboard")
-}
-
-// showMessage briefly replaces the header text with a status message and
-// restores the previous text afterwards.
-func (ui *UI) showMessage(message string) {
-	previousText := ui.header.GetText(false)
-	ui.header.SetText(message)
-
-	go func() {
-		time.Sleep(messageTimeout)
-		ui.app.QueueUpdateDraw(func() {
-			ui.header.Clear()
-			ui.header.SetText(previousText)
-		})
-	}()
 }
