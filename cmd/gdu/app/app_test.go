@@ -391,6 +391,7 @@ func TestAnalyzePathWithStyle(t *testing.T) {
 				},
 				UseOldSizeBar:     true,
 				ShowBarPercentage: true,
+				ShowItemCountBar:  true,
 			},
 		},
 		[]string{"test_dir"},

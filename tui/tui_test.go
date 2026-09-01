@@ -911,6 +911,20 @@ func TestSetShowItemCount(t *testing.T) {
 	assert.Equal(t, ui.showItemCount, true)
 }
 
+func TestSetShowItemCountBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+
+	assert.Equal(t, ui.showItemCountBar, false)
+
+	ui.SetShowItemCountBar()
+
+	assert.Equal(t, ui.showItemCountBar, true)
+}
+
 func TestSetShowMTime(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()

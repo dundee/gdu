@@ -156,6 +156,9 @@ type Style struct {
 	UseOldSizeBar bool                `yaml:"use-old-size-bar"`
 	// ShowBarPercentage shows the numeric usage percentage next to the size bar.
 	ShowBarPercentage bool `yaml:"show-bar-percentage"`
+	// ShowItemCountBar shows a bar next to the item count column. It only takes
+	// effect while the item count column is visible.
+	ShowItemCountBar bool `yaml:"show-item-count-bar"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -550,6 +553,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.Style.ShowBarPercentage {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetShowBarPercentage()
+		})
+	}
+	if a.Flags.Style.ShowItemCountBar {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetShowItemCountBar()
 		})
 	}
 	if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {

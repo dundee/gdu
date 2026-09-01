@@ -72,8 +72,7 @@ func (ui *UI) showDir() {
 	var (
 		totalUsage int64
 		totalSize  int64
-		maxUsage   int64
-		maxSize    int64
+		maxima     rowMaxima
 		itemCount  int64
 	)
 
@@ -93,10 +92,7 @@ func (ui *UI) showDir() {
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
-		prefix := "                         "
-		if len(ui.markedRows) > 0 {
-			prefix += "  "
-		}
+		prefix := strings.Repeat(" ", ui.columnsWidth())
 
 		cell := tview.NewTableCell(prefix + "[::b]/..")
 
@@ -119,24 +115,29 @@ func (ui *UI) showDir() {
 	defer unlock()
 
 	i := rowIndex
-	maxUsage = 0
-	maxSize = 0
+	maxima = rowMaxima{}
 	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
 		if _, ignored := ui.ignoredRows[i]; ignored {
 			i++
 			continue
 		}
 
+		count := fs.DisplayedItemCount(item)
+
 		if ui.ShowRelativeSize {
-			if item.GetUsage() > maxUsage {
-				maxUsage = item.GetUsage()
+			if item.GetUsage() > maxima.usage {
+				maxima.usage = item.GetUsage()
 			}
-			if item.GetSize() > maxSize {
-				maxSize = item.GetSize()
+			if item.GetSize() > maxima.size {
+				maxima.size = item.GetSize()
+			}
+			if count > maxima.count {
+				maxima.count = count
 			}
 		} else {
-			maxSize += item.GetSize()
-			maxUsage += item.GetUsage()
+			maxima.size += item.GetSize()
+			maxima.usage += item.GetUsage()
+			maxima.count += count
 		}
 		i++
 	}
@@ -175,17 +176,17 @@ func (ui *UI) showDir() {
 
 			if collapsedPath != nil {
 				// Format as collapsed path
-				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxUsage, maxSize, marked, ignored))
+				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxima, marked, ignored))
 				// Reference should point to the deepest directory for navigation
 				reference = collapsedPath.DeepestDir
 			} else {
 				// Regular directory formatting
-				cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+				cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
 				reference = item
 			}
 		} else {
 			// Regular file formatting
-			cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+			cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
 			reference = item
 		}
 

@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testapp"
@@ -91,7 +92,7 @@ func TestEscapeName(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "Aaa [red[] bbb")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "Aaa [red[] bbb")
 }
 
 func TestMarked(t *testing.T) {
@@ -115,8 +116,8 @@ func TestMarked(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), true, false), "✓ Aaa")
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "[##########]   Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, true, false), "✓ Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "[##########]   Aaa")
 }
 
 func TestIgnored(t *testing.T) {
@@ -140,8 +141,8 @@ func TestIgnored(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, true), "[          ] Aaa")
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "[##########] Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, true), "[          ] Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "[##########] Aaa")
 }
 
 func TestSizeBar(t *testing.T) {
@@ -163,7 +164,7 @@ func TestSizeBar(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "██████████▏Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "██████████▏Aaa")
 }
 
 func TestOldSizeBar(t *testing.T) {
@@ -187,7 +188,7 @@ func TestOldSizeBar(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, dir.GetUsage(), dir.GetSize(), false, false), "[#####     ]   Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: dir.GetUsage(), size: dir.GetSize()}, false, false), "[#####     ]   Aaa")
 }
 
 func TestSizeBarWithPercentage(t *testing.T) {
@@ -210,7 +211,7 @@ func TestSizeBarWithPercentage(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, file.GetUsage(), file.GetSize(), false, false), "100.0% ██████████▏Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "100.0% ██████████▏Aaa")
 }
 
 func TestSizeBarWithPercentagePartial(t *testing.T) {
@@ -234,5 +235,98 @@ func TestSizeBarWithPercentagePartial(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, dir.GetUsage(), dir.GetSize(), false, false), "50.0% [#####     ]")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: dir.GetUsage(), size: dir.GetSize()}, false, false), "50.0% [#####     ]")
+}
+
+func TestItemCountBar(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui.useOldSizeBar = true
+	ui.showItemCount = true
+	ui.showItemCountBar = true
+
+	parent := &analyze.Dir{File: &analyze.File{Name: "parent"}}
+
+	// 3 of the 4 items in the listing, so the bar is 75% full.
+	dir := &analyze.Dir{
+		File:      &analyze.File{Name: "Aaa", Parent: parent},
+		ItemCount: 4,
+	}
+
+	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, false)
+
+	assert.Contains(t, row, "3")
+	assert.Contains(t, row, "[#######   ]")
+}
+
+func TestItemCountBarHiddenWithoutItemCount(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui.useOldSizeBar = true
+	ui.showItemCountBar = true
+
+	parent := &analyze.Dir{File: &analyze.File{Name: "parent"}}
+	dir := &analyze.Dir{
+		File:      &analyze.File{Name: "Aaa", Parent: parent},
+		ItemCount: 4,
+	}
+
+	// The count column is hidden, so only the size bar is drawn.
+	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, false)
+
+	assert.Equal(t, 1, strings.Count(row, "["+"          ]"))
+}
+
+func TestItemCountBarIgnoredRowIsEmpty(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui.useOldSizeBar = true
+	ui.showItemCount = true
+	ui.showItemCountBar = true
+
+	parent := &analyze.Dir{File: &analyze.File{Name: "parent"}}
+	dir := &analyze.Dir{
+		File:      &analyze.File{Name: "Aaa", Parent: parent},
+		ItemCount: 4,
+	}
+
+	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, true)
+
+	// Both bars are empty for an ignored row.
+	assert.Equal(t, 2, strings.Count(row, "[          ]"))
+}
+
+func TestColumnsWidth(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+
+	// flag + size + unicode bar
+	assert.Equal(t, 23, ui.columnsWidth())
+
+	ui.useOldSizeBar = true
+	assert.Equal(t, 25, ui.columnsWidth())
+
+	ui.showItemCount = true
+	assert.Equal(t, 32, ui.columnsWidth())
+
+	ui.showItemCountBar = true
+	assert.Equal(t, 46, ui.columnsWidth())
+
+	ui.showMtime = true
+	assert.Equal(t, 66, ui.columnsWidth())
+
+	ui.markedRows[0] = struct{}{}
+	assert.Equal(t, 68, ui.columnsWidth())
 }
