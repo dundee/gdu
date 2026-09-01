@@ -28,7 +28,7 @@ var (
                [::b]T     [white:black:-]Filter items by file type (extension)
                [::b]a     [white:black:-]Toggle between showing disk usage and apparent size
                [::b]B     [white:black:-]Toggle bar alignment to biggest file or directory
-               [::b]c     [white:black:-]Show/hide file count
+               [::b]c     [white:black:-]Show/hide item count
                [::b]m     [white:black:-]Show/hide latest mtime
                [::b]b     [white:black:-]Spawn shell in current directory
                [::b]q     [white:black:-]Quit gdu (asks to confirm after a long scan)
@@ -49,7 +49,7 @@ Item under cursor:
 Sort by (twice toggles asc/desc):
                [::b]n     [white:black:-]Sort by name (asc/desc)
                [::b]s     [white:black:-]Sort by size (asc/desc)
-               [::b]C     [white:black:-]Sort by file count (asc/desc)
+               [::b]C     [white:black:-]Sort by item count (asc/desc)
                [::b]M     [white:black:-]Sort by mtime (asc/desc)`
 )
 
@@ -72,8 +72,7 @@ func (ui *UI) showDir() {
 	var (
 		totalUsage int64
 		totalSize  int64
-		maxUsage   int64
-		maxSize    int64
+		maxima     rowMaxima
 		itemCount  int64
 	)
 
@@ -93,10 +92,7 @@ func (ui *UI) showDir() {
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
-		prefix := "                         "
-		if len(ui.markedRows) > 0 {
-			prefix += "  "
-		}
+		prefix := strings.Repeat(" ", ui.columnsWidth())
 
 		cell := tview.NewTableCell(prefix + "[::b]/..")
 
@@ -119,24 +115,29 @@ func (ui *UI) showDir() {
 	defer unlock()
 
 	i := rowIndex
-	maxUsage = 0
-	maxSize = 0
+	maxima = rowMaxima{}
 	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
 		if _, ignored := ui.ignoredRows[i]; ignored {
 			i++
 			continue
 		}
 
+		count := fs.DisplayedItemCount(item)
+
 		if ui.ShowRelativeSize {
-			if item.GetUsage() > maxUsage {
-				maxUsage = item.GetUsage()
+			if item.GetUsage() > maxima.usage {
+				maxima.usage = item.GetUsage()
 			}
-			if item.GetSize() > maxSize {
-				maxSize = item.GetSize()
+			if item.GetSize() > maxima.size {
+				maxima.size = item.GetSize()
+			}
+			if count > maxima.count {
+				maxima.count = count
 			}
 		} else {
-			maxSize += item.GetSize()
-			maxUsage += item.GetUsage()
+			maxima.size += item.GetSize()
+			maxima.usage += item.GetUsage()
+			maxima.count += count
 		}
 		i++
 	}
@@ -175,17 +176,17 @@ func (ui *UI) showDir() {
 
 			if collapsedPath != nil {
 				// Format as collapsed path
-				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxUsage, maxSize, marked, ignored))
+				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxima, marked, ignored))
 				// Reference should point to the deepest directory for navigation
 				reference = collapsedPath.DeepestDir
 			} else {
 				// Regular directory formatting
-				cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+				cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
 				reference = item
 			}
 		} else {
 			// Regular file formatting
-			cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+			cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
 			reference = item
 		}
 

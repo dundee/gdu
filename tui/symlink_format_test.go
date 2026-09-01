@@ -33,7 +33,7 @@ func TestFormatSymlinkRow(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
 	ui.SetShowSymlinkTarget(true)
 
-	symlinkRow := ui.formatFileRow(newSymlinkTestFile(), 100, 100, false, false)
+	symlinkRow := ui.formatFileRow(newSymlinkTestFile(), rowMaxima{usage: 100, size: 100}, false, false)
 
 	if !bytes.Contains([]byte(symlinkRow), []byte("[aqua::b]")) {
 		t.Error("symlink row should contain [aqua::b]")
@@ -50,7 +50,7 @@ func TestFormatSymlinkRowDisabledByDefault(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
 
-	symlinkRow := ui.formatFileRow(newSymlinkTestFile(), 100, 100, false, false)
+	symlinkRow := ui.formatFileRow(newSymlinkTestFile(), rowMaxima{usage: 100, size: 100}, false, false)
 
 	if bytes.Contains([]byte(symlinkRow), []byte("-> usr/bin")) {
 		t.Error("symlink target should not be shown when the option is disabled")

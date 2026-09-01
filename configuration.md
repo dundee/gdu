@@ -54,7 +54,9 @@ Show relative size
 
 #### `show-item-count`
 
-Show number of items in directory
+Show the item count column. For a directory this is the number of items
+(files and subdirectories, recursively) it contains, not counting the
+directory itself; for a file it is 1.
 
 #### `show-symlink-target`
 
@@ -187,6 +189,17 @@ Show size bar without Unicode symbols.
 
 Show the numeric usage percentage (e.g. `61.4%`) next to the size bar in the directory listing.
 
+#### `style.show-item-count-bar`
+
+Show a bar next to the item count, drawn in proportion to the item counts of
+the other items in the same directory, in the same way the size bar works for
+sizes. Disabled by default.
+
+The bar is only drawn while the item count column itself is visible, so enable
+it together with `show-item-count` or toggle the column with the `c` key. Like
+the size bar, it is measured against the sum of the items in the listing, or
+against the largest one when `show-relative-size` is set.
+
 #### `style.footer.text-color`
 
 Color of text for footer bar
@@ -224,7 +237,7 @@ Color of directory names in result rows
 Sort items. Possible values:
 * name - name of the item
 * size - usage or apparent size
-* itemCount - number of items in the folder tree
+* itemCount - number of items contained in the folder tree (the same number shown by `show-item-count`)
 * mtime - modification time
 
 #### `sorting.order`

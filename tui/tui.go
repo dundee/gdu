@@ -91,6 +91,7 @@ type UI struct {
 	headerHidden            bool
 	useOldSizeBar           bool
 	showBarPercentage       bool
+	showItemCountBar        bool
 	noDelete                bool
 	noViewFile              bool
 	noSpawnShell            bool
@@ -321,6 +322,13 @@ func (ui *UI) UseOldSizeBar() {
 // SetShowBarPercentage shows the numeric usage percentage next to the size bar
 func (ui *UI) SetShowBarPercentage() {
 	ui.showBarPercentage = true
+}
+
+// SetShowItemCountBar shows a bar next to the item count column, drawn in
+// proportion to the item counts of the sibling items. It only takes effect
+// while the item count column itself is visible (the "c" key).
+func (ui *UI) SetShowItemCountBar() {
+	ui.showItemCountBar = true
 }
 
 // SetChangeCwdFn sets function that can be used to change current working dir

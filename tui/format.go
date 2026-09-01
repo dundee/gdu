@@ -17,20 +17,42 @@ const (
 	defaultColorBold = "[::b]"
 )
 
+// rowMaxima holds the denominators the bars of one directory listing are
+// scaled against. Which field is used depends on the displayed size metric and
+// on which bar is being drawn. Each field is either the sum over the sibling
+// items or, with ShowRelativeSize, the largest sibling.
+type rowMaxima struct {
+	usage int64
+	size  int64
+	count int64
+}
+
 // getUsagePart returns the percentage (0-100) that the given item's size or
 // usage represents relative to the provided maximum.
-func (ui *UI) getUsagePart(item fs.Item, maxUsage, maxSize int64, ignored bool) float64 {
+func (ui *UI) getUsagePart(item fs.Item, maxima rowMaxima, ignored bool) float64 {
 	if ignored {
 		return 0
 	}
 	if ui.ShowApparentSize {
 		if size := item.GetSize(); size > 0 {
-			return float64(size) / float64(maxSize) * 100.0
+			return float64(size) / float64(maxima.size) * 100.0
 		}
 	} else {
 		if usage := item.GetUsage(); usage > 0 {
-			return float64(usage) / float64(maxUsage) * 100.0
+			return float64(usage) / float64(maxima.usage) * 100.0
 		}
+	}
+	return 0
+}
+
+// getCountPart returns the percentage (0-100) that the given item's displayed
+// item count represents relative to the provided maximum.
+func (ui *UI) getCountPart(item fs.Item, maxima rowMaxima, ignored bool) float64 {
+	if ignored || maxima.count == 0 {
+		return 0
+	}
+	if count := fs.DisplayedItemCount(item); count > 0 {
+		return float64(count) / float64(maxima.count) * 100.0
 	}
 	return 0
 }
@@ -40,61 +62,102 @@ func formatUsagePercentage(part float64) string {
 	return fmt.Sprintf(" %5.1f%%", part)
 }
 
-func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignored bool) string {
-	partFloat := ui.getUsagePart(item, maxUsage, maxSize, ignored)
-	part := int(partFloat)
-
-	row := string(item.GetFlag())
-
-	numberColor := fmt.Sprintf(
-		"[%s::b]",
-		ui.resultRow.NumberColor,
-	)
-
-	if ui.UseColors && !marked && !ignored {
-		row += numberColor
-	} else {
-		row += defaultColorBold
+// formatBar renders a single bar filled to the given percentage, in whichever
+// bar style is configured.
+func (ui *UI) formatBar(part int) string {
+	if ui.useOldSizeBar {
+		return " " + getUsageGraphOld(part) + " "
 	}
+	return getUsageGraph(part)
+}
+
+// Visible widths of the columns rendered by formatColumns. The numeric columns
+// are padded to a wider format verb than these because formatSize and
+// formatCount embed a color tag, which is counted by the verb but occupies no
+// screen columns.
+const (
+	flagColumnWidth       = 1
+	sizeColumnWidth       = 10
+	percentageColumnWidth = 7
+	itemCountColumnWidth  = 7
+	mtimeColumnWidth      = 20
+	markedColumnWidth     = 2
+	barColumnWidth        = 12
+	oldBarColumnWidth     = 14
+)
+
+// columnsWidth returns the number of screen columns formatColumns occupies, so
+// that rows which have no columns of their own (the "/.." entry) can be padded
+// to line up their name with the rest of the listing.
+func (ui *UI) columnsWidth() int {
+	barWidth := barColumnWidth
+	if ui.useOldSizeBar {
+		barWidth = oldBarColumnWidth
+	}
+
+	width := flagColumnWidth + sizeColumnWidth + barWidth
+	if ui.showBarPercentage {
+		width += percentageColumnWidth
+	}
+	if ui.showItemCount {
+		width += itemCountColumnWidth
+		if ui.showItemCountBar {
+			width += barWidth
+		}
+	}
+	if ui.showMtime {
+		width += mtimeColumnWidth
+	}
+	if len(ui.markedRows) > 0 {
+		width += markedColumnWidth
+	}
+	return width
+}
+
+// formatColumns renders every column of a row except the trailing name: the
+// type flag, the size, the size bar, and the optional percentage, item count,
+// item count bar, mtime and marked columns.
+//
+// statsItem is the item the numbers are taken from, which is not always the
+// item whose name ends up on the row: a collapsed path displays the name of a
+// whole chain of directories but the stats of its deepest one.
+func (ui *UI) formatColumns(statsItem fs.Item, maxima rowMaxima, marked, ignored bool) string {
+	// numberPrefix is the color tag introducing a numeric column.
+	numberPrefix := func() string {
+		if ui.UseColors && !marked && !ignored {
+			return fmt.Sprintf("[%s::b]", ui.resultRow.NumberColor)
+		}
+		return defaultColorBold
+	}
+
+	row := string(statsItem.GetFlag()) + numberPrefix()
 
 	if ui.ShowApparentSize {
-		row += fmt.Sprintf("%15s", ui.formatSize(item.GetSize(), false, true))
+		row += fmt.Sprintf("%15s", ui.formatSize(statsItem.GetSize(), false, true))
 	} else {
-		row += fmt.Sprintf("%15s", ui.formatSize(item.GetUsage(), false, true))
+		row += fmt.Sprintf("%15s", ui.formatSize(statsItem.GetUsage(), false, true))
 	}
 
+	usagePart := ui.getUsagePart(statsItem, maxima, ignored)
 	if ui.showBarPercentage {
-		row += formatUsagePercentage(partFloat)
+		row += formatUsagePercentage(usagePart)
 	}
-	if ui.useOldSizeBar {
-		row += " " + getUsageGraphOld(part) + " "
-	} else {
-		row += getUsageGraph(part)
-	}
+	row += ui.formatBar(int(usagePart))
 
 	if ui.showItemCount {
-		if ui.UseColors && !marked && !ignored {
-			row += numberColor
-		} else {
-			row += defaultColorBold
-		}
+		row += numberPrefix()
+		row += fmt.Sprintf("%11s ", ui.formatCount(fs.DisplayedItemCount(statsItem)))
 
-		countToDisplay := item.GetItemCount()
-		if item.IsDir() {
-			countToDisplay--
+		if ui.showItemCountBar {
+			row += ui.formatBar(int(ui.getCountPart(statsItem, maxima, ignored)))
 		}
-		row += fmt.Sprintf("%11s ", ui.formatCount(countToDisplay))
 	}
 
 	if ui.showMtime {
-		if ui.UseColors && !marked && !ignored {
-			row += numberColor
-		} else {
-			row += defaultColorBold
-		}
+		row += numberPrefix()
 		row += fmt.Sprintf(
 			"%s "+defaultColor,
-			item.GetMtime().Format("2006-01-02 15:04:05"),
+			statsItem.GetMtime().Format("2006-01-02 15:04:05"),
 		)
 	}
 
@@ -106,6 +169,12 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 		}
 		row += " "
 	}
+
+	return row
+}
+
+func (ui *UI) formatFileRow(item fs.Item, maxima rowMaxima, marked, ignored bool) string {
+	row := ui.formatColumns(item, maxima, marked, ignored)
 
 	// Display symlink name in cyan/aqua (like ls --color) and target
 	if name := ui.formatItemName(item, marked, ignored); name != "" {
@@ -149,75 +218,11 @@ func (ui *UI) formatItemName(item fs.Item, marked, ignored bool) string {
 }
 
 // formatCollapsedRow formats a collapsed directory path for display
-func (ui *UI) formatCollapsedRow(collapsedPath *CollapsedPath, maxUsage, maxSize int64, marked, ignored bool) string {
+func (ui *UI) formatCollapsedRow(
+	collapsedPath *CollapsedPath, maxima rowMaxima, marked, ignored bool,
+) string {
 	// Use the deepest directory's stats for display
-	item := collapsedPath.DeepestDir
-
-	partFloat := ui.getUsagePart(item, maxUsage, maxSize, ignored)
-	part := int(partFloat)
-
-	row := string(item.GetFlag())
-
-	numberColor := fmt.Sprintf(
-		"[%s::b]",
-		ui.resultRow.NumberColor,
-	)
-
-	if ui.UseColors && !marked && !ignored {
-		row += numberColor
-	} else {
-		row += defaultColorBold
-	}
-
-	if ui.ShowApparentSize {
-		row += fmt.Sprintf("%15s", ui.formatSize(item.GetSize(), false, true))
-	} else {
-		row += fmt.Sprintf("%15s", ui.formatSize(item.GetUsage(), false, true))
-	}
-
-	if ui.showBarPercentage {
-		row += formatUsagePercentage(partFloat)
-	}
-	if ui.useOldSizeBar {
-		row += " " + getUsageGraphOld(part) + " "
-	} else {
-		row += getUsageGraph(part)
-	}
-
-	if ui.showItemCount {
-		if ui.UseColors && !marked && !ignored {
-			row += numberColor
-		} else {
-			row += defaultColorBold
-		}
-
-		countToDisplay := item.GetItemCount()
-		if item.IsDir() {
-			countToDisplay--
-		}
-		row += fmt.Sprintf("%11s ", ui.formatCount(countToDisplay))
-	}
-
-	if ui.showMtime {
-		if ui.UseColors && !marked && !ignored {
-			row += numberColor
-		} else {
-			row += defaultColorBold
-		}
-		row += fmt.Sprintf(
-			"%s "+defaultColor,
-			item.GetMtime().Format("2006-01-02 15:04:05"),
-		)
-	}
-
-	if len(ui.markedRows) > 0 {
-		if marked {
-			row += string('✓')
-		} else {
-			row += " "
-		}
-		row += " "
-	}
+	row := ui.formatColumns(collapsedPath.DeepestDir, maxima, marked, ignored)
 
 	// Always display as directory with special formatting for collapsed path
 	if ui.UseColors && !marked && !ignored {
