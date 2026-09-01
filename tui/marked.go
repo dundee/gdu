@@ -118,7 +118,7 @@ func (ui *UI) confirmDeletionMarked(action DeleteAction) {
 				strconv.Itoa(len(ui.markedRows)) +
 				"[::-] items?",
 		).
-		AddButtons([]string{"no", "yes", "don't ask me again"}).
+		AddButtons([]string{No, Yes, DontAskAgain}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {
 			case 2:

@@ -5,8 +5,7 @@ is developed so your change fits in with the rest of the codebase.
 
 ## Prerequisites
 
-- **Go** 1.25 or newer (development happens on 1.26; CI runs both 1.25.x and
-  1.26.x). The pinned toolchain is in `.tool-versions`.
+- **Go** 1.26 or newer (development happens on 1.27; CI runs 1.26.x and 1.27.x). The pinned toolchain is in `.tool-versions`.
 - **Node.js** — only needed if you change the web UI (`webui/frontend`). The
   compiled assets in `webui/dist` are committed and embedded into the binary, so
   pure-Go builds don't require Node.
@@ -49,7 +48,7 @@ make coverage-html     # open the coverage report in a browser
 go test ./...          # plain go test, no extra tooling
 ```
 
-CI runs the full suite on Go 1.25.x and 1.26.x (Ubuntu, plus macOS on 1.26.x),
+CI runs the full suite on Go 1.26.x and 1.27.x (Ubuntu, plus macOS on 1.27.x),
 with the race detector, and uploads coverage to Codecov. Coverage upload is set
 to fail the build on error, so add tests for new behavior and keep existing
 tests passing.
