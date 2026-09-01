@@ -1,9 +1,11 @@
 package webui
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -14,6 +16,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdev"
@@ -32,27 +37,17 @@ func makeTree(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(root, "big.bin"), make([]byte, 4096), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "small.txt"), make([]byte, 16), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(filepath.Join(root, "big.bin"), make([]byte, 4096), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "small.txt"), make([]byte, 16), 0o600))
 	sub := filepath.Join(root, "sub")
-	if err := os.Mkdir(sub, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(sub, "nested.dat"), make([]byte, 1024), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Mkdir(sub, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(sub, "nested.dat"), make([]byte, 1024), 0o600))
 	return root
 }
 
 func scan(t *testing.T, ui *UI, path string) {
 	t.Helper()
-	if err := ui.AnalyzePath(path, nil); err != nil {
-		t.Fatalf("AnalyzePath: %v", err)
-	}
+	require.NoError(t, ui.AnalyzePath(path, nil))
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		if ui.buildStatus().State == "done" {
@@ -72,21 +67,14 @@ func TestStatusEndpoint(t *testing.T) {
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/api/v1/status")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	var status statusResponse
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		t.Fatal(err)
-	}
-	if status.State != "done" {
-		t.Errorf("state = %q, want done", status.State)
-	}
-	if status.RootPath != root {
-		t.Errorf("rootPath = %q, want %q", status.RootPath, root)
-	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&status))
+	assert.Equal(t, "done", status.State)
+	assert.Equal(t, root, status.RootPath)
+	assert.True(t, status.DeleteAllowed, "delete should be allowed for an unfiltered local scan")
 }
 
 func TestNodesEndpoint(t *testing.T) {
@@ -98,41 +86,25 @@ func TestNodesEndpoint(t *testing.T) {
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(root))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d, want 200", resp.StatusCode)
-	}
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var node nodeResponse
-	if err := json.NewDecoder(resp.Body).Decode(&node); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&node))
 
-	if !node.Node.IsDir {
-		t.Error("root node should be a directory")
-	}
-	if len(node.Breadcrumbs) != 1 {
-		t.Errorf("breadcrumbs = %d, want 1", len(node.Breadcrumbs))
-	}
-	if len(node.Children) != 3 {
-		t.Fatalf("children = %d, want 3", len(node.Children))
-	}
+	assert.True(t, node.Node.IsDir, "root node should be a directory")
+	assert.Len(t, node.Breadcrumbs, 1)
+	require.Len(t, node.Children, 3)
 	// Default sort is by disk usage descending. Assert the returned order is
 	// monotonically non-increasing rather than depending on fixture specifics
 	// (sparse files can have near-zero disk usage regardless of apparent size).
 	for i := 1; i < len(node.Children); i++ {
-		if node.Children[i-1].Usage < node.Children[i].Usage {
-			t.Errorf("children not sorted by usage desc: %+v", node.Children)
-			break
-		}
+		assert.GreaterOrEqualf(t, node.Children[i-1].Usage, node.Children[i].Usage,
+			"children not sorted by usage desc: %+v", node.Children)
 	}
 	for _, c := range node.Children {
-		if c.Size <= 0 {
-			t.Errorf("child %q has non-positive size", c.Name)
-		}
+		assert.Greaterf(t, c.Size, int64(0), "child %q has non-positive size", c.Name)
 	}
 }
 
@@ -146,24 +118,73 @@ func TestNodesNested(t *testing.T) {
 
 	sub := filepath.Join(root, "sub")
 	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(sub))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	var node nodeResponse
-	if err := json.NewDecoder(resp.Body).Decode(&node); err != nil {
-		t.Fatal(err)
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&node))
+	assert.Equal(t, "sub", node.Node.Name)
+	assert.Len(t, node.Breadcrumbs, 2)
+	if assert.Len(t, node.Children, 1) {
+		assert.Equal(t, "nested.dat", node.Children[0].Name)
 	}
-	if node.Node.Name != "sub" {
-		t.Errorf("node name = %q, want sub", node.Node.Name)
+}
+
+type treePayload struct {
+	Name      string        `json:"name"`
+	Path      string        `json:"path"`
+	IsDir     bool          `json:"isDir"`
+	Size      int64         `json:"size"`
+	Usage     int64         `json:"usage"`
+	ItemCount int64         `json:"itemCount"`
+	Children  []treePayload `json:"children"`
+}
+
+func TestTreeEndpointReturnsCompleteSubtree(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(root))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var tree treePayload
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&tree))
+	require.Equal(t, root, tree.Path)
+	require.True(t, tree.IsDir)
+	require.Greater(t, tree.Size, int64(0), "tree root is missing size metadata: %+v", tree)
+	require.Greater(t, tree.Usage, int64(0), "tree root is missing size metadata: %+v", tree)
+	require.Greater(t, tree.ItemCount, int64(0), "tree root is missing size metadata: %+v", tree)
+
+	var sub *treePayload
+	for i := range tree.Children {
+		if tree.Children[i].Name == "sub" {
+			sub = &tree.Children[i]
+			break
+		}
 	}
-	if len(node.Breadcrumbs) != 2 {
-		t.Errorf("breadcrumbs = %d, want 2 (root, sub)", len(node.Breadcrumbs))
+	require.NotNil(t, sub, "sub directory missing from tree")
+	if assert.Len(t, sub.Children, 1) {
+		assert.Equal(t, "nested.dat", sub.Children[0].Name)
+		assert.NotNil(t, sub.Children[0].Children)
 	}
-	if len(node.Children) != 1 || node.Children[0].Name != "nested.dat" {
-		t.Errorf("unexpected children: %+v", node.Children)
-	}
+}
+
+func TestTreeEndpointRejectsPathOutsideRoot(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(filepath.Dir(root)))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func TestNodesPathTraversalRejected(t *testing.T) {
@@ -175,13 +196,9 @@ func TestNodesPathTraversalRejected(t *testing.T) {
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape("/etc"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("status = %d, want 403", resp.StatusCode)
-	}
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func TestNodesNotFound(t *testing.T) {
@@ -194,13 +211,185 @@ func TestNodesNotFound(t *testing.T) {
 
 	missing := filepath.Join(root, "does-not-exist")
 	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(missing))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("status = %d, want 404", resp.StatusCode)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestDeleteNodeEndpointRemovesFileAndUpdatesTree(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.True(t, os.IsNotExist(err), "deleted file still exists: %v", err)
+
+	_, err = ui.findNode(path)
+	assert.ErrorIs(t, err, errNotFound)
+}
+
+func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	var revealed string
+	ui.revealPath = func(path string) error {
+		revealed = path
+		return nil
 	}
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(root, "big.bin")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Equal(t, root, revealed)
+}
+
+// makeZip creates a zip archive at path containing a single file entry
+// "inner.txt" and returns the temp directory it lives in.
+func makeZip(t *testing.T, path string) {
+	t.Helper()
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+
+	zw := zip.NewWriter(f)
+	w, err := zw.Create("inner.txt")
+	require.NoError(t, err)
+	_, err = w.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+}
+
+func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
+	ui := newTestUI()
+	ui.SetArchiveBrowsing(true)
+	root := t.TempDir()
+	zipPath := filepath.Join(root, "archive.zip")
+	makeZip(t, zipPath)
+	scan(t, ui, root)
+
+	var revealed string
+	ui.revealPath = func(path string) error {
+		revealed = path
+		return nil
+	}
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(zipPath, "inner.txt")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Equal(t, root, revealed, "revealed path should be the archive's containing directory, not the archive file itself")
+}
+
+func TestDeleteEndpointHonorsNoDelete(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	ui.SetNoDelete()
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestDeleteEndpointHonorsActiveFilters(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	ui.FilteringFiles = true
+	t.Setenv("GDU_ALLOW_DELETE_WITH_FILTER", "")
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestDeleteEndpointRejectsAnalysisRoot(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(root), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	_, err = os.Stat(root)
+	assert.NoError(t, err, "root should remain after rejected delete")
+}
+
+func TestActionEndpointsRequireLocalActionHeader(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
 }
 
 func TestParseSort(t *testing.T) {
@@ -217,10 +406,8 @@ func TestParseSort(t *testing.T) {
 	}
 	for _, c := range cases {
 		gotBy, gotOrder := parseSort(c.sort, c.order)
-		if gotBy != c.wantBy || gotOrder != c.wantOrder {
-			t.Errorf("parseSort(%q,%q) = (%v,%v), want (%v,%v)",
-				c.sort, c.order, gotBy, gotOrder, c.wantBy, c.wantOrder)
-		}
+		assert.Equalf(t, c.wantBy, gotBy, "parseSort(%q,%q) by", c.sort, c.order)
+		assert.Equalf(t, c.wantOrder, gotOrder, "parseSort(%q,%q) order", c.sort, c.order)
 	}
 }
 
@@ -238,42 +425,24 @@ func TestBrowserCommand(t *testing.T) {
 	}
 	for _, c := range cases {
 		name, args, err := browserCommand(c.goos, "http://x", c.cmd)
-		if err != nil {
-			t.Fatalf("browserCommand error: %v", err)
-		}
-		if name != c.wantName {
-			t.Errorf("name = %q, want %q", name, c.wantName)
-		}
-		if len(args) != len(c.wantArgs) {
-			t.Fatalf("args = %v, want %v", args, c.wantArgs)
-		}
-		for i := range args {
-			if args[i] != c.wantArgs[i] {
-				t.Errorf("args[%d] = %q, want %q", i, args[i], c.wantArgs[i])
-			}
-		}
+		require.NoError(t, err)
+		assert.Equal(t, c.wantName, name)
+		assert.Equal(t, c.wantArgs, args)
 	}
 }
 
 func TestSetCollapsePath(t *testing.T) {
 	ui := newTestUI()
-	if ui.collapsePath {
-		t.Fatal("collapsePath should default to false")
-	}
+	require.False(t, ui.collapsePath, "collapsePath should default to false")
 	ui.SetCollapsePath(true)
-	if !ui.collapsePath {
-		t.Error("SetCollapsePath(true) did not set the field")
-	}
+	assert.True(t, ui.collapsePath, "SetCollapsePath(true) did not set the field")
 }
 
 func TestCreateUIDefaultListenAddr(t *testing.T) {
 	ui := CreateUI(io.Discard, "", false, "", true, true, true, true)
-	if ui.listenAddr != "localhost:0" {
-		t.Errorf("listenAddr = %q, want localhost:0", ui.listenAddr)
-	}
-	if !ui.UseColors || !ui.ShowApparentSize || !ui.ShowRelativeSize || !ui.UseSIPrefix {
-		t.Error("display options not propagated to embedded common.UI")
-	}
+	assert.Equal(t, "localhost:0", ui.listenAddr)
+	assert.True(t, ui.UseColors && ui.ShowApparentSize && ui.ShowRelativeSize && ui.UseSIPrefix,
+		"display options not propagated to embedded common.UI")
 }
 
 func TestListDevicesAndHandleDevices(t *testing.T) {
@@ -290,34 +459,25 @@ func TestListDevicesAndHandleDevices(t *testing.T) {
 	}
 	getter := testdev.DevicesInfoGetterMock{Devices: devices}
 
-	if err := ui.ListDevices(getter); err != nil {
-		t.Fatalf("ListDevices: %v", err)
-	}
+	require.NoError(t, ui.ListDevices(getter))
 
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/api/v1/devices")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d, want 200", resp.StatusCode)
-	}
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var out []deviceJSON
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		t.Fatal(err)
-	}
-	if len(out) != 1 {
-		t.Fatalf("devices = %d, want 1", len(out))
-	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&out))
+	require.Len(t, out, 1)
 	d := out[0]
-	if d.Name != "/dev/sda1" || d.MountPoint != "/" || d.Fstype != "ext4" ||
-		d.Size != 1000 || d.Free != 400 {
-		t.Errorf("unexpected device payload: %+v", d)
-	}
+	assert.Equal(t, "/dev/sda1", d.Name)
+	assert.Equal(t, "/", d.MountPoint)
+	assert.Equal(t, "ext4", d.Fstype)
+	assert.EqualValues(t, 1000, d.Size)
+	assert.EqualValues(t, 400, d.Free)
 }
 
 func TestHandleDevicesEmpty(t *testing.T) {
@@ -327,18 +487,12 @@ func TestHandleDevicesEmpty(t *testing.T) {
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/api/v1/devices")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	var out []deviceJSON
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		t.Fatal(err)
-	}
-	if len(out) != 0 {
-		t.Errorf("devices = %d, want 0", len(out))
-	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&out))
+	assert.Empty(t, out)
 }
 
 const sampleReport = `
@@ -354,48 +508,28 @@ const sampleReport = `
 func TestReadAnalysis(t *testing.T) {
 	ui := newTestUI()
 
-	if err := ui.ReadAnalysis(strings.NewReader(sampleReport)); err != nil {
-		t.Fatalf("ReadAnalysis: %v", err)
-	}
+	require.NoError(t, ui.ReadAnalysis(strings.NewReader(sampleReport)))
 
 	status := ui.buildStatus()
-	if status.State != "done" {
-		t.Errorf("state = %q, want done", status.State)
-	}
-	if status.RootPath != "/home/xxx" {
-		t.Errorf("rootPath = %q, want /home/xxx", status.RootPath)
-	}
+	assert.Equal(t, "done", status.State)
+	assert.Equal(t, "/home/xxx", status.RootPath)
 
 	node, err := ui.findNode("/home/xxx")
-	if err != nil {
-		t.Fatalf("findNode: %v", err)
-	}
-	if node.GetName() != "xxx" {
-		t.Errorf("root name = %q, want xxx", node.GetName())
-	}
-	if !node.IsDir() {
-		t.Error("root should be a directory")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "xxx", node.GetName())
+	assert.True(t, node.IsDir(), "root should be a directory")
 }
 
 func TestReadAnalysisError(t *testing.T) {
 	ui := newTestUI()
 
 	err := ui.ReadAnalysis(strings.NewReader("not valid json"))
-	if err == nil {
-		t.Fatal("expected error for invalid input")
-	}
+	require.Error(t, err, "expected error for invalid input")
 
 	status := ui.buildStatus()
-	if status.State != "error" {
-		t.Errorf("state = %q, want error", status.State)
-	}
-	if status.Error == "" {
-		t.Error("expected non-empty error message in status")
-	}
-	if ui.scanning {
-		t.Error("scanning flag should be cleared after error")
-	}
+	assert.Equal(t, "error", status.State)
+	assert.NotEmpty(t, status.Error, "expected non-empty error message in status")
+	assert.False(t, ui.scanning, "scanning flag should be cleared after error")
 }
 
 func TestReadFromStorage(t *testing.T) {
@@ -415,50 +549,34 @@ func TestReadFromStorage(t *testing.T) {
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	ui := newTestUI()
-	if err := ui.ReadFromStorage(storagePath, "test_dir"); err != nil {
-		t.Fatalf("ReadFromStorage: %v", err)
-	}
+	require.NoError(t, ui.ReadFromStorage(storagePath, "test_dir"))
 
 	status := ui.buildStatus()
-	if status.State != "done" {
-		t.Errorf("state = %q, want done", status.State)
-	}
+	assert.Equal(t, "done", status.State)
 
 	node, err := ui.findNode("test_dir")
-	if err != nil {
-		t.Fatalf("findNode: %v", err)
-	}
-	if node.GetName() != "test_dir" {
-		t.Errorf("root name = %q, want test_dir", node.GetName())
-	}
-	if node.GetItemCount() != 5 {
-		t.Errorf("itemCount = %d, want 5", node.GetItemCount())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "test_dir", node.GetName())
+	assert.EqualValues(t, 5, node.GetItemCount())
 }
 
 func TestReadFromStorageError(t *testing.T) {
 	ui := newTestUI()
 	// A non-existent path yields a badger read error.
 	err := ui.ReadFromStorage(t.TempDir()+"/badger", "missing_dir")
-	if err == nil {
-		t.Fatal("expected error reading a missing dir from storage")
-	}
+	assert.Error(t, err, "expected error reading a missing dir from storage")
 }
 
 func TestBuildStatusStates(t *testing.T) {
 	// Fresh UI: no topDir yet, not scanning -> reported as scanning.
 	ui := newTestUI()
-	if got := ui.buildStatus().State; got != "scanning" {
-		t.Errorf("initial state = %q, want scanning", got)
-	}
+	assert.Equal(t, "scanning", ui.buildStatus().State)
 
 	// Explicit scanning flag.
 	ui.mu.Lock()
 	ui.scanning = true
 	ui.mu.Unlock()
-	if got := ui.buildStatus().State; got != "scanning" {
-		t.Errorf("scanning state = %q, want scanning", got)
-	}
+	assert.Equal(t, "scanning", ui.buildStatus().State)
 }
 
 func TestStatusJSON(t *testing.T) {
@@ -475,16 +593,11 @@ func TestStatusJSON(t *testing.T) {
 	raw := ui.statusJSON()
 
 	var status statusResponse
-	if err := json.Unmarshal([]byte(raw), &status); err != nil {
-		t.Fatalf("statusJSON produced invalid JSON: %v", err)
-	}
-	if status.RootPath != "/tmp/root" {
-		t.Errorf("rootPath = %q, want /tmp/root", status.RootPath)
-	}
-	if status.Progress.ItemCount != 3 || status.Progress.TotalUsage != 100 ||
-		status.Progress.CurrentItem != "current" {
-		t.Errorf("unexpected progress: %+v", status.Progress)
-	}
+	require.NoError(t, json.Unmarshal([]byte(raw), &status), "statusJSON produced invalid JSON")
+	assert.Equal(t, "/tmp/root", status.RootPath)
+	assert.EqualValues(t, 3, status.Progress.ItemCount)
+	assert.EqualValues(t, 100, status.Progress.TotalUsage)
+	assert.Equal(t, "current", status.Progress.CurrentItem)
 }
 
 func TestHandleEventsSSE(t *testing.T) {
@@ -497,42 +610,26 @@ func TestHandleEventsSSE(t *testing.T) {
 	defer srv.Close()
 
 	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/events", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	if ct := resp.Header.Get("Content-Type"); ct != "text/event-stream" {
-		t.Errorf("content-type = %q, want text/event-stream", ct)
-	}
+	assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
 
 	// The initial state is pushed immediately on connect.
 	reader := bufio.NewReader(resp.Body)
 	line, err := readSSEData(t, reader)
-	if err != nil {
-		t.Fatalf("reading initial SSE frame: %v", err)
-	}
+	require.NoError(t, err, "reading initial SSE frame")
 	var status statusResponse
-	if err := json.Unmarshal([]byte(line), &status); err != nil {
-		t.Fatalf("initial SSE frame not valid JSON (%q): %v", line, err)
-	}
-	if status.RootPath != "/tmp/root" {
-		t.Errorf("initial SSE rootPath = %q, want /tmp/root", status.RootPath)
-	}
+	require.NoErrorf(t, json.Unmarshal([]byte(line), &status), "initial SSE frame not valid JSON (%q)", line)
+	assert.Equal(t, "/tmp/root", status.RootPath)
 
 	// A subsequent publish is delivered to the connected subscriber.
 	ui.hub.publish(`{"state":"custom"}`)
 	line, err = readSSEData(t, reader)
-	if err != nil {
-		t.Fatalf("reading published SSE frame: %v", err)
-	}
-	if line != `{"state":"custom"}` {
-		t.Errorf("published frame = %q", line)
-	}
+	require.NoError(t, err, "reading published SSE frame")
+	assert.Equal(t, `{"state":"custom"}`, line)
 }
 
 // readSSEData reads lines until it finds a `data: ` frame and returns its payload.
@@ -556,31 +653,24 @@ func TestHub(t *testing.T) {
 	h := newHub()
 
 	ch, last := h.subscribe()
-	if last != "" {
-		t.Errorf("last = %q, want empty before any publish", last)
-	}
+	assert.Empty(t, last, "last should be empty before any publish")
 
 	h.publish("hello")
 	select {
 	case msg := <-ch:
-		if msg != "hello" {
-			t.Errorf("received %q, want hello", msg)
-		}
+		assert.Equal(t, "hello", msg)
 	case <-time.After(time.Second):
 		t.Fatal("did not receive published message")
 	}
 
 	// A late subscriber gets the most recent message via `last`.
 	ch2, last2 := h.subscribe()
-	if last2 != "hello" {
-		t.Errorf("late subscriber last = %q, want hello", last2)
-	}
+	assert.Equal(t, "hello", last2)
 
 	h.unsubscribe(ch)
 	// unsubscribe closes the channel.
-	if _, open := <-ch; open {
-		t.Error("channel should be closed after unsubscribe")
-	}
+	_, open := <-ch
+	assert.False(t, open, "channel should be closed after unsubscribe")
 
 	// Unsubscribing twice is a no-op and must not panic.
 	h.unsubscribe(ch)
@@ -632,9 +722,7 @@ func TestWarnIfRemote(t *testing.T) {
 			var buf bytes.Buffer
 			warnIfRemote(&buf, c.addr)
 			warned := strings.Contains(buf.String(), "WARNING")
-			if warned != c.wantWarn {
-				t.Errorf("warned = %v, want %v (output: %q)", warned, c.wantWarn, buf.String())
-			}
+			assert.Equalf(t, c.wantWarn, warned, "output: %q", buf.String())
 		})
 	}
 }
@@ -644,21 +732,15 @@ func TestToNodeJSONFlag(t *testing.T) {
 
 	// A file with a meaningful flag exposes it in the JSON payload.
 	flagged := &analyze.File{Name: "denied", Flag: '!', Parent: parent}
-	if got := toNodeJSON(flagged).Flag; got != "!" {
-		t.Errorf("flag = %q, want !", got)
-	}
+	assert.Equal(t, "!", toNodeJSON(flagged).Flag)
 
 	// A blank flag (space) is omitted.
 	blank := &analyze.File{Name: "ok", Flag: ' ', Parent: parent}
-	if got := toNodeJSON(blank).Flag; got != "" {
-		t.Errorf("space flag = %q, want empty", got)
-	}
+	assert.Empty(t, toNodeJSON(blank).Flag)
 
 	// A zero flag is also omitted.
 	zero := &analyze.File{Name: "zero", Parent: parent}
-	if got := toNodeJSON(zero).Flag; got != "" {
-		t.Errorf("zero flag = %q, want empty", got)
-	}
+	assert.Empty(t, toNodeJSON(zero).Flag)
 }
 
 func TestAnalyzePathWithParent(t *testing.T) {
@@ -669,34 +751,22 @@ func TestAnalyzePathWithParent(t *testing.T) {
 	scan(t, ui, root)
 
 	parent, err := ui.findNode(root)
-	if err != nil {
-		t.Fatalf("findNode(root): %v", err)
-	}
+	require.NoError(t, err)
 
 	// Re-scan the "sub" directory into the existing parent. This exercises the
 	// parentDir != nil branch: SetParent / RemoveFileByName / AddFile. The
 	// re-scanned dir replaces the old child in the parent and keeps the same
 	// top-level tree root.
 	sub := filepath.Join(root, "sub")
-	if err := ui.AnalyzePath(sub, parent); err != nil {
-		t.Fatalf("AnalyzePath(sub, parent): %v", err)
-	}
+	require.NoError(t, ui.AnalyzePath(sub, parent))
 	waitDone(t, ui)
 
 	// The refreshed "sub" child is present in the parent and points back to it.
 	child, found := childByName(parent, "sub")
-	if !found {
-		t.Fatal("re-scanned sub not found under parent")
-	}
-	if child.GetName() != "sub" {
-		t.Errorf("child name = %q, want sub", child.GetName())
-	}
-	if child.GetParent() != parent {
-		t.Error("re-scanned sub should have its parent set to the original root")
-	}
-	if child.GetItemCount() < 1 {
-		t.Error("re-scanned sub should have counted its files")
-	}
+	require.True(t, found, "re-scanned sub not found under parent")
+	assert.Equal(t, "sub", child.GetName())
+	assert.Equal(t, parent, child.GetParent(), "re-scanned sub should have its parent set to the original root")
+	assert.GreaterOrEqual(t, child.GetItemCount(), int64(1), "re-scanned sub should have counted its files")
 }
 
 func waitDone(t *testing.T, ui *UI) {
@@ -717,26 +787,17 @@ func TestStaticHandlerServesIndex(t *testing.T) {
 
 	// Root path serves the SPA entry point.
 	resp, err := http.Get(srv.URL + "/")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("root status = %d, want 200", resp.StatusCode)
-	}
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	// An unknown non-asset path falls back to index.html (client-side routing).
 	resp2, err := http.Get(srv.URL + "/some/spa/route")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer resp2.Body.Close()
-	if resp2.StatusCode != http.StatusOK {
-		t.Errorf("fallback status = %d, want 200", resp2.StatusCode)
-	}
+	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 	body, _ := io.ReadAll(resp2.Body)
-	if !strings.Contains(strings.ToLower(string(body)), "<!doctype html") &&
-		!strings.Contains(strings.ToLower(string(body)), "<html") {
-		t.Errorf("fallback body does not look like the SPA index: %q", string(body[:min(80, len(body))]))
-	}
+	lower := strings.ToLower(string(body))
+	assert.Truef(t, strings.Contains(lower, "<!doctype html") || strings.Contains(lower, "<html"),
+		"fallback body does not look like the SPA index: %q", string(body[:min(80, len(body))]))
 }

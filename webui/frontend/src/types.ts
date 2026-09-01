@@ -11,6 +11,10 @@ export interface Node {
   flag?: string;
 }
 
+export interface TreeNode extends Node {
+  children: TreeNode[];
+}
+
 export interface NodeResponse {
   node: Node;
   breadcrumbs: Node[];
@@ -33,6 +37,7 @@ export interface Status {
   showApparentSize: boolean;
   showRelativeSize: boolean;
   useSIPrefix: boolean;
+  deleteAllowed: boolean;
 }
 
 export type SortKey = 'size' | 'name' | 'itemCount' | 'mtime';
