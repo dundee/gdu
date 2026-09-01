@@ -3,12 +3,12 @@ package webui
 import "runtime"
 
 func openPath(path string) error {
-	name, args := revealCommand(path)
+	name, args := revealCommand(runtime.GOOS, path)
 	return runDetached(name, args...)
 }
 
-func revealCommand(path string) (name string, args []string) {
-	switch runtime.GOOS {
+func revealCommand(goos, path string) (name string, args []string) {
+	switch goos {
 	case goosDarwin:
 		return cmdOpen, []string{path}
 	case goosWindows:

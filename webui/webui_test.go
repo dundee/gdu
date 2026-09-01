@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -280,6 +281,55 @@ func makeZip(t *testing.T, path string) {
 	_, err = w.Write([]byte("hello"))
 	require.NoError(t, err)
 	require.NoError(t, zw.Close())
+}
+
+// makeNestedZip creates a zip archive at path containing a single file entry
+// two levels deep ("subdir/deep.txt") and returns the temp directory it
+// lives in.
+func makeNestedZip(t *testing.T, path string) {
+	t.Helper()
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+
+	zw := zip.NewWriter(f)
+	w, err := zw.Create("subdir/deep.txt")
+	require.NoError(t, err)
+	_, err = w.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+}
+
+func TestRevealEndpointOpensArchiveParentDirectoryForDeeplyNestedEntry(t *testing.T) {
+	ui := newTestUI()
+	ui.SetArchiveBrowsing(true)
+	root := t.TempDir()
+	zipPath := filepath.Join(root, "archive.zip")
+	makeNestedZip(t, zipPath)
+	scan(t, ui, root)
+
+	var revealed string
+	ui.revealPath = func(path string) error {
+		revealed = path
+		return nil
+	}
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	// deep.txt's parent (subdir) is itself nested inside the archive root,
+	// so realPathAncestor must walk up two levels before reaching the
+	// archive's own top-level node.
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(zipPath, "subdir", "deep.txt")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Equal(t, root, revealed)
 }
 
 func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
@@ -779,6 +829,347 @@ func waitDone(t *testing.T, ui *UI) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal("scan did not complete in time")
+}
+
+func TestHandleStatusHidesDeleteAllowedForRemoteRequest(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+	req.RemoteAddr = "203.0.113.5:12345"
+	req.Host = "example.com"
+	w := httptest.NewRecorder()
+	ui.handleStatus(w, req)
+
+	var status statusResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&status))
+	assert.False(t, status.DeleteAllowed, "remote requests must never see delete as allowed")
+}
+
+func TestNodesEndpointDefaultsToRootWhenPathOmitted(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/api/v1/nodes")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var node nodeResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&node))
+	assert.Equal(t, root, node.Node.Path)
+}
+
+func TestNodesPathThroughFileSegmentNotFound(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	bogus := filepath.Join(root, "big.bin", "nested")
+	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(bogus))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestFindNodeBeforeScan(t *testing.T) {
+	ui := newTestUI()
+	_, err := ui.findNode("/anything")
+	assert.ErrorIs(t, err, errNotFound)
+}
+
+func TestFindNodeRejectsDotDotSegment(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	// Built by concatenation, not filepath.Join, so the literal ".." segment
+	// survives into findNode instead of being collapsed away beforehand.
+	_, err := ui.findNode(root + "/../etc/passwd")
+	assert.ErrorIs(t, err, errOutsideRoot)
+}
+
+func TestFindNodeRejectsRelativePath(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	// A relative path can't be made relative to the (absolute) scanned root,
+	// so filepath.Rel itself errors.
+	_, err := ui.findNode("relative/sub/path")
+	assert.ErrorIs(t, err, errOutsideRoot)
+}
+
+func TestFindNodeFallsBackToRootPathWhenTopDirPathUnset(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	ui.mu.Lock()
+	ui.topDirPath = ""
+	ui.mu.Unlock()
+
+	node, err := ui.findNode("")
+	require.NoError(t, err)
+	assert.Equal(t, root, node.GetPath())
+}
+
+func TestTreeEndpointForFileRoot(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	filePath := filepath.Join(root, "big.bin")
+	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(filePath))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var tree treePayload
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&tree))
+	assert.Equal(t, filePath, tree.Path)
+	assert.False(t, tree.IsDir)
+	assert.Empty(t, tree.Children)
+}
+
+func TestTreeEndpointOrdersMultipleDirectoriesBySize(t *testing.T) {
+	ui := newTestUI()
+	root := t.TempDir()
+	dirA := filepath.Join(root, "a")
+	dirB := filepath.Join(root, "b")
+	require.NoError(t, os.Mkdir(dirA, 0o700))
+	require.NoError(t, os.Mkdir(dirB, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dirA, "big.bin"), make([]byte, 8192), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dirB, "small.bin"), make([]byte, 16), 0o600))
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(root))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var tree treePayload
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&tree))
+	// Two sibling directories queued for expansion exercise the best-first
+	// heap's ordering (expansionQueue.Less), not just a single-item queue.
+	require.Len(t, tree.Children, 2)
+	assert.GreaterOrEqual(t, tree.Children[0].Usage, tree.Children[1].Usage)
+}
+
+func TestDeleteNodeEndpointNotFound(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	missing := filepath.Join(root, "does-not-exist")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(missing), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestDeleteNodeEndpointRejectsArchiveDescendant(t *testing.T) {
+	ui := newTestUI()
+	ui.SetArchiveBrowsing(true)
+	root := t.TempDir()
+	zipPath := filepath.Join(root, "archive.zip")
+	makeZip(t, zipPath)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	entryPath := filepath.Join(zipPath, "inner.txt")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(entryPath), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestRevealEndpointInvalidBody(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", strings.NewReader("not json"))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestRevealEndpointNotFound(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(root, "does-not-exist")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestRevealEndpointNoDirectoryToReveal(t *testing.T) {
+	ui := newTestUI()
+	// A root that is itself a file (not a directory) has no parent, so
+	// revealing it hits the "no directory to reveal" guard.
+	ui.mu.Lock()
+	ui.topDir = &analyze.File{Name: "onlyfile"}
+	ui.topDirPath = "onlyfile"
+	ui.mu.Unlock()
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", strings.NewReader(`{"path":"onlyfile"}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestRevealEndpointPropagatesRevealError(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	ui.revealPath = func(string) error { return errors.New("boom") }
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(root, "big.bin")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+}
+
+func TestWriteNodeErrorDefaultCase(t *testing.T) {
+	w := httptest.NewRecorder()
+	writeNodeError(w, errors.New("some other failure"))
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// noFlushRecorder is an http.ResponseWriter that deliberately does not
+// implement http.Flusher, unlike httptest.ResponseRecorder.
+type noFlushRecorder struct {
+	header http.Header
+	status int
+	body   bytes.Buffer
+}
+
+func newNoFlushRecorder() *noFlushRecorder             { return &noFlushRecorder{header: make(http.Header)} }
+func (w *noFlushRecorder) Header() http.Header         { return w.header }
+func (w *noFlushRecorder) Write(b []byte) (int, error) { return w.body.Write(b) }
+func (w *noFlushRecorder) WriteHeader(status int)      { w.status = status }
+
+func TestHandleEventsFlusherUnsupported(t *testing.T) {
+	ui := newTestUI()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events", nil)
+	w := newNoFlushRecorder()
+	ui.handleEvents(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.status)
+}
+
+func TestStatusJSONForClientHidesDeleteForRemote(t *testing.T) {
+	msg := `{"state":"done","deleteAllowed":true}`
+
+	out := statusJSONForClient(msg, false)
+	var resp statusResponse
+	require.NoError(t, json.Unmarshal([]byte(out), &resp))
+	assert.False(t, resp.DeleteAllowed)
+
+	assert.Equal(t, msg, statusJSONForClient(msg, true), "local clients see the message unchanged")
+	assert.Equal(t, "not json", statusJSONForClient("not json", false), "unparseable payloads pass through unchanged")
+}
+
+// errWriter is an http.ResponseWriter whose Write always fails, used to
+// exercise writeJSON's encode-error logging path.
+type errWriter struct{ header http.Header }
+
+func newErrWriter() *errWriter                 { return &errWriter{header: make(http.Header)} }
+func (w *errWriter) Header() http.Header       { return w.header }
+func (w *errWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }
+func (w *errWriter) WriteHeader(int)           {}
+
+func TestWriteJSONEncodeError(t *testing.T) {
+	assert.NotPanics(t, func() {
+		writeJSON(newErrWriter(), http.StatusOK, map[string]string{"a": "b"})
+	})
+}
+
+func TestIsLoopbackHost(t *testing.T) {
+	cases := []struct {
+		name     string
+		host     string
+		wantLoop bool
+	}{
+		{"loopback with port", "127.0.0.1:8080", true},
+		{"loopback v6 with port", "[::1]:8080", true},
+		{"remote with port", "example.com:80", false},
+		{"bare localhost name", "localhost", true},
+		{"bare non-loopback host", "example.com", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.wantLoop, isLoopbackHost(c.host))
+		})
+	}
+}
+
+func TestStartUILoopBindError(t *testing.T) {
+	blocker, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer blocker.Close()
+
+	ui := newTestUI()
+	ui.listenAddr = blocker.Addr().String()
+	err = ui.StartUILoop()
+	assert.Error(t, err, "binding an already-used address must fail")
 }
 
 func TestStaticHandlerServesIndex(t *testing.T) {
