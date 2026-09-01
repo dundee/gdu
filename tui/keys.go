@@ -237,7 +237,7 @@ func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
 	}
 	modal := tview.NewModal().
 		SetText(text).
-		AddButtons([]string{"no", "yes", "don't ask me again"}).
+		AddButtons([]string{No, Yes, DontAskAgain}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			ui.pages.RemovePage("confirm")
 			ui.app.SetFocus(ui.table)

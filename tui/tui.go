@@ -634,7 +634,7 @@ func (ui *UI) confirmDeletionSelected(action DeleteAction) {
 				tview.Escape(selectedFile.GetName()) +
 				"\"?",
 		).
-		AddButtons([]string{"no", "yes", "don't ask me again"}).
+		AddButtons([]string{No, Yes, DontAskAgain}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			switch buttonIndex {
 			case 2:
