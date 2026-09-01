@@ -47,7 +47,7 @@ func toNodeJSON(it fs.Item) nodeJSON {
 		IsDir:     it.IsDir(),
 		Size:      it.GetSize(),
 		Usage:     it.GetUsage(),
-		ItemCount: it.GetItemCount(),
+		ItemCount: fs.DisplayedItemCount(it),
 		Mtime:     it.GetMtime().Unix(),
 		Flag:      flag,
 	}

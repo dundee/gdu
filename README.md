@@ -104,7 +104,7 @@ Basic list of actions in interactive mode (show help modal for more):
   e                                   Empty the selected directory
   n                                   Sort by name
   s                                   Sort by size
-  c                                   Show number of items in directory
+  c                                   Show/hide item count
   ?                                   Show help modal
 ```
 

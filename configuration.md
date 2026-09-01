@@ -54,7 +54,9 @@ Show relative size
 
 #### `show-item-count`
 
-Show number of items in directory
+Show the item count column. For a directory this is the number of items
+(files and subdirectories, recursively) it contains, not counting the
+directory itself; for a file it is 1.
 
 #### `show-symlink-target`
 
@@ -224,7 +226,7 @@ Color of directory names in result rows
 Sort items. Possible values:
 * name - name of the item
 * size - usage or apparent size
-* itemCount - number of items in the folder tree
+* itemCount - number of items contained in the folder tree (the same number shown by `show-item-count`)
 * mtime - modification time
 
 #### `sorting.order`

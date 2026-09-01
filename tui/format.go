@@ -79,11 +79,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxUsage, maxSize int64, marked, ignor
 			row += defaultColorBold
 		}
 
-		countToDisplay := item.GetItemCount()
-		if item.IsDir() {
-			countToDisplay--
-		}
-		row += fmt.Sprintf("%11s ", ui.formatCount(countToDisplay))
+		row += fmt.Sprintf("%11s ", ui.formatCount(fs.DisplayedItemCount(item)))
 	}
 
 	if ui.showMtime {
@@ -191,11 +187,7 @@ func (ui *UI) formatCollapsedRow(collapsedPath *CollapsedPath, maxUsage, maxSize
 			row += defaultColorBold
 		}
 
-		countToDisplay := item.GetItemCount()
-		if item.IsDir() {
-			countToDisplay--
-		}
-		row += fmt.Sprintf("%11s ", ui.formatCount(countToDisplay))
+		row += fmt.Sprintf("%11s ", ui.formatCount(fs.DisplayedItemCount(item)))
 	}
 
 	if ui.showMtime {

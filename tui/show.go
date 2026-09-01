@@ -28,7 +28,7 @@ var (
                [::b]T     [white:black:-]Filter items by file type (extension)
                [::b]a     [white:black:-]Toggle between showing disk usage and apparent size
                [::b]B     [white:black:-]Toggle bar alignment to biggest file or directory
-               [::b]c     [white:black:-]Show/hide file count
+               [::b]c     [white:black:-]Show/hide item count
                [::b]m     [white:black:-]Show/hide latest mtime
                [::b]b     [white:black:-]Spawn shell in current directory
                [::b]q     [white:black:-]Quit gdu (asks to confirm after a long scan)
@@ -49,7 +49,7 @@ Item under cursor:
 Sort by (twice toggles asc/desc):
                [::b]n     [white:black:-]Sort by name (asc/desc)
                [::b]s     [white:black:-]Sort by size (asc/desc)
-               [::b]C     [white:black:-]Sort by file count (asc/desc)
+               [::b]C     [white:black:-]Sort by item count (asc/desc)
                [::b]M     [white:black:-]Sort by mtime (asc/desc)`
 )
 
