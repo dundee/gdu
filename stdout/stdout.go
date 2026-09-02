@@ -239,6 +239,63 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 
 	wait.Wait()
 
+	ui.printAnalyzedDir(dir)
+
+	return nil
+}
+
+// AnalyzePaths analyzes several paths and reports them together, grouped under
+// a virtual top level directory.
+func (ui *UI) AnalyzePaths(paths []string) error {
+	if len(paths) == 1 {
+		return ui.AnalyzePath(paths[0], nil)
+	}
+
+	// The top dir analyzer returns SimpleDir, a reduced item that cannot be
+	// re-parented, so it cannot live under a virtual root. Trade its lower
+	// memory use for the full tree, as --top and --depth already do.
+	if _, ok := ui.Analyzer.(*analyze.TopDirAnalyzer); ok {
+		ui.Analyzer = analyze.CreateAnalyzer()
+	}
+
+	roots := make([]fs.Item, 0, len(paths))
+	for _, path := range paths {
+		// the analyzer owns one set of progress channels per scan, so it has to
+		// be reset before each root - and before updateProgress reads its done
+		// channel
+		ui.Analyzer.ResetProgress()
+
+		var wait sync.WaitGroup
+		updateStatsDone := make(chan struct{}, 1)
+
+		if ui.ShowProgress {
+			wait.Add(1)
+			go func() {
+				defer wait.Done()
+				ui.updateProgress(updateStatsDone)
+			}()
+		}
+
+		root := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
+		updateStatsDone <- struct{}{}
+		wait.Wait()
+
+		roots = append(roots, root)
+	}
+
+	dir := analyze.CreateVirtualRootDir(roots...)
+	if ui.IsFilteringFiles() {
+		dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
+	} else {
+		dir.UpdateStats(make(fs.HardLinkedItems, 10))
+	}
+
+	ui.printAnalyzedDir(dir)
+
+	return nil
+}
+
+func (ui *UI) printAnalyzedDir(dir fs.Item) {
 	switch {
 	case ui.top > 0:
 		ui.printTopFiles(dir)
@@ -249,8 +306,6 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	default:
 		ui.showDir(dir)
 	}
-
-	return nil
 }
 
 // ReadFromStorage reads analysis data from persistent key-value storage
@@ -287,7 +342,7 @@ func (ui *UI) showDir(dir fs.Item) {
 	}
 
 	for file := range dir.GetFiles(sort, sortOrder) {
-		ui.printItem(file)
+		ui.printItem(dir, file)
 	}
 }
 
@@ -321,7 +376,9 @@ func (ui *UI) printTotalItem(file fs.Item) {
 	)
 }
 
-func (ui *UI) printItem(file fs.Item) {
+// printItem prints one row of a directory listing. parent is the directory
+// being listed, which decides how the item is labelled; it may be nil.
+func (ui *UI) printItem(parent, file fs.Item) {
 	var lineFormat string
 	if ui.showItemCnt {
 		if ui.UseColors {
@@ -344,9 +401,14 @@ func (ui *UI) printItem(file fs.Item) {
 		size = file.GetUsage()
 	}
 
-	name := file.GetName()
+	name := analyze.ItemDisplayName(parent, file)
 	if file.IsDir() {
-		name = ui.blue.Sprint("/" + file.GetName())
+		// a scanned root is labelled with its absolute path, which already
+		// reads as a path and must not gain another leading separator
+		if !analyze.IsVirtualRootDir(parent) {
+			name = "/" + name
+		}
+		name = ui.blue.Sprint(name)
 	}
 
 	// Append symlink target with cyan name (like ls --color)

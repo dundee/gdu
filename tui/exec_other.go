@@ -20,6 +20,10 @@ func (ui *UI) spawnShell() {
 	if ui.currentDir == nil {
 		return
 	}
+	if ui.atVirtualRoot() {
+		ui.showMessage("Shell cannot be spawned at the virtual top level directory")
+		return
+	}
 
 	ui.app.Suspend(func() {
 		if err := os.Chdir(ui.currentDirPath); err != nil {

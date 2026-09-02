@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode"
@@ -106,11 +107,16 @@ type UI struct {
 	confirmQuit             bool
 	scanning                bool
 	scanCancelled           bool
-	scanStart               time.Time
-	scanDuration            time.Duration
-	previewing              bool
-	previewSavedDir         fs.Item
-	progressFlex            *tview.Flex
+	// scanCancelRequested mirrors scanCancelled for readers outside the UI
+	// goroutine. A multi-root scan resets the analyzer between roots, which
+	// clears the analyzer's own cancelled flag, so the request has to survive
+	// somewhere the scanning goroutine can safely read it.
+	scanCancelRequested atomic.Bool
+	scanStart           time.Time
+	scanDuration        time.Duration
+	previewing          bool
+	previewSavedDir     fs.Item
+	progressFlex        *tview.Flex
 }
 
 type deleteQueueItem struct {
@@ -437,6 +443,7 @@ func (ui *UI) cancelScan() bool {
 
 	ui.Analyzer.Cancel()
 	ui.scanCancelled = true
+	ui.scanCancelRequested.Store(true)
 	ui.progress.SetTitle(" Stopping scan... ")
 	ui.progress.SetText("Stopping scan and keeping results...")
 	return true
@@ -512,12 +519,37 @@ func (ui *UI) resetSorting() {
 	ui.sortOrder = ui.defaultSortOrder
 }
 
+// atVirtualRoot reports whether the view is at the synthetic dir grouping
+// several scanned roots. That dir has no path on disk, so operations that
+// resolve currentDirPath back to the filesystem must not run there.
+func (ui *UI) atVirtualRoot() bool {
+	return analyze.IsVirtualRootDir(ui.currentDir)
+}
+
 func (ui *UI) rescanDir() {
 	ui.linkedItems = make(fs.HardLinkedItems)
+
+	// at the virtual root there is nothing to rescan but the roots below it
+	if ui.atVirtualRoot() {
+		if err := ui.AnalyzePaths(ui.scannedRootPaths()); err != nil {
+			ui.showErr("Error rescanning paths", err)
+		}
+		return
+	}
+
 	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.GetParent())
 	if err != nil {
 		ui.showErr("Error rescanning path", err)
 	}
+}
+
+// scannedRootPaths returns the paths of the roots grouped under the virtual root.
+func (ui *UI) scannedRootPaths() []string {
+	paths := make([]string, 0)
+	for item := range ui.currentDir.GetFiles(fs.SortByName, fs.SortAsc) {
+		paths = append(paths, item.GetPath())
+	}
+	return paths
 }
 
 func (ui *UI) fileItemSelected(row, column int) {

@@ -152,6 +152,16 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	return ui.exportDir(dir, &waitWritten)
 }
 
+// AnalyzePaths is not supported by the export UI: the ncdu-compatible export
+// format holds exactly one root directory, so there is nowhere to record a
+// virtual dir grouping several of them.
+func (ui *UI) AnalyzePaths(paths []string) error {
+	if len(paths) == 1 {
+		return ui.AnalyzePath(paths[0], nil)
+	}
+	return errors.New("exporting more than one directory is not supported")
+}
+
 func (ui *UI) topDir(dir fs.Item) fs.Item {
 	files := analyze.CollectTopFiles(dir, ui.top)
 

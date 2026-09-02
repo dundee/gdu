@@ -796,6 +796,7 @@ type uiTimeFilterMock struct {
 
 func (m *uiTimeFilterMock) ListDevices(getter device.DevicesInfoGetter) error { return nil }
 func (m *uiTimeFilterMock) AnalyzePath(path string, parentDir gfs.Item) error { return nil }
+func (m *uiTimeFilterMock) AnalyzePaths(paths []string) error                 { return nil }
 func (m *uiTimeFilterMock) ReadAnalysis(input io.Reader) error                { return nil }
 func (m *uiTimeFilterMock) ReadFromStorage(storagePath, path string) error    { return nil }
 func (m *uiTimeFilterMock) SetIgnoreTypes(types []string)                     {}

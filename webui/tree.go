@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -42,7 +43,9 @@ func toNodeJSON(it fs.Item) nodeJSON {
 		flag = string(f)
 	}
 	return nodeJSON{
-		Name:      it.GetName(),
+		// scanned roots are labelled with their absolute path, since their base
+		// names collide when the roots come from different parent directories
+		Name:      analyze.ItemDisplayName(it.GetParent(), it),
 		Path:      it.GetPath(),
 		IsDir:     it.IsDir(),
 		Size:      it.GetSize(),
@@ -73,6 +76,27 @@ func (ui *UI) findNode(path string) (fs.Item, error) {
 		return root, nil
 	}
 	cleanPath := filepath.Clean(path)
+	if cleanPath == cleanRoot {
+		return root, nil
+	}
+
+	// The virtual top level dir has no path of its own, so paths are resolved
+	// against each of the scanned roots it holds instead.
+	if analyze.IsVirtualRootDir(root) {
+		for child := range root.GetFiles(fs.SortByName, fs.SortAsc) {
+			if node, err := descendFrom(child, child.GetPath(), cleanPath); err == nil {
+				return node, nil
+			}
+		}
+		return nil, errOutsideRoot
+	}
+
+	return descendFrom(root, cleanRoot, cleanPath)
+}
+
+// descendFrom walks from root, which lives at cleanRoot, down to cleanPath.
+// It guards against path traversal outside the root.
+func descendFrom(root fs.Item, cleanRoot, cleanPath string) (fs.Item, error) {
 	if cleanPath == cleanRoot {
 		return root, nil
 	}
