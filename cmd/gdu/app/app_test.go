@@ -320,6 +320,21 @@ func TestGuiDeleteInParallel(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGuiTrashCommand(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", TrashCommand: "trash-put"},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
 func TestAnalyzePathWithGuiBackgroundDeletion(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

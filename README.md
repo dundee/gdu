@@ -87,6 +87,7 @@ Flags:
       --since string                  Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)
   -s, --summarize                     Show only a total in non-interactive mode
   -t, --top int                       Show only top X largest files in non-interactive mode
+      --trash-command string          Command used to move items to trash instead of the built-in trash (e.g. 'trash-put --trash-dir ~/mytrash')
   -T, --type strings                  File types to include (e.g., --type yaml,json)
       --until string                  Include files with mtime <= WHEN. WHEN accepts RFC3339 timestamp or date only YYYY-MM-DD
   -v, --version                       Print version
@@ -101,6 +102,7 @@ Basic list of actions in interactive mode (show help modal for more):
   → or Enter or l                     Go to highlighted directory
   ← or h                              Go to parent directory
   d                                   Delete the selected file or directory
+  D                                   Move the selected file or directory to trash
   e                                   Empty the selected directory
   n                                   Sort by name
   s                                   Sort by size
@@ -114,6 +116,8 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -a                                # show apparent size instead of disk usage
     gdu --no-delete                       # prevent write operations
     gdu --no-view-file                    # prevent viewing file contents
+    gdu --trash-command 'trash-put --trash-dir ~/mytrash'   # use own trash command for the D key
+    gdu --trash-command 'mv -f "$1" ~/mytrash/'             # trash by moving items with mv
     gdu <some_dir_to_analyze>             # analyze given dir
     gdu -d                                # show all mounted disks
     gdu -l ./gdu.log <some_dir>           # write errors to log file

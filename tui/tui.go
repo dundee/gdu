@@ -342,6 +342,11 @@ func (ui *UI) SetDeleteInParallel() {
 	ui.remover = remove.ItemFromDirParallel
 }
 
+// SetTrashCommand replaces the built-in trash with an external command
+func (ui *UI) SetTrashCommand(command string) {
+	ui.trasher = remove.TrashCommand(command)
+}
+
 // StartUILoop starts tview application
 func (ui *UI) StartUILoop() error {
 	signals := make(chan os.Signal, 1)
