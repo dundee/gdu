@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -321,6 +322,23 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Contains(t, reportOutput.String(), `"name":"nested"`)
+}
+
+func TestExportProgressClearsLineWithoutPadding(t *testing.T) {
+	var output bytes.Buffer
+	ui := CreateExportUI(&output, io.Discard, false, true, false, 0, 0, false, nil)
+
+	written := make(chan struct{})
+	go func() {
+		ui.writtenChan <- struct{}{}
+		close(written)
+	}()
+
+	ui.updateProgress()
+	<-written
+
+	assert.Contains(t, output.String(), "\x1b[2K")
+	assert.NotContains(t, output.String(), strings.Repeat(" ", 100))
 }
 
 func TestShowDevices(t *testing.T) {
