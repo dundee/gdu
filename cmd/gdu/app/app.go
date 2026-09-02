@@ -101,6 +101,7 @@ type Flags struct {
 	ChangeCwd          bool      `yaml:"change-cwd"`
 	DeleteInBackground bool      `yaml:"delete-in-background"`
 	DeleteInParallel   bool      `yaml:"delete-in-parallel"`
+	TrashCommand       string    `yaml:"trash-command"`
 	Since              string    `yaml:"since"`
 	Until              string    `yaml:"until"`
 	MaxAge             string    `yaml:"max-age"`
@@ -613,6 +614,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.DeleteInParallel {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetDeleteInParallel()
+		})
+	}
+	if a.Flags.TrashCommand != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetTrashCommand(a.Flags.TrashCommand)
 		})
 	}
 	if a.Flags.BrowseParentDirs {

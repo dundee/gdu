@@ -102,6 +102,8 @@ func init() {
 	flags.BoolVar(&af.NoViewFile, "no-view-file", false, "Do not allow viewing file contents")
 	flags.BoolVar(&af.NoSpawnShell, "no-spawn-shell", false, "Do not allow spawning shell")
 	flags.BoolVar(&af.NoConfirmQuit, "no-confirm-quit", false, "Do not ask for confirmation before quitting after a long scan")
+	flags.StringVar(&af.TrashCommand, "trash-command", "",
+		"Command used to move items to trash instead of the built-in trash (e.g. 'trash-put --trash-dir ~/mytrash')")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 	flags.StringVar(
 		&af.Since, "since", "",

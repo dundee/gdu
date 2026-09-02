@@ -106,6 +106,8 @@ non-interactive mode
 
 **\--no-view-file**\[=false\] Do not allow viewing file contents
 
+**\--trash-command**=\"\" Command used to move items to trash instead of the built-in trash. The command is evaluated by /bin/sh with the absolute path of the item appended as an argument, which is also exported as GDU_TRASH_PATH. Commands taking their destination last can refer to the path as \"\$1\" instead, in which case it is not appended. The command must not be interactive. Not supported on Windows. For example: trash-put \--trash-dir \~/mytrash or mv -f \"\$1\" \~/mytrash/
+
 **-f**, **\--input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 
 **-o**, **\--output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
