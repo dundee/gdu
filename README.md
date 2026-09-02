@@ -37,7 +37,7 @@ Or you can use Gdu directly via Docker:
 ## Usage
 
 ```
-  gdu [flags] [directory_to_scan]
+  gdu [flags] [directory_to_scan...]
 
 Flags:
       --archive-browsing              Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
@@ -115,6 +115,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu --no-delete                       # prevent write operations
     gdu --no-view-file                    # prevent viewing file contents
     gdu <some_dir_to_analyze>             # analyze given dir
+    gdu dir_a dir_b dir_c                 # analyze several dirs at once
     gdu -d                                # show all mounted disks
     gdu -l ./gdu.log <some_dir>           # write errors to log file
     gdu -i /sys,/proc /                   # ignore some paths
@@ -140,6 +141,18 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu --web /                           # analyze and browse the results in a web browser
     gdu --web --web-listen localhost:8080 /   # serve the web UI on a fixed address
     gdu --web --web-open=false /          # print the URL but do not open a browser
+
+## Scanning multiple directories
+
+More than one directory can be given on the command line, which is useful when only a subset of a large directory is of interest:
+
+    gdu ~/projects/alpha ~/projects/beta ~/projects/gamma
+
+The directories are scanned one after another and presented together under a virtual top level directory named `(multiple)`, so they can be compared and sorted like ordinary siblings. They are listed by their absolute path, so directories that share a base name stay distinguishable. Each of them keeps its real path, so rescanning, deletion and opening a shell work as usual once you navigate into one of them.
+
+The virtual top level directory itself has no counterpart on disk, so operations that need a real path are unavailable while it is shown: `--change-cwd`, spawning a shell, browsing to the parent directory (`--browse-parent-dirs`) and exporting to JSON. Rescanning it rescans every directory below it.
+
+Directories that are nested in one another are rejected, since scanning both would count the nested part twice. Exporting (`-o`) and database storage (`--db`) accept a single directory only.
 
 ## Modes
 

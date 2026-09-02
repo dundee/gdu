@@ -10,7 +10,7 @@ gdu - Pretty fast disk usage analyzer written in Go
 
 # SYNOPSIS
 
-**gdu \[flags\] \[directory_to_scan\]**
+**gdu \[flags\] \[directory_to_scan...\]**
 
 # DESCRIPTION
 
@@ -19,6 +19,13 @@ Pretty fast disk usage analyzer written in Go.
 Gdu is intended primarily for SSD disks where it can fully utilize
 parallel processing. However HDDs work as well, but the performance gain
 is not so huge.
+
+More than one directory can be given. They are scanned one after another
+and presented together under a virtual top level directory named
+"(multiple)", listed by their absolute path. Nested directories are
+rejected, as scanning both would count the nested part twice. Exporting
+(\--output-file) and database storage (\--db) accept a single directory
+only.
 
 # OPTIONS
 

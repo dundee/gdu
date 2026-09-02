@@ -478,3 +478,12 @@ func TestFormatSizeDec(t *testing.T) {
 	assert.Contains(t, ui.formatSize(1<<60+1), "EB")
 	assert.Contains(t, ui.formatSize(-1<<10-1), "kB")
 }
+
+func TestAnalyzePathsRejectsMultipleDirs(t *testing.T) {
+	buff := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateExportUI(buff, buff, false, false, false, 0, 0, false, nil)
+
+	err := ui.AnalyzePaths([]string{"test_dir", "other_dir"})
+
+	assert.ErrorContains(t, err, "more than one directory is not supported")
+}

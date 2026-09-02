@@ -173,6 +173,14 @@ func (ui *UI) formatColumns(statsItem fs.Item, maxima rowMaxima, marked, ignored
 	return row
 }
 
+// dirRowStyle returns the styling that introduces a directory name in a row.
+func (ui *UI) dirRowStyle(marked, ignored bool) string {
+	if ui.UseColors && !marked && !ignored {
+		return fmt.Sprintf("[%s::b]", ui.resultRow.DirectoryColor)
+	}
+	return defaultColorBold
+}
+
 func (ui *UI) formatFileRow(item fs.Item, maxima rowMaxima, marked, ignored bool) string {
 	row := ui.formatColumns(item, maxima, marked, ignored)
 
@@ -181,12 +189,14 @@ func (ui *UI) formatFileRow(item fs.Item, maxima rowMaxima, marked, ignored bool
 		return row + name
 	}
 
+	// Scanned roots are labelled with their absolute path, which already reads
+	// as a path and must not be given another leading separator.
+	if ui.atVirtualRoot() {
+		return row + ui.dirRowStyle(marked, ignored) + tview.Escape(item.GetPath())
+	}
+
 	if item.IsDir() {
-		if ui.UseColors && !marked && !ignored {
-			row += fmt.Sprintf("[%s::b]/", ui.resultRow.DirectoryColor)
-		} else {
-			row += defaultColorBold + "/"
-		}
+		row += ui.dirRowStyle(marked, ignored) + "/"
 	}
 	row += tview.Escape(item.GetName())
 
@@ -225,10 +235,10 @@ func (ui *UI) formatCollapsedRow(
 	row := ui.formatColumns(collapsedPath.DeepestDir, maxima, marked, ignored)
 
 	// Always display as directory with special formatting for collapsed path
-	if ui.UseColors && !marked && !ignored {
-		row += fmt.Sprintf("[%s::b]/", ui.resultRow.DirectoryColor)
-	} else {
-		row += defaultColorBold + "/"
+	row += ui.dirRowStyle(marked, ignored)
+	// a collapsed scanned root already starts from an absolute path
+	if !ui.atVirtualRoot() {
+		row += "/"
 	}
 
 	// Display the collapsed path (e.g., "a/b/c")

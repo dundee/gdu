@@ -8,6 +8,18 @@ Architectural decisions live in [`docs/adr/`](docs/adr/).
 Anything gdu can put on a row: a file or a directory. Devices are not items —
 they are listed by a separate screen with their own vocabulary.
 
+## Scanned root
+
+A directory named on the command line, i.e. one of the starting points of a
+scan. There can be more than one. Scanned roots are labelled by their absolute
+path, unlike every other item, which is labelled by its base name.
+
+## Virtual top level directory
+
+The synthetic directory that holds the scanned roots when there is more than
+one, so that they can be listed, sorted and compared as siblings. It is not an
+item on any filesystem and has no path; every other directory gdu shows does.
+
 ## Apparent size
 
 The size an item claims to be, i.e. the length of its contents.

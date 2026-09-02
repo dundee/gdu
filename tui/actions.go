@@ -44,11 +44,11 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	return nil
 }
 
-// AnalyzePath analyzes recursively disk usage for given path
-func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
+// showScanProgressModal builds and shows the modal that reports scan progress.
+func (ui *UI) showScanProgressModal(title string) {
 	ui.progress = tview.NewTextView().SetText("Scanning...")
 	ui.progress.SetBorder(true).SetBorderPadding(2, 2, 2, 2)
-	ui.progress.SetTitle(" Scanning... ")
+	ui.progress.SetTitle(title)
 	ui.progress.SetDynamicColors(true)
 
 	innerFlex := tview.NewFlex().SetDirection(tview.FlexRow).
@@ -72,7 +72,13 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 
 	ui.pages.AddPage("progress", flex, true, true)
 	ui.progressFlex = flex
+}
 
+// AnalyzePath analyzes recursively disk usage for given path
+func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
+	ui.showScanProgressModal(" Scanning... ")
+
+	ui.scanCancelRequested.Store(false)
 	ui.Analyzer.ResetProgress()
 
 	analyzer := ui.Analyzer
@@ -123,6 +129,90 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	}()
 
 	return nil
+}
+
+// AnalyzePaths scans several roots one after another and presents them under a
+// virtual top level dir, so that the rest of the UI keeps working on the single
+// rooted tree it expects.
+//
+// The roots are scanned sequentially rather than concurrently because the
+// analyzer owns a single set of progress channels; each root needs the analyzer
+// reset before it starts, which is also why cancellation has to be tracked
+// separately (ResetProgress clears the analyzer's own cancelled flag).
+func (ui *UI) AnalyzePaths(paths []string) error {
+	if len(paths) == 1 {
+		return ui.AnalyzePath(paths[0], nil)
+	}
+
+	ui.showScanProgressModal(scanProgressTitle(1, len(paths)))
+
+	ui.scanCancelRequested.Store(false)
+	ui.scanStart = time.Now()
+	ui.scanning = true
+	ui.scanCancelled = false
+
+	go func() {
+		defer debug.FreeOSMemory()
+
+		roots := make([]fs.Item, 0, len(paths))
+		for i, path := range paths {
+			if i > 0 {
+				title := scanProgressTitle(i+1, len(paths))
+				ui.app.QueueUpdateDraw(func() {
+					ui.progress.SetTitle(title)
+				})
+			}
+
+			ui.Analyzer.ResetProgress()
+			analyzer := ui.Analyzer
+			go ui.updateProgress(analyzer, analyzer.GetDone())
+
+			roots = append(
+				roots,
+				analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter()),
+			)
+
+			// keep whatever was scanned so far, as a cancelled single scan does
+			if ui.scanCancelRequested.Load() {
+				break
+			}
+		}
+
+		currentDir := analyze.CreateVirtualRootDir(roots...)
+		ui.topDir = currentDir
+		ui.topDirPath = currentDir.GetPath()
+
+		if ui.IsFilteringFiles() {
+			ui.topDir.UpdateStatsWithFileFiltering(ui.linkedItems)
+		} else {
+			ui.topDir.UpdateStats(ui.linkedItems)
+		}
+
+		ui.app.QueueUpdateDraw(func() {
+			ui.scanning = false
+			ui.scanCancelled = false
+			// remember the longest scan so we can guard against accidental quits
+			if d := time.Since(ui.scanStart); d > ui.scanDuration {
+				ui.scanDuration = d
+			}
+			// the finished scan replaces any mid-scan preview
+			ui.previewing = false
+			ui.previewSavedDir = nil
+			ui.currentDir = currentDir
+			ui.showDir()
+			ui.pages.RemovePage("progress")
+		})
+
+		if ui.done != nil {
+			ui.done <- struct{}{}
+		}
+	}()
+
+	return nil
+}
+
+func scanProgressTitle(current, total int) string {
+	return fmt.Sprintf(" Scanning %d/%d... ", current, total)
 }
 
 // ReadAnalysis reads analysis report from JSON file
@@ -411,6 +501,13 @@ func (ui *UI) confirmExport() *tview.Form {
 
 func (ui *UI) exportAnalysis() {
 	ui.pages.RemovePage("export")
+
+	// the export format holds exactly one root, so there is nowhere to put the
+	// virtual dir grouping several of them
+	if analyze.IsVirtualRootDir(ui.topDir) {
+		ui.showMessage("Export is not supported when multiple directories are scanned")
+		return
+	}
 
 	text := tview.NewTextView().SetText("Export in progress...").SetTextAlign(tview.AlignCenter)
 	text.SetBorder(true).SetTitle(" Export data to JSON ")

@@ -742,7 +742,7 @@ func TestPrintItemShowsSymlinkTarget(t *testing.T) {
 	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
 	ui.SetShowSymlinkTarget(true)
 
-	ui.printItem(newStdoutSymlinkFile())
+	ui.printItem(nil, newStdoutSymlinkFile())
 
 	assert.Contains(t, output.String(), "bin -> usr/bin")
 }
@@ -751,7 +751,7 @@ func TestPrintItemHidesSymlinkTargetByDefault(t *testing.T) {
 	output := bytes.NewBuffer(nil)
 	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
 
-	ui.printItem(newStdoutSymlinkFile())
+	ui.printItem(nil, newStdoutSymlinkFile())
 
 	out := output.String()
 	assert.NotContains(t, out, "-> usr/bin")

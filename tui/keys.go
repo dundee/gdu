@@ -532,7 +532,8 @@ func (ui *UI) handleLeft() {
 }
 
 func (ui *UI) analyzeParentOfTopDir() {
-	if ui.currentDir == nil || ui.isInArchive() {
+	// the virtual root has no parent on disk to browse up into
+	if ui.currentDir == nil || ui.isInArchive() || ui.atVirtualRoot() {
 		return
 	}
 

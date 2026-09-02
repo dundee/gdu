@@ -148,6 +148,54 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 	return nil
 }
 
+// AnalyzePaths scans several roots one after another and serves them under a
+// virtual top level dir. The roots are scanned sequentially because the
+// analyzer owns a single set of progress channels.
+func (ui *UI) AnalyzePaths(paths []string) error {
+	if len(paths) == 1 {
+		return ui.AnalyzePath(paths[0], nil)
+	}
+
+	ui.mu.Lock()
+	ui.scanning = true
+	ui.scanErr = nil
+	ui.topDirPath = analyze.VirtualRootName
+	ui.mu.Unlock()
+
+	go func() {
+		roots := make([]fs.Item, 0, len(paths))
+		for _, path := range paths {
+			ui.Analyzer.ResetProgress()
+
+			scanDone := make(chan struct{})
+			go ui.pollProgress(scanDone)
+
+			roots = append(
+				roots,
+				ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter()),
+			)
+			close(scanDone)
+		}
+
+		dir := analyze.CreateVirtualRootDir(roots...)
+		if ui.IsFilteringFiles() {
+			dir.UpdateStatsWithFileFiltering(ui.linkedItems)
+		} else {
+			dir.UpdateStats(ui.linkedItems)
+		}
+
+		ui.mu.Lock()
+		ui.topDir = dir
+		ui.topDirPath = dir.GetPath()
+		ui.scanning = false
+		ui.mu.Unlock()
+
+		ui.hub.publish(ui.statusJSON())
+	}()
+
+	return nil
+}
+
 // ReadAnalysis reads an analysis report from a JSON reader and serves it.
 func (ui *UI) ReadAnalysis(input io.Reader) error {
 	ui.mu.Lock()

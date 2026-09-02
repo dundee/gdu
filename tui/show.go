@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -67,6 +68,20 @@ func (ui *UI) currentDirLabelText() string {
 	return label
 }
 
+// followCurrentDirWithCwd moves the process working directory to the directory
+// being shown, when --change-cwd is enabled. The virtual top level dir has no
+// counterpart on disk, so it is skipped.
+func (ui *UI) followCurrentDirWithCwd() {
+	if ui.changeCwdFn == nil || ui.atVirtualRoot() {
+		return
+	}
+
+	if err := ui.changeCwdFn(ui.currentDirPath); err != nil {
+		log.Printf("error setting cwd: %s", err.Error())
+	}
+	log.Printf("changing cwd to %s", ui.currentDirPath)
+}
+
 // nolint: funlen // Why: complex function
 func (ui *UI) showDir() {
 	var (
@@ -78,13 +93,7 @@ func (ui *UI) showDir() {
 
 	ui.currentDirPath = ui.currentDir.GetPath()
 
-	if ui.changeCwdFn != nil {
-		err := ui.changeCwdFn(ui.currentDirPath)
-		if err != nil {
-			log.Printf("error setting cwd: %s", err.Error())
-		}
-		log.Printf("changing cwd to %s", ui.currentDirPath)
-	}
+	ui.followCurrentDirWithCwd()
 
 	ui.currentDirLabel.SetText(ui.currentDirLabelText()).SetDynamicColors(true)
 
@@ -143,8 +152,10 @@ func (ui *UI) showDir() {
 	}
 
 	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
+		// filter on the label the row actually shows, which for a scanned root
+		// under the virtual top level dir is its absolute path
 		if ui.filterValue != "" && !strings.Contains(
-			strings.ToLower(item.GetName()),
+			strings.ToLower(analyze.ItemDisplayName(ui.currentDir, item)),
 			strings.ToLower(ui.filterValue),
 		) {
 			continue
