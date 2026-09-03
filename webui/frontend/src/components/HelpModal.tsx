@@ -15,6 +15,10 @@ export function HelpModal() {
       onClose={() => setShowHelp(false)}
     >
       <dl className="shortcuts">
+        <dt>O</dt>
+        <dd>Reveal selected item</dd>
+        <dt>D</dt>
+        <dd>Delete selected item</dd>
         <dt>?</dt>
         <dd>Show this help</dd>
         <dt>Click</dt>

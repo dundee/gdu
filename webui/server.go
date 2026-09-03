@@ -69,6 +69,8 @@ func (ui *UI) routes() *http.ServeMux {
 	mux.HandleFunc("/api/v1/status", ui.handleStatus)
 	mux.HandleFunc("GET /api/v1/nodes", ui.handleNodes)
 	mux.HandleFunc("GET /api/v1/tree", ui.handleTree)
+	mux.HandleFunc("DELETE /api/v1/nodes", requireLocalAction(ui.handleDeleteNode))
+	mux.HandleFunc("POST /api/v1/reveal", requireLocalAction(ui.handleReveal))
 	mux.HandleFunc("/api/v1/devices", ui.handleDevices)
 	mux.HandleFunc("/api/v1/events", ui.handleEvents)
 	mux.Handle("/", staticHandler())
@@ -97,4 +99,27 @@ func isLoopbackHost(hostport string) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
+}
+
+// isLocalRequest reports whether r both originates from a loopback address
+// and targets a loopback Host header. Checking RemoteAddr alone is not
+// enough: a page on an attacker-controlled domain that DNS-rebinds to
+// 127.0.0.1 also connects from loopback, but the browser still sends the
+// attacker's hostname as the Host header, which this rejects.
+func isLocalRequest(r *http.Request) bool {
+	return isLoopbackHost(r.RemoteAddr) && isLoopbackHost(r.Host)
+}
+
+// requireLocalAction wraps a mutating handler so it only runs for requests
+// that both carry the frontend's action header and originate from loopback,
+// guarding against CSRF-style calls from other pages and from other hosts on
+// the network.
+func requireLocalAction(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !isLocalActionRequest(r) {
+			writeError(w, http.StatusForbidden, "actions are only available from the local web UI")
+			return
+		}
+		next(w, r)
+	}
 }

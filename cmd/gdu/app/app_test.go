@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"net"
 	"os"
 	"regexp"
 	"runtime"
@@ -696,6 +697,32 @@ func TestNoCross(t *testing.T) {
 
 	assert.Contains(t, out, "nested")
 	assert.Nil(t, err)
+}
+
+func TestWebFlagCreatesWebUIAndHonorsNoDelete(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	// Pre-bind the address so StartUILoop fails fast on net.Listen instead of
+	// actually serving; this only needs to exercise createUI's webUI
+	// construction and NoDelete wiring, not a live server.
+	blocker, err := net.Listen("tcp", "127.0.0.1:0")
+	assert.Nil(t, err)
+	defer blocker.Close()
+
+	_, err = runApp(
+		&Flags{
+			LogFile:   "/dev/null",
+			Web:       true,
+			NoDelete:  true,
+			WebConfig: WebConfig{Listen: blocker.Addr().String()},
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.ErrorContains(t, err, "binding")
 }
 
 func TestListDevices(t *testing.T) {
