@@ -1,10 +1,12 @@
 package webui
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -73,6 +75,7 @@ func TestStatusEndpoint(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&status))
 	assert.Equal(t, "done", status.State)
 	assert.Equal(t, root, status.RootPath)
+	assert.True(t, status.DeleteAllowed, "delete should be allowed for an unfiltered local scan")
 }
 
 func TestNodesEndpoint(t *testing.T) {
@@ -212,6 +215,231 @@ func TestNodesNotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestDeleteNodeEndpointRemovesFileAndUpdatesTree(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.True(t, os.IsNotExist(err), "deleted file still exists: %v", err)
+
+	_, err = ui.findNode(path)
+	assert.ErrorIs(t, err, errNotFound)
+}
+
+func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	var revealed string
+	ui.revealPath = func(path string) error {
+		revealed = path
+		return nil
+	}
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(root, "big.bin")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Equal(t, root, revealed)
+}
+
+// makeZip creates a zip archive at path containing a single file entry
+// "inner.txt" and returns the temp directory it lives in.
+func makeZip(t *testing.T, path string) {
+	t.Helper()
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+
+	zw := zip.NewWriter(f)
+	w, err := zw.Create("inner.txt")
+	require.NoError(t, err)
+	_, err = w.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+}
+
+// makeNestedZip creates a zip archive at path containing a single file entry
+// two levels deep ("subdir/deep.txt") and returns the temp directory it
+// lives in.
+func makeNestedZip(t *testing.T, path string) {
+	t.Helper()
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+
+	zw := zip.NewWriter(f)
+	w, err := zw.Create("subdir/deep.txt")
+	require.NoError(t, err)
+	_, err = w.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+}
+
+func TestRevealEndpointOpensArchiveParentDirectoryForDeeplyNestedEntry(t *testing.T) {
+	ui := newTestUI()
+	ui.SetArchiveBrowsing(true)
+	root := t.TempDir()
+	zipPath := filepath.Join(root, "archive.zip")
+	makeNestedZip(t, zipPath)
+	scan(t, ui, root)
+
+	var revealed string
+	ui.revealPath = func(path string) error {
+		revealed = path
+		return nil
+	}
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	// deep.txt's parent (subdir) is itself nested inside the archive root,
+	// so realPathAncestor must walk up two levels before reaching the
+	// archive's own top-level node.
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(zipPath, "subdir", "deep.txt")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Equal(t, root, revealed)
+}
+
+func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
+	ui := newTestUI()
+	ui.SetArchiveBrowsing(true)
+	root := t.TempDir()
+	zipPath := filepath.Join(root, "archive.zip")
+	makeZip(t, zipPath)
+	scan(t, ui, root)
+
+	var revealed string
+	ui.revealPath = func(path string) error {
+		revealed = path
+		return nil
+	}
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(zipPath, "inner.txt")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Equal(t, root, revealed, "revealed path should be the archive's containing directory, not the archive file itself")
+}
+
+func TestDeleteEndpointHonorsNoDelete(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	ui.SetNoDelete()
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestDeleteEndpointHonorsActiveFilters(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	ui.FilteringFiles = true
+	t.Setenv("GDU_ALLOW_DELETE_WITH_FILTER", "")
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestDeleteEndpointRejectsAnalysisRoot(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(root), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	_, err = os.Stat(root)
+	assert.NoError(t, err, "root should remain after rejected delete")
+}
+
+func TestActionEndpointsRequireLocalActionHeader(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
 }
 
 func TestParseSort(t *testing.T) {
@@ -621,6 +849,22 @@ func waitDone(t *testing.T, ui *UI) {
 	t.Fatal("scan did not complete in time")
 }
 
+func TestHandleStatusHidesDeleteAllowedForRemoteRequest(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+	req.RemoteAddr = "203.0.113.5:12345"
+	req.Host = "example.com"
+	w := httptest.NewRecorder()
+	ui.handleStatus(w, req)
+
+	var status statusResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&status))
+	assert.False(t, status.DeleteAllowed, "remote requests must never see delete as allowed")
+}
+
 func TestNodesEndpointDefaultsToRootWhenPathOmitted(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)
@@ -744,6 +988,124 @@ func TestTreeEndpointOrdersMultipleDirectoriesBySize(t *testing.T) {
 	assert.GreaterOrEqual(t, tree.Children[0].Usage, tree.Children[1].Usage)
 }
 
+func TestDeleteNodeEndpointNotFound(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	missing := filepath.Join(root, "does-not-exist")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(missing), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestDeleteNodeEndpointRejectsArchiveDescendant(t *testing.T) {
+	ui := newTestUI()
+	ui.SetArchiveBrowsing(true)
+	root := t.TempDir()
+	zipPath := filepath.Join(root, "archive.zip")
+	makeZip(t, zipPath)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	entryPath := filepath.Join(zipPath, "inner.txt")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(entryPath), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestRevealEndpointInvalidBody(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", strings.NewReader("not json"))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestRevealEndpointNotFound(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(root, "does-not-exist")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestRevealEndpointNoDirectoryToReveal(t *testing.T) {
+	ui := newTestUI()
+	// A root that is itself a file (not a directory) has no parent, so
+	// revealing it hits the "no directory to reveal" guard.
+	ui.mu.Lock()
+	ui.topDir = &analyze.File{Name: "onlyfile"}
+	ui.topDirPath = "onlyfile"
+	ui.mu.Unlock()
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", strings.NewReader(`{"path":"onlyfile"}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestRevealEndpointPropagatesRevealError(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	ui.revealPath = func(string) error { return errors.New("boom") }
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(fmt.Sprintf(`{"path":%q}`, filepath.Join(root, "big.bin")))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", "1")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+}
+
 func TestWriteNodeErrorDefaultCase(t *testing.T) {
 	w := httptest.NewRecorder()
 	writeNodeError(w, errors.New("some other failure"))
@@ -769,6 +1131,18 @@ func TestHandleEventsFlusherUnsupported(t *testing.T) {
 	w := newNoFlushRecorder()
 	ui.handleEvents(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.status)
+}
+
+func TestStatusJSONForClientHidesDeleteForRemote(t *testing.T) {
+	msg := `{"state":"done","deleteAllowed":true}`
+
+	out := statusJSONForClient(msg, false)
+	var resp statusResponse
+	require.NoError(t, json.Unmarshal([]byte(out), &resp))
+	assert.False(t, resp.DeleteAllowed)
+
+	assert.Equal(t, msg, statusJSONForClient(msg, true), "local clients see the message unchanged")
+	assert.Equal(t, "not json", statusJSONForClient("not json", false), "unparseable payloads pass through unchanged")
 }
 
 // errWriter is an http.ResponseWriter whose Write always fails, used to

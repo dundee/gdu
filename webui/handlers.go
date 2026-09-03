@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dundee/gdu/v5/pkg/remove"
 )
 
 // statusResponse describes the current scan state and display preferences.
@@ -18,6 +21,7 @@ type statusResponse struct {
 	ShowApparentSize bool         `json:"showApparentSize"`
 	ShowRelativeSize bool         `json:"showRelativeSize"`
 	UseSIPrefix      bool         `json:"useSIPrefix"`
+	DeleteAllowed    bool         `json:"deleteAllowed"`
 }
 
 type progressJSON struct {
@@ -66,14 +70,20 @@ func (ui *UI) buildStatus() statusResponse {
 		ShowRelativeSize: ui.ShowRelativeSize,
 		UseSIPrefix:      ui.UseSIPrefix,
 	}
+	reason, _ := ui.deleteDisabledReason(ui.noDelete, ui.scanning)
+	resp.DeleteAllowed = reason == ""
 	if ui.scanErr != nil {
 		resp.Error = ui.scanErr.Error()
 	}
 	return resp
 }
 
-func (ui *UI) handleStatus(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, ui.buildStatus())
+func (ui *UI) handleStatus(w http.ResponseWriter, r *http.Request) {
+	resp := ui.buildStatus()
+	if !isLocalRequest(r) {
+		resp.DeleteAllowed = false
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +106,96 @@ func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, buildTree(node))
+}
+
+// deleteDisabledReason reports why deletion is currently refused given the
+// scan state, or "" (with an unused status) when it is allowed. Shared by
+// buildStatus, which only needs the boolean, and handleDeleteNode, which also
+// needs the message and HTTP status to report.
+func (ui *UI) deleteDisabledReason(noDelete, scanning bool) (reason string, status int) {
+	switch {
+	case noDelete:
+		return "deletion is disabled", http.StatusForbidden
+	case ui.IsFilteringFiles() && os.Getenv("GDU_ALLOW_DELETE_WITH_FILTER") != "1":
+		return "deletion is disabled while filters are active", http.StatusForbidden
+	case scanning:
+		return "deletion is unavailable while scanning", http.StatusConflict
+	default:
+		return "", 0
+	}
+}
+
+func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
+	ui.actionMu.Lock()
+	defer ui.actionMu.Unlock()
+
+	ui.mu.RLock()
+	noDelete := ui.noDelete
+	scanning := ui.scanning
+	ui.mu.RUnlock()
+	if reason, status := ui.deleteDisabledReason(noDelete, scanning); reason != "" {
+		writeError(w, status, reason)
+		return
+	}
+
+	node, err := ui.findNode(r.URL.Query().Get("path"))
+	if err != nil {
+		writeNodeError(w, err)
+		return
+	}
+	parent := node.GetParent()
+	if parent == nil {
+		writeError(w, http.StatusBadRequest, "cannot delete the analysis root")
+		return
+	}
+	if isArchiveDescendant(node) {
+		writeError(w, http.StatusBadRequest, "cannot delete an entry nested inside a browsed archive")
+		return
+	}
+	if err := remove.ItemFromDir(parent, node); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (ui *UI) handleReveal(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	node, err := ui.findNode(body.Path)
+	if err != nil {
+		writeNodeError(w, err)
+		return
+	}
+	target := node
+	if !node.IsDir() {
+		target = node.GetParent()
+	}
+	if target == nil {
+		writeError(w, http.StatusBadRequest, "path has no directory to reveal")
+		return
+	}
+	target = realPathAncestor(target)
+	if isArchiveRoot(target) {
+		// target is a browsed archive's own top-level node: its GetPath
+		// names the archive file, so reveal its containing directory
+		// instead of opening the archive itself.
+		target = target.GetParent()
+	}
+	if err := ui.revealPath(target.GetPath()); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func isLocalActionRequest(r *http.Request) bool {
+	return r.Header.Get("X-GDU-Action") == "1" && isLocalRequest(r)
 }
 
 func writeNodeError(w http.ResponseWriter, err error) {
@@ -139,6 +239,8 @@ func (ui *UI) handleEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	local := isLocalRequest(r)
+
 	ch, last := ui.hub.subscribe()
 	defer ui.hub.unsubscribe(ch)
 
@@ -146,7 +248,7 @@ func (ui *UI) handleEvents(w http.ResponseWriter, r *http.Request) {
 	if last == "" {
 		last = ui.statusJSON()
 	}
-	fmt.Fprintf(w, "data: %s\n\n", last)
+	fmt.Fprintf(w, "data: %s\n\n", statusJSONForClient(last, local))
 	flusher.Flush()
 
 	for {
@@ -157,10 +259,30 @@ func (ui *UI) handleEvents(w http.ResponseWriter, r *http.Request) {
 			if !open {
 				return
 			}
-			fmt.Fprintf(w, "data: %s\n\n", msg)
+			fmt.Fprintf(w, "data: %s\n\n", statusJSONForClient(msg, local))
 			flusher.Flush()
 		}
 	}
+}
+
+// statusJSONForClient adjusts a broadcast status payload for one SSE
+// subscriber: the hub broadcasts a single shared message to every client, but
+// deleteAllowed must read false for remote clients since requireLocalAction
+// rejects their deletion requests regardless of what this message reports.
+func statusJSONForClient(msg string, local bool) string {
+	if local {
+		return msg
+	}
+	var resp statusResponse
+	if err := json.Unmarshal([]byte(msg), &resp); err != nil {
+		return msg
+	}
+	resp.DeleteAllowed = false
+	data, err := json.Marshal(resp)
+	if err != nil {
+		return msg
+	}
+	return string(data)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

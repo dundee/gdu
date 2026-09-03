@@ -15,8 +15,8 @@ export type ChartView = 'donut' | 'treemap';
 
 // GduModel is the shared app-level data: scan status, the current
 // directory's node data, and display preferences. Directory-specific
-// features (the recursive tree, selection) live in the view that needs them
-// (see TreeMapView) and are not part of this model.
+// features (the recursive tree, selection, delete/reveal) live in the view
+// that needs them (see TreeMapView) and are not part of this model.
 export interface GduModel {
   status: Status;
   currentPath: string;
@@ -45,6 +45,16 @@ export interface GduModel {
   treeRoot: TreeNode | null;
   treePath: string | null;
   setTree: (path: string, root: TreeNode | null) => void;
+  // Invalidates the cached tree (clears both treeRoot and treePath) so a
+  // failed refresh does not leave a stale tree displayed as current, and the
+  // loader effect above treats the path as not-yet-loaded, eligible for a
+  // retry.
+  clearTree: () => void;
+  // "Do not ask again this session" for delete confirmation. Lives here
+  // (rather than in TreeMapView) so it survives the view toggling
+  // donut/treemap, which unmounts TreeMapView and would otherwise reset it.
+  skipDeleteConfirm: boolean;
+  setSkipDeleteConfirm: (skip: boolean) => void;
 }
 
 const GduModelContext = createContext<GduModel | null>(null);
@@ -78,6 +88,7 @@ export function useGduModelState() {
   const [showHelp, setShowHelp] = useState(false);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
+  const [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
 
   // Initial status + live updates over SSE.
   useEffect(() => {
@@ -191,6 +202,11 @@ export function useGduModelState() {
     setTreeRoot(root);
   }, []);
 
+  const clearTree = useCallback(() => {
+    setTreePath(null);
+    setTreeRoot(null);
+  }, []);
+
   return {
     status,
     currentPath,
@@ -216,5 +232,8 @@ export function useGduModelState() {
     treeRoot,
     treePath,
     setTree,
+    clearTree,
+    skipDeleteConfirm,
+    setSkipDeleteConfirm,
   };
 }
