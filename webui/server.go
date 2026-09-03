@@ -25,7 +25,7 @@ func (ui *UI) StartUILoop() error {
 		return fmt.Errorf("binding %s: %w", ui.listenAddr, err)
 	}
 
-	url := "http://" + listener.Addr().String()
+	url := actionURL(listener.Addr(), ui.actionToken)
 	fmt.Fprintf(ui.output, "Gdu web UI running at %s\n", url)
 	warnIfRemote(ui.output, listener.Addr())
 

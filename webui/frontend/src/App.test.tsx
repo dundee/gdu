@@ -15,7 +15,6 @@ const status: Status = {
   showRelativeSize: false,
   useSIPrefix: false,
   deleteAllowed: true,
-  actionToken: 'test-token',
 };
 const nodeResponse: NodeResponse = {
   node: {
@@ -72,6 +71,9 @@ const treeResponse: TreeNode = {
 };
 
 beforeEach(() => {
+  // The action token lives only in this page's own URL (see model.tsx),
+  // mirroring how the server delivers it in practice.
+  window.history.pushState({}, '', '/?token=test-token');
   vi.mocked(api.fetchStatus).mockResolvedValue(status);
   vi.mocked(api.fetchNode).mockResolvedValue(nodeResponse);
   vi.mocked(api.fetchTree).mockResolvedValue(treeResponse);
@@ -81,6 +83,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  window.history.pushState({}, '', '/');
 });
 
 describe('chart view', () => {

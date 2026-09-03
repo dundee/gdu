@@ -22,7 +22,6 @@ type statusResponse struct {
 	ShowRelativeSize bool         `json:"showRelativeSize"`
 	UseSIPrefix      bool         `json:"useSIPrefix"`
 	DeleteAllowed    bool         `json:"deleteAllowed"`
-	ActionToken      string       `json:"actionToken"`
 }
 
 type progressJSON struct {
@@ -73,7 +72,6 @@ func (ui *UI) buildStatus() statusResponse {
 	}
 	reason, _ := ui.deleteDisabledReason(ui.noDelete, ui.scanning)
 	resp.DeleteAllowed = reason == ""
-	resp.ActionToken = ui.actionToken
 	if ui.scanErr != nil {
 		resp.Error = ui.scanErr.Error()
 	}
@@ -84,7 +82,6 @@ func (ui *UI) handleStatus(w http.ResponseWriter, r *http.Request) {
 	resp := ui.buildStatus()
 	if !isLocalRequest(r) {
 		resp.DeleteAllowed = false
-		resp.ActionToken = ""
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -266,9 +263,8 @@ func (ui *UI) handleEvents(w http.ResponseWriter, r *http.Request) {
 
 // statusJSONForClient adjusts a broadcast status payload for one SSE
 // subscriber: the hub broadcasts a single shared message to every client, but
-// deleteAllowed must read false, and actionToken must be withheld, for remote
-// clients since requireLocalAction rejects their action requests regardless
-// of what this message reports.
+// deleteAllowed must read false for remote clients since requireLocalAction
+// rejects their action requests regardless of what this message reports.
 func statusJSONForClient(msg string, local bool) string {
 	if local {
 		return msg
@@ -278,7 +274,6 @@ func statusJSONForClient(msg string, local bool) string {
 		return msg
 	}
 	resp.DeleteAllowed = false
-	resp.ActionToken = ""
 	data, err := json.Marshal(resp)
 	if err != nil {
 		return msg

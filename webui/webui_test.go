@@ -76,7 +76,6 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, "done", status.State)
 	assert.Equal(t, root, status.RootPath)
 	assert.True(t, status.DeleteAllowed, "delete should be allowed for an unfiltered local scan")
-	assert.Equal(t, ui.actionToken, status.ActionToken)
 }
 
 func TestNodesEndpoint(t *testing.T) {
@@ -964,7 +963,6 @@ func TestHandleStatusHidesDeleteAllowedForRemoteRequest(t *testing.T) {
 	var status statusResponse
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&status))
 	assert.False(t, status.DeleteAllowed, "remote requests must never see delete as allowed")
-	assert.Empty(t, status.ActionToken, "remote requests must never see the action token")
 }
 
 func TestNodesEndpointDefaultsToRootWhenPathOmitted(t *testing.T) {
@@ -1236,13 +1234,12 @@ func TestHandleEventsFlusherUnsupported(t *testing.T) {
 }
 
 func TestStatusJSONForClientHidesDeleteForRemote(t *testing.T) {
-	msg := `{"state":"done","deleteAllowed":true,"actionToken":"secret"}`
+	msg := `{"state":"done","deleteAllowed":true}`
 
 	out := statusJSONForClient(msg, false)
 	var resp statusResponse
 	require.NoError(t, json.Unmarshal([]byte(out), &resp))
 	assert.False(t, resp.DeleteAllowed)
-	assert.Empty(t, resp.ActionToken, "remote clients must never see the action token")
 
 	assert.Equal(t, msg, statusJSONForClient(msg, true), "local clients see the message unchanged")
 	assert.Equal(t, "not json", statusJSONForClient("not json", false), "unparseable payloads pass through unchanged")
@@ -1302,6 +1299,8 @@ func TestStaticHandlerServesIndex(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "no-referrer", resp.Header.Get("Referrer-Policy"),
+		"the action token lives in this page's URL; it must never leak via Referer")
 
 	// An unknown non-asset path falls back to index.html (client-side routing).
 	resp2, err := http.Get(srv.URL + "/some/spa/route")
