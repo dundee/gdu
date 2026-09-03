@@ -118,50 +118,6 @@ func (ui *UI) findNode(path string) (fs.Item, error) {
 	return current, nil
 }
 
-// isArchiveDescendant reports whether it sits below the root of a browsed
-// zip/tar archive, i.e. its parent is itself inside an archive. Such nodes
-// have a synthetic path (archive.zip/folder/file) that does not exist on
-// disk, so os.RemoveAll and OS reveal cannot operate on them directly. The
-// archive's own top-level node is not a descendant: its Parent is a real
-// filesystem directory, and its GetPath() resolves to the real archive file.
-func isArchiveDescendant(it fs.Item) bool {
-	parent := it.GetParent()
-	if parent == nil {
-		return false
-	}
-	switch parent.GetType() {
-	case "ZipDirectory", "TarDirectory":
-		return true
-	default:
-		return false
-	}
-}
-
-// realPathAncestor walks up from it until it finds a node whose GetPath
-// resolves to a real filesystem path: either it itself, or the nearest
-// ancestor that is not nested inside a browsed archive (the archive's own
-// top-level node, whose Parent is a real directory).
-func realPathAncestor(it fs.Item) fs.Item {
-	for isArchiveDescendant(it) {
-		it = it.GetParent()
-	}
-	return it
-}
-
-// isArchiveRoot reports whether it is the top-level node of a browsed
-// zip/tar archive. Its GetPath still resolves to a real filesystem path, but
-// that path names the archive file itself, not a directory: opening it would
-// launch the archive's associated application (and may start extracting it)
-// instead of revealing it in a file manager.
-func isArchiveRoot(it fs.Item) bool {
-	switch it.GetType() {
-	case "ZipDirectory", "TarDirectory":
-		return true
-	default:
-		return false
-	}
-}
-
 func childByName(parent fs.Item, name string) (fs.Item, bool) {
 	if !parent.IsDir() {
 		return nil, false

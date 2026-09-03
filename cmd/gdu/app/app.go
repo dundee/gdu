@@ -388,7 +388,7 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 
 	switch {
 	case a.Flags.Web:
-		webUI := webui.CreateUI(
+		ui = webui.CreateUI(
 			a.Writer,
 			a.Flags.WebConfig.Listen,
 			a.Flags.WebConfig.OpenBrowser,
@@ -398,10 +398,6 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 			a.Flags.ShowRelativeSize,
 			a.Flags.UseSIPrefix,
 		)
-		if a.Flags.NoDelete {
-			webUI.SetNoDelete()
-		}
-		ui = webUI
 	case a.Flags.OutputFile != "":
 		var output io.Writer
 		if a.Flags.OutputFile == "-" {

@@ -16,8 +16,8 @@ export type ChartView = 'donut' | 'treemap';
 
 // GduModel is the shared app-level data: scan status, the current
 // directory's node data, and display preferences. Directory-specific
-// features (the recursive tree, selection, delete/reveal) live in the view
-// that needs them (see TreeMapView) and are not part of this model.
+// features (the recursive tree, selection) live in the view that needs them
+// (see TreeMapView) and are not part of this model.
 export interface GduModel {
   status: Status;
   currentPath: string;
@@ -53,11 +53,6 @@ export interface GduModel {
   // loader effect above treats the path as not-yet-loaded, eligible for a
   // retry.
   clearTree: () => void;
-  // "Do not ask again this session" for delete confirmation. Lives here
-  // (rather than in TreeMapView) so it survives the view toggling
-  // donut/treemap, which unmounts TreeMapView and would otherwise reset it.
-  skipDeleteConfirm: boolean;
-  setSkipDeleteConfirm: (skip: boolean) => void;
 }
 
 const GduModelContext = createContext<GduModel | null>(null);
@@ -91,7 +86,6 @@ export function useGduModelState() {
   const [showHelp, setShowHelp] = useState(false);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
-  const [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
 
   // Tracks the latest currentPath so an in-flight refreshNode() call (e.g.
   // one started before a breadcrumb navigation) can tell its result is
@@ -260,7 +254,5 @@ export function useGduModelState() {
     treePath,
     setTree,
     clearTree,
-    skipDeleteConfirm,
-    setSkipDeleteConfirm,
   };
 }

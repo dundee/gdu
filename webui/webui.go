@@ -31,13 +31,11 @@ type UI struct {
 	listenAddr  string
 	openBrowser bool
 	browserCmd  string
-	revealPath  func(string) error
 
 	getter  device.DevicesInfoGetter
 	devices device.Devices
 
 	mu           sync.RWMutex
-	actionMu     sync.Mutex
 	topDir       fs.Item
 	topDirPath   string
 	linkedItems  fs.HardLinkedItems
@@ -45,16 +43,8 @@ type UI struct {
 	scanning     bool
 	scanErr      error
 	progress     common.CurrentProgress
-	noDelete     bool
 
 	hub *hub
-}
-
-// SetNoDelete disables destructive actions in the web UI.
-func (ui *UI) SetNoDelete() {
-	ui.mu.Lock()
-	ui.noDelete = true
-	ui.mu.Unlock()
 }
 
 // CreateUI creates a new web UI.
@@ -80,7 +70,6 @@ func CreateUI(
 		listenAddr:  listenAddr,
 		openBrowser: openBrowser,
 		browserCmd:  browserCmd,
-		revealPath:  openPath,
 		linkedItems: make(fs.HardLinkedItems),
 		hub:         newHub(),
 	}

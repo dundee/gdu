@@ -39,33 +39,6 @@ export function fetchTree(path: string): Promise<TreeNode> {
   return getJSON<TreeNode>(`api/v1/tree?${params.toString()}`);
 }
 
-async function requestAction(url: string, init: RequestInit): Promise<void> {
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      'X-GDU-Action': '1',
-      ...init.headers,
-    },
-  });
-  if (res.ok) {
-    return;
-  }
-  throw await responseError(res);
-}
-
-export function revealNode(path: string): Promise<void> {
-  return requestAction('api/v1/reveal', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path }),
-  });
-}
-
-export function deleteNode(path: string): Promise<void> {
-  const params = new URLSearchParams({ path });
-  return requestAction(`api/v1/nodes?${params.toString()}`, { method: 'DELETE' });
-}
-
 // subscribeStatus opens an SSE connection that yields status updates. Returns
 // an unsubscribe function.
 export function subscribeStatus(onStatus: (status: Status) => void): () => void {
