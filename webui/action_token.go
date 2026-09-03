@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	"net"
 	"net/http"
 )
 
@@ -11,18 +12,20 @@ import (
 // on for every mutating request (delete, reveal).
 const actionHeader = "X-GDU-Action"
 
+// actionTokenParam is the URL query parameter StartUILoop appends the action
+// token to (see server.go) so the frontend can pick it up client-side.
+const actionTokenParam = "token"
+
 // actionTokenSize is the amount of entropy (in bytes) behind the per-process
 // action token.
 const actionTokenSize = 32
 
 // generateActionToken returns a cryptographically random, hex-encoded token
-// unique to this server run. The frontend receives it once, over the status
-// endpoint/SSE stream (see statusJSONForClient), and echoes it back on every
-// mutating request. A page on another origin cannot read that value: the
-// browser blocks cross-origin scripts from reading the response body of a
-// same-origin-only endpoint (no Access-Control-Allow-Origin is ever sent),
-// so it has no way to learn the token even though it can still cause the
-// browser to *send* a request.
+// unique to this server run. The frontend receives it once, from the URL
+// StartUILoop prints and opens (see actionTokenParam), never over any API
+// response: unlike the read-only endpoints, which stay intentionally
+// unauthenticated, the token itself must not be readable by another local
+// user who can reach the port but not this process's own terminal.
 func generateActionToken() string {
 	b := make([]byte, actionTokenSize)
 	if _, err := rand.Read(b); err != nil {
@@ -31,6 +34,15 @@ func generateActionToken() string {
 		panic("webui: failed to generate action token: " + err.Error())
 	}
 	return hex.EncodeToString(b)
+}
+
+// actionURL is the URL StartUILoop prints and opens the browser to: the
+// loopback address the server is listening on, carrying the action token as
+// a query parameter (see actionTokenParam) so the frontend can pick it up
+// client-side, and so this URL - not any API response - is the token's only
+// delivery channel.
+func actionURL(addr net.Addr, token string) string {
+	return "http://" + addr.String() + "/?" + actionTokenParam + "=" + token
 }
 
 // validActionToken reports whether token matches this server's action token,

@@ -40,12 +40,13 @@ export function fetchTree(path: string): Promise<TreeNode> {
 }
 
 // requestAction sends a mutating request carrying the per-process action
-// token the server issued over /api/v1/status (see Status.actionToken). The
-// server rejects the request unless this exact token is echoed back, which
-// keeps a page on another origin (or another browser tab) from triggering a
-// delete/reveal even though it may still be able to make the browser send a
-// request: it does not know the token, since the server serves it only to
-// same-origin readers.
+// token the server printed into this page's own URL (see
+// GduModel.actionToken in model.tsx). The server rejects the request unless
+// this exact token is echoed back, which keeps a page on another origin (or
+// another browser tab, or another local user who never saw this URL) from
+// triggering a delete/reveal even though it may still be able to make the
+// browser send a request: it does not know the token, since the token is
+// never served over any API response.
 async function requestAction(url: string, token: string, init: RequestInit): Promise<void> {
   const res = await fetch(url, {
     ...init,

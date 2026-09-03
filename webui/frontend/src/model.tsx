@@ -19,6 +19,11 @@ export type ChartView = 'donut' | 'treemap';
 // that needs them (see TreeMapView) and are not part of this model.
 export interface GduModel {
   status: Status;
+  // Per-process secret the server prints/opens the page with (see
+  // actionTokenParam in webui/action_token.go), read once from this page's
+  // own URL rather than from any API response. Required on every
+  // delete/reveal request; see api.ts.
+  actionToken: string;
   currentPath: string;
   nodeResp: NodeResponse | null;
   children: Node[];
@@ -76,6 +81,11 @@ export function GduModelProvider({ model, children }: { model: GduModel; childre
 // still render the pre-scan loading/error/progress screens before a
 // GduModelProvider (which needs a non-null status/currentPath) makes sense.
 export function useGduModelState() {
+  // Read once at mount: the token lives only in this page's own URL (see
+  // GduModel.actionToken), not in any state the server pushes afterwards.
+  const [actionToken] = useState(
+    () => new URLSearchParams(window.location.search).get('token') ?? '',
+  );
   const [status, setStatus] = useState<Status | null>(null);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [nodeResp, setNodeResp] = useState<NodeResponse | null>(null);
@@ -209,6 +219,7 @@ export function useGduModelState() {
 
   return {
     status,
+    actionToken,
     currentPath,
     nodeResp,
     children,

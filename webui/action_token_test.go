@@ -1,11 +1,18 @@
 package webui
 
 import (
+	"net"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestActionURL(t *testing.T) {
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:1234")
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:1234/?token=abc123", actionURL(addr, "abc123"))
+}
 
 func TestGenerateActionTokenIsRandomAndHexEncoded(t *testing.T) {
 	a := generateActionToken()

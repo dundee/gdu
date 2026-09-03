@@ -205,13 +205,16 @@ By default the server binds to `localhost` on a random free port. Use
 The compiled web assets are embedded in the binary, so no extra files or network
 access are required.
 
-**Security:** the web UI has no authentication. It exposes file names and sizes
-over HTTP, so keep it bound to `localhost` (the default). Reveal and delete
-actions require a request that both originates from a loopback address and
-carries a random token generated fresh for each server run and known only to
-the page the server itself served; remote clients, and pages on another
-origin or browser tab, are read-only. Binding to a non-loopback address makes
-scan details reachable by other hosts on the network and prints a warning.
+**Security:** browsing is read-only and requires no authentication, so anyone
+who can reach the port sees file names and sizes - keep it bound to
+`localhost` (the default). Reveal and delete actions need more: a request
+that both originates from a loopback address and carries a random token,
+generated fresh for each server run and printed only in the URL on this
+process's own terminal (never served over the API), so another local user who
+can reach the port but not this terminal cannot forge one; pages on another
+origin or browser tab are rejected the same way even if they can reach the
+port. Binding to a non-loopback address makes scan details reachable by other
+hosts on the network and prints a warning.
 
 ## File flags
 
