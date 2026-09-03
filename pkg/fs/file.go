@@ -127,14 +127,33 @@ func (f ByApparentSize) Less(i, j int) bool {
 	return natural.Less(f[i].GetName(), f[j].GetName())
 }
 
+// DisplayedItemCount returns the item count as it is presented to the user.
+//
+// For a directory it is the number of items contained in its tree, excluding
+// the directory itself (GetItemCount counts the directory too). For a file it
+// is 1, i.e. the file counts itself. The asymmetry is deliberate: a row for a
+// file reports the one file it stands for, while a row for a directory reports
+// what is inside it.
+//
+// This is the authoritative value: it is what every frontend renders and what
+// SortByItemCount orders by, so the number on screen and the ordering always
+// agree.
+func DisplayedItemCount(item Item) int64 {
+	if item.IsDir() {
+		return item.GetItemCount() - 1
+	}
+	return item.GetItemCount()
+}
+
 // ByItemCount sorts files by item count
 type ByItemCount Files
 
 func (f ByItemCount) Len() int      { return len(f) }
 func (f ByItemCount) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 func (f ByItemCount) Less(i, j int) bool {
-	if f[i].GetItemCount() != f[j].GetItemCount() {
-		return f[i].GetItemCount() < f[j].GetItemCount()
+	ci, cj := DisplayedItemCount(f[i]), DisplayedItemCount(f[j])
+	if ci != cj {
+		return ci < cj
 	}
 	// if item count is the same, sort by name
 	return natural.Less(f[i].GetName(), f[j].GetName())

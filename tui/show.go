@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -27,7 +29,7 @@ var (
                [::b]T     [white:black:-]Filter items by file type (extension)
                [::b]a     [white:black:-]Toggle between showing disk usage and apparent size
                [::b]B     [white:black:-]Toggle bar alignment to biggest file or directory
-               [::b]c     [white:black:-]Show/hide file count
+               [::b]c     [white:black:-]Show/hide item count
                [::b]m     [white:black:-]Show/hide latest mtime
                [::b]b     [white:black:-]Spawn shell in current directory
                [::b]q     [white:black:-]Quit gdu (asks to confirm after a long scan)
@@ -39,6 +41,7 @@ Item under cursor:
                [::b]D     [white:black:-]Move file or directory to trash
 			   [::b]space [white:black:-]Mark file or directory for deletion
 			   [::b]p     [white:black:-]Print marked items paths to stdout after quitting
+			   [::b]y     [white:black:-]Copy path of file or directory to clipboard
 			   [::b]I     [white:black:-]Ignore file or directory
                [::b]v     [white:black:-]Show content of file
                [::b]o     [white:black:-]Open file or directory in external program
@@ -47,7 +50,7 @@ Item under cursor:
 Sort by (twice toggles asc/desc):
                [::b]n     [white:black:-]Sort by name (asc/desc)
                [::b]s     [white:black:-]Sort by size (asc/desc)
-               [::b]C     [white:black:-]Sort by file count (asc/desc)
+               [::b]C     [white:black:-]Sort by item count (asc/desc)
                [::b]M     [white:black:-]Sort by mtime (asc/desc)`
 )
 
@@ -65,25 +68,32 @@ func (ui *UI) currentDirLabelText() string {
 	return label
 }
 
+// followCurrentDirWithCwd moves the process working directory to the directory
+// being shown, when --change-cwd is enabled. The virtual top level dir has no
+// counterpart on disk, so it is skipped.
+func (ui *UI) followCurrentDirWithCwd() {
+	if ui.changeCwdFn == nil || ui.atVirtualRoot() {
+		return
+	}
+
+	if err := ui.changeCwdFn(ui.currentDirPath); err != nil {
+		log.Printf("error setting cwd: %s", err.Error())
+	}
+	log.Printf("changing cwd to %s", ui.currentDirPath)
+}
+
 // nolint: funlen // Why: complex function
 func (ui *UI) showDir() {
 	var (
 		totalUsage int64
 		totalSize  int64
-		maxUsage   int64
-		maxSize    int64
+		maxima     rowMaxima
 		itemCount  int64
 	)
 
 	ui.currentDirPath = ui.currentDir.GetPath()
 
-	if ui.changeCwdFn != nil {
-		err := ui.changeCwdFn(ui.currentDirPath)
-		if err != nil {
-			log.Printf("error setting cwd: %s", err.Error())
-		}
-		log.Printf("changing cwd to %s", ui.currentDirPath)
-	}
+	ui.followCurrentDirWithCwd()
 
 	ui.currentDirLabel.SetText(ui.currentDirLabelText()).SetDynamicColors(true)
 
@@ -91,10 +101,7 @@ func (ui *UI) showDir() {
 
 	rowIndex := 0
 	if ui.currentDirPath != ui.topDirPath {
-		prefix := "                         "
-		if len(ui.markedRows) > 0 {
-			prefix += "  "
-		}
+		prefix := strings.Repeat(" ", ui.columnsWidth())
 
 		cell := tview.NewTableCell(prefix + "[::b]/..")
 
@@ -117,31 +124,38 @@ func (ui *UI) showDir() {
 	defer unlock()
 
 	i := rowIndex
-	maxUsage = 0
-	maxSize = 0
+	maxima = rowMaxima{}
 	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
 		if _, ignored := ui.ignoredRows[i]; ignored {
 			i++
 			continue
 		}
 
+		count := fs.DisplayedItemCount(item)
+
 		if ui.ShowRelativeSize {
-			if item.GetUsage() > maxUsage {
-				maxUsage = item.GetUsage()
+			if item.GetUsage() > maxima.usage {
+				maxima.usage = item.GetUsage()
 			}
-			if item.GetSize() > maxSize {
-				maxSize = item.GetSize()
+			if item.GetSize() > maxima.size {
+				maxima.size = item.GetSize()
+			}
+			if count > maxima.count {
+				maxima.count = count
 			}
 		} else {
-			maxSize += item.GetSize()
-			maxUsage += item.GetUsage()
+			maxima.size += item.GetSize()
+			maxima.usage += item.GetUsage()
+			maxima.count += count
 		}
 		i++
 	}
 
 	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
+		// filter on the label the row actually shows, which for a scanned root
+		// under the virtual top level dir is its absolute path
 		if ui.filterValue != "" && !strings.Contains(
-			strings.ToLower(item.GetName()),
+			strings.ToLower(analyze.ItemDisplayName(ui.currentDir, item)),
 			strings.ToLower(ui.filterValue),
 		) {
 			continue
@@ -173,17 +187,17 @@ func (ui *UI) showDir() {
 
 			if collapsedPath != nil {
 				// Format as collapsed path
-				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxUsage, maxSize, marked, ignored))
+				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxima, marked, ignored))
 				// Reference should point to the deepest directory for navigation
 				reference = collapsedPath.DeepestDir
 			} else {
 				// Regular directory formatting
-				cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+				cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
 				reference = item
 			}
 		} else {
 			// Regular file formatting
-			cell = tview.NewTableCell(ui.formatFileRow(item, maxUsage, maxSize, marked, ignored))
+			cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
 			reference = item
 		}
 
@@ -346,6 +360,24 @@ func (ui *UI) showErrFromGo(msg string, err error) {
 	ui.app.QueueUpdateDraw(func() {
 		ui.showErr(msg, err)
 	})
+}
+
+// messageTimeout is how long a transient status message stays in the header.
+const messageTimeout = 2 * time.Second
+
+// showMessage briefly replaces the header text with a status message and
+// restores the previous text afterwards.
+func (ui *UI) showMessage(message string) {
+	previousText := ui.header.GetText(false)
+	ui.header.SetText(message)
+
+	go func() {
+		time.Sleep(messageTimeout)
+		ui.app.QueueUpdateDraw(func() {
+			ui.header.Clear()
+			ui.header.SetText(previousText)
+		})
+	}()
 }
 
 func (ui *UI) showHelp() {

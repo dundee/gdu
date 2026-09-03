@@ -565,6 +565,24 @@ func TestToNodeJSONFlag(t *testing.T) {
 	assert.Empty(t, toNodeJSON(zero).Flag)
 }
 
+// TestToNodeJSONItemCount pins the wire format to the displayed item count, so
+// the browser shows the same number the API sorts by.
+func TestToNodeJSONItemCount(t *testing.T) {
+	parent := &analyze.Dir{File: &analyze.File{Name: "root"}}
+
+	// A directory reports what it contains, not counting itself.
+	dir := &analyze.Dir{File: &analyze.File{Name: "sub", Parent: parent}, ItemCount: 4}
+	if got := toNodeJSON(dir).ItemCount; got != 3 {
+		t.Errorf("dir itemCount = %d, want 3", got)
+	}
+
+	// A file counts itself.
+	file := &analyze.File{Name: "leaf", Parent: parent}
+	if got := toNodeJSON(file).ItemCount; got != 1 {
+		t.Errorf("file itemCount = %d, want 1", got)
+	}
+}
+
 func TestAnalyzePathWithParent(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)

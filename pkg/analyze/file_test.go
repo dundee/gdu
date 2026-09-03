@@ -404,3 +404,23 @@ func TestStatsFromJSONArePreserved(t *testing.T) {
 	assert.Equal(t, int64(4096), size)
 	assert.Equal(t, int64(2048), usage)
 }
+
+func TestDisplayedItemCount(t *testing.T) {
+	file := &File{Name: "file"}
+
+	emptyDir := &Dir{
+		File:      &File{Name: "empty"},
+		ItemCount: 1,
+	}
+
+	dirWithThree := &Dir{
+		File:      &File{Name: "three"},
+		ItemCount: 4,
+	}
+
+	// a file counts itself
+	assert.Equal(t, int64(1), fs.DisplayedItemCount(file))
+	// a directory does not count itself
+	assert.Equal(t, int64(0), fs.DisplayedItemCount(emptyDir))
+	assert.Equal(t, int64(3), fs.DisplayedItemCount(dirWithThree))
+}

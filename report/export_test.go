@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -323,6 +324,23 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 	assert.Contains(t, reportOutput.String(), `"name":"nested"`)
 }
 
+func TestExportProgressClearsLineWithoutPadding(t *testing.T) {
+	var output bytes.Buffer
+	ui := CreateExportUI(&output, io.Discard, false, true, false, 0, 0, false, nil)
+
+	written := make(chan struct{})
+	go func() {
+		ui.writtenChan <- struct{}{}
+		close(written)
+	}()
+
+	ui.updateProgress()
+	<-written
+
+	assert.Contains(t, output.String(), "\x1b[2K")
+	assert.NotContains(t, output.String(), strings.Repeat(" ", 100))
+}
+
 func TestShowDevices(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
@@ -477,4 +495,13 @@ func TestFormatSizeDec(t *testing.T) {
 	assert.Contains(t, ui.formatSize(1<<50+1), "PB")
 	assert.Contains(t, ui.formatSize(1<<60+1), "EB")
 	assert.Contains(t, ui.formatSize(-1<<10-1), "kB")
+}
+
+func TestAnalyzePathsRejectsMultipleDirs(t *testing.T) {
+	buff := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateExportUI(buff, buff, false, false, false, 0, 0, false, nil)
+
+	err := ui.AnalyzePaths([]string{"test_dir", "other_dir"})
+
+	assert.ErrorContains(t, err, "more than one directory is not supported")
 }

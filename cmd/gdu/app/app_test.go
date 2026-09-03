@@ -320,6 +320,21 @@ func TestGuiDeleteInParallel(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGuiTrashCommand(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", TrashCommand: "trash-put"},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
 func TestAnalyzePathWithGuiBackgroundDeletion(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -391,6 +406,7 @@ func TestAnalyzePathWithStyle(t *testing.T) {
 				},
 				UseOldSizeBar:     true,
 				ShowBarPercentage: true,
+				ShowItemCountBar:  true,
 			},
 		},
 		[]string{"test_dir"},
@@ -780,6 +796,7 @@ type uiTimeFilterMock struct {
 
 func (m *uiTimeFilterMock) ListDevices(getter device.DevicesInfoGetter) error { return nil }
 func (m *uiTimeFilterMock) AnalyzePath(path string, parentDir gfs.Item) error { return nil }
+func (m *uiTimeFilterMock) AnalyzePaths(paths []string) error                 { return nil }
 func (m *uiTimeFilterMock) ReadAnalysis(input io.Reader) error                { return nil }
 func (m *uiTimeFilterMock) ReadFromStorage(storagePath, path string) error    { return nil }
 func (m *uiTimeFilterMock) SetIgnoreTypes(types []string)                     {}

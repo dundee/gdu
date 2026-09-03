@@ -33,6 +33,10 @@ import (
 type UI interface {
 	ListDevices(getter device.DevicesInfoGetter) error
 	AnalyzePath(path string, parentDir gfs.Item) error
+	// AnalyzePaths scans several roots and presents them under one virtual top
+	// level dir. Implementations that cannot represent more than one root
+	// return an error.
+	AnalyzePaths(paths []string) error
 	ReadAnalysis(input io.Reader) error
 	ReadFromStorage(storagePath, path string) error
 	SetIgnoreTypes(types []string)
@@ -101,6 +105,7 @@ type Flags struct {
 	ChangeCwd          bool      `yaml:"change-cwd"`
 	DeleteInBackground bool      `yaml:"delete-in-background"`
 	DeleteInParallel   bool      `yaml:"delete-in-parallel"`
+	TrashCommand       string    `yaml:"trash-command"`
 	Since              string    `yaml:"since"`
 	Until              string    `yaml:"until"`
 	MaxAge             string    `yaml:"max-age"`
@@ -156,6 +161,9 @@ type Style struct {
 	UseOldSizeBar bool                `yaml:"use-old-size-bar"`
 	// ShowBarPercentage shows the numeric usage percentage next to the size bar.
 	ShowBarPercentage bool `yaml:"show-bar-percentage"`
+	// ShowItemCountBar shows a bar next to the item count column. It only takes
+	// effect while the item count column is visible.
+	ShowItemCountBar bool `yaml:"show-item-count-bar"`
 }
 
 // ProgressModalOpts defines options for progress modal
@@ -243,10 +251,14 @@ func (a *App) Run() error {
 		return errors.New("--output-attrs requires --output-file")
 	}
 
-	path := a.getPath()
-	path, err = filepath.Abs(path)
+	paths, err := a.resolvePaths()
 	if err != nil {
 		return err
+	}
+	if len(paths) > 1 {
+		if err := a.checkMultiPathSupport(); err != nil {
+			return err
+		}
 	}
 
 	ui, err = a.createUI(outputAttributes)
@@ -295,8 +307,10 @@ func (a *App) Run() error {
 			return err
 		}
 	}
-	if err := a.setNoCross(path); err != nil {
-		return err
+	for _, path := range paths {
+		if err := a.setNoCross(path); err != nil {
+			return err
+		}
 	}
 
 	// Process type filters
@@ -327,18 +341,85 @@ func (a *App) Run() error {
 
 	a.setMaxProcs()
 
-	if err := a.runAction(ui, path); err != nil {
+	if err := a.runAction(ui, paths); err != nil {
 		return err
 	}
 
 	return ui.StartUILoop()
 }
 
-func (a *App) getPath() string {
-	if len(a.Args) == 1 {
-		return a.Args[0]
+func (a *App) getPaths() []string {
+	if len(a.Args) > 0 {
+		return a.Args
 	}
-	return "."
+	return []string{"."}
+}
+
+// resolvePaths turns the directory arguments into absolute paths, dropping
+// exact duplicates.
+//
+// Nested paths are rejected rather than deduplicated: scanning both a directory
+// and something inside it would count the nested part twice in every total gdu
+// reports, and there is no answer to that which is not surprising.
+func (a *App) resolvePaths() ([]string, error) {
+	args := a.getPaths()
+	paths := make([]string, 0, len(args))
+	seen := make(map[string]struct{}, len(args))
+
+	for _, arg := range args {
+		path, err := filepath.Abs(arg)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := seen[path]; ok {
+			continue
+		}
+		seen[path] = struct{}{}
+		paths = append(paths, path)
+	}
+
+	for i, path := range paths {
+		for j, other := range paths {
+			if i == j {
+				continue
+			}
+			if isSubPath(other, path) {
+				return nil, fmt.Errorf(
+					"directory %s is nested in %s, scanning both would count it twice", other, path,
+				)
+			}
+		}
+	}
+
+	return paths, nil
+}
+
+// checkMultiPathSupport rejects the modes that cannot represent more than one
+// scanned root. Both the JSON export format and the on-disk storage are keyed
+// by a single root, so there is nowhere to put a virtual top level dir.
+func (a *App) checkMultiPathSupport() error {
+	switch {
+	case a.Flags.OutputFile != "":
+		return errors.New("--output-file accepts only one directory to scan")
+	case a.Flags.DbPath != "":
+		return errors.New("--db accepts only one directory to scan")
+	}
+	return nil
+}
+
+// isSubPath reports whether path lies inside parent. Both must be absolute and
+// cleaned, as returned by filepath.Abs.
+func isSubPath(path, parent string) bool {
+	rel, err := filepath.Rel(parent, path)
+	if err != nil {
+		return false
+	}
+	if rel == "." || rel == ".." {
+		return false
+	}
+	// only a leading ".." path *element* means "outside parent"; a name such as
+	// "..foo" is an ordinary child
+	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 func (a *App) setMaxProcs() {
@@ -552,6 +633,11 @@ func (a *App) getOptions() []tui.Option {
 			ui.SetShowBarPercentage()
 		})
 	}
+	if a.Flags.Style.ShowItemCountBar {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetShowItemCountBar()
+		})
+	}
 	if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
@@ -607,6 +693,11 @@ func (a *App) getOptions() []tui.Option {
 			ui.SetDeleteInParallel()
 		})
 	}
+	if a.Flags.TrashCommand != "" {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetTrashCommand(a.Flags.TrashCommand)
+		})
+	}
 	if a.Flags.BrowseParentDirs {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetBrowseParentDirs()
@@ -631,7 +722,7 @@ func (a *App) setNoCross(path string) error {
 	return nil
 }
 
-func (a *App) runAction(ui UI, path string) error {
+func (a *App) runAction(ui UI, paths []string) error {
 	if a.Flags.Profiling {
 		go func() {
 			http.HandleFunc("/debug/pprof/", pprof.Index)
@@ -671,18 +762,29 @@ func (a *App) runAction(ui UI, path string) error {
 			log.Printf("Could not prevent dataless materialization: %s", err)
 		}
 
-		if build.RootPathPrefix != "" {
-			path = build.RootPathPrefix + path
+		scanPaths := make([]string, 0, len(paths))
+		for _, path := range paths {
+			if build.RootPathPrefix != "" {
+				path = build.RootPathPrefix + path
+			}
+
+			if _, err := a.PathChecker(path); err != nil {
+				return err
+			}
+			scanPaths = append(scanPaths, path)
 		}
 
-		_, err := a.PathChecker(path)
-		if err != nil {
-			return err
+		if len(scanPaths) == 1 {
+			log.Printf("Analyzing path: %s", scanPaths[0])
+			if err := ui.AnalyzePath(scanPaths[0], nil); err != nil {
+				return fmt.Errorf("scanning dir: %w", err)
+			}
+			break
 		}
 
-		log.Printf("Analyzing path: %s", path)
-		if err := ui.AnalyzePath(path, nil); err != nil {
-			return fmt.Errorf("scanning dir: %w", err)
+		log.Printf("Analyzing paths: %s", strings.Join(scanPaths, ", "))
+		if err := ui.AnalyzePaths(scanPaths); err != nil {
+			return fmt.Errorf("scanning dirs: %w", err)
 		}
 	}
 	return nil

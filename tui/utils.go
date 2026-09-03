@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/rivo/tview"
@@ -131,8 +132,12 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 		return nil
 	}
 
+	// a collapsed chain starting at a scanned root is labelled from its
+	// absolute path, as an uncollapsed root would be
+	base := analyze.ItemDisplayName(item.GetParent(), item)
+
 	return &CollapsedPath{
-		DisplayName: filepath.Join(slices.Concat([]string{item.GetName()}, segments)...),
+		DisplayName: filepath.Join(slices.Concat([]string{base}, segments)...),
 		DeepestDir:  current,
 		Segments:    segments,
 	}

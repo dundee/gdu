@@ -205,37 +205,37 @@ func TestFormatCollapsedRow(t *testing.T) {
 	}
 
 	// Test normal formatting
-	result := ui.formatCollapsedRow(collapsedPath, 1000, 1000, false, false)
+	result := ui.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, false, false)
 	assert.Contains(t, result, "level1/level2/deep")
 	assert.Contains(t, result, "/") // Should have directory indicator
 
 	// Test with marked flag
 	ui.markedRows = map[int]struct{}{0: {}}
-	result = ui.formatCollapsedRow(collapsedPath, 1000, 1000, true, false)
+	result = ui.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, true, false)
 	assert.Contains(t, result, "✓") // Should have marked indicator
 
 	// Test with ignored flag
-	result = ui.formatCollapsedRow(collapsedPath, 1000, 1000, false, true)
+	result = ui.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, false, true)
 	assert.Contains(t, result, "level1/level2/deep")
 
 	// Test with ShowApparentSize
 	ui.ShowApparentSize = true
-	result = ui.formatCollapsedRow(collapsedPath, 1000, 1000, false, false)
+	result = ui.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, false, false)
 	assert.Contains(t, result, "level1/level2/deep")
 
 	// Test with showItemCount
 	ui.showItemCount = true
-	result = ui.formatCollapsedRow(collapsedPath, 1000, 1000, false, false)
+	result = ui.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, false, false)
 	assert.Contains(t, result, "level1/level2/deep")
 
 	// Test with showMtime
 	ui.showMtime = true
-	result = ui.formatCollapsedRow(collapsedPath, 1000, 1000, false, false)
+	result = ui.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, false, false)
 	assert.Contains(t, result, "level1/level2/deep")
 
 	// Test without colors
 	ui2 := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
-	result = ui2.formatCollapsedRow(collapsedPath, 1000, 1000, false, false)
+	result = ui2.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, false, false)
 	assert.Contains(t, result, "level1/level2/deep")
 }
 

@@ -19,6 +19,8 @@ import (
 	"github.com/fatih/color"
 )
 
+const clearTerminalLine = "\r\x1b[2K"
+
 // UI struct
 type UI struct {
 	*common.UI
@@ -150,6 +152,16 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	return ui.exportDir(dir, &waitWritten)
 }
 
+// AnalyzePaths is not supported by the export UI: the ncdu-compatible export
+// format holds exactly one root directory, so there is nowhere to record a
+// virtual dir grouping several of them.
+func (ui *UI) AnalyzePaths(paths []string) error {
+	if len(paths) == 1 {
+		return ui.AnalyzePath(paths[0], nil)
+	}
+	return errors.New("exporting more than one directory is not supported")
+}
+
 func (ui *UI) topDir(dir fs.Item) fs.Item {
 	files := analyze.CollectTopFiles(dir, ui.top)
 
@@ -273,27 +285,22 @@ func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 func (ui *UI) updateProgress() {
 	waitingForWrite := false
 
-	emptyRow := "\r"
-	for j := 0; j < 100; j++ {
-		emptyRow += " "
-	}
-
 	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
 	doneChan := ui.Analyzer.GetDone()
 
 	i := 0
 	for {
-		fmt.Fprint(ui.output, emptyRow)
+		fmt.Fprint(ui.output, clearTerminalLine)
 
 		progress := ui.Analyzer.GetProgress()
 
 		select {
 		case <-doneChan:
-			fmt.Fprint(ui.output, "\r")
+			fmt.Fprint(ui.output, clearTerminalLine)
 			waitingForWrite = true
 		case <-ui.writtenChan:
-			fmt.Fprint(ui.output, "\r")
+			fmt.Fprint(ui.output, clearTerminalLine)
 			return
 		default:
 		}

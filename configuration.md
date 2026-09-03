@@ -54,7 +54,9 @@ Show relative size
 
 #### `show-item-count`
 
-Show number of items in directory
+Show the item count column. For a directory this is the number of items
+(files and subdirectories, recursively) it contains, not counting the
+directory itself; for a file it is 1.
 
 #### `show-symlink-target`
 
@@ -140,6 +142,39 @@ Delete items in the background, not blocking the UI from work
 
 Delete items in parallel, which might increase the speed of deletion
 
+#### `trash-command`
+
+Command used by the `D` key to move items to trash, replacing the built-in [FreeDesktop trash](https://specifications.freedesktop.org/trash-spec/latest/) implementation. Useful to trash into a non-default location, or to use a trash tool on systems where the built-in trash is not available (macOS).
+
+The command is evaluated by `/bin/sh` with the absolute path of the item appended as an argument, so shell syntax such as variable expansion works:
+
+```yaml
+trash-command: trash-put --trash-dir ~/mytrash
+```
+
+##### Using `mv`
+
+Commands taking their destination last would receive the item path in the wrong place. Refer to the path explicitly as `"$1"` and it is not appended:
+
+```yaml
+trash-command: mv -f "$1" ~/mytrash/
+```
+
+Note the trailing slash on the destination: without it, `mv` renames the item to `~/mytrash` when that directory does not exist, quietly replacing whatever was there. With it, a missing trash dir becomes an error dialog instead.
+
+Unlike a real trash tool, `mv` overwrites an item of the same name that was trashed earlier, and records nothing that would allow restoring the item to its original location.
+
+Further details:
+
+* The path is passed as a positional shell parameter, so item names are never interpreted as shell syntax.
+* The path is appended to the command unless the command refers to it itself via `$1`, `$@` or `$*`. An appended path needs the command to end where an argument can follow (`gio trash --` works, `some-command;` does not); otherwise use `"$1"`.
+* The absolute path is also exported as the `GDU_TRASH_PATH` environment variable.
+* The command must not be interactive. It gets no terminal, the UI keeps running while it executes, and with `delete-in-background` it may even run from a background worker.
+* When the command fails, its exit status and standard error output are shown in an error dialog and the item stays in the listing.
+* When the command succeeds but the item is still present on disk, the item stays in the listing as well. Only the selected item is refreshed, so an item moved elsewhere by the command is not picked up at its new location.
+* `no-delete` disables the `D` key regardless of this option.
+* Not supported on Windows, which has no POSIX shell to evaluate the command in.
+
 #### `browse-parent-dirs`
 
 Allow navigating above the launch directory by pressing the left arrow key. When enabled, pressing left at the top-level directory will rescan and open its parent directory. Disabled by default.
@@ -187,6 +222,17 @@ Show size bar without Unicode symbols.
 
 Show the numeric usage percentage (e.g. `61.4%`) next to the size bar in the directory listing.
 
+#### `style.show-item-count-bar`
+
+Show a bar next to the item count, drawn in proportion to the item counts of
+the other items in the same directory, in the same way the size bar works for
+sizes. Disabled by default.
+
+The bar is only drawn while the item count column itself is visible, so enable
+it together with `show-item-count` or toggle the column with the `c` key. Like
+the size bar, it is measured against the sum of the items in the listing, or
+against the largest one when `show-relative-size` is set.
+
 #### `style.footer.text-color`
 
 Color of text for footer bar
@@ -224,7 +270,7 @@ Color of directory names in result rows
 Sort items. Possible values:
 * name - name of the item
 * size - usage or apparent size
-* itemCount - number of items in the folder tree
+* itemCount - number of items contained in the folder tree (the same number shown by `show-item-count`)
 * mtime - modification time
 
 #### `sorting.order`

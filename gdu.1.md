@@ -10,7 +10,7 @@ gdu - Pretty fast disk usage analyzer written in Go
 
 # SYNOPSIS
 
-**gdu \[flags\] \[directory_to_scan\]**
+**gdu \[flags\] \[directory_to_scan...\]**
 
 # DESCRIPTION
 
@@ -19,6 +19,13 @@ Pretty fast disk usage analyzer written in Go.
 Gdu is intended primarily for SSD disks where it can fully utilize
 parallel processing. However HDDs work as well, but the performance gain
 is not so huge.
+
+More than one directory can be given. They are scanned one after another
+and presented together under a virtual top level directory named
+"(multiple)", listed by their absolute path. Nested directories are
+rejected, as scanning both would count the nested part twice. Exporting
+(\--output-file) and database storage (\--db) accept a single directory
+only.
 
 # OPTIONS
 
@@ -105,6 +112,8 @@ non-interactive mode
 **\--no-delete**\[=false\] Do not allow deletions
 
 **\--no-view-file**\[=false\] Do not allow viewing file contents
+
+**\--trash-command**=\"\" Command used to move items to trash instead of the built-in trash. The command is evaluated by /bin/sh with the absolute path of the item appended as an argument, which is also exported as GDU_TRASH_PATH. Commands taking their destination last can refer to the path as \"\$1\" instead, in which case it is not appended. The command must not be interactive. Not supported on Windows. For example: trash-put \--trash-dir \~/mytrash or mv -f \"\$1\" \~/mytrash/
 
 **-f**, **\--input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 

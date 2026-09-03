@@ -191,3 +191,27 @@ func TestSortByMtime(t *testing.T) {
 	assert.Equal(t, 41, files[1].GetMtime().Minute())
 	assert.Equal(t, 40, files[2].GetMtime().Minute())
 }
+
+// TestSortByItemCountMatchesDisplayedCount guards the invariant that ordering
+// agrees with the number rendered next to the bar: an empty dir displays 0 and
+// must sort below a file, which displays 1, even though both have a raw
+// GetItemCount of 1.
+func TestSortByItemCountMatchesDisplayedCount(t *testing.T) {
+	emptyDir := &Dir{
+		File:      &File{Name: "empty-dir"},
+		ItemCount: 1,
+	}
+	file := &File{Name: "a-file"}
+	bigDir := &Dir{
+		File:      &File{Name: "big-dir"},
+		ItemCount: 4,
+	}
+
+	files := fs.Files{bigDir, file, emptyDir}
+
+	sort.Sort(fs.ByItemCount(files))
+
+	assert.Equal(t, "empty-dir", files[0].GetName())
+	assert.Equal(t, "a-file", files[1].GetName())
+	assert.Equal(t, "big-dir", files[2].GetName())
+}

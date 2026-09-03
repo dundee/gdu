@@ -237,7 +237,7 @@ func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
 	}
 	modal := tview.NewModal().
 		SetText(text).
-		AddButtons([]string{"no", "yes", "don't ask me again"}).
+		AddButtons([]string{No, Yes, DontAskAgain}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			ui.pages.RemovePage("confirm")
 			ui.app.SetFocus(ui.table)
@@ -373,19 +373,7 @@ func (ui *UI) handleShell(key *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		if ui.noSpawnShell {
-			previousHeaderText := ui.header.GetText(false)
-
-			// show feedback to user
-			ui.header.SetText(" Shell spawning is disabled!")
-
-			go func() {
-				time.Sleep(2 * time.Second)
-				ui.app.QueueUpdateDraw(func() {
-					ui.header.Clear()
-					ui.header.SetText(previousHeaderText)
-				})
-			}()
-
+			ui.showMessage(" Shell spawning is disabled!")
 			return nil
 		}
 		ui.spawnShell()
@@ -451,35 +439,13 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		if ui.noViewFile {
-			previousHeaderText := ui.header.GetText(false)
-
-			ui.header.SetText(" Viewing files is disabled!")
-
-			go func() {
-				time.Sleep(2 * time.Second)
-				ui.app.QueueUpdateDraw(func() {
-					ui.header.Clear()
-					ui.header.SetText(previousHeaderText)
-				})
-			}()
-
+			ui.showMessage(" Viewing files is disabled!")
 			return nil
 		}
 		ui.showFile()
 	case 'o':
 		if ui.noSpawnShell {
-			previousHeaderText := ui.header.GetText(false)
-
-			// show feedback to user
-			ui.header.SetText(" Opening items is disabled!")
-
-			go func() {
-				time.Sleep(2 * time.Second)
-				ui.app.QueueUpdateDraw(func() {
-					ui.header.Clear()
-					ui.header.SetText(previousHeaderText)
-				})
-			}()
+			ui.showMessage(" Opening items is disabled!")
 			return nil
 		}
 		ui.openItem()
@@ -506,6 +472,9 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 		ui.handleMark()
 	case 'p':
 		ui.printMarked()
+		return nil
+	case 'y':
+		ui.copySelectedPath()
 		return nil
 	case 'I':
 		ui.ignoreItem()
@@ -563,7 +532,8 @@ func (ui *UI) handleLeft() {
 }
 
 func (ui *UI) analyzeParentOfTopDir() {
-	if ui.currentDir == nil || ui.isInArchive() {
+	// the virtual root has no parent on disk to browse up into
+	if ui.currentDir == nil || ui.isInArchive() || ui.atVirtualRoot() {
 		return
 	}
 
