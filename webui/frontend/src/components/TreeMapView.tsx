@@ -119,7 +119,7 @@ export function TreeMapView() {
       setActionPending(true);
       setDeleteCandidate(null);
       try {
-        await deleteNode(node.path);
+        await deleteNode(node.path, status.actionToken);
         await refreshAfterMutation();
         setLoadError(null);
       } catch (err: unknown) {
@@ -135,7 +135,7 @@ export function TreeMapView() {
         setActionPending(false);
       }
     },
-    [actionPending, refreshAfterMutation, setLoadError],
+    [actionPending, refreshAfterMutation, setLoadError, status.actionToken],
   );
 
   const revealSelected = useCallback(async () => {
@@ -144,14 +144,14 @@ export function TreeMapView() {
     }
     setActionPending(true);
     try {
-      await revealNode(selectedNode.path);
+      await revealNode(selectedNode.path, status.actionToken);
       setLoadError(null);
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
       setActionPending(false);
     }
-  }, [actionPending, selectedNode, setLoadError]);
+  }, [actionPending, selectedNode, setLoadError, status.actionToken]);
 
   const requestDelete = useCallback(() => {
     if (!selectedNode || actionPending || !status.deleteAllowed) {

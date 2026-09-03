@@ -32,6 +32,7 @@ type UI struct {
 	openBrowser bool
 	browserCmd  string
 	revealPath  func(string) error
+	actionToken string
 
 	getter  device.DevicesInfoGetter
 	devices device.Devices
@@ -81,6 +82,7 @@ func CreateUI(
 		openBrowser: openBrowser,
 		browserCmd:  browserCmd,
 		revealPath:  openPath,
+		actionToken: generateActionToken(),
 		linkedItems: make(fs.HardLinkedItems),
 		hub:         newHub(),
 	}

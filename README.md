@@ -207,9 +207,11 @@ access are required.
 
 **Security:** the web UI has no authentication. It exposes file names and sizes
 over HTTP, so keep it bound to `localhost` (the default). Reveal and delete
-actions are accepted only from a browser connecting through a loopback address;
-remote clients are read-only. Binding to a non-loopback address makes scan
-details reachable by other hosts on the network and prints a warning.
+actions require a request that both originates from a loopback address and
+carries a random token generated fresh for each server run and known only to
+the page the server itself served; remote clients, and pages on another
+origin or browser tab, are read-only. Binding to a non-loopback address makes
+scan details reachable by other hosts on the network and prints a warning.
 
 ## File flags
 

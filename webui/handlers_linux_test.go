@@ -31,7 +31,7 @@ func TestDeleteNodeEndpointPropagatesRemovalError(t *testing.T) {
 	path := filepath.Join(sub, "nested.dat")
 	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
 	require.NoError(t, err)
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()

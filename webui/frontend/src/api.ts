@@ -39,11 +39,18 @@ export function fetchTree(path: string): Promise<TreeNode> {
   return getJSON<TreeNode>(`api/v1/tree?${params.toString()}`);
 }
 
-async function requestAction(url: string, init: RequestInit): Promise<void> {
+// requestAction sends a mutating request carrying the per-process action
+// token the server issued over /api/v1/status (see Status.actionToken). The
+// server rejects the request unless this exact token is echoed back, which
+// keeps a page on another origin (or another browser tab) from triggering a
+// delete/reveal even though it may still be able to make the browser send a
+// request: it does not know the token, since the server serves it only to
+// same-origin readers.
+async function requestAction(url: string, token: string, init: RequestInit): Promise<void> {
   const res = await fetch(url, {
     ...init,
     headers: {
-      'X-GDU-Action': '1',
+      'X-GDU-Action': token,
       ...init.headers,
     },
   });
@@ -53,17 +60,17 @@ async function requestAction(url: string, init: RequestInit): Promise<void> {
   throw await responseError(res);
 }
 
-export function revealNode(path: string): Promise<void> {
-  return requestAction('api/v1/reveal', {
+export function revealNode(path: string, token: string): Promise<void> {
+  return requestAction('api/v1/reveal', token, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
   });
 }
 
-export function deleteNode(path: string): Promise<void> {
+export function deleteNode(path: string, token: string): Promise<void> {
   const params = new URLSearchParams({ path });
-  return requestAction(`api/v1/nodes?${params.toString()}`, { method: 'DELETE' });
+  return requestAction(`api/v1/nodes?${params.toString()}`, token, { method: 'DELETE' });
 }
 
 // subscribeStatus opens an SSE connection that yields status updates. Returns
