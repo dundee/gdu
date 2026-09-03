@@ -76,6 +76,7 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, "done", status.State)
 	assert.Equal(t, root, status.RootPath)
 	assert.True(t, status.DeleteAllowed, "delete should be allowed for an unfiltered local scan")
+	assert.Equal(t, ui.actionToken, status.ActionToken)
 }
 
 func TestNodesEndpoint(t *testing.T) {
@@ -228,7 +229,7 @@ func TestDeleteNodeEndpointRemovesFileAndUpdatesTree(t *testing.T) {
 	path := filepath.Join(root, "big.bin")
 	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
 	require.NoError(t, err)
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -258,7 +259,7 @@ func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -323,7 +324,7 @@ func TestRevealEndpointOpensArchiveParentDirectoryForDeeplyNestedEntry(t *testin
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -352,7 +353,7 @@ func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -372,7 +373,7 @@ func TestDeleteEndpointHonorsNoDelete(t *testing.T) {
 	path := filepath.Join(root, "big.bin")
 	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
 	require.NoError(t, err)
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -394,7 +395,7 @@ func TestDeleteEndpointHonorsActiveFilters(t *testing.T) {
 	path := filepath.Join(root, "big.bin")
 	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
 	require.NoError(t, err)
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -413,7 +414,7 @@ func TestDeleteEndpointRejectsAnalysisRoot(t *testing.T) {
 	defer srv.Close()
 	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(root), nil)
 	require.NoError(t, err)
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -440,6 +441,106 @@ func TestActionEndpointsRequireLocalActionHeader(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	_, err = os.Stat(path)
 	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestActionEndpointsRejectWrongToken(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", "not-the-real-token")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestActionEndpointsRejectCrossSiteFetch(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestActionEndpointsAllowSameOriginFetchMetadata(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestActionEndpointsRejectMismatchedOrigin(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	req.Header.Set("Origin", "http://attacker.example")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+func TestActionEndpointsAllowMatchingOrigin(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	req.Header.Set("Origin", "http://"+req.URL.Host)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
 
 func TestParseSort(t *testing.T) {
@@ -863,6 +964,7 @@ func TestHandleStatusHidesDeleteAllowedForRemoteRequest(t *testing.T) {
 	var status statusResponse
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&status))
 	assert.False(t, status.DeleteAllowed, "remote requests must never see delete as allowed")
+	assert.Empty(t, status.ActionToken, "remote requests must never see the action token")
 }
 
 func TestNodesEndpointDefaultsToRootWhenPathOmitted(t *testing.T) {
@@ -999,7 +1101,7 @@ func TestDeleteNodeEndpointNotFound(t *testing.T) {
 	missing := filepath.Join(root, "does-not-exist")
 	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(missing), nil)
 	require.NoError(t, err)
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1020,7 +1122,7 @@ func TestDeleteNodeEndpointRejectsArchiveDescendant(t *testing.T) {
 	entryPath := filepath.Join(zipPath, "inner.txt")
 	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(entryPath), nil)
 	require.NoError(t, err)
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1038,7 +1140,7 @@ func TestRevealEndpointInvalidBody(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", strings.NewReader("not json"))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1057,7 +1159,7 @@ func TestRevealEndpointNotFound(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1079,7 +1181,7 @@ func TestRevealEndpointNoDirectoryToReveal(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", strings.NewReader(`{"path":"onlyfile"}`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1099,7 +1201,7 @@ func TestRevealEndpointPropagatesRevealError(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GDU-Action", "1")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1134,12 +1236,13 @@ func TestHandleEventsFlusherUnsupported(t *testing.T) {
 }
 
 func TestStatusJSONForClientHidesDeleteForRemote(t *testing.T) {
-	msg := `{"state":"done","deleteAllowed":true}`
+	msg := `{"state":"done","deleteAllowed":true,"actionToken":"secret"}`
 
 	out := statusJSONForClient(msg, false)
 	var resp statusResponse
 	require.NoError(t, json.Unmarshal([]byte(out), &resp))
 	assert.False(t, resp.DeleteAllowed)
+	assert.Empty(t, resp.ActionToken, "remote clients must never see the action token")
 
 	assert.Equal(t, msg, statusJSONForClient(msg, true), "local clients see the message unchanged")
 	assert.Equal(t, "not json", statusJSONForClient("not json", false), "unparseable payloads pass through unchanged")

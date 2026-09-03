@@ -15,6 +15,7 @@ const status: Status = {
   showRelativeSize: false,
   useSIPrefix: false,
   deleteAllowed: true,
+  actionToken: 'test-token',
 };
 const nodeResponse: NodeResponse = {
   node: {
@@ -115,14 +116,14 @@ describe('treemap actions', () => {
     fireEvent.click(file);
 
     fireEvent.keyDown(window, { code: 'KeyO' });
-    await waitFor(() => expect(api.revealNode).toHaveBeenCalledWith(`${root}/file.txt`));
+    await waitFor(() => expect(api.revealNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token'));
 
     fireEvent.keyDown(window, { code: 'KeyD' });
     expect(screen.getByRole('dialog', { name: 'Delete item' })).toBeTruthy();
     expect(screen.getByText(`${root}/file.txt`)).toBeTruthy();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Do not ask again this session' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
-    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`));
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token'));
     await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(2));
 
     fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
@@ -179,7 +180,7 @@ describe('treemap actions', () => {
     fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
 
     fireEvent.keyDown(window, { code: 'KeyO' });
-    await waitFor(() => expect(api.revealNode).toHaveBeenCalledWith(`${root}/file.txt`));
+    await waitFor(() => expect(api.revealNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token'));
     fireEvent.keyDown(window, { code: 'KeyD' });
 
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
@@ -203,7 +204,7 @@ describe('treemap actions', () => {
     fireEvent.keyDown(window, { code: 'KeyD' });
     fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
 
-    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`));
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token'));
     await screen.findByText('Treemap unavailable');
     expect(screen.queryByRole('img', { name: 'Directory size treemap' })).toBeNull();
   });

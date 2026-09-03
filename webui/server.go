@@ -69,8 +69,8 @@ func (ui *UI) routes() *http.ServeMux {
 	mux.HandleFunc("/api/v1/status", ui.handleStatus)
 	mux.HandleFunc("GET /api/v1/nodes", ui.handleNodes)
 	mux.HandleFunc("GET /api/v1/tree", ui.handleTree)
-	mux.HandleFunc("DELETE /api/v1/nodes", requireLocalAction(ui.handleDeleteNode))
-	mux.HandleFunc("POST /api/v1/reveal", requireLocalAction(ui.handleReveal))
+	mux.HandleFunc("DELETE /api/v1/nodes", ui.requireLocalAction(ui.handleDeleteNode))
+	mux.HandleFunc("POST /api/v1/reveal", ui.requireLocalAction(ui.handleReveal))
 	mux.HandleFunc("/api/v1/devices", ui.handleDevices)
 	mux.HandleFunc("/api/v1/events", ui.handleEvents)
 	mux.Handle("/", staticHandler())
@@ -111,12 +111,13 @@ func isLocalRequest(r *http.Request) bool {
 }
 
 // requireLocalAction wraps a mutating handler so it only runs for requests
-// that both carry the frontend's action header and originate from loopback,
-// guarding against CSRF-style calls from other pages and from other hosts on
-// the network.
-func requireLocalAction(next http.HandlerFunc) http.HandlerFunc {
+// that originate from loopback, carry Fetch Metadata/Origin headers
+// consistent with this server's own page, and present this server's action
+// token. Together these guard against CSRF-style calls from other pages, tabs,
+// and hosts on the network.
+func (ui *UI) requireLocalAction(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !isLocalActionRequest(r) {
+		if !isLocalRequest(r) || !sameOriginFetch(r) || !ui.validActionToken(r.Header.Get(actionHeader)) {
 			writeError(w, http.StatusForbidden, "actions are only available from the local web UI")
 			return
 		}
