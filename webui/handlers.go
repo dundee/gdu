@@ -34,18 +34,24 @@ type deviceJSON struct {
 	Free       int64  `json:"free"`
 }
 
+const (
+	scanStateDone     = "done"
+	scanStateScanning = "scanning"
+	scanStateError    = "error"
+)
+
 func (ui *UI) buildStatus() statusResponse {
 	ui.mu.RLock()
 	defer ui.mu.RUnlock()
 
-	state := "done"
+	state := scanStateDone
 	switch {
 	case ui.scanErr != nil:
-		state = "error"
+		state = scanStateError
 	case ui.scanning:
-		state = "scanning"
+		state = scanStateScanning
 	case ui.topDir == nil:
-		state = "scanning"
+		state = scanStateScanning
 	}
 
 	resp := statusResponse{
@@ -75,19 +81,32 @@ func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 
 	node, err := ui.findNode(path)
 	if err != nil {
-		switch {
-		case errors.Is(err, errOutsideRoot):
-			writeError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, errNotFound):
-			writeError(w, http.StatusNotFound, err.Error())
-		default:
-			writeError(w, http.StatusInternalServerError, err.Error())
-		}
+		writeNodeError(w, err)
 		return
 	}
 
 	sortBy, order := parseSort(r.URL.Query().Get("sort"), r.URL.Query().Get("order"))
 	writeJSON(w, http.StatusOK, buildNodeResponse(node, sortBy, order))
+}
+
+func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
+	node, err := ui.findNode(r.URL.Query().Get("path"))
+	if err != nil {
+		writeNodeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, buildTree(node))
+}
+
+func writeNodeError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, errOutsideRoot):
+		writeError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, errNotFound):
+		writeError(w, http.StatusNotFound, err.Error())
+	default:
+		writeError(w, http.StatusInternalServerError, err.Error())
+	}
 }
 
 func (ui *UI) handleDevices(w http.ResponseWriter, _ *http.Request) {

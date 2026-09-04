@@ -1,9 +1,11 @@
 package webui
 
 import (
+	"container/heap"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -35,6 +37,15 @@ type nodeResponse struct {
 	Node        nodeJSON   `json:"node"`
 	Breadcrumbs []nodeJSON `json:"breadcrumbs"`
 	Children    []nodeJSON `json:"children"`
+}
+
+// treeJSON is the recursive wire representation used by GET /api/v1/tree.
+// Children is a slice of pointers so buildTree can hand out a stable address
+// to each child (queued for later expansion) without it being invalidated by
+// later appends growing a sibling slice.
+type treeJSON struct {
+	nodeJSON
+	Children []*treeJSON `json:"children"`
 }
 
 func toNodeJSON(it fs.Item) nodeJSON {
@@ -74,6 +85,14 @@ func (ui *UI) findNode(path string) (fs.Item, error) {
 	cleanRoot := filepath.Clean(rootPath)
 	if path == "" {
 		return root, nil
+	}
+	// Reject ".." segments before cleaning. Archive entries (zip/tar) expose
+	// virtual paths built from untrusted member names; filepath.Clean would
+	// silently collapse a "../victim" segment into a real sibling path that
+	// happens to exist in the scanned tree, letting a malicious archive entry
+	// resolve to (and so disclose) an unrelated real node.
+	if slices.Contains(strings.Split(filepath.ToSlash(path), "/"), "..") {
+		return nil, errOutsideRoot
 	}
 	cleanPath := filepath.Clean(path)
 	if cleanPath == cleanRoot {
@@ -151,6 +170,68 @@ func buildNodeResponse(it fs.Item, sortBy fs.SortBy, order fs.SortOrder) nodeRes
 	return resp
 }
 
+// maxTreeNodes bounds how many nodes GET /api/v1/tree will serialize in one
+// response. Without it, requesting the tree for a large root (e.g. "/")
+// walks and JSON-encodes every scanned file at once, which can hang both the
+// server and the browser parsing the payload.
+//
+// buildTree spends that budget best-first (largest usage across the whole
+// tree first, via a priority queue), not depth-first. A naive depth-first
+// walk would sink the entire budget into the single largest top-level
+// directory's deepest descendants before ever expanding its siblings,
+// leaving the rest of the tree empty; best-first instead fills in the
+// biggest, most visually significant nodes wherever they are, which is what
+// the treemap actually needs.
+const maxTreeNodes = 5000
+
+// pendingExpansion is a directory whose children have not yet been added to
+// the output, queued with a pointer to the treeJSON node they attach to.
+type pendingExpansion struct {
+	item fs.Item
+	slot *treeJSON
+}
+
+// expansionQueue is a max-heap of pendingExpansion ordered by disk usage,
+// matching the size-desc ordering buildTree already uses for children.
+type expansionQueue []pendingExpansion
+
+func (q expansionQueue) Len() int           { return len(q) }
+func (q expansionQueue) Less(i, j int) bool { return q[i].item.GetUsage() > q[j].item.GetUsage() }
+func (q expansionQueue) Swap(i, j int)      { q[i], q[j] = q[j], q[i] }
+func (q *expansionQueue) Push(x any)        { *q = append(*q, x.(pendingExpansion)) }
+func (q *expansionQueue) Pop() any {
+	old := *q
+	n := len(old)
+	last := old[n-1]
+	*q = old[:n-1]
+	return last
+}
+
+func buildTree(it fs.Item) treeJSON {
+	root := &treeJSON{nodeJSON: toNodeJSON(it), Children: []*treeJSON{}}
+	if !it.IsDir() {
+		return *root
+	}
+
+	remaining := maxTreeNodes
+	queue := &expansionQueue{{item: it, slot: root}}
+	for queue.Len() > 0 && remaining > 0 {
+		next := heap.Pop(queue).(pendingExpansion)
+		for child := range next.item.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
+			if remaining <= 0 {
+				break
+			}
+			remaining--
+			childJSON := &treeJSON{nodeJSON: toNodeJSON(child), Children: []*treeJSON{}}
+			next.slot.Children = append(next.slot.Children, childJSON)
+			if child.IsDir() {
+				heap.Push(queue, pendingExpansion{item: child, slot: childJSON})
+			}
+		}
+	}
+	return *root
+}
+
 // breadcrumbs walks parents from the item up to the root and returns them
 // root-first.
 func breadcrumbs(it fs.Item) []nodeJSON {
@@ -180,8 +261,9 @@ func parseSort(sortParam, orderParam string) (fs.SortBy, fs.SortOrder) {
 		sortBy = fs.SortBySize
 	}
 
+	const sortOrderAsc = "asc"
 	order := fs.SortDesc
-	if orderParam == "asc" {
+	if orderParam == sortOrderAsc {
 		order = fs.SortAsc
 	}
 	return sortBy, order

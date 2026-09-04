@@ -67,7 +67,8 @@ func (ui *UI) StartUILoop() error {
 func (ui *UI) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/status", ui.handleStatus)
-	mux.HandleFunc("/api/v1/nodes", ui.handleNodes)
+	mux.HandleFunc("GET /api/v1/nodes", ui.handleNodes)
+	mux.HandleFunc("GET /api/v1/tree", ui.handleTree)
 	mux.HandleFunc("/api/v1/devices", ui.handleDevices)
 	mux.HandleFunc("/api/v1/events", ui.handleEvents)
 	mux.Handle("/", staticHandler())
@@ -77,14 +78,23 @@ func (ui *UI) routes() *http.ServeMux {
 // warnIfRemote prints a security warning when the server is not bound to a
 // loopback address, since directory names and sizes can be sensitive.
 func warnIfRemote(w io.Writer, addr net.Addr) {
-	host := addr.String()
-	if i := strings.LastIndex(host, ":"); i >= 0 {
-		host = host[:i]
-	}
-	ip := net.ParseIP(strings.Trim(host, "[]"))
-	if ip != nil && ip.IsLoopback() {
+	if isLoopbackHost(addr.String()) {
 		return
 	}
 	fmt.Fprintln(w, "WARNING: the web UI is reachable from other hosts on the network.")
 	fmt.Fprintln(w, "         It exposes file names and sizes with no authentication.")
+}
+
+// isLoopbackHost reports whether the host component of a "host:port" string
+// (or a bare host) is a loopback address, including the "localhost" name.
+func isLoopbackHost(hostport string) bool {
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		host = strings.Trim(hostport, "[]")
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

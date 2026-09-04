@@ -11,11 +11,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "d3-hierarchy": "^3.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@testing-library/react": "^16.1.0",
+    "@types/d3-hierarchy": "^3.1.7",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@typescript/native-preview": "latest",

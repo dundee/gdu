@@ -11,6 +11,10 @@ export interface Node {
   flag?: string;
 }
 
+export interface TreeNode extends Node {
+  children: TreeNode[];
+}
+
 export interface NodeResponse {
   node: Node;
   breadcrumbs: Node[];

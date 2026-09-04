@@ -187,8 +187,11 @@ gdu --web /some/dir
 Gdu scans the directory, prints the URL, and (by default) opens it in your
 default browser. The interface shows an animated donut chart of the current
 directory's contents alongside a sortable table with size bars, breadcrumb
-navigation, and a disk-usage/apparent-size toggle. Scan progress is streamed
-live while the analysis runs.
+navigation, and a disk-usage/apparent-size toggle. Switch to the full-window
+treemap to explore the complete nested subtree, select files or directories,
+and double-click a directory to open it. Details too small to display are
+folded into their nearest visible parent directory. Press `?` to show the
+keyboard shortcuts. Scan progress is streamed live while the analysis runs.
 
 By default the server binds to `localhost` on a random free port. Use
 `--web-listen` (or the `web.listen` config option) to pin a fixed address.
