@@ -90,7 +90,7 @@ func (ui *UI) findNode(path string) (fs.Item, error) {
 	// virtual paths built from untrusted member names; filepath.Clean would
 	// silently collapse a "../victim" segment into a real sibling path that
 	// happens to exist in the scanned tree, letting a malicious archive entry
-	// resolve to (and, for delete, remove) an unrelated real node.
+	// resolve to (and so disclose) an unrelated real node.
 	if slices.Contains(strings.Split(filepath.ToSlash(path), "/"), "..") {
 		return nil, errOutsideRoot
 	}

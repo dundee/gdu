@@ -480,18 +480,6 @@ body {
   margin: 0;
 }
 
-.modal-path {
-  overflow-wrap: anywhere;
-  color: var(--text-muted);
-}
-
-.modal-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -506,16 +494,6 @@ body {
   background: var(--track);
   color: var(--text);
   cursor: pointer;
-}
-
-.modal button.danger {
-  border-color: #8d3036;
-  background: #7a292f;
-}
-
-.modal button:disabled {
-  cursor: wait;
-  opacity: 0.6;
 }
 
 .shortcuts {

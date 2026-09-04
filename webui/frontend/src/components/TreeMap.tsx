@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Node, TreeNode } from '../types';
 import { metricValue } from '../slices';
-import { formatSize, percent } from '../format';
+import { formatCount, formatSize, percent } from '../format';
 import { layoutTree } from './treemap/treeLayout';
 import { OTHER_COLOR } from '../colors';
 
@@ -203,7 +203,7 @@ export function TreeMap({
             {formatSize(metricValue(hoveredNode, apparent), useSIPrefix)} ·{' '}
             {percent(metricValue(hoveredNode, apparent), total).toFixed(1)}%
             {hoveredNode.isDir
-              ? ` · ${Math.max(hoveredNode.itemCount - 1, 0)} item${hoveredNode.itemCount === 2 ? '' : 's'}`
+              ? ` · ${formatCount(hoveredNode.itemCount)} item${hoveredNode.itemCount === 1 ? '' : 's'}`
               : ''}
           </span>
         </div>

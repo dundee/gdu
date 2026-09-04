@@ -13,13 +13,15 @@ const nested: TreeNode = {
   mtime: 0,
   children: [],
 };
+// itemCount is fs.DisplayedItemCount off the wire (ADR-0001): a directory
+// reports its contents excluding itself, a file reports 1.
 const folder: TreeNode = {
   name: 'folder',
   path: '/tmp/root/folder',
   isDir: true,
   size: 70,
   usage: 70,
-  itemCount: 4,
+  itemCount: 1,
   mtime: 0,
   children: [nested],
 };
@@ -39,7 +41,7 @@ const root: TreeNode = {
   isDir: true,
   size: 100,
   usage: 100,
-  itemCount: 5,
+  itemCount: 3,
   mtime: 0,
   children: [folder, file],
 };
@@ -135,7 +137,23 @@ describe('TreeMap interaction', () => {
 
     expect(screen.getByRole('img', { name: 'Directory size treemap' }).classList.contains('hovering')).toBe(true);
     expect(screen.getByText('/tmp/root/folder')).toBeTruthy();
-    expect(screen.getByText(/70 B · 70\.0% · 3 items/)).toBeTruthy();
+    expect(screen.getByText(/70 B · 70\.0% · 1 item(?!s)/)).toBeTruthy();
+
+    rerender(
+      <TreeMap
+        root={root}
+        apparent={false}
+        useSIPrefix={false}
+        colorMap={new Map()}
+        hoveredPath="/tmp/root"
+        selectedPath="/tmp/root/file.txt"
+        onHover={() => undefined}
+        onSelect={() => undefined}
+        onOpen={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText(/100 B · 100\.0% · 3 items/)).toBeTruthy();
 
     rerender(
       <TreeMap
