@@ -9,6 +9,8 @@
   --track: #232833;
   --other: #4a5568;
   --accent: #2479d0;
+  --danger: #e63946;
+  --danger-hover: #ff5262;
   color-scheme: dark;
 }
 
@@ -494,6 +496,23 @@ body {
   background: var(--track);
   color: var(--text);
   cursor: pointer;
+}
+
+.modal button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+.modal button.danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+.modal button.danger:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .shortcuts {

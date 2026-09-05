@@ -482,6 +482,9 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 		if a.Flags.NoDelete {
 			webUI.SetNoDelete()
 		}
+		if a.Flags.TrashCommand != "" {
+			webUI.SetTrashCommand(a.Flags.TrashCommand)
+		}
 		ui = webUI
 	case a.Flags.OutputFile != "":
 		var output io.Writer

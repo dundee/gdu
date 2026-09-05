@@ -15,6 +15,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v5/pkg/remove"
 	"github.com/dundee/gdu/v5/report"
 )
 
@@ -47,6 +48,7 @@ type UI struct {
 	scanErr      error
 	progress     common.CurrentProgress
 	noDelete     bool
+	trasher      func(fs.Item, fs.Item) error
 
 	hub *hub
 }
@@ -56,6 +58,12 @@ func (ui *UI) SetNoDelete() {
 	ui.mu.Lock()
 	ui.noDelete = true
 	ui.mu.Unlock()
+}
+
+// SetTrashCommand replaces the built-in trash with an external command, as
+// used by --trash-command. See remove.TrashCommand for the command contract.
+func (ui *UI) SetTrashCommand(command string) {
+	ui.trasher = remove.TrashCommand(command)
 }
 
 // CreateUI creates a new web UI.
@@ -82,6 +90,7 @@ func CreateUI(
 		openBrowser: openBrowser,
 		browserCmd:  browserCmd,
 		revealPath:  openPath,
+		trasher:     remove.MoveItemToTrash,
 		actionToken: generateActionToken(),
 		linkedItems: make(fs.HardLinkedItems),
 		hub:         newHub(),

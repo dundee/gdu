@@ -44,6 +44,10 @@ const (
 	scanStateError    = "error"
 )
 
+// deleteModeTrash is the ?mode= value for DELETE /api/v1/nodes that moves the
+// item to the trash instead of deleting it permanently.
+const deleteModeTrash = "trash"
+
 func (ui *UI) buildStatus() statusResponse {
 	ui.mu.RLock()
 	defer ui.mu.RUnlock()
@@ -152,7 +156,12 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot delete an entry nested inside a browsed archive")
 		return
 	}
-	if err := remove.ItemFromDir(parent, node); err != nil {
+
+	removeFunc := remove.ItemFromDir
+	if r.URL.Query().Get("mode") == deleteModeTrash {
+		removeFunc = ui.trasher
+	}
+	if err := removeFunc(parent, node); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

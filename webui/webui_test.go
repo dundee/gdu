@@ -241,6 +241,43 @@ func TestDeleteNodeEndpointRemovesFileAndUpdatesTree(t *testing.T) {
 	assert.ErrorIs(t, err, errNotFound)
 }
 
+func TestDeleteNodeEndpointTrashModeUsesTrasher(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	var trashedPath string
+	ui.trasher = func(dir, item fs.Item) error {
+		trashedPath = item.GetPath()
+		dir.RemoveFile(item)
+		return nil
+	}
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(
+		http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path)+"&mode=trash", nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	assert.Equal(t, path, trashedPath)
+	// The trasher stub above does not touch the filesystem, unlike a
+	// permanent delete: the file being untouched on disk confirms the
+	// permanent-delete codepath (remove.ItemFromDir) was not used instead.
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "trash mode must not permanently delete the file")
+
+	_, err = ui.findNode(path)
+	assert.ErrorIs(t, err, errNotFound)
+}
+
 func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)

@@ -75,6 +75,23 @@ describe('layoutTree', () => {
     expect(large.some((rect) => rect.node === tiny)).toBe(true);
   });
 
+  it('still renders a lone zero-size file instead of leaving the directory blank', () => {
+    const emptyFile = node('empty.txt', 0);
+    const emptyDir: TreeNode = { ...node('root', 0, [emptyFile]), path: '/root' };
+
+    const rects = layoutTree(emptyDir, {
+      width: 100,
+      height: 100,
+      apparent: false,
+      minArea: 1,
+      maxRects: 2000,
+      inset: 0,
+    });
+
+    expect(rects.map((rect) => rect.node.name)).toEqual(['empty.txt']);
+    expect(rects[0].w * rects[0].h).toBeCloseTo(10000, 5);
+  });
+
   it('never exceeds the DOM rectangle limit', () => {
     const children = Array.from({ length: 3000 }, (_, index) => node(`file-${index}`, 1));
     const many: TreeNode = {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Node } from '../types';
-import { deleteNode, fetchTree, revealNode } from '../api';
+import { deleteNode, fetchTree, revealNode, type DeleteMode } from '../api';
 import { useGduModel } from '../model';
 import { formatSize } from '../format';
 import { TreeMap } from './TreeMap';
@@ -107,20 +107,27 @@ export function TreeMapView() {
   }, [currentPath, setTree, clearTree]);
 
   const refreshAfterMutation = useCallback(async () => {
-    await Promise.all([refreshNode(), refreshTree()]);
+    const [nodeResp] = await Promise.all([refreshNode(), refreshTree()]);
     setSelectedNode(null);
     setHoveredPath(null);
-  }, [refreshNode, refreshTree, setHoveredPath]);
+    // Deleting the last item leaves the current directory empty: staying
+    // put would show a blank chart with no way back except the breadcrumbs,
+    // so step up to the parent directory instead.
+    if (nodeResp.children.length === 0 && nodeResp.breadcrumbs.length > 1) {
+      const parent = nodeResp.breadcrumbs[nodeResp.breadcrumbs.length - 2];
+      navigateToPath(parent.path);
+    }
+  }, [refreshNode, refreshTree, setHoveredPath, navigateToPath]);
 
   const performDelete = useCallback(
-    async (node: Node) => {
+    async (node: Node, mode: DeleteMode) => {
       if (actionPending) {
         return;
       }
       setActionPending(true);
       setDeleteCandidate(null);
       try {
-        await deleteNode(node.path, actionToken);
+        await deleteNode(node.path, actionToken, mode);
         await refreshAfterMutation();
         setLoadError(null);
       } catch (err: unknown) {
@@ -159,7 +166,7 @@ export function TreeMapView() {
       return;
     }
     if (skipDeleteConfirm) {
-      void performDelete(selectedNode);
+      void performDelete(selectedNode, skipDeleteConfirm);
       return;
     }
     setSkipDeleteChoice(false);
@@ -178,7 +185,11 @@ export function TreeMapView() {
       if (event.code === 'KeyO' && selectedNode) {
         event.preventDefault();
         void revealSelected();
-      } else if (event.code === 'KeyD' && selectedNode && status.deleteAllowed) {
+      } else if (
+        (event.code === 'KeyD' || event.key === 'Delete' || event.key === 'Backspace') &&
+        selectedNode &&
+        status.deleteAllowed
+      ) {
         event.preventDefault();
         requestDelete();
       }
@@ -216,8 +227,7 @@ export function TreeMapView() {
           title="Delete item"
           onClose={() => setDeleteCandidate(null)}
         >
-          <p>This permanently deletes the selected item. This action cannot be undone.</p>
-          <strong>{deleteCandidate.name}</strong>
+          <p>Move the selected item to the trash, or delete it permanently right away.</p>
           <code className="modal-path">{deleteCandidate.path}</code>
           <span className="muted">
             {formatSize(
@@ -239,16 +249,28 @@ export function TreeMapView() {
             </button>
             <button
               type="button"
+              disabled={actionPending}
+              onClick={() => {
+                if (skipDeleteChoice) {
+                  setSkipDeleteConfirm('trash');
+                }
+                void performDelete(deleteCandidate, 'trash');
+              }}
+            >
+              Move to Trash
+            </button>
+            <button
+              type="button"
               className="danger"
               disabled={actionPending}
               onClick={() => {
                 if (skipDeleteChoice) {
-                  setSkipDeleteConfirm(true);
+                  setSkipDeleteConfirm('permanent');
                 }
-                void performDelete(deleteCandidate);
+                void performDelete(deleteCandidate, 'permanent');
               }}
             >
-              Delete permanently
+              Delete Permanently
             </button>
           </div>
         </Modal>
