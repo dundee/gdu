@@ -193,38 +193,47 @@ func (ui *UI) topDir(dir fs.Item) fs.Item {
 }
 
 func (ui *UI) limitDirByDepth(dir fs.Item, currentDepth int) fs.Item {
-	if d, ok := dir.(*analyze.Dir); ok {
-		limited := &analyze.Dir{
-			File: &analyze.File{
-				Name:   d.GetName(),
-				Mtime:  d.GetMtime(),
-				Parent: d.GetParent(),
-				Size:   d.GetSize(),
-				Usage:  d.GetUsage(),
-			},
-			BasePath:  d.BasePath,
-			ItemCount: d.ItemCount,
-		}
-		if currentDepth == ui.depth {
-			return limited
-		}
-		for f := range d.GetFiles(fs.SortBySize, fs.SortDesc) {
-			if f.IsDir() {
-				child := ui.limitDirByDepth(f, currentDepth+1)
-				if child != nil {
-					child.SetParent(limited)
-					limited.AddFile(child)
-				}
-			} else if currentDepth+1 <= ui.depth {
-				file := *f.(*analyze.File)
-				file.Parent = limited
-				limited.AddFile(&file)
-			}
-		}
-		return limited
+	if !dir.IsDir() {
+		return dir
 	}
 
-	return dir
+	limited := &analyze.Dir{
+		File: &analyze.File{
+			Name:   dir.GetName(),
+			Flag:   dir.GetFlag(),
+			Mtime:  dir.GetMtime(),
+			Parent: dir.GetParent(),
+			Size:   dir.GetSize(),
+			Usage:  dir.GetUsage(),
+		},
+		ItemCount: dir.GetItemCount(),
+	}
+	if d, ok := dir.(*analyze.Dir); ok {
+		limited.BasePath = d.BasePath
+	}
+	if currentDepth == ui.depth {
+		return limited
+	}
+	for f := range dir.GetFiles(fs.SortBySize, fs.SortDesc) {
+		if f.IsDir() {
+			child := ui.limitDirByDepth(f, currentDepth+1)
+			if child != nil {
+				child.SetParent(limited)
+				limited.AddFile(child)
+			}
+		} else if currentDepth+1 <= ui.depth {
+			limited.AddFile(&analyze.File{
+				Name:   f.GetName(),
+				Flag:   f.GetFlag(),
+				Size:   f.GetSize(),
+				Usage:  f.GetUsage(),
+				Mtime:  f.GetMtime(),
+				Mli:    f.GetMultiLinkedInode(),
+				Parent: limited,
+			})
+		}
+	}
+	return limited
 }
 
 func (ui *UI) summarizeDir(dir fs.Item) fs.Item {
@@ -232,13 +241,13 @@ func (ui *UI) summarizeDir(dir fs.Item) fs.Item {
 		File: &analyze.File{
 			Name:  dir.GetName(),
 			Mtime: dir.GetMtime(),
+			Size:  dir.GetSize(),
+			Usage: dir.GetUsage(),
 		},
+		ItemCount: dir.GetItemCount(),
 	}
 	if d, ok := dir.(*analyze.Dir); ok {
 		summary.BasePath = d.BasePath
-		summary.ItemCount = d.ItemCount
-		summary.Size = d.GetSize()
-		summary.Usage = d.GetUsage()
 	}
 	return summary
 }

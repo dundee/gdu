@@ -133,6 +133,59 @@ func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
 	assert.Contains(t, reportOutput.String(), `"name":"inside.txt"`)
 }
 
+func TestAnalyzePathWithDepthAndArchiveBrowsing(t *testing.T) {
+	dir := t.TempDir()
+
+	archive, err := os.Create(filepath.Join(dir, "archive.tar"))
+	assert.Nil(t, err)
+	tw := tar.NewWriter(archive)
+	assert.Nil(t, tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeReg, Name: "inside.txt", Size: 11, Mode: 0o644,
+	}))
+	_, err = tw.Write([]byte("hello world"))
+	assert.Nil(t, err)
+	assert.Nil(t, tw.Close())
+	assert.Nil(t, archive.Close())
+
+	var output, reportOutput bytes.Buffer
+
+	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 2, false, nil)
+	ui.SetArchiveBrowsing(true)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+
+	assert.NotPanics(t, func() {
+		err = ui.AnalyzePath(dir, nil)
+	})
+	assert.Nil(t, err)
+	assert.Contains(t, reportOutput.String(), `"name":"archive.tar"`)
+	assert.Contains(t, reportOutput.String(), `"name":"inside.txt"`)
+}
+
+func TestAnalyzePathWithDepthCutsInsideArchive(t *testing.T) {
+	dir := t.TempDir()
+
+	archive, err := os.Create(filepath.Join(dir, "archive.tar"))
+	assert.Nil(t, err)
+	tw := tar.NewWriter(archive)
+	assert.Nil(t, tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeReg, Name: "inside.txt", Size: 11, Mode: 0o644,
+	}))
+	_, err = tw.Write([]byte("hello world"))
+	assert.Nil(t, err)
+	assert.Nil(t, tw.Close())
+	assert.Nil(t, archive.Close())
+
+	var output, reportOutput bytes.Buffer
+
+	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 1, false, nil)
+	ui.SetArchiveBrowsing(true)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	assert.Nil(t, ui.AnalyzePath(dir, nil))
+
+	assert.Contains(t, reportOutput.String(), `"name":"archive.tar"`)
+	assert.NotContains(t, reportOutput.String(), `"name":"inside.txt"`)
+}
+
 func TestAnalyzePathWithDepth(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
