@@ -69,8 +69,13 @@ export function revealNode(path: string, token: string): Promise<void> {
   });
 }
 
-export function deleteNode(path: string, token: string): Promise<void> {
+export type DeleteMode = 'trash' | 'permanent';
+
+export function deleteNode(path: string, token: string, mode: DeleteMode): Promise<void> {
   const params = new URLSearchParams({ path });
+  if (mode === 'trash') {
+    params.set('mode', 'trash');
+  }
   return requestAction(`api/v1/nodes?${params.toString()}`, token, { method: 'DELETE' });
 }
 

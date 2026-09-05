@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Node, NodeResponse, SortKey, SortOrder, Status, TreeNode } from './types';
-import { fetchNode, fetchStatus, subscribeStatus } from './api';
+import { fetchNode, fetchStatus, subscribeStatus, type DeleteMode } from './api';
 import { colorMapFor, computeSlices } from './slices';
 
 export type ChartView = 'donut' | 'treemap';
@@ -58,11 +58,12 @@ export interface GduModel {
   // loader effect above treats the path as not-yet-loaded, eligible for a
   // retry.
   clearTree: () => void;
-  // "Do not ask again this session" for delete confirmation. Lives here
+  // "Do not ask again this session" for delete confirmation, remembering
+  // which of the two delete modes to repeat without asking. Lives here
   // (rather than in TreeMapView) so it survives the view toggling
   // donut/treemap, which unmounts TreeMapView and would otherwise reset it.
-  skipDeleteConfirm: boolean;
-  setSkipDeleteConfirm: (skip: boolean) => void;
+  skipDeleteConfirm: DeleteMode | null;
+  setSkipDeleteConfirm: (mode: DeleteMode | null) => void;
 }
 
 const GduModelContext = createContext<GduModel | null>(null);
@@ -86,9 +87,18 @@ export function GduModelProvider({ model, children }: { model: GduModel; childre
 export function useGduModelState() {
   // Read once at mount: the token lives only in this page's own URL (see
   // GduModel.actionToken), not in any state the server pushes afterwards.
-  const [actionToken] = useState(
-    () => new URLSearchParams(window.location.search).get('token') ?? '',
-  );
+  // Strip it from the visible address bar immediately after reading it, so
+  // it does not linger somewhere a shoulder-surfer, browser history entry,
+  // or copy-pasted URL could pick it up.
+  const [actionToken] = useState(() => {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token') ?? '';
+    if (url.searchParams.has('token')) {
+      url.searchParams.delete('token');
+      window.history.replaceState(window.history.state, '', url);
+    }
+    return token;
+  });
   const [status, setStatus] = useState<Status | null>(null);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [nodeResp, setNodeResp] = useState<NodeResponse | null>(null);
@@ -101,7 +111,7 @@ export function useGduModelState() {
   const [showHelp, setShowHelp] = useState(false);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
-  const [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
+  const [skipDeleteConfirm, setSkipDeleteConfirm] = useState<DeleteMode | null>(null);
 
   // Tracks the latest currentPath so an in-flight refreshNode() call (e.g.
   // one started before a breadcrumb navigation) can tell its result is
