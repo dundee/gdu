@@ -25,6 +25,12 @@ func staticHandler() http.Handler {
 	fileServer := http.FileServer(http.FS(sub))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// The action token lives in this page's URL query string. Without
+		// this header, following an outbound link from the page would leak
+		// the full URL - token included - to that site via the Referer
+		// request header.
+		w.Header().Set("Referrer-Policy", "no-referrer")
+
 		reqPath := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 		if reqPath == "" {
 			reqPath = "index.html"

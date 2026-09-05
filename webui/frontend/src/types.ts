@@ -37,6 +37,7 @@ export interface Status {
   showApparentSize: boolean;
   showRelativeSize: boolean;
   useSIPrefix: boolean;
+  deleteAllowed: boolean;
 }
 
 export type SortKey = 'size' | 'name' | 'itemCount' | 'mtime';

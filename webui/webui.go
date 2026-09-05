@@ -15,6 +15,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v5/pkg/remove"
 	"github.com/dundee/gdu/v5/report"
 )
 
@@ -31,11 +32,14 @@ type UI struct {
 	listenAddr  string
 	openBrowser bool
 	browserCmd  string
+	revealPath  func(string) error
+	actionToken string
 
 	getter  device.DevicesInfoGetter
 	devices device.Devices
 
 	mu           sync.RWMutex
+	actionMu     sync.Mutex
 	topDir       fs.Item
 	topDirPath   string
 	linkedItems  fs.HardLinkedItems
@@ -43,8 +47,23 @@ type UI struct {
 	scanning     bool
 	scanErr      error
 	progress     common.CurrentProgress
+	noDelete     bool
+	trasher      func(fs.Item, fs.Item) error
 
 	hub *hub
+}
+
+// SetNoDelete disables destructive actions in the web UI.
+func (ui *UI) SetNoDelete() {
+	ui.mu.Lock()
+	ui.noDelete = true
+	ui.mu.Unlock()
+}
+
+// SetTrashCommand replaces the built-in trash with an external command, as
+// used by --trash-command. See remove.TrashCommand for the command contract.
+func (ui *UI) SetTrashCommand(command string) {
+	ui.trasher = remove.TrashCommand(command)
 }
 
 // CreateUI creates a new web UI.
@@ -70,6 +89,9 @@ func CreateUI(
 		listenAddr:  listenAddr,
 		openBrowser: openBrowser,
 		browserCmd:  browserCmd,
+		revealPath:  openPath,
+		trasher:     remove.MoveItemToTrash,
+		actionToken: generateActionToken(),
 		linkedItems: make(fs.HardLinkedItems),
 		hub:         newHub(),
 	}
