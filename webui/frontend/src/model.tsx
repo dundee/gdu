@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -40,8 +41,10 @@ export interface GduModel {
   hoveredPath: string | null;
   setHoveredPath: (path: string | null) => void;
   loadError: string | null;
+  setLoadError: (message: string | null) => void;
   handleSelect: (node: Node) => void;
   navigateToPath: (path: string) => void;
+  refreshNode: () => Promise<NodeResponse>;
   showHelp: boolean;
   setShowHelp: (show: boolean) => void;
   // Recursive-tree cache, keyed by path. Lives here (rather than inside
@@ -99,6 +102,15 @@ export function useGduModelState() {
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
   const [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
+
+  // Tracks the latest currentPath so an in-flight refreshNode() call (e.g.
+  // one started before a breadcrumb navigation) can tell its result is
+  // stale once it resolves, instead of unconditionally overwriting nodeResp
+  // with data for a directory the user has since navigated away from.
+  const currentPathRef = useRef(currentPath);
+  useEffect(() => {
+    currentPathRef.current = currentPath;
+  }, [currentPath]);
 
   // Initial status + live updates over SSE.
   useEffect(() => {
@@ -207,6 +219,19 @@ export function useGduModelState() {
     setApparent((a) => !(a ?? status?.showApparentSize ?? false));
   }, [status?.showApparentSize]);
 
+  const refreshNode = useCallback(async () => {
+    if (currentPath === null) {
+      throw new Error('no current path');
+    }
+    const path = currentPath;
+    const resp = await fetchNode(path, sort, order);
+    if (currentPathRef.current === path) {
+      setNodeResp(resp);
+      setLoadError(null);
+    }
+    return resp;
+  }, [currentPath, sort, order]);
+
   const setTree = useCallback((path: string, root: TreeNode | null) => {
     setTreePath(path);
     setTreeRoot(root);
@@ -236,8 +261,10 @@ export function useGduModelState() {
     hoveredPath,
     setHoveredPath,
     loadError,
+    setLoadError,
     handleSelect,
     navigateToPath,
+    refreshNode,
     showHelp,
     setShowHelp,
     treeRoot,
