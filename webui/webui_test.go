@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -278,6 +279,33 @@ func TestDeleteNodeEndpointTrashModeUsesTrasher(t *testing.T) {
 	assert.ErrorIs(t, err, errNotFound)
 }
 
+func TestDeleteNodeEndpointReturnsErrorWhenRemoveFuncFails(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	ui.trasher = func(dir fs.Item, item fs.Item) error {
+		return errors.New("trash command failed")
+	}
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(
+		http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path)+"&mode=trash", nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	_, err = os.Stat(path)
+	assert.NoError(t, err, "file must still exist after a failed delete")
+}
+
 func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)
@@ -396,6 +424,16 @@ func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
 
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	assert.Equal(t, root, revealed, "revealed path should be the archive's containing directory, not the archive file itself")
+}
+
+func TestSetTrashCommandReplacesDefaultTrasher(t *testing.T) {
+	ui := newTestUI()
+	before := reflect.ValueOf(ui.trasher).Pointer()
+
+	ui.SetTrashCommand("true")
+
+	after := reflect.ValueOf(ui.trasher).Pointer()
+	assert.NotEqual(t, before, after, "SetTrashCommand should replace the default trasher")
 }
 
 func TestDeleteEndpointHonorsNoDelete(t *testing.T) {
