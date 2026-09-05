@@ -712,10 +712,11 @@ func TestWebFlagCreatesWebUIAndHonorsNoDelete(t *testing.T) {
 
 	_, err = runApp(
 		&Flags{
-			LogFile:   "/dev/null",
-			Web:       true,
-			NoDelete:  true,
-			WebConfig: WebConfig{Listen: blocker.Addr().String()},
+			LogFile:      "/dev/null",
+			Web:          true,
+			NoDelete:     true,
+			TrashCommand: "trash-put",
+			WebConfig:    WebConfig{Listen: blocker.Addr().String()},
 		},
 		[]string{"test_dir"},
 		false,

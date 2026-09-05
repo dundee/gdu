@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http/httptest"
 	"testing"
@@ -21,6 +22,15 @@ func TestGenerateActionTokenIsRandomAndHexEncoded(t *testing.T) {
 	assert.NotEqual(t, a, b, "two tokens from the same process must not collide")
 	assert.Len(t, a, actionTokenSize*2, "hex-encoded token should be twice the byte length")
 	assert.Regexp(t, "^[0-9a-f]+$", a)
+}
+
+func TestOriginOf(t *testing.T) {
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Host = "example.com"
+	assert.Equal(t, "http://example.com", originOf(req))
+
+	req.TLS = &tls.ConnectionState{}
+	assert.Equal(t, "https://example.com", originOf(req))
 }
 
 func TestValidActionToken(t *testing.T) {

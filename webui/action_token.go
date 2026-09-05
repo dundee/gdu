@@ -26,13 +26,12 @@ const actionTokenSize = 32
 // response: unlike the read-only endpoints, which stay intentionally
 // unauthenticated, the token itself must not be readable by another local
 // user who can reach the port but not this process's own terminal.
+//
+// rand.Read never returns an error: since Go 1.24 a broken OS entropy source
+// is fatal to the process instead, so there is no error path to handle here.
 func generateActionToken() string {
 	b := make([]byte, actionTokenSize)
-	if _, err := rand.Read(b); err != nil {
-		// crypto/rand only fails if the OS entropy source is broken, which
-		// makes every other security property of the process suspect too.
-		panic("webui: failed to generate action token: " + err.Error())
-	}
+	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
 
