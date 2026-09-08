@@ -84,7 +84,11 @@ Do not show progress in non-interactive mode
 
 #### `no-cross`
 
-Do not cross filesystem boundaries
+Do not cross filesystem boundaries.
+
+On Linux, same-filesystem bind mounts (including read-only mounts) remain
+included. Mounts on other filesystems remain excluded. Explicit ignore rules
+still apply.
 
 #### `no-hidden`
 

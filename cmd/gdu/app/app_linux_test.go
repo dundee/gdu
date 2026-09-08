@@ -3,14 +3,20 @@
 package app
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestNoCrossWithErr(t *testing.T) {
@@ -150,4 +156,53 @@ func TestAnalyzePathWithSqliteStorageError(t *testing.T) {
 
 	assert.Empty(t, out)
 	assert.ErrorContains(t, err, "creating sqlite analyzer")
+}
+
+func TestNoCrossWithMountInfo(t *testing.T) {
+	temp := t.TempDir()
+	root := filepath.Join(temp, "scan")
+	for name, size := range map[string]int{"root.dat": 101, "same/same.dat": 203, "foreign/foreign.dat": 307} {
+		path := filepath.Join(root, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, bytes.Repeat([]byte("x"), size), 0o600))
+	}
+	var stat unix.Stat_t
+	require.NoError(t, unix.Stat(root, &stat))
+	major, minor := unix.Major(uint64(stat.Dev)), unix.Minor(uint64(stat.Dev))
+	rootField := strings.ReplaceAll(root, " ", `\040`)
+	mountsPath := filepath.Join(temp, "mountinfo")
+	mounts := fmt.Sprintf(`1 1 %d:%d / / rw - ext4 /dev/example rw
+2 1 %d:%d /store %s/same ro - ext4 /dev/example rw
+3 1 %d:%d / %s/foreign rw - tmpfs tmpfs rw
+`, major, minor, major, minor, rootField, major, minor^1, rootField)
+	require.NoError(t, os.WriteFile(mountsPath, []byte(mounts), 0o600))
+
+	for _, tt := range []struct {
+		name    string
+		noCross bool
+		ignore  []string
+		want    string
+	}{
+		{name: "unrestricted", want: "611"},
+		{name: "same filesystem", noCross: true, want: "304"},
+		{name: "explicit ignore", noCross: true, ignore: []string{filepath.Join(root, "same")}, want: "101"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			app := App{
+				Flags: &Flags{
+					LogFile: "/dev/null", NoCross: tt.noCross, IgnoreDirs: tt.ignore,
+					ShowApparentSize: true, NoPrefix: true, NoColor: true, NoProgress: true, Depth: 3,
+				},
+				Args: []string{root}, Writer: &output,
+				TermApp: testapp.CreateMockedApp(false), PathChecker: os.Stat,
+				Getter: device.LinuxDevicesInfoGetter{MountsPath: mountsPath},
+			}
+			require.NoError(t, app.Run())
+			require.NotEmpty(t, output.String())
+			assert.Equal(t, tt.want, strings.Fields(output.String())[0])
+			assert.Equal(t, !tt.noCross, strings.Contains(output.String(), "/foreign/foreign.dat"))
+			assert.Equal(t, len(tt.ignore) == 0, strings.Contains(output.String(), "/same/same.dat"))
+		})
+	}
 }
