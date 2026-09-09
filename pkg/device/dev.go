@@ -1,14 +1,19 @@
 package device
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 // Device struct
 type Device struct {
 	Name       string
 	MountPoint string
 	Fstype     string
-	Size       int64
-	Free       int64
+	// FilesystemID is the Linux device number, or nil when unavailable.
+	FilesystemID *uint64
+	Size         int64
+	Free         int64
 }
 
 // GetUsage returns used size of device
@@ -43,14 +48,21 @@ func (f ByName) Less(i, j int) bool {
 	return f[i].Name < f[j].Name
 }
 
-// GetNestedMountpointsPaths returns paths of nested mount points
+// GetNestedMountpointsPaths returns nested mount points on other or unknown filesystems.
 func GetNestedMountpointsPaths(path string, mounts Devices) []string {
 	paths := make([]string, 0, len(mounts))
+	filesystemID, known := getFilesystemID(path)
 
 	for _, mount := range mounts {
-		if strings.HasPrefix(mount.MountPoint, path) && mount.MountPoint != path {
-			paths = append(paths, mount.MountPoint)
+		relative, err := filepath.Rel(path, mount.MountPoint)
+		if err != nil || relative == "." || relative == ".." ||
+			strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			continue
 		}
+		if known && mount.FilesystemID != nil && filesystemID == *mount.FilesystemID {
+			continue
+		}
+		paths = append(paths, mount.MountPoint)
 	}
 	return paths
 }

@@ -71,3 +71,14 @@ func TestSortByUsedSize(t *testing.T) {
 	assert.Equal(t, "yyy", devices[1].Name)
 	assert.Equal(t, "xxx", devices[2].Name)
 }
+
+func TestNestedMountpointPathBoundary(t *testing.T) {
+	mounts := Devices{
+		{MountPoint: "/scan"},
+		{MountPoint: "/scan/child"},
+		{MountPoint: "/scan-neighbour"},
+		{MountPoint: "/scan-neighbour/child"},
+	}
+
+	assert.Equal(t, []string{"/scan/child"}, GetNestedMountpointsPaths("/scan", mounts))
+}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
+	"strconv"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -16,9 +18,9 @@ type LinuxDevicesInfoGetter struct {
 }
 
 // Getter is current instance of DevicesInfoGetter
-var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/mounts"}
+var Getter DevicesInfoGetter = LinuxDevicesInfoGetter{MountsPath: "/proc/self/mountinfo"}
 
-// GetMounts returns all mounted filesystems from /proc/mounts
+// GetMounts returns mounted filesystems from a mountinfo or legacy mounts file.
 func (t LinuxDevicesInfoGetter) GetMounts() (devices Devices, err error) {
 	file, err := os.Open(t.MountsPath)
 	if err != nil {
@@ -50,30 +52,67 @@ func (t LinuxDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
 
 func readMountsFile(file io.Reader) (mounts Devices, err error) {
 	mounts = Devices{}
+	parents := make(map[*Device]string)
+	byID := make(map[string]*Device)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Fields(line)
 
-		// skip malformed lines, a valid entry has at least device, mount point and fstype
-		if len(parts) < 3 {
-			continue
+		separator := slices.Index(parts, "-")
+		switch {
+		case separator >= 6 && len(parts) >= separator+4:
+			mount := &Device{
+				Name:         parts[separator+2],
+				MountPoint:   unescapeString(parts[4]),
+				Fstype:       parts[separator+1],
+				FilesystemID: parseFilesystemID(parts[2]),
+			}
+			mounts = append(mounts, mount)
+			parents[mount] = parts[1]
+			byID[parts[0]] = mount
+		case len(parts) >= 3 && strings.HasPrefix(parts[1], "/"):
+			mounts = append(mounts, &Device{
+				Name:       parts[0],
+				MountPoint: unescapeString(parts[1]),
+				Fstype:     parts[2],
+			})
 		}
-
-		device := &Device{
-			Name:       parts[0],
-			MountPoint: unescapeString(parts[1]),
-			Fstype:     parts[2],
-		}
-		mounts = append(mounts, device)
 	}
 
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 
-	return mounts, nil
+	return visibleMounts(mounts, parents, byID), nil
+}
+
+func visibleMounts(mounts Devices, parents map[*Device]string, byID map[string]*Device) Devices {
+	covered := make(map[*Device]bool)
+	for mount, parentID := range parents {
+		parent := byID[parentID]
+		if parent != nil && parent != mount && parent.MountPoint == mount.MountPoint {
+			covered[parent] = true
+		}
+	}
+	return slices.DeleteFunc(mounts, func(mount *Device) bool {
+		if covered[mount] {
+			return true
+		}
+		// Bound malformed parent cycles in custom mount tables.
+		for range len(parents) {
+			parent := byID[parents[mount]]
+			if parent == nil || parent == mount {
+				break
+			}
+			if covered[parent] && parent.MountPoint != mount.MountPoint {
+				return true
+			}
+			mount = parent
+		}
+		return false
+	})
 }
 
 func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err error) {
@@ -106,4 +145,29 @@ func processMounts(mounts Devices, ignoreErrors bool) (devices Devices, err erro
 
 func unescapeString(str string) string {
 	return strings.ReplaceAll(str, "\\040", " ")
+}
+
+func getFilesystemID(path string) (uint64, bool) {
+	var stat unix.Stat_t
+	if err := unix.Stat(path, &stat); err != nil {
+		return 0, false
+	}
+	return uint64(stat.Dev), true
+}
+
+func parseFilesystemID(value string) *uint64 {
+	majorText, minorText, found := strings.Cut(value, ":")
+	if !found {
+		return nil
+	}
+	major, err := strconv.ParseUint(majorText, 10, 32)
+	if err != nil {
+		return nil
+	}
+	minor, err := strconv.ParseUint(minorText, 10, 32)
+	if err != nil {
+		return nil
+	}
+	id := unix.Mkdev(uint32(major), uint32(minor))
+	return &id
 }
