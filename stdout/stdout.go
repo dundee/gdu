@@ -330,16 +330,24 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	return nil
 }
 
-func (ui *UI) showDir(dir fs.Item) {
+// sortSettings returns the field and the direction the file list is sorted by,
+// honoring --show-apparent-size and --reverse-sort.
+func (ui *UI) sortSettings() (fs.SortBy, fs.SortOrder) {
 	sortOrder := fs.SortDesc
 	if ui.reverseSort {
 		sortOrder = fs.SortAsc
 	}
 
-	sort := fs.SortBySize
+	sortBy := fs.SortBySize
 	if ui.ShowApparentSize {
-		sort = fs.SortByApparentSize
+		sortBy = fs.SortByApparentSize
 	}
+
+	return sortBy, sortOrder
+}
+
+func (ui *UI) showDir(dir fs.Item) {
+	sort, sortOrder := ui.sortSettings()
 
 	for file := range dir.GetFiles(sort, sortOrder) {
 		ui.printItem(dir, file)
@@ -475,12 +483,7 @@ func (ui *UI) printDirWithDepth(dir fs.Item, currentDepth int) {
 
 	// If we haven't reached the max depth, print contents
 	if currentDepth < ui.depth && dir.IsDir() {
-		sortOrder := fs.SortDesc
-		if ui.reverseSort {
-			sortOrder = fs.SortAsc
-		}
-
-		files := dir.GetFiles(fs.SortBySize, sortOrder)
+		files := dir.GetFiles(ui.sortSettings())
 
 		// Print all files at this depth level
 		for file := range files {

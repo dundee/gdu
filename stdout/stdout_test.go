@@ -255,6 +255,34 @@ func TestShowDepthWithReverseSort(t *testing.T) {
 	assert.Contains(t, outputStr, "test_dir/nested/subnested")
 }
 
+func TestShowDepthWithApparentSize(t *testing.T) {
+	// "sparse" has the bigger apparent size but the smaller disk usage, so
+	// --show-apparent-size has to flip the order of the two subdirectories.
+	root := &analyze.Dir{
+		File:      &analyze.File{Name: "root"},
+		BasePath:  "/",
+		ItemCount: 3,
+	}
+	sparse := &analyze.Dir{
+		File:      &analyze.File{Name: "sparse", Parent: root, Size: 50 << 20, Usage: 4096},
+		ItemCount: 1,
+	}
+	dense := &analyze.Dir{
+		File:      &analyze.File{Name: "dense", Parent: root, Size: 5 << 20, Usage: 5 << 20},
+		ItemCount: 1,
+	}
+	root.AddFile(sparse)
+	root.AddFile(dense)
+
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, true, false, false, false, false, "", 0, false, 1)
+	ui.printDirWithDepth(root, 0)
+
+	out := output.String()
+	assert.Less(t, strings.Index(out, "/root/sparse"), strings.Index(out, "/root/dense"),
+		"largest apparent size should be printed first, got:\n"+out)
+}
+
 func TestAnalyzeSubdir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
