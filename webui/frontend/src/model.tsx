@@ -4,21 +4,27 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { Node, NodeResponse, SortKey, SortOrder, Status, TreeNode } from './types';
-import { fetchNode, fetchStatus, subscribeStatus } from './api';
+import { fetchNode, fetchStatus, subscribeStatus, type DeleteMode } from './api';
 import { colorMapFor, computeSlices } from './slices';
 
 export type ChartView = 'donut' | 'treemap';
 
 // GduModel is the shared app-level data: scan status, the current
 // directory's node data, and display preferences. Directory-specific
-// features (the recursive tree, selection) live in the view that needs them
-// (see TreeMapView) and are not part of this model.
+// features (the recursive tree, selection, delete/reveal) live in the view
+// that needs them (see TreeMapView) and are not part of this model.
 export interface GduModel {
   status: Status;
+  // Per-process secret the server prints/opens the page with (see
+  // actionTokenParam in webui/action_token.go), read once from this page's
+  // own URL rather than from any API response. Required on every
+  // delete/reveal request; see api.ts.
+  actionToken: string;
   currentPath: string;
   nodeResp: NodeResponse | null;
   children: Node[];
@@ -35,8 +41,10 @@ export interface GduModel {
   hoveredPath: string | null;
   setHoveredPath: (path: string | null) => void;
   loadError: string | null;
+  setLoadError: (message: string | null) => void;
   handleSelect: (node: Node) => void;
   navigateToPath: (path: string) => void;
+  refreshNode: () => Promise<NodeResponse>;
   showHelp: boolean;
   setShowHelp: (show: boolean) => void;
   // Recursive-tree cache, keyed by path. Lives here (rather than inside
@@ -45,6 +53,17 @@ export interface GduModel {
   treeRoot: TreeNode | null;
   treePath: string | null;
   setTree: (path: string, root: TreeNode | null) => void;
+  // Invalidates the cached tree (clears both treeRoot and treePath) so a
+  // failed refresh does not leave a stale tree displayed as current, and the
+  // loader effect above treats the path as not-yet-loaded, eligible for a
+  // retry.
+  clearTree: () => void;
+  // "Do not ask again this session" for delete confirmation, remembering
+  // which of the two delete modes to repeat without asking. Lives here
+  // (rather than in TreeMapView) so it survives the view toggling
+  // donut/treemap, which unmounts TreeMapView and would otherwise reset it.
+  skipDeleteConfirm: DeleteMode | null;
+  setSkipDeleteConfirm: (mode: DeleteMode | null) => void;
 }
 
 const GduModelContext = createContext<GduModel | null>(null);
@@ -66,6 +85,20 @@ export function GduModelProvider({ model, children }: { model: GduModel; childre
 // still render the pre-scan loading/error/progress screens before a
 // GduModelProvider (which needs a non-null status/currentPath) makes sense.
 export function useGduModelState() {
+  // Read once at mount: the token lives only in this page's own URL (see
+  // GduModel.actionToken), not in any state the server pushes afterwards.
+  // Strip it from the visible address bar immediately after reading it, so
+  // it does not linger somewhere a shoulder-surfer, browser history entry,
+  // or copy-pasted URL could pick it up.
+  const [actionToken] = useState(() => {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token') ?? '';
+    if (url.searchParams.has('token')) {
+      url.searchParams.delete('token');
+      window.history.replaceState(window.history.state, '', url);
+    }
+    return token;
+  });
   const [status, setStatus] = useState<Status | null>(null);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [nodeResp, setNodeResp] = useState<NodeResponse | null>(null);
@@ -78,6 +111,16 @@ export function useGduModelState() {
   const [showHelp, setShowHelp] = useState(false);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
+  const [skipDeleteConfirm, setSkipDeleteConfirm] = useState<DeleteMode | null>(null);
+
+  // Tracks the latest currentPath so an in-flight refreshNode() call (e.g.
+  // one started before a breadcrumb navigation) can tell its result is
+  // stale once it resolves, instead of unconditionally overwriting nodeResp
+  // with data for a directory the user has since navigated away from.
+  const currentPathRef = useRef(currentPath);
+  useEffect(() => {
+    currentPathRef.current = currentPath;
+  }, [currentPath]);
 
   // Initial status + live updates over SSE.
   useEffect(() => {
@@ -186,13 +229,32 @@ export function useGduModelState() {
     setApparent((a) => !(a ?? status?.showApparentSize ?? false));
   }, [status?.showApparentSize]);
 
+  const refreshNode = useCallback(async () => {
+    if (currentPath === null) {
+      throw new Error('no current path');
+    }
+    const path = currentPath;
+    const resp = await fetchNode(path, sort, order);
+    if (currentPathRef.current === path) {
+      setNodeResp(resp);
+      setLoadError(null);
+    }
+    return resp;
+  }, [currentPath, sort, order]);
+
   const setTree = useCallback((path: string, root: TreeNode | null) => {
     setTreePath(path);
     setTreeRoot(root);
   }, []);
 
+  const clearTree = useCallback(() => {
+    setTreePath(null);
+    setTreeRoot(null);
+  }, []);
+
   return {
     status,
+    actionToken,
     currentPath,
     nodeResp,
     children,
@@ -209,12 +271,17 @@ export function useGduModelState() {
     hoveredPath,
     setHoveredPath,
     loadError,
+    setLoadError,
     handleSelect,
     navigateToPath,
+    refreshNode,
     showHelp,
     setShowHelp,
     treeRoot,
     treePath,
     setTree,
+    clearTree,
+    skipDeleteConfirm,
+    setSkipDeleteConfirm,
   };
 }

@@ -56,9 +56,16 @@ export function layoutTree(
       return;
     }
 
+    // Zero-size children (empty files, or directories holding only empty
+    // files) still get a sliver of layout weight instead of being dropped:
+    // otherwise a directory containing nothing but empty files would render
+    // as a totally blank tile, indistinguishable from a load in progress.
+    const MIN_LAYOUT_VALUE = 1;
     const children = parent.children
-      .map((child) => ({ child, value: metricValue(child, options.apparent) }))
-      .filter(({ value }) => value > 0)
+      .map((child) => ({
+        child,
+        value: Math.max(metricValue(child, options.apparent), MIN_LAYOUT_VALUE),
+      }))
       .sort((a, b) => b.value - a.value);
     const childrenTotal = children.reduce((total, child) => total + child.value, 0);
     const parentValue = metricValue(parent, options.apparent);
