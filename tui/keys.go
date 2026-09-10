@@ -48,7 +48,8 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		return ui.handleConfirmation(key)
 	}
 
-	if key.Key() == tcell.KeyCtrlC && ui.cancelScan() {
+	key = ui.handleCtrlC(key)
+	if key == nil {
 		return nil
 	}
 
@@ -60,12 +61,7 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 		ui.pages.HasPage("deleting") ||
 		ui.pages.HasPage("emptying") ||
 		ui.pages.HasPage("moving to trash") {
-		// allow peeking at the results found so far during a scan
-		if key.Key() == tcell.KeyTab && ui.pages.HasPage("progress") {
-			ui.enterPreview()
-			return nil
-		}
-		return key
+		return ui.handleBlockingModalKeys(key)
 	}
 
 	key = ui.handleHelp(key)
@@ -93,6 +89,40 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	}
 
 	return ui.handleMainActions(key)
+}
+
+// handleCtrlC reacts to Ctrl+C. By default it stops a running scan and keeps
+// the results found so far; when ctrlCQuits is set it quits gdu straight away
+// instead. Returns nil when the event has been consumed.
+func (ui *UI) handleCtrlC(key *tcell.EventKey) *tcell.EventKey {
+	if key.Key() != tcell.KeyCtrlC {
+		return key
+	}
+	if ui.ctrlCQuits {
+		ui.quitNow()
+		return nil
+	}
+	if ui.cancelScan() {
+		return nil
+	}
+	return key
+}
+
+// handleBlockingModalKeys handles the few keys that stay available while a
+// modal that blocks browsing is up (scan progress, deleting, emptying, moving
+// to trash). Returns nil when the event has been consumed.
+func (ui *UI) handleBlockingModalKeys(key *tcell.EventKey) *tcell.EventKey {
+	// allow peeking at the results found so far during a scan
+	if key.Key() == tcell.KeyTab && ui.pages.HasPage("progress") {
+		ui.enterPreview()
+		return nil
+	}
+	// Esc always stops the scan and keeps the results found so far, even when
+	// Ctrl+C is configured to quit instead.
+	if key.Key() == tcell.KeyEsc && ui.cancelScan() {
+		return nil
+	}
+	return key
 }
 
 func (ui *UI) handleClosingModals(key *tcell.EventKey) *tcell.EventKey {

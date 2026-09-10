@@ -8,6 +8,16 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 )
 
+// stopScanHint returns the progress modal line telling the user how to stop
+// the scan and keep the results found so far. Ctrl+C is only advertised when
+// it is not configured to quit instead.
+func (ui *UI) stopScanHint() string {
+	if ui.ctrlCQuits {
+		return "Press Esc to stop scanning and keep results"
+	}
+	return "Press Esc or Ctrl+C to stop scanning and keep results"
+}
+
 func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGroup) {
 	color := "[white:black:b]"
 	if ui.UseColors {
@@ -60,7 +70,7 @@ func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGro
 					color +
 					delta.String() +
 					"[white:black:-]\n\nPress Tab to preview results found so far\n" +
-					"Press Ctrl+C to stop scanning and keep results")
+					ui.stopScanHint())
 			})
 		}(progress.ItemCount, progress.TotalUsage)
 	}

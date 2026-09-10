@@ -113,6 +113,7 @@ type Flags struct {
 	ArchiveBrowsing    bool      `yaml:"archive-browsing"`
 	CollapsePath       bool      `yaml:"collapse-path"`
 	ShowSymlinkTarget  bool      `yaml:"show-symlink-target"`
+	CtrlCQuits         bool      `yaml:"ctrl-c-quits"`
 	BrowseParentDirs   bool      `yaml:"browse-parent-dirs"`
 	Web                bool      `yaml:"-"`
 	WebConfig          WebConfig `yaml:"web"`
@@ -681,6 +682,11 @@ func (a *App) getOptions() []tui.Option {
 	if a.Flags.NoConfirmQuit {
 		opts = append(opts, func(ui *tui.UI) {
 			ui.SetConfirmQuit(false)
+		})
+	}
+	if a.Flags.CtrlCQuits {
+		opts = append(opts, func(ui *tui.UI) {
+			ui.SetCtrlCQuits()
 		})
 	}
 	if a.Flags.DeleteInBackground {

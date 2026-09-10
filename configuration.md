@@ -106,6 +106,14 @@ Do not allow viewing file contents
 
 Do not ask for confirmation before quitting after a long scan. By default, pressing `q`/`Q` after a scan that took more than a few seconds shows a confirmation dialog so that results are not lost by an accidental key press.
 
+#### `ctrl-c-quits`
+
+Quit gdu when `Ctrl+C` is pressed during a scan, instead of stopping the scan and keeping the results found so far.
+
+By default, `Ctrl+C` during a scan produces a stopped scan: no new work is scheduled and the results found so far are kept. Set this option if you prefer `Ctrl+C` to behave the way it does in most other programs and exit gdu instead. Quitting this way is immediate and unconditional — the confirmation dialog described under `no-confirm-quit` is not shown, because `Ctrl+C` is treated as a stronger signal than `q`.
+
+`Esc` always stops the scan and keeps the results, regardless of this option, so the behaviour remains reachable. This option only has an effect while a scan is running; outside a scan `Ctrl+C` already quits gdu.
+
 #### `follow-symlinks`
 
 Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)

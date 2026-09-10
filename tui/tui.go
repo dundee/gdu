@@ -105,6 +105,7 @@ type UI struct {
 	showDiskProgressBar     bool
 	currentDeviceSize       int64
 	confirmQuit             bool
+	ctrlCQuits              bool
 	scanning                bool
 	scanCancelled           bool
 	// scanCancelRequested mirrors scanCancelled for readers outside the UI
@@ -429,9 +430,14 @@ func signalEvent(current os.Signal) *tcell.EventKey {
 }
 
 func (ui *UI) handleSignalEvent(event *tcell.EventKey) {
-	if event.Modifiers() == tcell.ModCtrl && (ui.cancelScan() || ui.scanning) {
+	if event.Modifiers() == tcell.ModCtrl && !ui.ctrlCQuits && (ui.cancelScan() || ui.scanning) {
 		return
 	}
+	ui.quitNow()
+}
+
+// quitNow shuts the app down straight away, without asking for confirmation.
+func (ui *UI) quitNow() {
 	ui.printMarkedPaths()
 	ui.app.Stop()
 }
@@ -453,6 +459,13 @@ func (ui *UI) cancelScan() bool {
 // after a scan that took a noticeable amount of time
 func (ui *UI) SetConfirmQuit(value bool) {
 	ui.confirmQuit = value
+}
+
+// SetCtrlCQuits makes Ctrl+C quit gdu during a scan instead of stopping the
+// scan and keeping the results found so far. Esc always stops the scan,
+// regardless of this setting.
+func (ui *UI) SetCtrlCQuits() {
+	ui.ctrlCQuits = true
 }
 
 // SetShowItemCount sets the flag to show number of items in directory

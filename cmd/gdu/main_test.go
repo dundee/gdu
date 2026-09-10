@@ -55,6 +55,31 @@ func TestShowSymlinkTargetFlagCanBeSet(t *testing.T) {
 	}
 }
 
+func TestCtrlCQuitsFlagRegistered(t *testing.T) {
+	flag := rootCmd.Flags().Lookup("ctrl-c-quits")
+	if flag == nil {
+		t.Fatal("expected ctrl-c-quits flag to be registered")
+	}
+	if flag.DefValue != "false" {
+		t.Fatalf("expected ctrl-c-quits to default to false, got %q", flag.DefValue)
+	}
+}
+
+func TestCtrlCQuitsFlagCanBeSet(t *testing.T) {
+	t.Cleanup(func() {
+		_ = rootCmd.Flags().Set("ctrl-c-quits", "false")
+	})
+
+	err := rootCmd.Flags().Set("ctrl-c-quits", "true")
+	if err != nil {
+		t.Fatalf("expected setting ctrl-c-quits flag to succeed: %v", err)
+	}
+
+	if !af.CtrlCQuits {
+		t.Fatal("expected CtrlCQuits to be true after setting flag")
+	}
+}
+
 func TestInteractiveFlagRegistered(t *testing.T) {
 	flag := rootCmd.Flags().Lookup("interactive")
 	if flag == nil {
