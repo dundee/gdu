@@ -104,8 +104,9 @@ func TestAnalyzePathWithTopAndTypeFilter(t *testing.T) {
 	assert.NotContains(t, reportOutput.String(), `"name":"file2"`)
 }
 
-func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
-	dir := t.TempDir()
+// createTestArchive writes archive.tar with a single file inside.txt into dir.
+func createTestArchive(t *testing.T, dir string) {
+	t.Helper()
 
 	archive, err := os.Create(filepath.Join(dir, "archive.tar"))
 	assert.Nil(t, err)
@@ -117,6 +118,11 @@ func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Nil(t, tw.Close())
 	assert.Nil(t, archive.Close())
+}
+
+func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
+	dir := t.TempDir()
+	createTestArchive(t, dir)
 
 	var output, reportOutput bytes.Buffer
 
@@ -126,6 +132,7 @@ func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
 
 	// Files inside an archive are not *analyze.File, so collecting the top
 	// items used to panic instead of exporting them.
+	var err error
 	assert.NotPanics(t, func() {
 		err = ui.AnalyzePath(dir, nil)
 	})
@@ -135,17 +142,7 @@ func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
 
 func TestAnalyzePathWithDepthAndArchiveBrowsing(t *testing.T) {
 	dir := t.TempDir()
-
-	archive, err := os.Create(filepath.Join(dir, "archive.tar"))
-	assert.Nil(t, err)
-	tw := tar.NewWriter(archive)
-	assert.Nil(t, tw.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeReg, Name: "inside.txt", Size: 11, Mode: 0o644,
-	}))
-	_, err = tw.Write([]byte("hello world"))
-	assert.Nil(t, err)
-	assert.Nil(t, tw.Close())
-	assert.Nil(t, archive.Close())
+	createTestArchive(t, dir)
 
 	var output, reportOutput bytes.Buffer
 
@@ -153,6 +150,7 @@ func TestAnalyzePathWithDepthAndArchiveBrowsing(t *testing.T) {
 	ui.SetArchiveBrowsing(true)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 
+	var err error
 	assert.NotPanics(t, func() {
 		err = ui.AnalyzePath(dir, nil)
 	})
@@ -163,17 +161,7 @@ func TestAnalyzePathWithDepthAndArchiveBrowsing(t *testing.T) {
 
 func TestAnalyzePathWithDepthCutsInsideArchive(t *testing.T) {
 	dir := t.TempDir()
-
-	archive, err := os.Create(filepath.Join(dir, "archive.tar"))
-	assert.Nil(t, err)
-	tw := tar.NewWriter(archive)
-	assert.Nil(t, tw.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeReg, Name: "inside.txt", Size: 11, Mode: 0o644,
-	}))
-	_, err = tw.Write([]byte("hello world"))
-	assert.Nil(t, err)
-	assert.Nil(t, tw.Close())
-	assert.Nil(t, archive.Close())
+	createTestArchive(t, dir)
 
 	var output, reportOutput bytes.Buffer
 
