@@ -163,6 +163,8 @@ func TestAnalyzePathImmediateCtrlCIsNotLost(t *testing.T) {
 	// Ctrl-C is intentionally delivered immediately, before AnalyzeDir is
 	// guaranteed to have started. Cancel must still be observed by the double.
 	require.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0)))
+	// The second press escalates to quitting, but must not cancel twice nor
+	// make the in-flight scan unsafe.
 	_ = ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
 
 	select {
@@ -178,7 +180,7 @@ func TestAnalyzePathImmediateCtrlCIsNotLost(t *testing.T) {
 	drainScanUpdates(t, app, ui)
 
 	require.Equal(t, 1, analyzer.cancelCount())
-	require.Equal(t, 0, app.stopCount())
+	require.Equal(t, 1, app.stopCount())
 	require.Equal(t, "test_dir", ui.currentDir.GetName())
 }
 
@@ -205,16 +207,21 @@ func TestCtrlCBeforeQueuedCompletionKeepsResults(t *testing.T) {
 	require.Equal(t, 4, ui.table.GetRowCount())
 }
 
-func TestRepeatedSignalCtrlCIsIdempotent(t *testing.T) {
+func TestRepeatedSignalCtrlCCancelsOnceThenQuits(t *testing.T) {
 	app := newCancelRaceApp()
 	analyzer := newCancelRaceAnalyzer()
 	ui := newCancelRaceUI(app, analyzer)
 
 	require.NoError(t, ui.AnalyzePath("test_dir", nil))
 	ui.keyPressed(signalEvent(os.Interrupt))
-	ui.keyPressed(signalEvent(os.Interrupt))
 	require.Equal(t, 1, analyzer.cancelCount())
 	require.Equal(t, 0, app.stopCount())
+
+	// The second SIGINT arrives while the scan is still stopping. Cancellation
+	// stays idempotent, but the user's escalation is honoured by quitting.
+	ui.keyPressed(signalEvent(os.Interrupt))
+	require.Equal(t, 1, analyzer.cancelCount())
+	require.Equal(t, 1, app.stopCount())
 
 	close(analyzer.release)
 	select {
@@ -224,10 +231,10 @@ func TestRepeatedSignalCtrlCIsIdempotent(t *testing.T) {
 	}
 	drainScanUpdates(t, app, ui)
 
-	// Once the completion callback has marked the scan finished, SIGINT takes
-	// the normal quit path.
+	// Once the completion callback has marked the scan finished, SIGINT still
+	// takes the normal quit path.
 	ui.keyPressed(signalEvent(os.Interrupt))
-	require.Equal(t, 1, app.stopCount())
+	require.Equal(t, 2, app.stopCount())
 }
 
 func TestSignalLoopQueuesScanCancellation(t *testing.T) {

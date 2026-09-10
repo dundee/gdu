@@ -430,7 +430,8 @@ func signalEvent(current os.Signal) *tcell.EventKey {
 }
 
 func (ui *UI) handleSignalEvent(event *tcell.EventKey) {
-	if event.Modifiers() == tcell.ModCtrl && !ui.ctrlCQuits && (ui.cancelScan() || ui.scanning) {
+	// A second Ctrl+C while the scan is stopping falls through to quitting.
+	if event.Modifiers() == tcell.ModCtrl && !ui.ctrlCQuits && ui.cancelScan() {
 		return
 	}
 	ui.quitNow()
@@ -451,7 +452,11 @@ func (ui *UI) cancelScan() bool {
 	ui.scanCancelled = true
 	ui.scanCancelRequested.Store(true)
 	ui.progress.SetTitle(" Stopping scan... ")
-	ui.progress.SetText("Stopping scan and keeping results...")
+	stopping := "Stopping scan and keeping results..."
+	if !ui.ctrlCQuits {
+		stopping += "\n\nPress Ctrl+C again to quit gdu"
+	}
+	ui.progress.SetText(stopping)
 	return true
 }
 

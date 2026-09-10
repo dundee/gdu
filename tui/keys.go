@@ -105,6 +105,12 @@ func (ui *UI) handleCtrlC(key *tcell.EventKey) *tcell.EventKey {
 	if ui.cancelScan() {
 		return nil
 	}
+	// Pressing Ctrl+C again while the scan is still stopping escalates to
+	// quitting: the user has already asked to stop and is now asking harder.
+	if ui.scanning {
+		ui.quitNow()
+		return nil
+	}
 	return key
 }
 
