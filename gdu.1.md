@@ -95,7 +95,7 @@ non-interactive mode
 
 **\--archive-browsing**\[=false\] Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
 
-**\--depth**\[=0\] Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored)
+**\--depth**\[=0\] Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
 
 **\--collapse-path**\[=false\] Collapse single-child directory chains
 

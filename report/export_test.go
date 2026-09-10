@@ -104,8 +104,9 @@ func TestAnalyzePathWithTopAndTypeFilter(t *testing.T) {
 	assert.NotContains(t, reportOutput.String(), `"name":"file2"`)
 }
 
-func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
-	dir := t.TempDir()
+// createTestArchive writes archive.tar with a single file inside.txt into dir.
+func createTestArchive(t *testing.T, dir string) {
+	t.Helper()
 
 	archive, err := os.Create(filepath.Join(dir, "archive.tar"))
 	assert.Nil(t, err)
@@ -117,6 +118,11 @@ func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Nil(t, tw.Close())
 	assert.Nil(t, archive.Close())
+}
+
+func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
+	dir := t.TempDir()
+	createTestArchive(t, dir)
 
 	var output, reportOutput bytes.Buffer
 
@@ -126,11 +132,46 @@ func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
 
 	// Files inside an archive are not *analyze.File, so collecting the top
 	// items used to panic instead of exporting them.
+	var err error
 	assert.NotPanics(t, func() {
 		err = ui.AnalyzePath(dir, nil)
 	})
 	assert.Nil(t, err)
 	assert.Contains(t, reportOutput.String(), `"name":"inside.txt"`)
+}
+
+func TestAnalyzePathWithDepthAndArchiveBrowsing(t *testing.T) {
+	dir := t.TempDir()
+	createTestArchive(t, dir)
+
+	var output, reportOutput bytes.Buffer
+
+	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 2, false, nil)
+	ui.SetArchiveBrowsing(true)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+
+	var err error
+	assert.NotPanics(t, func() {
+		err = ui.AnalyzePath(dir, nil)
+	})
+	assert.Nil(t, err)
+	assert.Contains(t, reportOutput.String(), `"name":"archive.tar"`)
+	assert.Contains(t, reportOutput.String(), `"name":"inside.txt"`)
+}
+
+func TestAnalyzePathWithDepthCutsInsideArchive(t *testing.T) {
+	dir := t.TempDir()
+	createTestArchive(t, dir)
+
+	var output, reportOutput bytes.Buffer
+
+	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 1, false, nil)
+	ui.SetArchiveBrowsing(true)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	assert.Nil(t, ui.AnalyzePath(dir, nil))
+
+	assert.Contains(t, reportOutput.String(), `"name":"archive.tar"`)
+	assert.NotContains(t, reportOutput.String(), `"name":"inside.txt"`)
 }
 
 func TestAnalyzePathWithDepth(t *testing.T) {

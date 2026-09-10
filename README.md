@@ -44,7 +44,7 @@ Flags:
       --collapse-path                 Collapse single-child directory chains
       --config-file string            Read config from file (default is $HOME/.gdu.yaml)
   -D, --db string                     Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
-      --depth int                     Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored)
+      --depth int                     Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -E, --exclude-type strings          File types to exclude (e.g., --exclude-type yaml,json)
   -L, --follow-symlinks               Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)

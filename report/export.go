@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -162,85 +163,78 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 	return errors.New("exporting more than one directory is not supported")
 }
 
+// exportedDir copies the attributes of dir that the export can emit. The
+// export filters can receive any fs.Item implementation (a plain scan,
+// analyses stored in SQLite/BadgerDB, entries inside browsed archives, ...),
+// so the copy reads everything through the interface instead of type-asserting
+// *analyze.Dir. BasePath is not part of the interface and is rebuilt from
+// GetPath, so the top-level entry keeps its full path in the export.
+func exportedDir(dir fs.Item) *analyze.Dir {
+	return &analyze.Dir{
+		File: &analyze.File{
+			Name:  dir.GetName(),
+			Flag:  dir.GetFlag(),
+			Mtime: dir.GetMtime(),
+			Size:  dir.GetSize(),
+			Usage: dir.GetUsage(),
+		},
+		BasePath:  filepath.Dir(dir.GetPath()),
+		ItemCount: dir.GetItemCount(),
+	}
+}
+
+// exportedFile copies the attributes of a file the export can emit, reading
+// them through the fs.Item interface for the same reason as exportedDir.
+func exportedFile(file, parent fs.Item) *analyze.File {
+	copied := &analyze.File{
+		Name:   file.GetName(),
+		Flag:   file.GetFlag(),
+		Size:   file.GetSize(),
+		Usage:  file.GetUsage(),
+		Mtime:  file.GetMtime(),
+		Mli:    file.GetMultiLinkedInode(),
+		Parent: parent,
+	}
+	if symlink, ok := file.(fs.SymlinkItem); ok {
+		copied.Symlink = symlink.GetSymlinkTarget()
+	}
+	return copied
+}
+
 func (ui *UI) topDir(dir fs.Item) fs.Item {
 	files := analyze.CollectTopFiles(dir, ui.top)
 
-	topDir := &analyze.Dir{
-		File: &analyze.File{
-			Name:  dir.GetName(),
-			Mtime: dir.GetMtime(),
-		},
-	}
-	if d, ok := dir.(*analyze.Dir); ok {
-		topDir.BasePath = d.BasePath
-	}
+	topDir := exportedDir(dir)
 	for _, f := range files {
-		// CollectTopFiles can return any fs.Item implementation (files stored in
-		// SQLite/BadgerDB, entries inside browsed archives, ...), so copy the
-		// attributes through the interface instead of type-asserting *analyze.File.
-		topDir.AddFile(&analyze.File{
-			Name:   f.GetName(),
-			Flag:   f.GetFlag(),
-			Size:   f.GetSize(),
-			Usage:  f.GetUsage(),
-			Mtime:  f.GetMtime(),
-			Mli:    f.GetMultiLinkedInode(),
-			Parent: topDir,
-		})
+		topDir.AddFile(exportedFile(f, topDir))
 	}
 	topDir.UpdateStats(make(fs.HardLinkedItems, 10))
 	return topDir
 }
 
 func (ui *UI) limitDirByDepth(dir fs.Item, currentDepth int) fs.Item {
-	if d, ok := dir.(*analyze.Dir); ok {
-		limited := &analyze.Dir{
-			File: &analyze.File{
-				Name:   d.GetName(),
-				Mtime:  d.GetMtime(),
-				Parent: d.GetParent(),
-				Size:   d.GetSize(),
-				Usage:  d.GetUsage(),
-			},
-			BasePath:  d.BasePath,
-			ItemCount: d.ItemCount,
-		}
-		if currentDepth == ui.depth {
-			return limited
-		}
-		for f := range d.GetFiles(fs.SortBySize, fs.SortDesc) {
-			if f.IsDir() {
-				child := ui.limitDirByDepth(f, currentDepth+1)
-				if child != nil {
-					child.SetParent(limited)
-					limited.AddFile(child)
-				}
-			} else if currentDepth+1 <= ui.depth {
-				file := *f.(*analyze.File)
-				file.Parent = limited
-				limited.AddFile(&file)
-			}
-		}
-		return limited
+	if !dir.IsDir() {
+		return dir
 	}
 
-	return dir
+	limited := exportedDir(dir)
+	if currentDepth == ui.depth {
+		return limited
+	}
+	for f := range dir.GetFiles(fs.SortBySize, fs.SortDesc) {
+		if f.IsDir() {
+			child := ui.limitDirByDepth(f, currentDepth+1)
+			child.SetParent(limited)
+			limited.AddFile(child)
+		} else if currentDepth+1 <= ui.depth {
+			limited.AddFile(exportedFile(f, limited))
+		}
+	}
+	return limited
 }
 
 func (ui *UI) summarizeDir(dir fs.Item) fs.Item {
-	summary := &analyze.Dir{
-		File: &analyze.File{
-			Name:  dir.GetName(),
-			Mtime: dir.GetMtime(),
-		},
-	}
-	if d, ok := dir.(*analyze.Dir); ok {
-		summary.BasePath = d.BasePath
-		summary.ItemCount = d.ItemCount
-		summary.Size = d.GetSize()
-		summary.Usage = d.GetUsage()
-	}
-	return summary
+	return exportedDir(dir)
 }
 
 func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
