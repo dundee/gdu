@@ -495,6 +495,87 @@ func TestCtrlCDuringScanCancelsAnalyzer(t *testing.T) {
 	assert.Equal(t, " Stopping scan... ", ui.progress.GetTitle())
 }
 
+func TestSecondCtrlCWhileScanStoppingQuits(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := &bytes.Buffer{}
+	ui := analyzedUI(t, buff)
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.scanStart = time.Now().Add(-10 * time.Second)
+	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.markedPaths = []string{"test_dir/nested"}
+
+	// first Ctrl+C stops the scan and keeps the results
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0)))
+	assert.True(t, ui.scanCancelled)
+	assert.Contains(t, ui.progress.GetText(false), "Press Ctrl+C again to quit gdu")
+	assert.Empty(t, buff.String())
+
+	// second Ctrl+C, while the scan is still stopping, quits
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0)))
+	assert.False(t, ui.pages.HasPage("confirm"))
+	assert.Equal(t, "test_dir/nested\n", buff.String())
+}
+
+func TestSecondSignalWhileScanStoppingQuits(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := &bytes.Buffer{}
+	ui := analyzedUI(t, buff)
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.markedPaths = []string{"test_dir/nested"}
+
+	ui.handleSignalEvent(signalEvent(syscall.SIGINT))
+	assert.True(t, ui.scanCancelled)
+	assert.Empty(t, buff.String())
+
+	ui.handleSignalEvent(signalEvent(syscall.SIGINT))
+	assert.Equal(t, "test_dir/nested\n", buff.String())
+}
+
+func TestEscThenCtrlCWhileScanStoppingQuits(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := &bytes.Buffer{}
+	ui := analyzedUI(t, buff)
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.markedPaths = []string{"test_dir/nested"}
+
+	// Esc stops the scan, Ctrl+C then escalates to quitting
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0)))
+	assert.True(t, ui.scanCancelled)
+
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0)))
+	assert.Equal(t, "test_dir/nested\n", buff.String())
+}
+
+func TestEscWhileScanStoppingDoesNotQuit(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := &bytes.Buffer{}
+	ui := analyzedUI(t, buff)
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.markedPaths = []string{"test_dir/nested"}
+
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0)))
+	assert.True(t, ui.scanCancelled)
+
+	// only Ctrl+C escalates; Esc stays idempotent
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
+	assert.Empty(t, buff.String())
+}
+
 func TestEscDuringScanCancelsAnalyzer(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

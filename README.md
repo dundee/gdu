@@ -169,7 +169,7 @@ In non-interactive mode (and without `--top` and `--depth` flags), gdu uses a me
 This means memory usage stays constant regardless of how large the scanned directory tree is.
 When `--top` or `--depth` flags are used, the full directory tree is built in memory as in interactive mode.
 
-Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag. In interactive mode, press `Esc` or `Ctrl+C` during a scan to stop scheduling new work and keep the results found so far. If you would rather have `Ctrl+C` quit gdu outright, use `--ctrl-c-quits`; `Esc` keeps working either way.
+Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag. In interactive mode, press `Esc` or `Ctrl+C` during a scan to stop scheduling new work and keep the results found so far; pressing `Ctrl+C` again while the scan is stopping quits gdu. If you would rather have the first `Ctrl+C` quit gdu outright, use `--ctrl-c-quits`; `Esc` keeps working either way.
 
 By default the export includes every attribute, and directories always carry their `asize`, `dsize`, and `items` summary stats so they can be preserved on import. Use `--output-attrs=asize,dsize` to emit only selected optional attributes; `name` is always included. Available attributes are `asize`, `dsize`, `items`, `mtime`, and `notreg`.
 
