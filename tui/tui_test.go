@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -108,7 +109,21 @@ func TestUpdateProgressShowsCancellationHint(t *testing.T) {
 
 	draws := app.GetUpdateDraws()
 	draws[0]()
-	assert.Contains(t, ui.progress.GetText(false), "Press Ctrl+C to stop scanning and keep results")
+	assert.Contains(t, ui.progress.GetText(false), "Press Esc or Ctrl+C to stop scanning and keep results")
+}
+
+func TestStopScanHint(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+
+	assert.Equal(t, "Press Esc or Ctrl+C to stop scanning and keep results", ui.stopScanHint())
+
+	// Ctrl+C quits, so it must not be advertised as the way to keep results
+	ui.SetCtrlCQuits()
+	assert.Equal(t, "Press Esc to stop scanning and keep results", ui.stopScanHint())
 }
 
 func TestSetShowDiskProgressBar(t *testing.T) {
@@ -160,16 +175,7 @@ func TestHelp(t *testing.T) {
 	ui.help.Draw(simScreen)
 	simScreen.Show()
 
-	// printScreen(simScreen)
-
-	b, _, _ := simScreen.GetContents()
-
-	cells := b[607 : 607+9]
-
-	text := []byte("directory")
-	for i, r := range cells {
-		assert.Equal(t, text[i], r.Bytes[0])
-	}
+	assert.Contains(t, screenText(simScreen), "directory")
 }
 
 func TestHelpBw(t *testing.T) {
@@ -181,16 +187,18 @@ func TestHelpBw(t *testing.T) {
 	ui.help.Draw(simScreen)
 	simScreen.Show()
 
-	// printScreen(simScreen)
+	assert.Contains(t, screenText(simScreen), "directory")
+}
 
-	b, _, _ := simScreen.GetContents()
+func TestHelpShowsScanKeys(t *testing.T) {
+	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
+	defer simScreen.Fini()
 
-	cells := b[607 : 607+9]
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 
-	text := []byte("directory")
-	for i, r := range cells {
-		assert.Equal(t, text[i], r.Bytes[0])
-	}
+	text := ui.formatHelpTextFor()
+	assert.Contains(t, text, "Preview results found so far")
+	assert.Contains(t, text, "Stop scanning and keep results")
 }
 
 func TestAppRun(t *testing.T) {
@@ -971,6 +979,21 @@ func TestNoViewFile(t *testing.T) {
 	ui.SetNoViewFile()
 
 	assert.Equal(t, ui.noViewFile, true)
+}
+
+// screenText returns the rendered contents of the simulated screen as a single
+// string, with one line per screen row.
+func screenText(simScreen tcell.SimulationScreen) string {
+	b, width, _ := simScreen.GetContents()
+
+	var sb strings.Builder
+	for i, cell := range b {
+		if i > 0 && i%width == 0 {
+			sb.WriteByte('\n')
+		}
+		sb.Write(cell.Bytes)
+	}
+	return sb.String()
 }
 
 // nolint: unused // Why: for debugging

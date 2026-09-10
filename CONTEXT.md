@@ -20,6 +20,12 @@ The synthetic directory that holds the scanned roots when there is more than
 one, so that they can be listed, sorted and compared as siblings. It is not an
 item on any filesystem and has no path; every other directory gdu shows does.
 
+## Stopped scan
+
+A scan the user told to schedule no new work, whose results found so far are
+kept and browsed as if the scan had finished. Distinct from an abandoned scan,
+where the user quits gdu and the results are discarded.
+
 ## Apparent size
 
 The size an item claims to be, i.e. the length of its contents.

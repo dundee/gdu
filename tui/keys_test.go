@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -492,6 +493,81 @@ func TestCtrlCDuringScanCancelsAnalyzer(t *testing.T) {
 	assert.True(t, ui.scanCancelled)
 	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
 	assert.Equal(t, " Stopping scan... ", ui.progress.GetTitle())
+}
+
+func TestEscDuringScanCancelsAnalyzer(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
+
+	assert.Nil(t, key)
+	assert.True(t, ui.scanCancelled)
+	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.Equal(t, " Stopping scan... ", ui.progress.GetTitle())
+}
+
+func TestEscStopsScanEvenWhenCtrlCQuits(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	ui.SetCtrlCQuits()
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
+
+	assert.Nil(t, key)
+	assert.True(t, ui.scanCancelled)
+	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+}
+
+func TestCtrlCQuitsDuringScanWhenConfigured(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := &bytes.Buffer{}
+	ui := analyzedUI(t, buff)
+	ui.SetCtrlCQuits()
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.scanStart = time.Now().Add(-10 * time.Second)
+	ui.pages.AddPage("progress", ui.progress, true, true)
+	ui.markedPaths = []string{"test_dir/nested"}
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
+
+	assert.Nil(t, key)
+	// the scan must not be stopped-and-kept, gdu just quits
+	assert.False(t, ui.scanCancelled)
+	assert.False(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	// quitting is immediate and unconditional, even after a long scan
+	assert.False(t, ui.pages.HasPage("confirm"))
+	// the regular quit teardown still runs, so marked paths are printed
+	assert.Equal(t, "test_dir/nested\n", buff.String())
+}
+
+func TestSignalCtrlCQuitsDuringScanWhenConfigured(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := analyzedUI(t, &bytes.Buffer{})
+	ui.SetCtrlCQuits()
+	ui.progress = tview.NewTextView()
+	ui.scanning = true
+	ui.pages.AddPage("progress", ui.progress, true, true)
+
+	ui.handleSignalEvent(signalEvent(syscall.SIGINT))
+
+	assert.False(t, ui.scanCancelled)
+	assert.False(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
 }
 
 func TestCtrlCDuringScanPreviewCancelsAnalyzer(t *testing.T) {

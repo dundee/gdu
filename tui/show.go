@@ -35,6 +35,10 @@ var (
                [::b]q     [white:black:-]Quit gdu (asks to confirm after a long scan)
                [::b]Q     [white:black:-]Quit gdu and print current directory path
 
+During a scan:
+             [::b]tab     [white:black:-]Preview results found so far
+             [::b]esc     [white:black:-]Stop scanning and keep results
+
 Item under cursor:
                [::b]d     [white:black:-]Delete file or directory
                [::b]e     [white:black:-]Empty file or directory

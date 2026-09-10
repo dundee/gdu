@@ -148,6 +148,38 @@ func TestCtrlCDuringScanShowsPartialResults(t *testing.T) {
 	assert.Equal(t, 4, ui.table.GetRowCount())
 }
 
+func TestEscDuringScanShowsPartialResults(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	// Ctrl+C is configured to quit, so Esc is the only way to keep results
+	ui.SetCtrlCQuits()
+	analyzer := &blockingAnalyzer{
+		started:   make(chan struct{}),
+		cancelled: make(chan struct{}),
+		done:      make(common.SignalGroup),
+	}
+	ui.Analyzer = analyzer
+	ui.done = make(chan struct{})
+
+	assert.NoError(t, ui.AnalyzePath("test_dir", nil))
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
+	assert.Nil(t, key)
+	assert.True(t, ui.scanCancelled)
+	<-ui.done
+	for _, draw := range app.(*testapp.MockedApp).GetUpdateDraws() {
+		draw()
+	}
+
+	assert.False(t, ui.scanCancelled)
+	assert.False(t, ui.pages.HasPage("progress"))
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+	assert.Equal(t, 4, ui.table.GetRowCount())
+}
+
 type blockingAnalyzer struct {
 	testanalyze.MockedAnalyzer
 	started   chan struct{}

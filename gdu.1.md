@@ -109,6 +109,8 @@ non-interactive mode
 
 **\--no-confirm-quit**\[=false\] Do not ask for confirmation before quitting after a long scan
 
+**\--ctrl-c-quits**\[=false\] Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results. Esc always stops the scan and keeps the results found so far, regardless of this flag.
+
 **\--no-delete**\[=false\] Do not allow deletions
 
 **\--no-view-file**\[=false\] Do not allow viewing file contents

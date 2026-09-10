@@ -43,6 +43,7 @@ Flags:
       --archive-browsing              Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
       --collapse-path                 Collapse single-child directory chains
       --config-file string            Read config from file (default is $HOME/.gdu.yaml)
+      --ctrl-c-quits                  Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results (Esc always stops the scan)
   -D, --db string                     Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
       --depth int                     Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
       --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
@@ -168,7 +169,7 @@ In non-interactive mode (and without `--top` and `--depth` flags), gdu uses a me
 This means memory usage stays constant regardless of how large the scanned directory tree is.
 When `--top` or `--depth` flags are used, the full directory tree is built in memory as in interactive mode.
 
-Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag. In interactive mode, press `Ctrl+C` during a scan to stop scheduling new work and keep the results found so far.
+Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag. In interactive mode, press `Esc` or `Ctrl+C` during a scan to stop scheduling new work and keep the results found so far. If you would rather have `Ctrl+C` quit gdu outright, use `--ctrl-c-quits`; `Esc` keeps working either way.
 
 By default the export includes every attribute, and directories always carry their `asize`, `dsize`, and `items` summary stats so they can be preserved on import. Use `--output-attrs=asize,dsize` to emit only selected optional attributes; `name` is always included. Available attributes are `asize`, `dsize`, `items`, `mtime`, and `notreg`.
 
