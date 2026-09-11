@@ -447,6 +447,62 @@ func TestReadAnalysisWithSummarize(t *testing.T) {
 	assert.Contains(t, output.String(), " gdu\n")
 }
 
+func TestReadAnalysisWithSummarizeAndTop(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 2, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+
+	out := output.String()
+	// --top wins over --summarize, the same way it does for a scan
+	assert.Contains(t, out, "/home/gdu/app/app_test.go")
+	assert.NotContains(t, out, " gdu\n")
+}
+
+func TestReadAnalysisWithTop(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+
+	out := output.String()
+	// the two largest files of the imported analysis, printed by their path
+	// instead of the plain listing of the root
+	assert.Contains(t, out, "/home/gdu/app/app_test.go")
+	assert.Contains(t, out, "/home/gdu/app/app.go")
+	assert.NotContains(t, out, "/home/gdu/main.go")
+	assert.NotContains(t, out, "app_linux_test.go")
+}
+
+func TestReadAnalysisWithDepth(t *testing.T) {
+	input, err := os.OpenFile("../internal/testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 1)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+
+	out := output.String()
+	assert.Contains(t, out, "/home/gdu\n")
+	assert.Contains(t, out, "/home/gdu/app\n")
+	assert.Contains(t, out, "/home/gdu/main.go\n")
+	// depth 1 stops at the direct children of the root
+	assert.NotContains(t, out, "/home/gdu/app/app.go")
+}
+
 func TestMaxInt(t *testing.T) {
 	assert.Equal(t, 5, maxInt(2, 5))
 	assert.Equal(t, 4, maxInt(4, 2))
