@@ -198,6 +198,35 @@ func TestShowTopBw(t *testing.T) {
 	assert.Contains(t, output.String(), "test_dir/nested/file2")
 }
 
+func TestShowTopWithApparentSize(t *testing.T) {
+	// "sparse" has the bigger apparent size but no disk usage at all, so --top
+	// has to rank "dense" first by default and "sparse" first with
+	// --show-apparent-size, matching the size printed next to each path.
+	root := &analyze.Dir{
+		File:      &analyze.File{Name: "root"},
+		BasePath:  "/",
+		ItemCount: 3,
+	}
+	root.AddFile(&analyze.File{Name: "sparse", Parent: root, Size: 50 << 20})
+	root.AddFile(&analyze.File{Name: "dense", Parent: root, Size: 5 << 20, Usage: 5 << 20})
+
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	ui.printTopFiles(root)
+
+	out := output.String()
+	assert.Less(t, strings.Index(out, "/root/dense"), strings.Index(out, "/root/sparse"),
+		"largest disk usage should be printed first, got:\n"+out)
+
+	output = bytes.NewBuffer(nil)
+	ui = CreateStdoutUI(output, false, false, true, false, false, false, false, "", 2, false, 0)
+	ui.printTopFiles(root)
+
+	out = output.String()
+	assert.Less(t, strings.Index(out, "/root/sparse"), strings.Index(out, "/root/dense"),
+		"largest apparent size should be printed first, got:\n"+out)
+}
+
 func TestShowDepth(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
