@@ -545,11 +545,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		return err
 	}
 
-	if ui.summarize {
-		ui.printTotalItem(dir)
-	} else {
-		ui.showDir(dir)
-	}
+	ui.printAnalyzedDir(dir)
 
 	return nil
 }
