@@ -54,15 +54,24 @@ func GetNestedMountpointsPaths(path string, mounts Devices) []string {
 	filesystemID, known := getFilesystemID(path)
 
 	for _, mount := range mounts {
-		relative, err := filepath.Rel(path, mount.MountPoint)
-		if err != nil || relative == "." || relative == ".." ||
-			strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-			continue
+		mountPoint := mount.MountPoint
+		if !isNestedPath(path, mountPoint) {
+			alias, ok := getMountPointAlias(mountPoint)
+			if !ok || !isNestedPath(path, alias) {
+				continue
+			}
+			mountPoint = alias
 		}
 		if known && mount.FilesystemID != nil && filesystemID == *mount.FilesystemID {
 			continue
 		}
-		paths = append(paths, mount.MountPoint)
+		paths = append(paths, mountPoint)
 	}
 	return paths
+}
+
+func isNestedPath(path, mountPoint string) bool {
+	relative, err := filepath.Rel(path, mountPoint)
+	return err == nil && relative != "." && relative != ".." &&
+		!strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
