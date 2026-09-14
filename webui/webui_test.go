@@ -1354,6 +1354,27 @@ func TestIsLoopbackHost(t *testing.T) {
 	}
 }
 
+func TestRoutesRejectDNSHost(t *testing.T) {
+	ui := newTestUI()
+	req := httptest.NewRequest(http.MethodGet, "http://attacker.example/api/v1/status", nil)
+	w := httptest.NewRecorder()
+
+	ui.routes().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestRoutesAllowConfiguredDNSHost(t *testing.T) {
+	ui := newTestUI()
+	ui.listenAddr = "fileserver.example:8080"
+	req := httptest.NewRequest(http.MethodGet, "http://fileserver.example:8080/api/v1/status", nil)
+	w := httptest.NewRecorder()
+
+	ui.routes().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
 func TestStartUILoopBindError(t *testing.T) {
 	blocker, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
