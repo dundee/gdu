@@ -338,6 +338,83 @@ func TestDeleteEndpointRejectsChangedParent(t *testing.T) {
 	assert.NoError(t, err, "file outside the scanned tree should remain")
 }
 
+// TestDeleteEndpointRejectsSwappedAncestor is the same attack one level
+// deeper: the symlink replaces a *grandparent* of the target rather than its
+// immediate parent. os.Lstat only declines to follow the final component of a
+// path, so a check on the parent alone resolves straight through the swapped
+// ancestor, sees a real directory, and lets os.RemoveAll delete outside the
+// scanned tree. The attacker needs nothing more than for the tested case:
+// write access to the scanned root.
+func TestDeleteEndpointRejectsSwappedAncestor(t *testing.T) {
+	ui := newTestUI()
+	root := t.TempDir()
+
+	// root/a/b/victim.txt, scanned while every component is real.
+	realA := filepath.Join(root, "a")
+	realB := filepath.Join(realA, "b")
+	require.NoError(t, os.MkdirAll(realB, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(realB, "victim.txt"), []byte("x"), 0o600))
+	scan(t, ui, root)
+
+	// An identically shaped tree outside the scanned root.
+	outside := t.TempDir()
+	outsideB := filepath.Join(outside, "b")
+	require.NoError(t, os.Mkdir(outsideB, 0o700))
+	precious := filepath.Join(outsideB, "victim.txt")
+	require.NoError(t, os.WriteFile(precious, []byte("precious"), 0o600))
+
+	// Swap the grandparent, not the parent.
+	require.NoError(t, os.RemoveAll(realA))
+	if err := os.Symlink(outside, realA); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		srv.URL+"/api/v1/nodes?path="+url.QueryEscape(filepath.Join(realB, "victim.txt")),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusConflict, resp.StatusCode)
+	_, err = os.Stat(precious)
+	assert.NoError(t, err, "file outside the scanned tree should remain")
+}
+
+// TestDeleteEndpointStaysIdempotentWhenItemAlreadyGone guards the other side
+// of the containment check: os.RemoveAll is a no-op on a path that no longer
+// resolves, so an item removed in another window between the scan and the
+// delete must not turn into an error.
+func TestDeleteEndpointStaysIdempotentWhenItemAlreadyGone(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	target := filepath.Join(root, "big.bin")
+	require.NoError(t, os.Remove(target))
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		srv.URL+"/api/v1/nodes?path="+url.QueryEscape(target),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
 func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)

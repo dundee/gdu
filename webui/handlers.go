@@ -160,13 +160,8 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot delete an entry nested inside a browsed archive")
 		return
 	}
-	parentInfo, err := os.Lstat(parent.GetPath())
-	if err != nil {
-		writeError(w, http.StatusConflict, fmt.Sprintf("checking delete parent: %s", err))
-		return
-	}
-	if !parentInfo.IsDir() {
-		writeError(w, http.StatusConflict, "delete parent changed since the scan")
+	if err := checkNotRelocated(node); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
 
