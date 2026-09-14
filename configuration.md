@@ -98,10 +98,15 @@ Ignore hidden directories (beginning with dot)
 
 Do not allow deletions
 
+Applies to the web UI as well as the terminal UI: the web UI hides its delete
+action and the server rejects delete requests, so it cannot be re-enabled from
+the browser.
+
 Reveal remains available in the web UI because it does not modify scanned
-data. Deletion while file or time filters are active is disabled by default;
-set `GDU_ALLOW_DELETE_WITH_FILTER=1` to override this safety check. The
-displayed tree may then omit files that are still present on disk.
+data. Deletion while a filter is active is disabled by default: the terminal
+UI applies this to time filters, the web UI to any active filter, file-type
+filters included. Set `GDU_ALLOW_DELETE_WITH_FILTER=1` to override the check.
+The displayed tree may then omit files that are still present on disk.
 
 #### `no-view-file`
 
@@ -190,6 +195,7 @@ Further details:
 * When the command fails, its exit status and standard error output are shown in an error dialog and the item stays in the listing.
 * When the command succeeds but the item is still present on disk, the item stays in the listing as well. Only the selected item is refreshed, so an item moved elsewhere by the command is not picked up at its new location.
 * `no-delete` disables the `D` key regardless of this option.
+* Also used by the web UI's "Move to Trash" action, under the same contract.
 * Not supported on Windows, which has no POSIX shell to evaluate the command in.
 
 #### `browse-parent-dirs`

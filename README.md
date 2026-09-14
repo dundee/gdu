@@ -195,14 +195,14 @@ folded into their nearest visible parent directory. Scan progress is streamed
 live while the analysis runs.
 
 In the treemap, press `O` to reveal the selected item in the system file
-manager, `D` to permanently delete it after confirmation, or `?` to show the
-keyboard shortcuts. The deletion dialog can suppress further confirmations
-for the current browser session. The `--no-delete` flag and filtered-scan
-deletion restrictions apply to the web UI as well as the terminal UI. Reveal
-remains available with `--no-delete` because it does not modify scanned data.
-To deliberately allow deletion while filters are active, set
-`GDU_ALLOW_DELETE_WITH_FILTER=1`; the displayed tree may then omit files that
-are still present on disk.
+manager, `D` (or `Delete`) to permanently delete it after confirmation, or `?`
+to show the keyboard shortcuts. The deletion dialog can suppress further
+confirmations for the current browser session. The `--no-delete` flag and
+filtered-scan deletion restrictions apply to the web UI as well as the
+terminal UI. Reveal remains available with `--no-delete` because it does not
+modify scanned data. To deliberately allow deletion while filters are active,
+set `GDU_ALLOW_DELETE_WITH_FILTER=1`; the displayed tree may then omit files
+that are still present on disk.
 
 By default the server binds to `localhost` on a random free port. Use
 `--web-listen` (or the `web.listen` config option) to pin a fixed address.

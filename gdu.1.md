@@ -111,16 +111,18 @@ non-interactive mode
 
 **\--ctrl-c-quits**\[=false\] Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results. Esc always stops the scan and keeps the results found so far, regardless of this flag.
 
-**\--no-delete**\[=false\] Do not allow deletions
+**\--no-delete**\[=false\] Do not allow deletions. Applies to the web UI as well: the delete action is hidden and the server rejects delete requests.
 
 Reveal remains available in the web UI because it does not modify scanned
-data. Deletion while file or time filters are active is disabled by default.
-Set **GDU_ALLOW_DELETE_WITH_FILTER=1** to override this safety check; the
-displayed tree may then omit files that are still present on disk.
+data. Deletion while a filter is active is disabled by default: the terminal
+UI applies this to time filters, the web UI to any active filter, file-type
+filters included. Set **GDU_ALLOW_DELETE_WITH_FILTER=1** to override the
+check; the displayed tree may then omit files that are still present on
+disk.
 
 **\--no-view-file**\[=false\] Do not allow viewing file contents
 
-**\--trash-command**=\"\" Command used to move items to trash instead of the built-in trash. The command is evaluated by /bin/sh with the absolute path of the item appended as an argument, which is also exported as GDU_TRASH_PATH. Commands taking their destination last can refer to the path as \"\$1\" instead, in which case it is not appended. The command must not be interactive. Not supported on Windows. For example: trash-put \--trash-dir \~/mytrash or mv -f \"\$1\" \~/mytrash/
+**\--trash-command**=\"\" Command used to move items to trash instead of the built-in trash. Used by the terminal UI's D key and the web UI's "Move to Trash" action. The command is evaluated by /bin/sh with the absolute path of the item appended as an argument, which is also exported as GDU_TRASH_PATH. Commands taking their destination last can refer to the path as \"\$1\" instead, in which case it is not appended. The command must not be interactive. Not supported on Windows. For example: trash-put \--trash-dir \~/mytrash or mv -f \"\$1\" \~/mytrash/
 
 **-f**, **\--input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 
