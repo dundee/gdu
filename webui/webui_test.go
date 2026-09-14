@@ -306,6 +306,38 @@ func TestDeleteNodeEndpointReturnsErrorWhenRemoveFuncFails(t *testing.T) {
 	assert.NoError(t, err, "file must still exist after a failed delete")
 }
 
+func TestDeleteEndpointRejectsChangedParent(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	outside := t.TempDir()
+	victim := filepath.Join(outside, "nested.dat")
+	require.NoError(t, os.WriteFile(victim, []byte("keep"), 0o600))
+	sub := filepath.Join(root, "sub")
+	require.NoError(t, os.RemoveAll(sub))
+	if err := os.Symlink(outside, sub); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		srv.URL+"/api/v1/nodes?path="+url.QueryEscape(filepath.Join(sub, "nested.dat")),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusConflict, resp.StatusCode)
+	_, err = os.Stat(victim)
+	assert.NoError(t, err, "file outside the scanned tree should remain")
+}
+
 func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)
