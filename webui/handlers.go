@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/remove"
 )
 
@@ -148,8 +149,8 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parent := node.GetParent()
-	if parent == nil {
-		writeError(w, http.StatusBadRequest, "cannot delete the analysis root")
+	if parent == nil || analyze.IsVirtualRootDir(parent) {
+		writeError(w, http.StatusBadRequest, "cannot delete a scanned root")
 		return
 	}
 	if isArchiveDescendant(node) {

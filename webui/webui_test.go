@@ -530,6 +530,27 @@ func TestDeleteEndpointRejectsAnalysisRoot(t *testing.T) {
 	assert.NoError(t, err, "root should remain after rejected delete")
 }
 
+func TestDeleteEndpointRejectsRootUnderVirtualRoot(t *testing.T) {
+	ui := newTestUI()
+	rootA := makeTree(t)
+	rootB := makeTree(t)
+	require.NoError(t, ui.AnalyzePaths([]string{rootA, rootB}))
+	waitDone(t, ui)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(rootA), nil)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	_, err = os.Stat(rootA)
+	assert.NoError(t, err, "scanned root should remain after rejected delete")
+}
+
 func TestActionEndpointsRequireLocalActionHeader(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)
