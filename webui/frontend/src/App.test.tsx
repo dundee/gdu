@@ -71,9 +71,10 @@ const treeResponse: TreeNode = {
 };
 
 beforeEach(() => {
-  // The action token lives only in this page's own URL (see model.tsx),
-  // mirroring how the server delivers it in practice.
-  window.history.pushState({}, '', '/?token=test-token');
+  window.sessionStorage.clear();
+  // index.html extracts the URL token before the React bundle loads.
+  window.sessionStorage.setItem('gdu.actionToken', 'test-token');
+  window.history.pushState({}, '', '/');
   vi.mocked(api.fetchStatus).mockResolvedValue(status);
   vi.mocked(api.fetchNode).mockResolvedValue(nodeResponse);
   vi.mocked(api.fetchTree).mockResolvedValue(treeResponse);
@@ -84,6 +85,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   window.history.pushState({}, '', '/');
+  window.sessionStorage.clear();
 });
 
 describe('chart view', () => {
@@ -109,11 +111,21 @@ describe('chart view', () => {
 });
 
 describe('action token', () => {
-  it('strips the token from the address bar after reading it', async () => {
-    render(<App />);
+  it('keeps the token across reloads', async () => {
+    vi.mocked(api.revealNode).mockResolvedValue(undefined);
+    const firstRender = render(<App />);
     await screen.findByRole('table');
 
-    expect(window.location.search).toBe('');
+    firstRender.unmount();
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+    fireEvent.keyDown(window, { code: 'KeyO' });
+
+    await waitFor(() =>
+      expect(api.revealNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token'),
+    );
   });
 });
 
@@ -121,7 +133,7 @@ describe('treemap actions', () => {
   it('reveals and deletes only the selected item, with session-only confirmation', async () => {
     vi.mocked(api.revealNode).mockResolvedValue(undefined);
     vi.mocked(api.deleteNode).mockResolvedValue(undefined);
-    render(<App />);
+    const firstRender = render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
     const file = await screen.findByRole('button', { name: /file\.txt/ });
@@ -145,6 +157,15 @@ describe('treemap actions', () => {
     fireEvent.keyDown(window, { code: 'KeyD' });
     await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(2));
     expect(api.deleteNode).toHaveBeenLastCalledWith(`${root}/file.txt`, 'test-token', 'permanent');
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+
+    firstRender.unmount();
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(3));
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
   });
 

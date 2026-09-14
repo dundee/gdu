@@ -1467,6 +1467,10 @@ func TestStaticHandlerServesIndex(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "no-referrer", resp.Header.Get("Referrer-Policy"),
 		"the action token lives in this page's URL; it must never leak via Referer")
+	indexBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(indexBody), "sessionStorage.setItem('gdu.actionToken', token)")
+	assert.Contains(t, string(indexBody), "history.replaceState(history.state, '', url)")
 
 	// An unknown non-asset path falls back to index.html (client-side routing).
 	resp2, err := http.Get(srv.URL + "/some/spa/route")

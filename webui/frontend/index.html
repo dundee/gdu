@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gdu</title>
+    <script>
+      const url = new URL(window.location.href);
+      const token = url.searchParams.get('token');
+      if (token) sessionStorage.setItem('gdu.actionToken', token);
+      if (url.searchParams.has('token')) {
+        url.searchParams.delete('token');
+        history.replaceState(history.state, '', url);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

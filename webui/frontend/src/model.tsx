@@ -14,6 +14,9 @@ import { colorMapFor, computeSlices } from './slices';
 
 export type ChartView = 'donut' | 'treemap';
 
+const actionTokenStorageKey = 'gdu.actionToken';
+const deleteModeStorageKey = 'gdu.skipDeleteConfirm';
+
 // GduModel is the shared app-level data: scan status, the current
 // directory's node data, and display preferences. Directory-specific
 // features (the recursive tree, selection, delete/reveal) live in the view
@@ -21,8 +24,8 @@ export type ChartView = 'donut' | 'treemap';
 export interface GduModel {
   status: Status;
   // Per-process secret the server prints/opens the page with (see
-  // actionTokenParam in webui/action_token.go), read once from this page's
-  // own URL rather than from any API response. Required on every
+  // actionTokenParam in webui/action_token.go), read from this page's own URL
+  // and retained in tab-scoped session storage. Required on every
   // delete/reveal request; see api.ts.
   actionToken: string;
   currentPath: string;
@@ -85,20 +88,11 @@ export function GduModelProvider({ model, children }: { model: GduModel; childre
 // still render the pre-scan loading/error/progress screens before a
 // GduModelProvider (which needs a non-null status/currentPath) makes sense.
 export function useGduModelState() {
-  // Read once at mount: the token lives only in this page's own URL (see
-  // GduModel.actionToken), not in any state the server pushes afterwards.
-  // Strip it from the visible address bar immediately after reading it, so
-  // it does not linger somewhere a shoulder-surfer, browser history entry,
-  // or copy-pasted URL could pick it up.
-  const [actionToken] = useState(() => {
-    const url = new URL(window.location.href);
-    const token = url.searchParams.get('token') ?? '';
-    if (url.searchParams.has('token')) {
-      url.searchParams.delete('token');
-      window.history.replaceState(window.history.state, '', url);
-    }
-    return token;
-  });
+  // index.html strips a fresh token from the URL before loading the application
+  // bundle and retains it in tab-scoped storage so reloads keep actions working.
+  const [actionToken] = useState(
+    () => window.sessionStorage.getItem(actionTokenStorageKey) ?? '',
+  );
   const [status, setStatus] = useState<Status | null>(null);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [nodeResp, setNodeResp] = useState<NodeResponse | null>(null);
@@ -111,7 +105,10 @@ export function useGduModelState() {
   const [showHelp, setShowHelp] = useState(false);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
-  const [skipDeleteConfirm, setSkipDeleteConfirm] = useState<DeleteMode | null>(null);
+  const [skipDeleteConfirm, setSkipDeleteConfirmState] = useState<DeleteMode | null>(() => {
+    const mode = window.sessionStorage.getItem(deleteModeStorageKey);
+    return mode === 'trash' || mode === 'permanent' ? mode : null;
+  });
 
   // Tracks the latest currentPath so an in-flight refreshNode() call (e.g.
   // one started before a breadcrumb navigation) can tell its result is
@@ -250,6 +247,15 @@ export function useGduModelState() {
   const clearTree = useCallback(() => {
     setTreePath(null);
     setTreeRoot(null);
+  }, []);
+
+  const setSkipDeleteConfirm = useCallback((mode: DeleteMode | null) => {
+    setSkipDeleteConfirmState(mode);
+    if (mode === null) {
+      window.sessionStorage.removeItem(deleteModeStorageKey);
+    } else {
+      window.sessionStorage.setItem(deleteModeStorageKey, mode);
+    }
   }, []);
 
   return {
