@@ -1,8 +1,15 @@
 package webui
 
-import "runtime"
+import (
+	"fmt"
+	"path/filepath"
+	"runtime"
+)
 
 func openPath(path string) error {
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("refusing to reveal non-absolute path %q", path)
+	}
 	name, args := revealCommand(runtime.GOOS, path)
 	return runDetached(name, args...)
 }
