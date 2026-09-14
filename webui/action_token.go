@@ -23,9 +23,9 @@ const actionTokenSize = 32
 // generateActionToken returns a cryptographically random, hex-encoded token
 // unique to this server run. The frontend receives it once, from the URL
 // StartUILoop prints and opens (see actionTokenParam), never over any API
-// response: unlike the read-only endpoints, which stay intentionally
-// unauthenticated, the token itself must not be readable by another local
-// user who can reach the port but not this process's own terminal.
+// response. The launcher receives that URL through argv, so on a multi-user
+// machine callers that need to keep it out of process listings should use
+// --web-open=false and open the printed URL from an already-running browser.
 //
 // rand.Read never returns an error: since Go 1.24 a broken OS entropy source
 // is fatal to the process instead, so there is no error path to handle here.

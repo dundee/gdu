@@ -210,12 +210,15 @@ access are required.
 who can reach the port sees file names and sizes - keep it bound to
 `localhost` (the default). Reveal and delete actions need more: a request
 that both originates from a loopback address and carries a random token,
-generated fresh for each server run and printed only in the URL on this
-process's own terminal (never served over the API), so another local user who
-can reach the port but not this terminal cannot forge one; pages on another
-origin or browser tab are rejected the same way even if they can reach the
-port. Binding to a non-loopback address makes scan details reachable by other
-hosts on the network and prints a warning.
+generated fresh for each server run and never served over the API. The URL is
+printed to this process's terminal and passed to the configured browser
+launcher. On Linux, a cold-started browser may retain that URL in its
+world-readable command line; custom browser commands may do the same on any
+platform. On a multi-user machine, use `--web-open=false` and open the printed
+URL from an already-running browser. Pages on another origin or browser tab
+are rejected even if they can reach the port. Binding to a non-loopback address
+makes scan details reachable by other hosts on the network and prints a
+warning.
 
 ## File flags
 
