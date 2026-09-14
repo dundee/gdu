@@ -70,8 +70,8 @@ func GetNestedMountpointsPaths(path string, mounts Devices) []string {
 	return paths
 }
 
-func isNestedPath(path, mountPoint string) bool {
-	relative, err := filepath.Rel(path, mountPoint)
+func isNestedPath(basePath, path string) bool {
+	relative, err := filepath.Rel(basePath, path)
 	return err == nil && relative != "." && relative != ".." &&
 		!strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
