@@ -207,22 +207,30 @@ func scannedRootOf(it fs.Item) fs.Item {
 	}
 }
 
-// checkNotRelocated re-resolves a node's recorded path immediately before it
-// is deleted and reports whether it still lies inside its scanned root.
+// checkNotRelocated re-resolves the directory a node is about to be removed
+// from and reports whether it still lies inside the node's scanned root.
 //
 // The scan records paths as plain strings, and remove.ItemFromDir re-resolves
-// that string much later via os.RemoveAll. os.RemoveAll does not follow a
-// symlink in the final component (it unlinks the link itself), but every
-// component above it is followed: anyone able to write inside the scanned
-// tree between the scan and the delete can swap an ancestor directory for a
-// link and redirect the removal somewhere else entirely.
+// that string much later via os.RemoveAll. Every component *above* the last
+// one is followed during that resolution, so anyone able to write inside the
+// scanned tree between the scan and the delete can swap an ancestor directory
+// for a link and redirect the removal somewhere else entirely.
 //
-// Checking the immediate parent alone is not enough, because os.Lstat also
-// follows intermediate components - it only leaves the final one alone - so a
-// swapped grandparent resolves through to a real directory and passes. Fully
-// resolving the path and re-checking containment catches a swap at any depth.
-// Both sides are resolved so that a root legitimately reached through a
-// symlink (macOS /tmp, for instance) is not mistaken for an escape.
+// It is the containing directory that gets resolved, not the node, because
+// that is exactly what os.RemoveAll resolves: it unlinks a final-component
+// symlink rather than following it. Resolving the node instead would be both
+// too strict and too weak - it would refuse to delete an ordinary symlink
+// merely because it points outside the tree (removing it only unlinks the
+// link, which is inside), and it would need search permission on the very
+// directory whose contents are being removed, turning an ordinary
+// permission-denied removal into a bogus relocation error.
+//
+// Checking the immediate parent with os.Lstat is not enough either: Lstat
+// leaves only the final component alone and follows everything above it, so a
+// swapped *grandparent* resolves through to a real directory and passes.
+// Resolving the whole parent chain catches a swap at any depth. Both sides
+// are resolved so a root legitimately reached through a symlink (macOS /tmp,
+// for instance) is not mistaken for an escape.
 //
 // This narrows the window to the microseconds between the check and the
 // removal rather than closing it outright; doing that needs openat-style
@@ -237,19 +245,19 @@ func checkNotRelocated(node fs.Item) error {
 	if err != nil {
 		return err
 	}
-	realPath, err := filepath.EvalSymlinks(node.GetPath())
+	realParent, err := filepath.EvalSymlinks(filepath.Dir(node.GetPath()))
 	if err != nil {
 		if os.IsNotExist(err) {
-			// The item is already gone (or points at something gone).
-			// os.RemoveAll is a no-op on a path that does not resolve, so
-			// letting it through keeps deletion idempotent instead of
-			// failing a user who removed the file in another window.
+			// The containing directory is already gone, so os.RemoveAll has
+			// nothing to do and will report no error. Letting it through
+			// keeps deletion idempotent instead of failing a user who
+			// removed the item in another window.
 			return nil
 		}
 		return err
 	}
 
-	rel, err := filepath.Rel(realRoot, realPath)
+	rel, err := filepath.Rel(realRoot, realParent)
 	if err != nil {
 		return errRelocated
 	}

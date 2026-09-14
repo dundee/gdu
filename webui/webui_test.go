@@ -1559,3 +1559,43 @@ func TestStaticHandlerServesIndex(t *testing.T) {
 	assert.Truef(t, strings.Contains(lower, "<!doctype html") || strings.Contains(lower, "<html"),
 		"fallback body does not look like the SPA index: %q", string(body[:min(80, len(body))]))
 }
+
+// TestDeleteEndpointAllowsSymlinkPointingOutside guards against the
+// containment check being stricter than os.RemoveAll. RemoveAll unlinks a
+// final-component symlink rather than following it, so removing a link that
+// happens to point outside the scanned tree only ever deletes the link
+// itself, which lives inside the tree. Refusing it would make ordinary
+// symlinks undeletable in the web UI.
+func TestDeleteEndpointAllowsSymlinkPointingOutside(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+
+	outside := t.TempDir()
+	target := filepath.Join(outside, "target.txt")
+	require.NoError(t, os.WriteFile(target, []byte("keep"), 0o600))
+
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	scan(t, ui, root)
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		srv.URL+"/api/v1/nodes?path="+url.QueryEscape(link),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	_, err = os.Lstat(link)
+	assert.True(t, os.IsNotExist(err), "the symlink itself should be gone")
+	_, err = os.Stat(target)
+	assert.NoError(t, err, "its target outside the tree must be untouched")
+}
