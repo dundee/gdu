@@ -1273,6 +1273,23 @@ func TestRevealEndpointInvalidBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
+func TestRevealEndpointRejectsOversizedBody(t *testing.T) {
+	ui := newTestUI()
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	body := strings.NewReader(`{"path":"` + strings.Repeat("x", maxRevealBodyBytes+1) + `"}`)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/reveal", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
 func TestRevealEndpointNotFound(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)

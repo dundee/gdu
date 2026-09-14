@@ -49,6 +49,9 @@ const (
 // item to the trash instead of deleting it permanently.
 const deleteModeTrash = "trash"
 
+// maxRevealBodyBytes limits reveal requests to 1 MiB.
+const maxRevealBodyBytes = 1 << 20
+
 func (ui *UI) buildStatus() statusResponse {
 	ui.mu.RLock()
 	defer ui.mu.RUnlock()
@@ -179,6 +182,7 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ui *UI) handleReveal(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRevealBodyBytes)
 	var body struct {
 		Path string `json:"path"`
 	}
