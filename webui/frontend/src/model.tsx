@@ -4,18 +4,41 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { Node, NodeResponse, SortKey, SortOrder, Status, TreeNode } from './types';
 import { fetchNode, fetchStatus, subscribeStatus, type DeleteMode } from './api';
 import { colorMapFor, computeSlices } from './slices';
+import { useLatest } from './useLatest';
 
 export type ChartView = 'donut' | 'treemap';
 
 const actionTokenStorageKey = 'gdu.actionToken';
 const deleteModeStorageKey = 'gdu.skipDeleteConfirm';
+
+// sessionStorage can throw rather than return null (private-mode browsers,
+// storage disabled by policy). Losing the token only costs the actions, so
+// degrade to "no token" instead of taking the whole app down with it.
+function readSessionStorage(key: string): string | null {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionStorage(key: string, value: string | null) {
+  try {
+    if (value === null) {
+      window.sessionStorage.removeItem(key);
+    } else {
+      window.sessionStorage.setItem(key, value);
+    }
+  } catch {
+    // Non-fatal: the preference simply will not survive a reload.
+  }
+}
 
 // GduModel is the shared app-level data: scan status, the current
 // directory's node data, and display preferences. Directory-specific
@@ -90,9 +113,7 @@ export function GduModelProvider({ model, children }: { model: GduModel; childre
 export function useGduModelState() {
   // index.html strips a fresh token from the URL before loading the application
   // bundle and retains it in tab-scoped storage so reloads keep actions working.
-  const [actionToken] = useState(
-    () => window.sessionStorage.getItem(actionTokenStorageKey) ?? '',
-  );
+  const [actionToken] = useState(() => readSessionStorage(actionTokenStorageKey) ?? '');
   const [status, setStatus] = useState<Status | null>(null);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [nodeResp, setNodeResp] = useState<NodeResponse | null>(null);
@@ -106,7 +127,7 @@ export function useGduModelState() {
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
   const [skipDeleteConfirm, setSkipDeleteConfirmState] = useState<DeleteMode | null>(() => {
-    const mode = window.sessionStorage.getItem(deleteModeStorageKey);
+    const mode = readSessionStorage(deleteModeStorageKey);
     return mode === 'trash' || mode === 'permanent' ? mode : null;
   });
 
@@ -114,10 +135,7 @@ export function useGduModelState() {
   // one started before a breadcrumb navigation) can tell its result is
   // stale once it resolves, instead of unconditionally overwriting nodeResp
   // with data for a directory the user has since navigated away from.
-  const currentPathRef = useRef(currentPath);
-  useEffect(() => {
-    currentPathRef.current = currentPath;
-  }, [currentPath]);
+  const currentPathRef = useLatest(currentPath);
 
   // Initial status + live updates over SSE.
   useEffect(() => {
@@ -251,11 +269,7 @@ export function useGduModelState() {
 
   const setSkipDeleteConfirm = useCallback((mode: DeleteMode | null) => {
     setSkipDeleteConfirmState(mode);
-    if (mode === null) {
-      window.sessionStorage.removeItem(deleteModeStorageKey);
-    } else {
-      window.sessionStorage.setItem(deleteModeStorageKey, mode);
-    }
+    writeSessionStorage(deleteModeStorageKey, mode);
   }, []);
 
   return {

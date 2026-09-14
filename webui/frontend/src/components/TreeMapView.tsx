@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Node } from '../types';
 import { deleteNode, fetchTree, revealNode, type DeleteMode } from '../api';
 import { useGduModel } from '../model';
 import { formatSize } from '../format';
 import { TreeMap } from './TreeMap';
 import { Modal } from './Modal';
+import { useLatest } from '../useLatest';
+
+// Shown instead of firing a request that is certain to come back as a bare
+// 403. The token is missing whenever this tab never received one - the page
+// was opened without the token gdu put in the URL, or session storage is
+// unavailable - and no API call can recover it.
+const noActionTokenMessage =
+  'Actions are unavailable: this page has no action token. Reopen the URL gdu printed, or restart gdu.';
 
 // TreeMapView owns everything specific to the treemap: fetching (and
 // caching, via the model) the recursive tree, node selection, and the
@@ -47,10 +55,7 @@ export function TreeMapView() {
   // Tracks the latest currentPath so an in-flight refreshTree() call (e.g.
   // one started before breadcrumb navigation) can tell its result is stale
   // once it resolves.
-  const currentPathRef = useRef(currentPath);
-  useEffect(() => {
-    currentPathRef.current = currentPath;
-  }, [currentPath]);
+  const currentPathRef = useLatest(currentPath);
 
   // Load (and cache, via the model) the recursive tree for the current
   // directory. Cached in the model rather than here so toggling back to this
@@ -124,6 +129,11 @@ export function TreeMapView() {
       if (actionPending) {
         return;
       }
+      if (!actionToken) {
+        setDeleteCandidate(null);
+        setLoadError(noActionTokenMessage);
+        return;
+      }
       setActionPending(true);
       setDeleteCandidate(null);
       try {
@@ -148,6 +158,10 @@ export function TreeMapView() {
 
   const revealSelected = useCallback(async () => {
     if (!selectedNode || actionPending) {
+      return;
+    }
+    if (!actionToken) {
+      setLoadError(noActionTokenMessage);
       return;
     }
     setActionPending(true);
@@ -186,7 +200,11 @@ export function TreeMapView() {
         event.preventDefault();
         void revealSelected();
       } else if (
-        (event.code === 'KeyD' || event.key === 'Delete' || event.key === 'Backspace') &&
+        // Deliberately not Backspace: every desktop file manager binds it to
+        // "go up one level", so a user reaching for it here would expect to
+        // navigate, not to destroy the selected item. The help modal lists
+        // only D and Delete.
+        (event.code === 'KeyD' || event.key === 'Delete') &&
         selectedNode &&
         status.deleteAllowed
       ) {

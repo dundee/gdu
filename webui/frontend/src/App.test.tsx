@@ -129,6 +129,22 @@ describe('action token', () => {
   });
 });
 
+describe('missing action token', () => {
+  it('explains that actions are unavailable instead of firing a doomed request', async () => {
+    // No token in storage: index.html found none in the URL, or storage is
+    // unavailable. Every action would come back as a bare 403.
+    window.sessionStorage.clear();
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+    fireEvent.keyDown(window, { code: 'KeyO' });
+
+    expect(await screen.findByText(/no action token/i)).toBeTruthy();
+    expect(api.revealNode).not.toHaveBeenCalled();
+  });
+});
+
 describe('treemap actions', () => {
   it('reveals and deletes only the selected item, with session-only confirmation', async () => {
     vi.mocked(api.revealNode).mockResolvedValue(undefined);
@@ -202,6 +218,38 @@ describe('treemap actions', () => {
 
     fireEvent.keyDown(window, { key: 'Delete' });
     expect(screen.getByRole('dialog', { name: 'Delete item' })).toBeTruthy();
+  });
+
+  it('does not delete on Backspace, which file managers bind to "go up"', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+
+    fireEvent.keyDown(window, { key: 'Backspace' });
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+  });
+
+  it('remembers the skip-confirmation choice across a reload', async () => {
+    vi.mocked(api.deleteNode).mockResolvedValue(undefined);
+    const first = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Do not ask again this session' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Permanently' }));
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(1));
+
+    first.unmount();
+
+    // The reload must not silently start re-prompting.
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(2));
   });
 
   it('moves the item to the trash without affecting the permanent-delete skip choice', async () => {
