@@ -5,15 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gdu</title>
     <script>
-      const url = new URL(window.location.href);
-      const token = url.searchParams.get('token');
-      if (token) sessionStorage.setItem('gdu.actionToken', token);
-      if (url.searchParams.has('token')) {
+      // Runs before the application bundle so the token leaves the address
+      // bar even if the bundle never loads (stale cache, script error).
+      // The strip is deliberately not conditional on the store succeeding:
+      // sessionStorage can throw in a private-mode browser, and the token
+      // lingering in the URL is the exact thing this is here to prevent.
+      (function () {
+        var url = new URL(window.location.href);
+        var token = url.searchParams.get('token');
+        if (!token) return;
+        try {
+          sessionStorage.setItem('gdu.actionToken', token);
+        } catch (e) {
+          // Non-fatal: actions stay unavailable, and the UI says so.
+        }
         url.searchParams.delete('token');
         history.replaceState(history.state, '', url);
-      }
+      })();
     </script>
-    <script type="module" crossorigin src="./assets/index-B6SP8RBu.js"></script>
+    <script type="module" crossorigin src="./assets/index-Cc6_v0Fv.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-D6VFfQWo.css">
   </head>
   <body>
