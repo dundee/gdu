@@ -113,6 +113,11 @@ non-interactive mode
 
 **\--no-delete**\[=false\] Do not allow deletions
 
+Reveal remains available in the web UI because it does not modify scanned
+data. Deletion while file or time filters are active is disabled by default.
+Set **GDU_ALLOW_DELETE_WITH_FILTER=1** to override this safety check; the
+displayed tree may then omit files that are still present on disk.
+
 **\--no-view-file**\[=false\] Do not allow viewing file contents
 
 **\--trash-command**=\"\" Command used to move items to trash instead of the built-in trash. The command is evaluated by /bin/sh with the absolute path of the item appended as an argument, which is also exported as GDU_TRASH_PATH. Commands taking their destination last can refer to the path as \"\$1\" instead, in which case it is not appended. The command must not be interactive. Not supported on Windows. For example: trash-put \--trash-dir \~/mytrash or mv -f \"\$1\" \~/mytrash/

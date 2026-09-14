@@ -98,6 +98,11 @@ Ignore hidden directories (beginning with dot)
 
 Do not allow deletions
 
+Reveal remains available in the web UI because it does not modify scanned
+data. Deletion while file or time filters are active is disabled by default;
+set `GDU_ALLOW_DELETE_WITH_FILTER=1` to override this safety check. The
+displayed tree may then omit files that are still present on disk.
+
 #### `no-view-file`
 
 Do not allow viewing file contents
