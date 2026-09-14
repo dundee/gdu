@@ -142,6 +142,19 @@ func descendFrom(root fs.Item, cleanRoot, cleanPath string) (fs.Item, error) {
 	return current, nil
 }
 
+// isArchiveType reports whether a node type name is one of the synthetic
+// directory types gdu creates when browsing inside an archive. Shared by
+// isArchiveDescendant and isArchiveRoot so a new archive type only has to be
+// added in one place.
+func isArchiveType(nodeType string) bool {
+	switch nodeType {
+	case "ZipDirectory", "TarDirectory":
+		return true
+	default:
+		return false
+	}
+}
+
 // isArchiveDescendant reports whether it sits below the root of a browsed
 // zip/tar archive, i.e. its parent is itself inside an archive. Such nodes
 // have a synthetic path (archive.zip/folder/file) that does not exist on
@@ -153,12 +166,7 @@ func isArchiveDescendant(it fs.Item) bool {
 	if parent == nil {
 		return false
 	}
-	switch parent.GetType() {
-	case "ZipDirectory", "TarDirectory":
-		return true
-	default:
-		return false
-	}
+	return isArchiveType(parent.GetType())
 }
 
 // realPathAncestor walks up from it until it finds a node whose GetPath
@@ -178,12 +186,7 @@ func realPathAncestor(it fs.Item) fs.Item {
 // launch the archive's associated application (and may start extracting it)
 // instead of revealing it in a file manager.
 func isArchiveRoot(it fs.Item) bool {
-	switch it.GetType() {
-	case "ZipDirectory", "TarDirectory":
-		return true
-	default:
-		return false
-	}
+	return isArchiveType(it.GetType())
 }
 
 // errRelocated is returned when a node's recorded path no longer resolves to

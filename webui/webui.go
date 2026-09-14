@@ -89,7 +89,7 @@ func CreateUI(
 		listenAddr:  listenAddr,
 		openBrowser: openBrowser,
 		browserCmd:  browserCmd,
-		revealPath:  openPath,
+		revealPath:  revealInFileManager,
 		trasher:     remove.MoveItemToTrash,
 		actionToken: generateActionToken(),
 		linkedItems: make(fs.HardLinkedItems),

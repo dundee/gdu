@@ -22,6 +22,15 @@ func TestRevealCommand(t *testing.T) {
 	}
 }
 
-func TestOpenPathRejectsRelativePath(t *testing.T) {
-	assert.EqualError(t, openPath("--new-window"), `refusing to reveal non-absolute path "--new-window"`)
+func TestRevealInFileManagerRejectsRelativePath(t *testing.T) {
+	assert.EqualError(
+		t,
+		revealInFileManager("--new-window"),
+		`refusing to reveal non-absolute path "--new-window"`,
+	)
+	assert.EqualError(
+		t,
+		revealInFileManager("relative/path"),
+		`refusing to reveal non-absolute path "relative/path"`,
+	)
 }
