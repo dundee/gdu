@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Platform identifiers and open-handler command names.
+// Platform identifiers and open-handler command names shared with reveal.go.
 const (
 	goosDarwin  = "darwin"
 	goosWindows = "windows"
@@ -47,9 +47,10 @@ func openBrowser(url, cmd string) error {
 }
 
 // runDetached starts an external command without waiting for its output,
-// used for handing a URL off to the OS's URL handler. It still reaps the
-// process asynchronously once it exits, so it doesn't accumulate unreaped
-// processes for the server's lifetime.
+// used for handing a URL or path off to the OS's file/URL handler. It still
+// reaps the process asynchronously once it exits, so repeated calls (e.g.
+// one per reveal action) don't accumulate unreaped processes for the
+// server's lifetime.
 func runDetached(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	if err := cmd.Start(); err != nil {

@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gdu</title>
+    <script>
+      // Runs before the application bundle so the token leaves the address
+      // bar even if the bundle never loads (stale cache, script error).
+      // The strip is deliberately not conditional on the store succeeding:
+      // sessionStorage can throw in a private-mode browser, and the token
+      // lingering in the URL is the exact thing this is here to prevent.
+      (function () {
+        var url = new URL(window.location.href);
+        var token = url.searchParams.get('token');
+        if (!token) return;
+        try {
+          sessionStorage.setItem('gdu.actionToken', token);
+        } catch (e) {
+          // Non-fatal: actions stay unavailable, and the UI says so.
+        }
+        url.searchParams.delete('token');
+        history.replaceState(history.state, '', url);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -102,7 +102,7 @@ func (ui *UI) findNode(path string) (fs.Item, error) {
 	// The virtual top level dir has no path of its own, so paths are resolved
 	// against each of the scanned roots it holds instead.
 	if analyze.IsVirtualRootDir(root) {
-		for child := range root.GetFiles(fs.SortByName, fs.SortAsc) {
+		for child := range root.GetFilesLocked(fs.SortByName, fs.SortAsc) {
 			if node, err := descendFrom(child, child.GetPath(), cleanPath); err == nil {
 				return node, nil
 			}
@@ -140,6 +140,131 @@ func descendFrom(root fs.Item, cleanRoot, cleanPath string) (fs.Item, error) {
 		current = next
 	}
 	return current, nil
+}
+
+// isArchiveType reports whether a node type name is one of the synthetic
+// directory types gdu creates when browsing inside an archive. Shared by
+// isArchiveDescendant and isArchiveRoot so a new archive type only has to be
+// added in one place.
+func isArchiveType(nodeType string) bool {
+	switch nodeType {
+	case "ZipDirectory", "TarDirectory":
+		return true
+	default:
+		return false
+	}
+}
+
+// isArchiveDescendant reports whether it sits below the root of a browsed
+// zip/tar archive, i.e. its parent is itself inside an archive. Such nodes
+// have a synthetic path (archive.zip/folder/file) that does not exist on
+// disk, so os.RemoveAll and OS reveal cannot operate on them directly. The
+// archive's own top-level node is not a descendant: its Parent is a real
+// filesystem directory, and its GetPath() resolves to the real archive file.
+func isArchiveDescendant(it fs.Item) bool {
+	parent := it.GetParent()
+	if parent == nil {
+		return false
+	}
+	return isArchiveType(parent.GetType())
+}
+
+// realPathAncestor walks up from it until it finds a node whose GetPath
+// resolves to a real filesystem path: either it itself, or the nearest
+// ancestor that is not nested inside a browsed archive (the archive's own
+// top-level node, whose Parent is a real directory).
+func realPathAncestor(it fs.Item) fs.Item {
+	for isArchiveDescendant(it) {
+		it = it.GetParent()
+	}
+	return it
+}
+
+// isArchiveRoot reports whether it is the top-level node of a browsed
+// zip/tar archive. Its GetPath still resolves to a real filesystem path, but
+// that path names the archive file itself, not a directory: opening it would
+// launch the archive's associated application (and may start extracting it)
+// instead of revealing it in a file manager.
+func isArchiveRoot(it fs.Item) bool {
+	return isArchiveType(it.GetType())
+}
+
+// errRelocated is returned when a node's recorded path no longer resolves to
+// a location inside the root it was scanned under.
+var errRelocated = errors.New("path changed on disk since the scan and now resolves outside the scanned root")
+
+// scannedRootOf walks up from it to the root of the path the user actually
+// asked gdu to scan. With a single path that is the analysis root itself;
+// under a virtual top level dir (several scanned paths) it is the child of
+// that virtual dir, which is a real directory with a real path.
+func scannedRootOf(it fs.Item) fs.Item {
+	for {
+		parent := it.GetParent()
+		if parent == nil || analyze.IsVirtualRootDir(parent) {
+			return it
+		}
+		it = parent
+	}
+}
+
+// checkNotRelocated re-resolves the directory a node is about to be removed
+// from and reports whether it still lies inside the node's scanned root.
+//
+// The scan records paths as plain strings, and remove.ItemFromDir re-resolves
+// that string much later via os.RemoveAll. Every component *above* the last
+// one is followed during that resolution, so anyone able to write inside the
+// scanned tree between the scan and the delete can swap an ancestor directory
+// for a link and redirect the removal somewhere else entirely.
+//
+// It is the containing directory that gets resolved, not the node, because
+// that is exactly what os.RemoveAll resolves: it unlinks a final-component
+// symlink rather than following it. Resolving the node instead would be both
+// too strict and too weak - it would refuse to delete an ordinary symlink
+// merely because it points outside the tree (removing it only unlinks the
+// link, which is inside), and it would need search permission on the very
+// directory whose contents are being removed, turning an ordinary
+// permission-denied removal into a bogus relocation error.
+//
+// Checking the immediate parent with os.Lstat is not enough either: Lstat
+// leaves only the final component alone and follows everything above it, so a
+// swapped *grandparent* resolves through to a real directory and passes.
+// Resolving the whole parent chain catches a swap at any depth. Both sides
+// are resolved so a root legitimately reached through a symlink (macOS /tmp,
+// for instance) is not mistaken for an escape.
+//
+// This narrows the window to the microseconds between the check and the
+// removal rather than closing it outright; doing that needs openat-style
+// traversal inside pkg/remove, which the terminal UI would benefit from too.
+func checkNotRelocated(node fs.Item) error {
+	root := scannedRootOf(node)
+	if root == node {
+		return nil
+	}
+
+	realRoot, err := filepath.EvalSymlinks(root.GetPath())
+	if err != nil {
+		return err
+	}
+	realParent, err := filepath.EvalSymlinks(filepath.Dir(node.GetPath()))
+	if err != nil {
+		if os.IsNotExist(err) {
+			// The containing directory is already gone, so os.RemoveAll has
+			// nothing to do and will report no error. Letting it through
+			// keeps deletion idempotent instead of failing a user who
+			// removed the item in another window.
+			return nil
+		}
+		return err
+	}
+
+	rel, err := filepath.Rel(realRoot, realParent)
+	if err != nil {
+		return errRelocated
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return errRelocated
+	}
+	return nil
 }
 
 func childByName(parent fs.Item, name string) (fs.Item, bool) {

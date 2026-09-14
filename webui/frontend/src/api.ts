@@ -39,6 +39,46 @@ export function fetchTree(path: string): Promise<TreeNode> {
   return getJSON<TreeNode>(`api/v1/tree?${params.toString()}`);
 }
 
+// requestAction sends a mutating request carrying the per-process action
+// token the server printed into this page's own URL (see
+// GduModel.actionToken in model.tsx). The server rejects the request unless
+// this exact token is echoed back, which keeps a page on another origin (or
+// another browser tab, or another local user who never saw this URL) from
+// triggering a delete/reveal even though it may still be able to make the
+// browser send a request: it does not know the token, since the token is
+// never served over any API response.
+async function requestAction(url: string, token: string, init: RequestInit): Promise<void> {
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      'X-GDU-Action': token,
+      ...init.headers,
+    },
+  });
+  if (res.ok) {
+    return;
+  }
+  throw await responseError(res);
+}
+
+export function revealNode(path: string, token: string): Promise<void> {
+  return requestAction('api/v1/reveal', token, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+}
+
+export type DeleteMode = 'trash' | 'permanent';
+
+export function deleteNode(path: string, token: string, mode: DeleteMode): Promise<void> {
+  const params = new URLSearchParams({ path });
+  if (mode === 'trash') {
+    params.set('mode', 'trash');
+  }
+  return requestAction(`api/v1/nodes?${params.toString()}`, token, { method: 'DELETE' });
+}
+
 // subscribeStatus opens an SSE connection that yields status updates. Returns
 // an unsubscribe function.
 export function subscribeStatus(onStatus: (status: Status) => void): () => void {

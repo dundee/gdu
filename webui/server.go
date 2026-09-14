@@ -25,7 +25,7 @@ func (ui *UI) StartUILoop() error {
 		return fmt.Errorf("binding %s: %w", ui.listenAddr, err)
 	}
 
-	url := "http://" + listener.Addr().String()
+	url := actionURL(listener.Addr(), ui.actionToken)
 	fmt.Fprintf(ui.output, "Gdu web UI running at %s\n", url)
 	warnIfRemote(ui.output, listener.Addr())
 
@@ -64,15 +64,44 @@ func (ui *UI) StartUILoop() error {
 
 // routes builds a dedicated mux (never the shared http.DefaultServeMux, which
 // is deliberately reset elsewhere to keep pprof handlers isolated).
-func (ui *UI) routes() *http.ServeMux {
+func (ui *UI) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/status", ui.handleStatus)
 	mux.HandleFunc("GET /api/v1/nodes", ui.handleNodes)
 	mux.HandleFunc("GET /api/v1/tree", ui.handleTree)
+	mux.HandleFunc("DELETE /api/v1/nodes", ui.requireLocalAction(ui.handleDeleteNode))
+	mux.HandleFunc("POST /api/v1/reveal", ui.requireLocalAction(ui.handleReveal))
 	mux.HandleFunc("/api/v1/devices", ui.handleDevices)
 	mux.HandleFunc("/api/v1/events", ui.handleEvents)
 	mux.Handle("/", staticHandler())
-	return mux
+	return requireSafeHost(mux, ui.listenAddr)
+}
+
+// requireSafeHost rejects DNS names other than localhost or the exact hostname
+// configured by --web-listen. A browser page on an attacker-controlled DNS
+// name can otherwise rebind that name to 127.0.0.1 and read the unauthenticated
+// API with its attacker-controlled Host header. Literal IP hosts remain
+// allowed so non-loopback read-only access continues to work.
+func requireSafeHost(next http.Handler, listenAddr string) http.Handler {
+	configuredHost := hostOnly(listenAddr)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := hostOnly(r.Host)
+		if !strings.EqualFold(host, "localhost") &&
+			net.ParseIP(host) == nil &&
+			(configuredHost == "" || !strings.EqualFold(host, configuredHost)) {
+			http.Error(w, "invalid Host header", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func hostOnly(hostport string) string {
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return strings.Trim(hostport, "[]")
+	}
+	return host
 }
 
 // warnIfRemote prints a security warning when the server is not bound to a
@@ -88,13 +117,34 @@ func warnIfRemote(w io.Writer, addr net.Addr) {
 // isLoopbackHost reports whether the host component of a "host:port" string
 // (or a bare host) is a loopback address, including the "localhost" name.
 func isLoopbackHost(hostport string) bool {
-	host, _, err := net.SplitHostPort(hostport)
-	if err != nil {
-		host = strings.Trim(hostport, "[]")
-	}
+	host := hostOnly(hostport)
 	if strings.EqualFold(host, "localhost") {
 		return true
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
+}
+
+// isLocalRequest reports whether r both originates from a loopback address
+// and targets a loopback Host header. Checking RemoteAddr alone is not
+// enough: a page on an attacker-controlled domain that DNS-rebinds to
+// 127.0.0.1 also connects from loopback, but the browser still sends the
+// attacker's hostname as the Host header, which this rejects.
+func isLocalRequest(r *http.Request) bool {
+	return isLoopbackHost(r.RemoteAddr) && isLoopbackHost(r.Host)
+}
+
+// requireLocalAction wraps a mutating handler so it only runs for requests
+// that originate from loopback, carry Fetch Metadata/Origin headers
+// consistent with this server's own page, and present this server's action
+// token. Together these guard against CSRF-style calls from other pages, tabs,
+// and hosts on the network.
+func (ui *UI) requireLocalAction(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !isLocalRequest(r) || !sameOriginFetch(r) || !ui.validActionToken(r.Header.Get(actionHeader)) {
+			writeError(w, http.StatusForbidden, "actions are only available from the local web UI")
+			return
+		}
+		next(w, r)
+	}
 }

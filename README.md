@@ -191,8 +191,18 @@ directory's contents alongside a sortable table with size bars, breadcrumb
 navigation, and a disk-usage/apparent-size toggle. Switch to the full-window
 treemap to explore the complete nested subtree, select files or directories,
 and double-click a directory to open it. Details too small to display are
-folded into their nearest visible parent directory. Press `?` to show the
-keyboard shortcuts. Scan progress is streamed live while the analysis runs.
+folded into their nearest visible parent directory. Scan progress is streamed
+live while the analysis runs.
+
+In the treemap, press `O` to reveal the selected item in the system file
+manager, `D` (or `Delete`) to permanently delete it after confirmation, or `?`
+to show the keyboard shortcuts. The deletion dialog can suppress further
+confirmations for the current browser session. The `--no-delete` flag and
+filtered-scan deletion restrictions apply to the web UI as well as the
+terminal UI. Reveal remains available with `--no-delete` because it does not
+modify scanned data. To deliberately allow deletion while filters are active,
+set `GDU_ALLOW_DELETE_WITH_FILTER=1`; the displayed tree may then omit files
+that are still present on disk.
 
 By default the server binds to `localhost` on a random free port. Use
 `--web-listen` (or the `web.listen` config option) to pin a fixed address.
@@ -200,10 +210,19 @@ By default the server binds to `localhost` on a random free port. Use
 The compiled web assets are embedded in the binary, so no extra files or network
 access are required.
 
-**Security:** the web UI is read-only and has no authentication. It exposes file
-names and sizes over HTTP, so keep it bound to `localhost` (the default). Binding
-to a non-loopback address makes those details reachable by other hosts on the
-network and prints a warning.
+**Security:** browsing is read-only and requires no authentication, so anyone
+who can reach the port sees file names and sizes - keep it bound to
+`localhost` (the default). Reveal and delete actions need more: a request
+that both originates from a loopback address and carries a random token,
+generated fresh for each server run and never served over the API. The URL is
+printed to this process's terminal and passed to the configured browser
+launcher. On Linux, a cold-started browser may retain that URL in its
+world-readable command line; custom browser commands may do the same on any
+platform. On a multi-user machine, use `--web-open=false` and open the printed
+URL from an already-running browser. Pages on another origin or browser tab
+are rejected even if they can reach the port. Binding to a non-loopback address
+makes scan details reachable by other hosts on the network and prints a
+warning.
 
 ## File flags
 
