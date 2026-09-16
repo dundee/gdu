@@ -4,6 +4,7 @@ package common
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,7 +13,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// CreateIgnorePattern creates one pattern from all path patterns
+// CreateIgnorePattern creates one pattern from all path patterns.
+// Every relative pattern also gets its absolute form added as an alternative
+// and vice versa, so that patterns work no matter whether the scanned paths
+// are relative or absolute. The added path alternatives are literal paths
+// (with path separators escaped), while the user-supplied patterns stay
+// regular expressions.
 func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
 	for i, path := range paths {
 		if _, err = regexp.Compile(path); err != nil {
@@ -21,19 +27,31 @@ func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
 		if !filepath.IsAbs(path) {
 			absPath, err := filepath.Abs(path)
 			if err == nil {
-				paths = append(paths, absPath)
+				paths = append(paths, "(?:"+escapePathSeparators(absPath)+")")
 			}
 		} else {
 			relPath, err := filepath.Rel("/", path)
 			if err == nil {
-				paths = append(paths, relPath)
+				paths = append(paths, "(?:"+escapePathSeparators(relPath)+")")
 			}
 		}
 		paths[i] = "(" + path + ")"
 	}
 
-	ignore := `^(?:` + strings.Join(paths, "|") + `)$`
-	return regexp.Compile(ignore)
+	return compileAnchoredAlternation(paths)
+}
+
+// escapePathSeparators doubles backslashes so that a filesystem path is a
+// valid (literal) regular expression; on Windows, raw backslashes in paths
+// like `E:\repos\git` would otherwise be parsed as invalid escape sequences.
+func escapePathSeparators(path string) string {
+	return strings.ReplaceAll(path, `\`, `\\`)
+}
+
+// compileAnchoredAlternation joins whole-path patterns into a single regexp
+// that matches only when the whole path equals one of the alternatives.
+func compileAnchoredAlternation(patterns []string) (*regexp.Regexp, error) {
+	return regexp.Compile(`^(?:` + strings.Join(patterns, "|") + `)$`)
 }
 
 // SetIgnoreDirPaths sets paths to ignore
@@ -62,9 +80,10 @@ func (ui *UI) SetIgnoreDirPatterns(paths []string) error {
 	return err
 }
 
-// SetIgnoreFromFile sets regular patterns of dirs to ignore
+// SetIgnoreFromFile sets regular patterns of dirs to ignore.
+// The file contains one regular expression per line; blank lines and lines
+// starting with # are skipped.
 func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
-	var err error
 	var paths []string
 	log.Printf("Reading ignoring dir patterns from file '%s'", ignoreFile)
 
@@ -75,8 +94,16 @@ func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		paths = append(paths, scanner.Text())
+	for lineNo := 1; scanner.Scan(); lineNo++ {
+		pattern := strings.TrimSpace(scanner.Text())
+		if pattern == "" || strings.HasPrefix(pattern, "#") {
+			continue
+		}
+		if _, err := regexp.Compile(pattern); err != nil {
+			return fmt.Errorf("invalid pattern %q on line %d of %s: %w",
+				pattern, lineNo, ignoreFile, err)
+		}
+		paths = append(paths, pattern)
 	}
 
 	if err := scanner.Err(); err != nil {
