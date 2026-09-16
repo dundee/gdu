@@ -36,6 +36,12 @@ Path patterns to ignore (separated by comma). Patterns can be absolute or relati
 
 Read path patterns to ignore from file. Patterns can be absolute or relative to the current working directory.
 
+#### `ignore-from-gitignore`
+
+Read directories to ignore from a file with [gitignore-style patterns](https://git-scm.com/docs/gitignore). One pattern per line; blank lines and comments (starting with `#`) are skipped. A name without `/` matches at any depth, a trailing `/` marks a directory and a leading `/` anchors the pattern to the scanned root. Negated patterns (starting with `!`) are not supported and are skipped.
+
+When more than one of `ignore-dir-patterns`, `ignore-from-file` and `ignore-from-gitignore` is set, only the one with the highest precedence applies (`ignore-from-gitignore` > `ignore-from-file` > `ignore-dir-patterns`), matching the existing `ignore-from-file` over `ignore-dir-patterns` behavior. Paths from `ignore-dirs` always apply in addition.
+
 #### `max-cores`
 
 Set max cores that Gdu will use.

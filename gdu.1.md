@@ -43,6 +43,14 @@ only.
     Read path patterns to ignore from file.
     Supports both absolute and relative path patterns.
 
+**-G**, **\--ignore-from-gitignore**
+    Read directories to ignore from file with .gitignore-style patterns.
+    A name without / matches at any depth, a trailing / marks a directory,
+    a leading / anchors the pattern to the scanned root. Blank lines and
+    comments are skipped; negated patterns (starting with !) are not supported.
+    When combined with -I or -X, the last pattern source wins (-G > -X > -I);
+    paths from -i always apply in addition.
+
 **-T**, **\--type** File types to include (e.g., --type yaml,json)
 
 **-E**, **\--exclude-type** File types to exclude (e.g., --exclude-type yaml,json)

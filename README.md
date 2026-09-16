@@ -40,62 +40,63 @@ Or you can use Gdu directly via Docker:
   gdu [flags] [directory_to_scan...]
 
 Flags:
-      --archive-browsing              Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
-      --collapse-path                 Collapse single-child directory chains
-      --config-file string            Read config from file (default is $HOME/.gdu.yaml)
-      --ctrl-c-quits                  Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results (Esc always stops the scan)
-  -D, --db string                     Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
-      --depth int                     Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
-      --enable-profiling              Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
-  -E, --exclude-type strings          File types to exclude (e.g., --exclude-type yaml,json)
-  -L, --follow-symlinks               Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
-  -h, --help                          help for gdu
-  -i, --ignore-dirs strings           Paths to ignore (separated by comma). Can be absolute or relative to current directory (default [/proc,/dev,/sys,/run])
-  -I, --ignore-dirs-pattern strings   Path patterns to ignore (separated by comma)
-  -X, --ignore-from string            Read path patterns to ignore from file
-  -f, --input-file string             Import analysis from JSON file
-      --interactive                   Force interactive mode even when output is not a TTY
-  -l, --log-file string               Path to a logfile (default "/dev/null")
-      --max-age string                Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
-  -m, --max-cores int                 Set max cores that Gdu will use. 8 cores available (default 8)
-      --min-age string                Include files with mtime at least DURATION old (e.g., 30d, 1w)
-      --mouse                         Use mouse
-  -c, --no-color                      Do not use colorized output
-      --no-confirm-quit               Do not ask for confirmation before quitting after a long scan
-  -x, --no-cross                      Do not cross filesystem boundaries
-      --no-delete                     Do not allow deletions
-  -H, --no-hidden                     Ignore hidden directories (beginning with dot)
-      --no-prefix                     Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
-  -p, --no-progress                   Do not show progress in non-interactive mode
-      --no-spawn-shell                Do not allow spawning shell
-  -u, --no-unicode                    Do not use Unicode symbols (for size bar)
-      --no-view-file                  Do not allow viewing file contents
-  -n, --non-interactive               Do not run in interactive mode
-      --output-attrs string           Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg)
-  -o, --output-file string            Export all info into file as JSON
-  -r, --read-from-storage             Use existing database instead of re-scanning
-      --reverse-sort                  Reverse sorting order (smallest to largest) in non-interactive mode
-      --sequential                    Use sequential scanning (intended for rotating HDDs)
-  -A, --show-annexed-size             Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
-  -a, --show-apparent-size            Show apparent size
-  -d, --show-disks                    Show all mounted disks
-  -k, --show-in-kib                   Show sizes in KiB (or kB with --si) in non-interactive mode
-  -C, --show-item-count               Show number of items in directory
-  -M, --show-mtime                    Show latest mtime of items in directory
-  -B, --show-relative-size            Show relative size
-      --show-symlink-target           Show symlink target (name -> target) in the file list
-      --si                            Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
-      --since string                  Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)
-  -s, --summarize                     Show only a total in non-interactive mode
-  -t, --top int                       Show only top X largest files in non-interactive mode
-      --trash-command string          Command used to move items to trash instead of the built-in trash (e.g. 'trash-put --trash-dir ~/mytrash')
-  -T, --type strings                  File types to include (e.g., --type yaml,json)
-      --until string                  Include files with mtime <= WHEN. WHEN accepts RFC3339 timestamp or date only YYYY-MM-DD
-  -v, --version                       Print version
-      --web                           Run the web UI (serves a browser interface instead of the terminal UI)
-      --web-listen string             Address for the web UI to listen on (default: localhost with a random free port)
-      --web-open                      Open the web UI in the default browser on start (default true)
-      --write-config                  Write current configuration to file (default is $HOME/.gdu.yaml)
+      --archive-browsing               Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)
+      --collapse-path                  Collapse single-child directory chains
+      --config-file string             Read config from file (default is $HOME/.gdu.yaml)
+      --ctrl-c-quits                   Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results (Esc always stops the scan)
+  -D, --db string                      Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
+      --depth int                      Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
+      --enable-profiling               Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
+  -E, --exclude-type strings           File types to exclude (e.g., --exclude-type yaml,json)
+  -L, --follow-symlinks                Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
+  -h, --help                           help for gdu
+  -i, --ignore-dirs strings            Paths to ignore (separated by comma). Can be absolute or relative to current directory (default [/proc,/dev,/sys,/run])
+  -I, --ignore-dirs-pattern strings    Path patterns to ignore (separated by comma)
+  -X, --ignore-from string             Read path patterns to ignore from file
+  -G, --ignore-from-gitignore string   Read directories to ignore from file with .gitignore-style patterns
+  -f, --input-file string              Import analysis from JSON file
+      --interactive                    Force interactive mode even when output is not a TTY
+  -l, --log-file string                Path to a logfile (default "/dev/null")
+      --max-age string                 Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
+  -m, --max-cores int                     Set max cores that Gdu will use. 8 cores available (default 8)
+      --min-age string                 Include files with mtime at least DURATION old (e.g., 30d, 1w)
+      --mouse                          Use mouse
+  -c, --no-color                       Do not use colorized output
+      --no-confirm-quit                Do not ask for confirmation before quitting after a long scan
+  -x, --no-cross                       Do not cross filesystem boundaries
+      --no-delete                      Do not allow deletions
+  -H, --no-hidden                      Ignore hidden directories (beginning with dot)
+      --no-prefix                      Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode
+  -p, --no-progress                    Do not show progress in non-interactive mode
+      --no-spawn-shell                 Do not allow spawning shell
+  -u, --no-unicode                     Do not use Unicode symbols (for size bar)
+      --no-view-file                   Do not allow viewing file contents
+  -n, --non-interactive                Do not run in interactive mode
+      --output-attrs string            Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg)
+  -o, --output-file string             Export all info into file as JSON
+  -r, --read-from-storage              Use existing database instead of re-scanning
+      --reverse-sort                   Reverse sorting order (smallest to largest) in non-interactive mode
+      --sequential                     Use sequential scanning (intended for rotating HDDs)
+  -A, --show-annexed-size              Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
+  -a, --show-apparent-size             Show apparent size
+  -d, --show-disks                     Show all mounted disks
+  -k, --show-in-kib                    Show sizes in KiB (or kB with --si) in non-interactive mode
+  -C, --show-item-count                Show number of items in directory
+  -M, --show-mtime                     Show latest mtime of items in directory
+  -B, --show-relative-size             Show relative size
+      --show-symlink-target            Show symlink target (name -> target) in the file list
+      --si                             Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)
+      --since string                   Include files with mtime >= WHEN. WHEN accepts RFC3339 timestamp (e.g., 2025-08-11T01:00:00-07:00) or date only YYYY-MM-DD (calendar-day compare; includes the whole day)
+  -s, --summarize                      Show only a total in non-interactive mode
+  -t, --top int                        Show only top X largest files in non-interactive mode
+      --trash-command string           Command used to move items to trash instead of the built-in trash (e.g. 'trash-put --trash-dir ~/mytrash')
+  -T, --type strings                   File types to include (e.g., --type yaml,json)
+      --until string                   Include files with mtime <= WHEN. WHEN accepts RFC3339 timestamp or date only YYYY-MM-DD
+  -v, --version                        Print version
+      --web                            Run the web UI (serves a browser interface instead of the terminal UI)
+      --web-listen string              Address for the web UI to listen on (default: localhost with a random free port)
+      --web-open                       Open the web UI in the default browser on start (default true)
+      --write-config                   Write current configuration to file (default is $HOME/.gdu.yaml)
 
 Basic list of actions in interactive mode (show help modal for more):
   ↑ or k                              Move cursor up
@@ -126,6 +127,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu -i /sys,/proc /                   # ignore some paths
     gdu -I '.*[abc]+'                     # ignore paths by regular pattern
     gdu -X ignore_file /                  # ignore paths by regular patterns from file
+    gdu -G .gitignore /                   # ignore dirs by .gitignore-style patterns from file
     gdu -c /                              # use only white/gray/black colors
 
     gdu -n /                              # only print stats, do not start interactive mode

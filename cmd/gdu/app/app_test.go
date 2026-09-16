@@ -216,6 +216,25 @@ func TestAnalyzePathWithIgnoringFromNotExistingFile(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestAnalyzePathWithIgnoringFromNotExistingGitignoreFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile:             "/dev/null",
+			IgnoreFromGitignore: "file",
+			NoHidden:            true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Equal(t, out, "")
+	assert.NotNil(t, err)
+}
+
 func TestAnalyzePathWithGui(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -837,20 +856,21 @@ type uiTimeFilterMock struct {
 	timeFilter common.TimeFilter
 }
 
-func (m *uiTimeFilterMock) ListDevices(getter device.DevicesInfoGetter) error { return nil }
-func (m *uiTimeFilterMock) AnalyzePath(path string, parentDir gfs.Item) error { return nil }
-func (m *uiTimeFilterMock) AnalyzePaths(paths []string) error                 { return nil }
-func (m *uiTimeFilterMock) ReadAnalysis(input io.Reader) error                { return nil }
-func (m *uiTimeFilterMock) ReadFromStorage(storagePath, path string) error    { return nil }
-func (m *uiTimeFilterMock) SetIgnoreTypes(types []string)                     {}
-func (m *uiTimeFilterMock) SetIgnoreDirPaths(paths []string)                  {}
-func (m *uiTimeFilterMock) SetIgnoreDirPatterns(paths []string) error         { return nil }
-func (m *uiTimeFilterMock) SetIgnoreFromFile(ignoreFile string) error         { return nil }
-func (m *uiTimeFilterMock) SetIgnoreHidden(value bool)                        {}
-func (m *uiTimeFilterMock) SetIncludeTypes(types []string)                    {}
-func (m *uiTimeFilterMock) SetFollowSymlinks(value bool)                      {}
-func (m *uiTimeFilterMock) SetShowAnnexedSize(value bool)                     {}
-func (m *uiTimeFilterMock) SetAnalyzer(analyzer common.Analyzer)              {}
+func (m *uiTimeFilterMock) ListDevices(getter device.DevicesInfoGetter) error  { return nil }
+func (m *uiTimeFilterMock) AnalyzePath(path string, parentDir gfs.Item) error  { return nil }
+func (m *uiTimeFilterMock) AnalyzePaths(paths []string) error                  { return nil }
+func (m *uiTimeFilterMock) ReadAnalysis(input io.Reader) error                 { return nil }
+func (m *uiTimeFilterMock) ReadFromStorage(storagePath, path string) error     { return nil }
+func (m *uiTimeFilterMock) SetIgnoreTypes(types []string)                      {}
+func (m *uiTimeFilterMock) SetIgnoreDirPaths(paths []string)                   {}
+func (m *uiTimeFilterMock) SetIgnoreDirPatterns(paths []string) error          { return nil }
+func (m *uiTimeFilterMock) SetIgnoreFromFile(ignoreFile string) error          { return nil }
+func (m *uiTimeFilterMock) SetIgnoreFromGitignoreFile(ignoreFile string) error { return nil }
+func (m *uiTimeFilterMock) SetIgnoreHidden(value bool)                         {}
+func (m *uiTimeFilterMock) SetIncludeTypes(types []string)                     {}
+func (m *uiTimeFilterMock) SetFollowSymlinks(value bool)                       {}
+func (m *uiTimeFilterMock) SetShowAnnexedSize(value bool)                      {}
+func (m *uiTimeFilterMock) SetAnalyzer(analyzer common.Analyzer)               {}
 func (m *uiTimeFilterMock) SetTimeFilter(timeFilter common.TimeFilter) {
 	m.timeFilter = timeFilter
 }
