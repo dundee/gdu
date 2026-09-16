@@ -202,7 +202,9 @@ func exportedFile(file, parent fs.Item) *analyze.File {
 }
 
 func (ui *UI) topDir(dir fs.Item) fs.Item {
-	files := analyze.CollectTopFiles(dir, ui.top)
+	// the export UI is never told about --show-apparent-size, so its top-N
+	// ranking stays on apparent size
+	files := analyze.CollectTopFiles(dir, ui.top, fs.SortByApparentSize)
 
 	topDir := exportedDir(dir)
 	for _, f := range files {
