@@ -46,10 +46,12 @@ only.
 **-G**, **\--ignore-from-gitignore**
     Read directories to ignore from file with .gitignore-style patterns.
     A name without / matches at any depth, a trailing / marks a directory,
-    a leading / anchors the pattern to the scanned root. Blank lines and
-    comments are skipped; negated patterns (starting with !) are not supported.
-    When combined with -I or -X, the last pattern source wins (-G > -X > -I);
-    paths from -i always apply in addition.
+    a leading / anchors the pattern to the directory being scanned. Blank
+    lines and comments are skipped. Negated patterns (starting with !) and
+    patterns matching every directory (such as * or **) are rejected with
+    an error, as both would make gdu report less than is really on disk.
+    -I, -X and -G combine: a directory is ignored if it matches any of
+    them. Paths from -i apply in addition.
 
 **-T**, **\--type** File types to include (e.g., --type yaml,json)
 

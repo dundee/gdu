@@ -4,6 +4,7 @@ package common
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -12,11 +13,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// SetIgnoreFromGitignoreFile sets dirs to ignore from a file with .gitignore-style
-// patterns. Blank lines and lines starting with # are skipped; negated patterns
-// (starting with !) are not supported and are skipped with a warning.
-func (ui *UI) SetIgnoreFromGitignoreFile(ignoreFile string) error {
-	var patterns []string
+// SetIgnoreFromGitignoreFile sets dirs to ignore from a file with
+// .gitignore-style patterns.
+//
+// scanRoots are the resolved directories being scanned; patterns anchored with
+// a leading / are matched relative to them. Blank lines and # comments are
+// skipped. Negated (!) and match-everything patterns are rejected with an
+// error rather than skipped, because both would silently make gdu report less
+// than is really on disk.
+//
+// The resulting patterns are added to whatever --ignore-dirs-pattern and
+// --ignore-from already contributed; the sources combine.
+func (ui *UI) SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error {
+	var fragments []string
 	log.Printf("Reading ignoring dirs in gitignore syntax from file '%s'", ignoreFile)
 
 	file, err := os.Open(ignoreFile)
@@ -32,61 +41,107 @@ func (ui *UI) SetIgnoreFromGitignoreFile(ignoreFile string) error {
 			continue
 		}
 		if strings.HasPrefix(pattern, "!") {
-			log.Printf("Negated gitignore pattern %q on line %d of %s is not supported, skipping",
+			return fmt.Errorf(
+				"negated pattern %q on line %d of %s is not supported: gdu prunes whole "+
+					"directories, so an already ignored directory cannot be un-ignored; "+
+					"remove the line or drop the pattern it negates",
 				pattern, lineNo, ignoreFile)
-			continue
 		}
-		regex, err := TranslateGitignorePattern(pattern)
+		fragment, err := TranslateGitignorePattern(pattern, scanRoots)
 		if err != nil {
 			return fmt.Errorf("invalid pattern %q on line %d of %s: %w",
 				pattern, lineNo, ignoreFile, err)
 		}
-		patterns = append(patterns, regex)
+		fragments = append(fragments, fragment)
 	}
 
 	if err := scanner.Err(); err != nil {
 		return err
 	}
 
-	ui.IgnoreDirPathPatterns, err = regexp.Compile(`^(?:` + strings.Join(patterns, "|") + `)$`)
-	return err
+	return ui.addIgnoreDirPatterns(fragments)
 }
 
-// TranslateGitignorePattern converts one .gitignore-style pattern into an
-// anchored regular expression matched against the whole directory path.
-// A trailing / (directory marker) is accepted, a leading / anchors the pattern
-// to the scanned root, a name without / matches at any depth, and / in the
-// pattern matches either path separator so that patterns written for Unix
-// also match Windows paths.
-func TranslateGitignorePattern(pattern string) (string, error) {
-	// directory marker; gdu ignores only dirs anyway
-	pattern = strings.TrimSuffix(pattern, "/")
-	// anchor to the scanned root
-	rooted := strings.HasPrefix(pattern, "/")
-	pattern = strings.TrimPrefix(pattern, "/")
-	pattern = strings.TrimPrefix(pattern, "./")
-	// leading **/ means "at any depth", which is what the non-rooted
-	// prefix below already provides
-	if strings.HasPrefix(pattern, "**/") {
-		pattern = strings.TrimPrefix(pattern, "**/")
-		rooted = false
+// TranslateGitignorePattern converts one .gitignore-style pattern into a
+// regular expression fragment matched against the whole directory path.
+//
+// A trailing / (directory marker) is accepted, a name without / matches at any
+// depth, and / in the pattern matches either path separator so that patterns
+// written for Unix also match Windows paths. A leading / anchors the pattern to
+// scanRoots; with no scanRoots it anchors to the start of the path instead.
+func TranslateGitignorePattern(pattern string, scanRoots []string) (string, error) {
+	body, rooted := stripGitignoreDecorations(pattern)
+	if body == "" {
+		return "", errors.New("pattern has no name to match")
 	}
-	// gdu skips whole directories, so a/** means "the dir a itself"
-	pattern = strings.TrimSuffix(pattern, "/**")
 
 	var expr strings.Builder
-	if !rooted {
+	switch {
+	case !rooted:
 		expr.WriteString(`(?:.*[\\/])?`)
+	case len(scanRoots) > 0:
+		expr.WriteString(scanRootPrefix(scanRoots))
 	}
-	for i := 0; i < len(pattern); {
-		i = writeGitignorePatternPart(&expr, pattern, i)
+	for i := 0; i < len(body); {
+		i = writeGitignorePatternPart(&expr, body, i)
 	}
 
 	regex := expr.String()
-	if _, err := regexp.Compile(regex); err != nil {
+	compiled, err := regexp.Compile(`^(?:` + regex + `)$`)
+	if err != nil {
 		return "", err
 	}
+	if matchesEveryPath(compiled) {
+		return "", errors.New(
+			"pattern matches every directory, which would hide the whole scan")
+	}
 	return regex, nil
+}
+
+// stripGitignoreDecorations removes the parts of a pattern that carry meaning
+// on their own - the directory marker, the root anchor and the ** segments
+// that gdu's whole-directory pruning makes redundant - and reports whether
+// what is left is anchored to the scanned root.
+func stripGitignoreDecorations(pattern string) (body string, rooted bool) {
+	// directory marker; gdu ignores only dirs anyway
+	body = strings.TrimSuffix(pattern, "/")
+	// anchor to the scanned root
+	rooted = strings.HasPrefix(body, "/")
+	body = strings.TrimPrefix(body, "/")
+	body = strings.TrimPrefix(body, "./")
+	// leading **/ means "at any depth", which is what the non-rooted
+	// prefix already provides
+	if strings.HasPrefix(body, "**/") {
+		body = strings.TrimPrefix(body, "**/")
+		rooted = false
+	}
+	// gdu skips whole directories, so a/** means "the dir a itself"
+	body = strings.TrimSuffix(body, "/**")
+	return body, rooted
+}
+
+// scanRootPrefix builds the alternation of scanned roots that a pattern
+// anchored with a leading / is matched against, followed by a separator.
+// gdu resolves every scanned path with filepath.Abs, so anchoring at the start
+// of the regex alone would never match anything.
+func scanRootPrefix(scanRoots []string) string {
+	quoted := make([]string, 0, len(scanRoots))
+	for _, root := range scanRoots {
+		// a root of "/" (or "C:\") must not contribute its own separator,
+		// the one appended below would double it
+		trimmed := strings.TrimRight(root, `/\`)
+		quoted = append(quoted, regexp.QuoteMeta(trimmed))
+	}
+	return `(?:` + strings.Join(quoted, "|") + `)[\\/]`
+}
+
+// matchesEveryPath reports whether a translated pattern is so broad that it
+// would prune the entire scan. Patterns such as "*", "**" or "/**" are legal
+// gitignore but meaningless to gdu, and silently returning an empty tree is
+// far worse than refusing the pattern. The sentinels use NUL bytes so that no
+// realistic pattern can match them by intent.
+func matchesEveryPath(compiled *regexp.Regexp) bool {
+	return compiled.MatchString("\x00\x01") || compiled.MatchString("\x00\x01/\x02\x03")
 }
 
 // writeGitignorePatternPart translates the pattern element starting at

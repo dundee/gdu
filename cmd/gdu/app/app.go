@@ -43,7 +43,7 @@ type UI interface {
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
-	SetIgnoreFromGitignoreFile(ignoreFile string) error
+	SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error
 	SetIgnoreHidden(value bool)
 	SetIncludeTypes(types []string)
 	SetFollowSymlinks(value bool)
@@ -339,7 +339,9 @@ func (a *App) Run() error {
 	}
 
 	if a.Flags.IgnoreFromGitignore != "" {
-		if err := ui.SetIgnoreFromGitignoreFile(a.Flags.IgnoreFromGitignore); err != nil {
+		// the scanned roots are needed so that patterns anchored with a
+		// leading / can be matched against the absolute paths gdu scans
+		if err := ui.SetIgnoreFromGitignoreFile(a.Flags.IgnoreFromGitignore, paths); err != nil {
 			return err
 		}
 	}

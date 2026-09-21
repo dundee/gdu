@@ -14,6 +14,7 @@ func TestTranslateGitignorePattern(t *testing.T) {
 	tests := []struct {
 		name    string
 		pattern string
+		roots   []string
 		matches []string
 		skips   []string
 	}{
@@ -31,6 +32,34 @@ func TestTranslateGitignorePattern(t *testing.T) {
 		},
 		{
 			name:    "leading slash anchors to the scanned root",
+			pattern: "/build",
+			roots:   []string{"/home/me/proj"},
+			matches: []string{"/home/me/proj/build"},
+			skips:   []string{"/home/me/proj/a/build", "/home/me/proj/builder", "/elsewhere/build"},
+		},
+		{
+			name:    "leading slash anchors to each of several scanned roots",
+			pattern: "/build",
+			roots:   []string{"/home/me/one", "/home/me/two"},
+			matches: []string{"/home/me/one/build", "/home/me/two/build"},
+			skips:   []string{"/home/me/three/build"},
+		},
+		{
+			name:    "root is the filesystem root",
+			pattern: "/proc",
+			roots:   []string{"/"},
+			matches: []string{"/proc"},
+			skips:   []string{"/a/proc"},
+		},
+		{
+			name:    "scanned root is escaped, not treated as a pattern",
+			pattern: "/build",
+			roots:   []string{"/home/me/c++ (x86)"},
+			matches: []string{"/home/me/c++ (x86)/build"},
+			skips:   []string{"/home/me/cxx (x86)/build"},
+		},
+		{
+			name:    "leading slash without roots anchors to the start of the path",
 			pattern: "/build",
 			matches: []string{"build"},
 			skips:   []string{"a/build", "builder"},
@@ -129,7 +158,7 @@ func TestTranslateGitignorePattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			regex, err := common.TranslateGitignorePattern(tt.pattern)
+			regex, err := common.TranslateGitignorePattern(tt.pattern, tt.roots)
 			assert.Nil(t, err)
 			// the fragment is meant to be used inside an anchored alternation
 			re, err := regexp.Compile(`^(?:` + regex + `)$`)
@@ -148,23 +177,71 @@ func TestTranslateGitignorePattern(t *testing.T) {
 func TestSetIgnoreFromGitignoreFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".gitignore")
-	content := "# comment line\n\nnode_modules/\ntarget\n/build\n*.class\n!keep\n"
+	content := "# comment line\n\nnode_modules/\ntarget\n/build\n*.class\n"
 	err := os.WriteFile(path, []byte(content), 0o600)
 	assert.Nil(t, err)
 
 	ui := &common.UI{}
-	err = ui.SetIgnoreFromGitignoreFile(path)
+	err = ui.SetIgnoreFromGitignoreFile(path, []string{"/scan/root"})
 	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
-	assert.True(t, shouldBeIgnored("node_modules", "a/node_modules"))
+	assert.True(t, shouldBeIgnored("node_modules", "/scan/root/a/node_modules"))
 	assert.True(t, shouldBeIgnored("node_modules", `a\b\node_modules`))
-	assert.True(t, shouldBeIgnored("target", "x/y/target"))
-	assert.True(t, shouldBeIgnored("build", "build"))
-	assert.False(t, shouldBeIgnored("build", "deep/build"))
-	assert.False(t, shouldBeIgnored("xxx", "xxx"))
-	// negated patterns are skipped, they do not ignore anything
-	assert.False(t, shouldBeIgnored("keep", "keep"))
+	assert.True(t, shouldBeIgnored("target", "/scan/root/x/y/target"))
+	assert.True(t, shouldBeIgnored("build", "/scan/root/build"))
+	assert.False(t, shouldBeIgnored("build", "/scan/root/deep/build"))
+	assert.False(t, shouldBeIgnored("build", "/other/root/build"))
+	assert.False(t, shouldBeIgnored("xxx", "/scan/root/xxx"))
+}
+
+func TestSetIgnoreFromGitignoreNegatedPattern(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".gitignore")
+	content := "build/\n!build/keep\n"
+	err := os.WriteFile(path, []byte(content), 0o600)
+	assert.Nil(t, err)
+
+	ui := &common.UI{}
+	err = ui.SetIgnoreFromGitignoreFile(path, nil)
+
+	// skipping the negation would silently prune build/keep as well, so gdu
+	// would under-report the size on disk; refuse the file instead
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "line 2")
+	assert.Contains(t, err.Error(), "!build/keep")
+	assert.Contains(t, err.Error(), "not supported")
+}
+
+func TestSetIgnoreFromGitignoreMatchEverythingPattern(t *testing.T) {
+	for _, pattern := range []string{"*", "**", "**/", "/**", "**/*"} {
+		t.Run(pattern, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, ".gitignore")
+			err := os.WriteFile(path, []byte("node_modules\n"+pattern+"\n"), 0o600)
+			assert.Nil(t, err)
+
+			ui := &common.UI{}
+			err = ui.SetIgnoreFromGitignoreFile(path, nil)
+
+			assert.NotNil(t, err)
+			assert.Contains(t, err.Error(), "line 2")
+			assert.Contains(t, err.Error(), "matches every directory")
+		})
+	}
+}
+
+func TestSetIgnoreFromGitignoreEmptyPattern(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".gitignore")
+	err := os.WriteFile(path, []byte("/\n"), 0o600)
+	assert.Nil(t, err)
+
+	ui := &common.UI{}
+	err = ui.SetIgnoreFromGitignoreFile(path, nil)
+
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "no name to match")
 }
 
 func TestSetIgnoreFromGitignoreInvalidPattern(t *testing.T) {
@@ -175,7 +252,7 @@ func TestSetIgnoreFromGitignoreInvalidPattern(t *testing.T) {
 	assert.Nil(t, err)
 
 	ui := &common.UI{}
-	err = ui.SetIgnoreFromGitignoreFile(path)
+	err = ui.SetIgnoreFromGitignoreFile(path, nil)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "line 2")
 	assert.Contains(t, err.Error(), "foo[z-a]bar")
@@ -184,26 +261,48 @@ func TestSetIgnoreFromGitignoreInvalidPattern(t *testing.T) {
 
 func TestSetIgnoreFromNotExistingGitignoreFile(t *testing.T) {
 	ui := &common.UI{}
-	err := ui.SetIgnoreFromGitignoreFile(filepath.Join("xxx", "yyy"))
+	err := ui.SetIgnoreFromGitignoreFile(filepath.Join("xxx", "yyy"), nil)
 	assert.NotNil(t, err)
 }
 
 func TestSetIgnoreFromGitignoreDirectory(t *testing.T) {
 	ui := &common.UI{}
-	err := ui.SetIgnoreFromGitignoreFile(t.TempDir())
+	err := ui.SetIgnoreFromGitignoreFile(t.TempDir(), nil)
 	assert.NotNil(t, err)
 }
 
 func TestSetIgnoreFromEmptyGitignoreFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".gitignore")
-	err := os.WriteFile(path, []byte(""), 0o600)
+	err := os.WriteFile(path, []byte("# nothing but a comment\n"), 0o600)
 	assert.Nil(t, err)
 
 	ui := &common.UI{}
-	err = ui.SetIgnoreFromGitignoreFile(path)
+	err = ui.SetIgnoreFromGitignoreFile(path, nil)
 	assert.Nil(t, err)
+
+	// no patterns at all must leave the scan unfiltered rather than compile
+	// an empty alternation that matches the empty path
+	assert.Nil(t, ui.IgnoreDirPathPatterns)
 
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 	assert.False(t, shouldBeIgnored("anything", "/anything"))
+	assert.False(t, shouldBeIgnored("", ""))
+}
+
+func TestGitignoreCombinesWithOtherPatternSources(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".gitignore")
+	err := os.WriteFile(path, []byte("node_modules\n"), 0o600)
+	assert.Nil(t, err)
+
+	ui := &common.UI{}
+	assert.Nil(t, ui.SetIgnoreDirPatterns([]string{"/from-pattern"}))
+	assert.Nil(t, ui.SetIgnoreFromGitignoreFile(path, nil))
+	shouldBeIgnored := ui.CreateIgnoreFunc()
+
+	// neither source is dropped just because the other one was given too
+	assert.True(t, shouldBeIgnored("from-pattern", "/from-pattern"))
+	assert.True(t, shouldBeIgnored("node_modules", "/a/node_modules"))
+	assert.False(t, shouldBeIgnored("xxx", "/xxx"))
 }

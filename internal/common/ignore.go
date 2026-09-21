@@ -14,26 +14,65 @@ import (
 
 // CreateIgnorePattern creates one pattern from all path patterns
 func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
-	for i, path := range paths {
-		if _, err = regexp.Compile(path); err != nil {
+	fragments, err := regexPatternFragments(paths)
+	if err != nil {
+		return nil, err
+	}
+	return compileIgnoreFragments(fragments)
+}
+
+// regexPatternFragments validates the given regular path patterns and returns
+// them as regex fragments. Each pattern gets an absolute/relative twin so that
+// it matches regardless of how the scanned path was spelled.
+func regexPatternFragments(paths []string) ([]string, error) {
+	fragments := make([]string, 0, len(paths)*2)
+	for _, path := range paths {
+		if _, err := regexp.Compile(path); err != nil {
 			return nil, err
 		}
+		fragments = append(fragments, "("+path+")")
+
+		// the twin is wrapped too, so that a pattern containing a top level
+		// alternation does not leak its branches into the combined pattern
 		if !filepath.IsAbs(path) {
-			absPath, err := filepath.Abs(path)
-			if err == nil {
-				paths = append(paths, absPath)
+			if absPath, err := filepath.Abs(path); err == nil {
+				fragments = append(fragments, "("+absPath+")")
 			}
 		} else {
-			relPath, err := filepath.Rel("/", path)
-			if err == nil {
-				paths = append(paths, relPath)
+			if relPath, err := filepath.Rel("/", path); err == nil {
+				fragments = append(fragments, "("+relPath+")")
 			}
 		}
-		paths[i] = "(" + path + ")"
 	}
+	return fragments, nil
+}
 
-	ignore := `^(?:` + strings.Join(paths, "|") + `)$`
-	return regexp.Compile(ignore)
+// compileIgnoreFragments joins regex fragments into a single anchored pattern.
+// No fragments means no filtering at all, which is a nil pattern rather than
+// an empty alternation - `^(?:)$` would still match the empty path and would
+// push CreateIgnoreFunc onto the regex branch for no benefit.
+func compileIgnoreFragments(fragments []string) (*regexp.Regexp, error) {
+	if len(fragments) == 0 {
+		return nil, nil
+	}
+	return regexp.Compile(`^(?:` + strings.Join(fragments, "|") + `)$`)
+}
+
+// addIgnoreDirPatterns registers regex fragments coming from one pattern
+// source and recompiles the combined pattern.
+//
+// Sources accumulate instead of overriding each other: --ignore-dirs-pattern,
+// --ignore-from and --ignore-from-gitignore all feed this one pattern, so a
+// pattern the user asked for is never silently dropped because another flag
+// was given as well.
+func (ui *UI) addIgnoreDirPatterns(fragments []string) error {
+	ui.ignorePatternFragments = append(ui.ignorePatternFragments, fragments...)
+	compiled, err := compileIgnoreFragments(ui.ignorePatternFragments)
+	if err != nil {
+		return err
+	}
+	ui.IgnoreDirPathPatterns = compiled
+	return nil
 }
 
 // SetIgnoreDirPaths sets paths to ignore
@@ -56,15 +95,16 @@ func (ui *UI) SetIgnoreDirPaths(paths []string) {
 
 // SetIgnoreDirPatterns sets regular patterns of dirs to ignore
 func (ui *UI) SetIgnoreDirPatterns(paths []string) error {
-	var err error
 	log.Printf("Ignoring dir patterns %s", strings.Join(paths, ", "))
-	ui.IgnoreDirPathPatterns, err = CreateIgnorePattern(paths)
-	return err
+	fragments, err := regexPatternFragments(paths)
+	if err != nil {
+		return err
+	}
+	return ui.addIgnoreDirPatterns(fragments)
 }
 
 // SetIgnoreFromFile sets regular patterns of dirs to ignore
 func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
-	var err error
 	var paths []string
 	log.Printf("Reading ignoring dir patterns from file '%s'", ignoreFile)
 
@@ -76,15 +116,22 @@ func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		paths = append(paths, scanner.Text())
+		// a blank line is not a pattern that matches the empty path, it is
+		// just formatting
+		if path := scanner.Text(); path != "" {
+			paths = append(paths, path)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return err
 	}
 
-	ui.IgnoreDirPathPatterns, err = CreateIgnorePattern(paths)
-	return err
+	fragments, err := regexPatternFragments(paths)
+	if err != nil {
+		return err
+	}
+	return ui.addIgnoreDirPatterns(fragments)
 }
 
 // SetIgnoreTypes sets file types to ignore

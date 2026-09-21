@@ -22,8 +22,12 @@ type UI struct {
 	ShowApparentSize      bool
 	ShowRelativeSize      bool
 	FilteringFiles        bool
-	blockSize             int64
-	blockSuffix           string
+	// regex fragments contributed by every pattern source (-I, -X, -G),
+	// kept so that a later source can be combined with the earlier ones
+	// instead of replacing them
+	ignorePatternFragments []string
+	blockSize              int64
+	blockSuffix            string
 }
 
 // SetAnalyzer sets analyzer instance

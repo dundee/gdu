@@ -58,7 +58,7 @@ Flags:
       --interactive                    Force interactive mode even when output is not a TTY
   -l, --log-file string                Path to a logfile (default "/dev/null")
       --max-age string                 Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
-  -m, --max-cores int                     Set max cores that Gdu will use. 8 cores available (default 8)
+  -m, --max-cores int                  Set max cores that Gdu will use. 8 cores available (default 8)
       --min-age string                 Include files with mtime at least DURATION old (e.g., 30d, 1w)
       --mouse                          Use mouse
   -c, --no-color                       Do not use colorized output
