@@ -355,7 +355,8 @@ func (ui *UI) showDir(dir fs.Item) {
 }
 
 func (ui *UI) printTopFiles(file fs.Item) {
-	collected := analyze.CollectTopFiles(file, ui.top)
+	sortBy, _ := ui.sortSettings()
+	collected := analyze.CollectTopFiles(file, ui.top, sortBy)
 	for _, file := range collected {
 		ui.printItemPath(file)
 	}
@@ -545,11 +546,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		return err
 	}
 
-	if ui.summarize {
-		ui.printTotalItem(dir)
-	} else {
-		ui.showDir(dir)
-	}
+	ui.printAnalyzedDir(dir)
 
 	return nil
 }

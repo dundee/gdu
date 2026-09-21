@@ -107,6 +107,38 @@ func TestIgnoreFromNotExistingFile(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestIgnoreFromFileSkipsBlankLinesAndComments(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ignore")
+	content := "# a comment\n\n   \n/aaa\n  /bbb  \n"
+	err := os.WriteFile(path, []byte(content), 0o600)
+	assert.Nil(t, err)
+
+	ui := &common.UI{}
+	err = ui.SetIgnoreFromFile(path)
+	assert.Nil(t, err)
+	shouldBeIgnored := ui.CreateIgnoreFunc()
+
+	assert.True(t, shouldBeIgnored("aaa", "/aaa"))
+	assert.True(t, shouldBeIgnored("bbb", "/bbb"))
+	assert.False(t, shouldBeIgnored("xxx", "/xxx"))
+}
+
+func TestIgnoreFromFileInvalidPatternError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ignore")
+	content := "/aaa\n*.class\n"
+	err := os.WriteFile(path, []byte(content), 0o600)
+	assert.Nil(t, err)
+
+	ui := &common.UI{}
+	err = ui.SetIgnoreFromFile(path)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "line 2")
+	assert.Contains(t, err.Error(), "*.class")
+	assert.Contains(t, err.Error(), path)
+}
+
 func TestIgnoreHidden(t *testing.T) {
 	ui := &common.UI{}
 	ui.SetIgnoreHidden(true)

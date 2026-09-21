@@ -1,8 +1,6 @@
 package analyze
 
 import (
-	"sort"
-
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -11,29 +9,40 @@ type TopList struct {
 	Items   fs.Files
 	Count   int
 	MinSize int64
+	SortBy  fs.SortBy
 }
 
-// NewTopList creates new TopList
-func NewTopList(count int) *TopList {
-	return &TopList{Count: count}
+// NewTopList creates new TopList ranking files by sortBy
+func NewTopList(count int, sortBy fs.SortBy) *TopList {
+	return &TopList{Count: count, SortBy: sortBy}
+}
+
+// rankedSize returns the value of the ranking metric of the item, so that the
+// list is built from the same number the caller orders and displays by.
+func (tl *TopList) rankedSize(item fs.Item) int64 {
+	if tl.SortBy == fs.SortByApparentSize {
+		return item.GetSize()
+	}
+	return item.GetUsage()
 }
 
 // Add adds file to the list
 func (tl *TopList) Add(file fs.Item) {
-	if file.GetSize() > tl.MinSize || len(tl.Items) < tl.Count {
+	if tl.rankedSize(file) > tl.MinSize || len(tl.Items) < tl.Count {
 		tl.Items = append(tl.Items, file)
-		sort.Sort(fs.ByApparentSize(tl.Items))
+		sortFiles(tl.Items, tl.SortBy, fs.SortAsc)
 		if len(tl.Items) > tl.Count {
 			tl.Items = tl.Items[1:]
 		}
-		tl.MinSize = tl.Items[0].GetSize()
+		tl.MinSize = tl.rankedSize(tl.Items[0])
 	}
 }
 
-func CollectTopFiles(dir fs.Item, count int) fs.Files {
-	topList := NewTopList(count)
+// CollectTopFiles returns the count largest files in dir, ranked by sortBy
+func CollectTopFiles(dir fs.Item, count int, sortBy fs.SortBy) fs.Files {
+	topList := NewTopList(count, sortBy)
 	walkDir(dir, topList)
-	sort.Sort(sort.Reverse(fs.ByApparentSize(topList.Items)))
+	sortFiles(topList.Items, sortBy, fs.SortDesc)
 	return topList.Items
 }
 

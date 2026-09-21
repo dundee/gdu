@@ -4,6 +4,7 @@ package common
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,7 +13,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// CreateIgnorePattern creates one pattern from all path patterns
+// CreateIgnorePattern creates one pattern from all path patterns.
+// Every relative pattern also gets its absolute form added as an alternative
+// and vice versa, so that patterns work no matter whether the scanned paths
+// are relative or absolute. The added alternative is the pattern itself with
+// a generated path prefix, so it stays a regular expression; only the path
+// separators in it are escaped.
 func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
 	fragments, err := regexPatternFragments(paths)
 	if err != nil {
@@ -32,22 +38,32 @@ func regexPatternFragments(paths []string) ([]string, error) {
 		}
 		fragments = append(fragments, "("+path+")")
 
-		// the twin is wrapped too, so that a pattern containing a top level
-		// alternation does not leak its branches into the combined pattern
+		// the twin is the generated absolute (or relative) form of the same
+		// pattern, so only the path separators are escaped: the user's
+		// pattern has to keep working as a regexp inside it, while a Windows
+		// prefix like E:\repos\git must not be read as regexp escapes
 		if !filepath.IsAbs(path) {
 			if absPath, err := filepath.Abs(path); err == nil {
-				fragments = append(fragments, "("+absPath+")")
+				fragments = append(fragments, "(?:"+escapePathSeparators(absPath)+")")
 			}
 		} else {
 			if relPath, err := filepath.Rel("/", path); err == nil {
-				fragments = append(fragments, "("+relPath+")")
+				fragments = append(fragments, "(?:"+escapePathSeparators(relPath)+")")
 			}
 		}
 	}
 	return fragments, nil
 }
 
-// compileIgnoreFragments joins regex fragments into a single anchored pattern.
+// escapePathSeparators doubles backslashes so that a filesystem path is a
+// valid (literal) regular expression; on Windows, raw backslashes in paths
+// like `E:\repos\git` would otherwise be parsed as invalid escape sequences.
+func escapePathSeparators(path string) string {
+	return strings.ReplaceAll(path, `\`, `\\`)
+}
+
+// compileIgnoreFragments joins regex fragments into a single pattern that
+// matches only when the whole path equals one of the alternatives.
 // No fragments means no filtering at all, which is a nil pattern rather than
 // an empty alternation - `^(?:)$` would still match the empty path and would
 // push CreateIgnoreFunc onto the regex branch for no benefit.
@@ -103,7 +119,9 @@ func (ui *UI) SetIgnoreDirPatterns(paths []string) error {
 	return ui.addIgnoreDirPatterns(fragments)
 }
 
-// SetIgnoreFromFile sets regular patterns of dirs to ignore
+// SetIgnoreFromFile sets regular patterns of dirs to ignore.
+// The file contains one regular expression per line; blank lines and lines
+// starting with # are skipped.
 func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
 	var paths []string
 	log.Printf("Reading ignoring dir patterns from file '%s'", ignoreFile)
@@ -115,12 +133,16 @@ func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		// a blank line is not a pattern that matches the empty path, it is
-		// just formatting
-		if path := scanner.Text(); path != "" {
-			paths = append(paths, path)
+	for lineNo := 1; scanner.Scan(); lineNo++ {
+		pattern := strings.TrimSpace(scanner.Text())
+		if pattern == "" || strings.HasPrefix(pattern, "#") {
+			continue
 		}
+		if _, err := regexp.Compile(pattern); err != nil {
+			return fmt.Errorf("invalid pattern %q on line %d of %s: %w",
+				pattern, lineNo, ignoreFile, err)
+		}
+		paths = append(paths, pattern)
 	}
 
 	if err := scanner.Err(); err != nil {
