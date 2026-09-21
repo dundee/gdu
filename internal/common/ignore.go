@@ -16,29 +16,43 @@ import (
 // CreateIgnorePattern creates one pattern from all path patterns.
 // Every relative pattern also gets its absolute form added as an alternative
 // and vice versa, so that patterns work no matter whether the scanned paths
-// are relative or absolute. The added path alternatives are literal paths
-// (with path separators escaped), while the user-supplied patterns stay
-// regular expressions.
+// are relative or absolute. The added alternative is the pattern itself with
+// a generated path prefix, so it stays a regular expression; only the path
+// separators in it are escaped.
 func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
-	for i, path := range paths {
-		if _, err = regexp.Compile(path); err != nil {
+	fragments, err := regexPatternFragments(paths)
+	if err != nil {
+		return nil, err
+	}
+	return compileIgnoreFragments(fragments)
+}
+
+// regexPatternFragments validates the given regular path patterns and returns
+// them as regex fragments. Each pattern gets an absolute/relative twin so that
+// it matches regardless of how the scanned path was spelled.
+func regexPatternFragments(paths []string) ([]string, error) {
+	fragments := make([]string, 0, len(paths)*2)
+	for _, path := range paths {
+		if _, err := regexp.Compile(path); err != nil {
 			return nil, err
 		}
+		fragments = append(fragments, "("+path+")")
+
+		// the twin is the generated absolute (or relative) form of the same
+		// pattern, so only the path separators are escaped: the user's
+		// pattern has to keep working as a regexp inside it, while a Windows
+		// prefix like E:\repos\git must not be read as regexp escapes
 		if !filepath.IsAbs(path) {
-			absPath, err := filepath.Abs(path)
-			if err == nil {
-				paths = append(paths, "(?:"+escapePathSeparators(absPath)+")")
+			if absPath, err := filepath.Abs(path); err == nil {
+				fragments = append(fragments, "(?:"+escapePathSeparators(absPath)+")")
 			}
 		} else {
-			relPath, err := filepath.Rel("/", path)
-			if err == nil {
-				paths = append(paths, "(?:"+escapePathSeparators(relPath)+")")
+			if relPath, err := filepath.Rel("/", path); err == nil {
+				fragments = append(fragments, "(?:"+escapePathSeparators(relPath)+")")
 			}
 		}
-		paths[i] = "(" + path + ")"
 	}
-
-	return compileAnchoredAlternation(paths)
+	return fragments, nil
 }
 
 // escapePathSeparators doubles backslashes so that a filesystem path is a
@@ -48,10 +62,33 @@ func escapePathSeparators(path string) string {
 	return strings.ReplaceAll(path, `\`, `\\`)
 }
 
-// compileAnchoredAlternation joins whole-path patterns into a single regexp
-// that matches only when the whole path equals one of the alternatives.
-func compileAnchoredAlternation(patterns []string) (*regexp.Regexp, error) {
-	return regexp.Compile(`^(?:` + strings.Join(patterns, "|") + `)$`)
+// compileIgnoreFragments joins regex fragments into a single pattern that
+// matches only when the whole path equals one of the alternatives.
+// No fragments means no filtering at all, which is a nil pattern rather than
+// an empty alternation - `^(?:)$` would still match the empty path and would
+// push CreateIgnoreFunc onto the regex branch for no benefit.
+func compileIgnoreFragments(fragments []string) (*regexp.Regexp, error) {
+	if len(fragments) == 0 {
+		return nil, nil
+	}
+	return regexp.Compile(`^(?:` + strings.Join(fragments, "|") + `)$`)
+}
+
+// addIgnoreDirPatterns registers regex fragments coming from one pattern
+// source and recompiles the combined pattern.
+//
+// Sources accumulate instead of overriding each other: --ignore-dirs-pattern,
+// --ignore-from and --ignore-from-gitignore all feed this one pattern, so a
+// pattern the user asked for is never silently dropped because another flag
+// was given as well.
+func (ui *UI) addIgnoreDirPatterns(fragments []string) error {
+	ui.ignorePatternFragments = append(ui.ignorePatternFragments, fragments...)
+	compiled, err := compileIgnoreFragments(ui.ignorePatternFragments)
+	if err != nil {
+		return err
+	}
+	ui.IgnoreDirPathPatterns = compiled
+	return nil
 }
 
 // SetIgnoreDirPaths sets paths to ignore
@@ -74,10 +111,12 @@ func (ui *UI) SetIgnoreDirPaths(paths []string) {
 
 // SetIgnoreDirPatterns sets regular patterns of dirs to ignore
 func (ui *UI) SetIgnoreDirPatterns(paths []string) error {
-	var err error
 	log.Printf("Ignoring dir patterns %s", strings.Join(paths, ", "))
-	ui.IgnoreDirPathPatterns, err = CreateIgnorePattern(paths)
-	return err
+	fragments, err := regexPatternFragments(paths)
+	if err != nil {
+		return err
+	}
+	return ui.addIgnoreDirPatterns(fragments)
 }
 
 // SetIgnoreFromFile sets regular patterns of dirs to ignore.
@@ -110,8 +149,11 @@ func (ui *UI) SetIgnoreFromFile(ignoreFile string) error {
 		return err
 	}
 
-	ui.IgnoreDirPathPatterns, err = CreateIgnorePattern(paths)
-	return err
+	fragments, err := regexPatternFragments(paths)
+	if err != nil {
+		return err
+	}
+	return ui.addIgnoreDirPatterns(fragments)
 }
 
 // SetIgnoreTypes sets file types to ignore

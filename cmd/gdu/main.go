@@ -65,6 +65,8 @@ func init() {
 		"Path patterns to ignore (separated by comma)")
 	flags.StringVarP(&af.IgnoreFromFile, "ignore-from", "X", "",
 		"Read path patterns to ignore from file")
+	flags.StringVarP(&af.IgnoreFromGitignore, "ignore-from-gitignore", "G", "",
+		"Read directories to ignore from file with .gitignore-style patterns")
 	flags.BoolVarP(&af.NoHidden, "no-hidden", "H", false, "Ignore hidden directories (beginning with dot)")
 	flags.BoolVarP(
 		&af.FollowSymlinks, "follow-symlinks", "L", false,

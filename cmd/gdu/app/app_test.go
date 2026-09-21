@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -206,6 +207,136 @@ func TestAnalyzePathWithIgnoringFromNotExistingFile(t *testing.T) {
 			LogFile:        "/dev/null",
 			IgnoreFromFile: "file",
 			NoHidden:       true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Equal(t, out, "")
+	assert.NotNil(t, err)
+}
+
+func TestAnalyzePathWithIgnoringFromNotExistingGitignoreFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile:             "/dev/null",
+			IgnoreFromGitignore: "file",
+			NoHidden:            true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Equal(t, out, "")
+	assert.NotNil(t, err)
+}
+
+// writeGitignore puts a gitignore file in a temp dir and returns its path.
+func writeGitignore(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), ".gitignore")
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestAnalyzePathWithIgnoringFromGitignoreFile(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile:             "/dev/null",
+			IgnoreFromGitignore: writeGitignore(t, "nested/\n"),
+			NoHidden:            true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Nil(t, err)
+	assert.NotContains(t, out, "nested")
+}
+
+// gdu resolves every scanned path with filepath.Abs, so a pattern anchored
+// with a leading / has to be matched against the scanned root to fire at all.
+func TestAnalyzePathWithRootedGitignorePattern(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile:             "/dev/null",
+			IgnoreFromGitignore: writeGitignore(t, "/nested\n"),
+			NoHidden:            true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Nil(t, err)
+	assert.NotContains(t, out, "nested")
+}
+
+func TestAnalyzePathWithRootedGitignorePatternBelowRoot(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	// subnested lives at test_dir/nested/subnested, so anchoring it to the
+	// scanned root must not prune it
+	out, err := runApp(
+		&Flags{
+			LogFile:             "/dev/null",
+			IgnoreFromGitignore: writeGitignore(t, "/subnested\n"),
+			NoHidden:            true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Nil(t, err)
+	assert.Contains(t, out, "nested")
+}
+
+func TestAnalyzePathWithGitignoreAndPatternCombined(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	// both sources apply; neither is dropped because the other was given
+	out, err := runApp(
+		&Flags{
+			LogFile:             "/dev/null",
+			IgnoreDirPatterns:   []string{".*/(abc)+"},
+			IgnoreFromGitignore: writeGitignore(t, "nested/\n"),
+			NoHidden:            true,
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Nil(t, err)
+	assert.NotContains(t, out, "nested")
+}
+
+func TestAnalyzePathWithNegatedGitignorePattern(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{
+			LogFile:             "/dev/null",
+			IgnoreFromGitignore: writeGitignore(t, "nested/\n!nested/file2\n"),
+			NoHidden:            true,
 		},
 		[]string{"test_dir"},
 		false,
@@ -851,6 +982,9 @@ func (m *uiTimeFilterMock) SetIncludeTypes(types []string)                    {}
 func (m *uiTimeFilterMock) SetFollowSymlinks(value bool)                      {}
 func (m *uiTimeFilterMock) SetShowAnnexedSize(value bool)                     {}
 func (m *uiTimeFilterMock) SetAnalyzer(analyzer common.Analyzer)              {}
+func (m *uiTimeFilterMock) SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error {
+	return nil
+}
 func (m *uiTimeFilterMock) SetTimeFilter(timeFilter common.TimeFilter) {
 	m.timeFilter = timeFilter
 }

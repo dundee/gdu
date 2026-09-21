@@ -43,6 +43,7 @@ type UI interface {
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
+	SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error
 	SetIgnoreHidden(value bool)
 	SetIncludeTypes(types []string)
 	SetFollowSymlinks(value bool)
@@ -57,66 +58,67 @@ type UI interface {
 
 // Flags define flags accepted by Run
 type Flags struct {
-	Style              Style     `yaml:"style"`
-	Sorting            Sorting   `yaml:"sorting"`
-	CfgFile            string    `yaml:"-"`
-	LogFile            string    `yaml:"log-file"`
-	InputFile          string    `yaml:"input-file"`
-	OutputFile         string    `yaml:"output-file"`
-	OutputAttrs        string    `yaml:"output-attrs"`
-	IgnoreFromFile     string    `yaml:"ignore-from-file"`
-	IgnoreDirs         []string  `yaml:"ignore-dirs"`
-	IgnoreDirPatterns  []string  `yaml:"ignore-dir-patterns"`
-	TypeFilter         []string  `yaml:"type"`
-	ExcludeTypeFilter  []string  `yaml:"exclude-type"`
-	MaxCores           int       `yaml:"max-cores"`
-	Top                int       `yaml:"top"`
-	Depth              int       `yaml:"depth"`
-	SequentialScanning bool      `yaml:"sequential-scanning"`
-	ShowDisks          bool      `yaml:"-"`
-	ShowApparentSize   bool      `yaml:"show-apparent-size"`
-	ShowRelativeSize   bool      `yaml:"show-relative-size"`
-	ShowAnnexedSize    bool      `yaml:"show-annexed-size"`
-	ShowVersion        bool      `yaml:"-"`
-	ShowItemCount      bool      `yaml:"show-item-count"`
-	ShowMTime          bool      `yaml:"show-mtime"`
-	NoColor            bool      `yaml:"no-color"`
-	Mouse              bool      `yaml:"mouse"`
-	NonInteractive     bool      `yaml:"non-interactive"`
-	Interactive        bool      `yaml:"interactive"`
-	NoProgress         bool      `yaml:"no-progress"`
-	NoUnicode          bool      `yaml:"no-unicode"`
-	NoCross            bool      `yaml:"no-cross"`
-	NoHidden           bool      `yaml:"no-hidden"`
-	NoDelete           bool      `yaml:"no-delete"`
-	NoViewFile         bool      `yaml:"no-view-file"`
-	NoSpawnShell       bool      `yaml:"no-spawn-shell"`
-	NoConfirmQuit      bool      `yaml:"no-confirm-quit"`
-	FollowSymlinks     bool      `yaml:"follow-symlinks"`
-	Profiling          bool      `yaml:"profiling"`
-	ReadFromStorage    bool      `yaml:"read-from-storage"`
-	DbPath             string    `yaml:"db"`
-	Summarize          bool      `yaml:"summarize"`
-	UseSIPrefix        bool      `yaml:"use-si-prefix"`
-	NoPrefix           bool      `yaml:"no-prefix"`
-	ShowInKiB          bool      `yaml:"show-in-kib"`
-	WriteConfig        bool      `yaml:"-"`
-	ReverseSort        bool      `yaml:"reverse-sort"`
-	ChangeCwd          bool      `yaml:"change-cwd"`
-	DeleteInBackground bool      `yaml:"delete-in-background"`
-	DeleteInParallel   bool      `yaml:"delete-in-parallel"`
-	TrashCommand       string    `yaml:"trash-command"`
-	Since              string    `yaml:"since"`
-	Until              string    `yaml:"until"`
-	MaxAge             string    `yaml:"max-age"`
-	MinAge             string    `yaml:"min-age"`
-	ArchiveBrowsing    bool      `yaml:"archive-browsing"`
-	CollapsePath       bool      `yaml:"collapse-path"`
-	ShowSymlinkTarget  bool      `yaml:"show-symlink-target"`
-	CtrlCQuits         bool      `yaml:"ctrl-c-quits"`
-	BrowseParentDirs   bool      `yaml:"browse-parent-dirs"`
-	Web                bool      `yaml:"-"`
-	WebConfig          WebConfig `yaml:"web"`
+	Style               Style     `yaml:"style"`
+	Sorting             Sorting   `yaml:"sorting"`
+	CfgFile             string    `yaml:"-"`
+	LogFile             string    `yaml:"log-file"`
+	InputFile           string    `yaml:"input-file"`
+	OutputFile          string    `yaml:"output-file"`
+	OutputAttrs         string    `yaml:"output-attrs"`
+	IgnoreFromFile      string    `yaml:"ignore-from-file"`
+	IgnoreFromGitignore string    `yaml:"ignore-from-gitignore"`
+	IgnoreDirs          []string  `yaml:"ignore-dirs"`
+	IgnoreDirPatterns   []string  `yaml:"ignore-dir-patterns"`
+	TypeFilter          []string  `yaml:"type"`
+	ExcludeTypeFilter   []string  `yaml:"exclude-type"`
+	MaxCores            int       `yaml:"max-cores"`
+	Top                 int       `yaml:"top"`
+	Depth               int       `yaml:"depth"`
+	SequentialScanning  bool      `yaml:"sequential-scanning"`
+	ShowDisks           bool      `yaml:"-"`
+	ShowApparentSize    bool      `yaml:"show-apparent-size"`
+	ShowRelativeSize    bool      `yaml:"show-relative-size"`
+	ShowAnnexedSize     bool      `yaml:"show-annexed-size"`
+	ShowVersion         bool      `yaml:"-"`
+	ShowItemCount       bool      `yaml:"show-item-count"`
+	ShowMTime           bool      `yaml:"show-mtime"`
+	NoColor             bool      `yaml:"no-color"`
+	Mouse               bool      `yaml:"mouse"`
+	NonInteractive      bool      `yaml:"non-interactive"`
+	Interactive         bool      `yaml:"interactive"`
+	NoProgress          bool      `yaml:"no-progress"`
+	NoUnicode           bool      `yaml:"no-unicode"`
+	NoCross             bool      `yaml:"no-cross"`
+	NoHidden            bool      `yaml:"no-hidden"`
+	NoDelete            bool      `yaml:"no-delete"`
+	NoViewFile          bool      `yaml:"no-view-file"`
+	NoSpawnShell        bool      `yaml:"no-spawn-shell"`
+	NoConfirmQuit       bool      `yaml:"no-confirm-quit"`
+	FollowSymlinks      bool      `yaml:"follow-symlinks"`
+	Profiling           bool      `yaml:"profiling"`
+	ReadFromStorage     bool      `yaml:"read-from-storage"`
+	DbPath              string    `yaml:"db"`
+	Summarize           bool      `yaml:"summarize"`
+	UseSIPrefix         bool      `yaml:"use-si-prefix"`
+	NoPrefix            bool      `yaml:"no-prefix"`
+	ShowInKiB           bool      `yaml:"show-in-kib"`
+	WriteConfig         bool      `yaml:"-"`
+	ReverseSort         bool      `yaml:"reverse-sort"`
+	ChangeCwd           bool      `yaml:"change-cwd"`
+	DeleteInBackground  bool      `yaml:"delete-in-background"`
+	DeleteInParallel    bool      `yaml:"delete-in-parallel"`
+	TrashCommand        string    `yaml:"trash-command"`
+	Since               string    `yaml:"since"`
+	Until               string    `yaml:"until"`
+	MaxAge              string    `yaml:"max-age"`
+	MinAge              string    `yaml:"min-age"`
+	ArchiveBrowsing     bool      `yaml:"archive-browsing"`
+	CollapsePath        bool      `yaml:"collapse-path"`
+	ShowSymlinkTarget   bool      `yaml:"show-symlink-target"`
+	CtrlCQuits          bool      `yaml:"ctrl-c-quits"`
+	BrowseParentDirs    bool      `yaml:"browse-parent-dirs"`
+	Web                 bool      `yaml:"-"`
+	WebConfig           WebConfig `yaml:"web"`
 }
 
 // WebConfig defines the web UI options that can be set from the config file.
@@ -332,6 +334,14 @@ func (a *App) Run() error {
 
 	if a.Flags.IgnoreFromFile != "" {
 		if err := ui.SetIgnoreFromFile(a.Flags.IgnoreFromFile); err != nil {
+			return err
+		}
+	}
+
+	if a.Flags.IgnoreFromGitignore != "" {
+		// the scanned roots are needed so that patterns anchored with a
+		// leading / can be matched against the absolute paths gdu scans
+		if err := ui.SetIgnoreFromGitignoreFile(a.Flags.IgnoreFromGitignore, paths); err != nil {
 			return err
 		}
 	}

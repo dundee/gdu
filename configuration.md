@@ -36,6 +36,23 @@ Path patterns to ignore (separated by comma). Patterns can be absolute or relati
 
 Read path patterns to ignore from file. Patterns can be absolute or relative to the current working directory.
 
+#### `ignore-from-gitignore`
+
+Read directories to ignore from a file with [gitignore-style patterns](https://git-scm.com/docs/gitignore). One pattern per line; blank lines and comments (starting with `#`) are skipped.
+
+- a name without `/` matches at any depth, so `node_modules` ignores every `node_modules` directory in the tree
+- a trailing `/` marks a directory and a leading `/` anchors the pattern to the directory being scanned, so `/build` ignores `build` at the top of the scan but not `src/build`
+- `*` does not cross separators, `**` does; `/` matches either path separator, so patterns written for Unix also match Windows paths
+- a trailing `/**` means the directory itself (`build/**` = `build`), because gdu prunes whole directories
+- file patterns such as `*.class` are accepted but have no effect, as gdu only prunes directories
+
+Two kinds of pattern are rejected with an error rather than skipped, because both would make gdu quietly report less than is really on disk:
+
+- negated patterns (starting with `!`). gdu prunes a whole directory at once, so it never descends into an ignored directory and cannot un-ignore anything inside it. Remove the negation, or remove the pattern it negates.
+- patterns that match every directory, such as `*`, `**` or `/**`. These are legal gitignore but would hide the entire scan.
+
+All pattern sources combine. When `ignore-dir-patterns`, `ignore-from-file` and `ignore-from-gitignore` are given together, a directory is ignored if it matches any of them — nothing is silently dropped because another flag was also set. Paths from `ignore-dirs` apply in addition.
+
 #### `max-cores`
 
 Set max cores that Gdu will use.
