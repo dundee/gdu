@@ -61,7 +61,7 @@ build-all:
 
 	CGO_ENABLED=0 gox \
 		-os="windows" \
-		-arch="amd64" \
+		-arch="amd64 arm64" \
 		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
