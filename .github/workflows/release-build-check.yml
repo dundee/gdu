@@ -1,0 +1,29 @@
+name: Release build check
+
+on:
+  pull_request:
+    paths:
+      - Makefile
+      - .github/workflows/release.yml
+      - .github/workflows/release-build-check.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.26.x
+      - name: Install tooling
+        run: go install github.com/mitchellh/gox@latest
+      - name: Build and verify Windows release archives
+        run: |
+          make build-all
+          make clean-uncompressed-dist
+          test -s dist/gdu_windows_amd64.zip
+          test -s dist/gdu_windows_arm64.zip
+          unzip -tq dist/gdu_windows_amd64.zip
+          unzip -tq dist/gdu_windows_arm64.zip
