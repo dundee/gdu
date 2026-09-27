@@ -61,10 +61,11 @@ build-all:
 
 	CGO_ENABLED=0 gox \
 		-os="windows" \
-		-arch="amd64 arm64" \
+		-arch="amd64" \
 		-output="dist/gdu_{{.OS}}_{{.Arch}}" \
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_windows_arm64.exe $(PACKAGE)/$(CMD_GDU)
 
 	CGO_ENABLED=0 gox \
 		-os="linux freebsd netbsd openbsd" \

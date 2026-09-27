@@ -23,7 +23,7 @@ jobs:
         run: |
           make build-all
           make clean-uncompressed-dist
-          test -s dist/gdu_windows_amd64.zip
-          test -s dist/gdu_windows_arm64.zip
-          unzip -tq dist/gdu_windows_amd64.zip
-          unzip -tq dist/gdu_windows_arm64.zip
+          test -s dist/gdu_windows_amd64.exe.zip
+          test -s dist/gdu_windows_arm64.exe.zip
+          unzip -tq dist/gdu_windows_amd64.exe.zip
+          unzip -tq dist/gdu_windows_arm64.exe.zip
