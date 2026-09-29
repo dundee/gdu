@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"os"
 	"slices"
 	"testing"
 
@@ -40,6 +41,11 @@ func TestStoredAnalyzer(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
+	// disk usage depends on the filesystem block size, take it from stat
+	info, err := os.Lstat("test_dir/nested/file2")
+	assert.NoError(t, err)
+	wantUsage, _ := getPlatformSpecificUsageAndMli(info)
+
 	a := CreateStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(
 		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
@@ -67,7 +73,7 @@ func TestStoredAnalyzer(t *testing.T) {
 	// test file
 	assert.Equal(t, "file2", nestedFiles[0].GetName())
 	assert.Equal(t, int64(2), nestedFiles[0].GetSize())
-	assert.True(t, int64(4096) <= nestedFiles[0].GetUsage())
+	assert.Equal(t, wantUsage, nestedFiles[0].GetUsage())
 
 	subnested := nestedFiles[1].(*StoredDir)
 	subnestedFiles := slices.Collect(subnested.GetFiles(fs.SortByName, fs.SortAsc))

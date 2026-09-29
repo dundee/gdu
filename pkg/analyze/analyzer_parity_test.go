@@ -101,8 +101,13 @@ func scanFilteringAllFiles(
 func TestEmptyDirStatsAcrossAnalyzers(t *testing.T) {
 	root := createEmptyDirTree(t)
 
+	// disk usage depends on the filesystem block size, take it from stat
+	info, err := os.Lstat(filepath.Join(root, "withfile", "f"))
+	assert.NoError(t, err)
+	fileUsage, _ := getPlatformSpecificUsageAndMli(info)
+
 	want := map[string]itemStats{
-		".":         {size: 1541, usage: 4096, itemCount: 10, flag: ' '},
+		".":         {size: 1541, usage: fileUsage, itemCount: 10, flag: ' '},
 		"empty":     {size: EmptyDirSize, usage: 0, itemCount: 1, flag: 'e'},
 		"onlyempty": {size: EmptyDirSize, usage: 0, itemCount: 2, flag: ' '},
 		"onlyempty/sub": {
