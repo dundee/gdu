@@ -22,6 +22,8 @@ all: clean tarball build-all build-docker man clean-uncompressed-dist shasums
 run:
 	go run $(PACKAGE)/$(CMD_GDU)
 
+check: lint test test-web
+
 vendor: go.mod go.sum
 	go mod vendor
 
@@ -99,6 +101,9 @@ show-man:
 
 test:
 	gotestsum
+
+test-web:
+	cd webui/frontend && npm ci && npm test
 
 coverage:
 	gotestsum -- -race -coverprofile=coverage.txt -covermode=atomic ./...
@@ -198,4 +203,4 @@ install-dev-dependencies:
 	$(GOBIN) install honnef.co/go/gotraceui/cmd/gotraceui@latest
 	$(GOBIN) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 
-.PHONY: run build build-static build-all build-web test gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
+.PHONY: run build build-static build-all build-web check test test-web gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
