@@ -426,3 +426,138 @@ describe('treemap actions', () => {
     expect(await screen.findByText('node not found')).toBeTruthy();
   });
 });
+
+describe('table actions', () => {
+  it('reveals a row without navigating into it', async () => {
+    vi.mocked(api.revealNode).mockResolvedValue(undefined);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reveal folder' }));
+
+    await waitFor(() =>
+      expect(api.revealNode).toHaveBeenCalledWith(`${root}/folder`, 'test-token'),
+    );
+    // The row itself navigates into directories; the button must not.
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('still navigates into a directory when the row itself is clicked', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByText('folder', { exact: false, selector: '.name' }));
+
+    await waitFor(() =>
+      expect(api.fetchNode).toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc'),
+    );
+  });
+
+  it('confirms before deleting and moves the row to the trash', async () => {
+    vi.mocked(api.deleteNode).mockResolvedValue(undefined);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
+    expect(screen.getByRole('dialog', { name: 'Delete item' })).toBeTruthy();
+    expect(screen.getByText(`${root}/file.txt`)).toBeTruthy();
+    expect(api.deleteNode).not.toHaveBeenCalled();
+    // Opening the dialog from a directory row must not navigate either.
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
+
+    await waitFor(() =>
+      expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token', 'trash'),
+    );
+    await waitFor(() => expect(api.fetchNode).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+  });
+
+  it('deletes permanently from the dialog', async () => {
+    vi.mocked(api.deleteNode).mockResolvedValue(undefined);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete folder' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Permanently' }));
+
+    await waitFor(() =>
+      expect(api.deleteNode).toHaveBeenCalledWith(`${root}/folder`, 'test-token', 'permanent'),
+    );
+    expect(api.fetchNode).not.toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc');
+  });
+
+  it('does not delete when the dialog is cancelled', async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+    expect(api.deleteNode).not.toHaveBeenCalled();
+  });
+
+  it('shares the do-not-ask-again choice with the treemap', async () => {
+    vi.mocked(api.deleteNode).mockResolvedValue(undefined);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Do not ask again this session' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(2));
+    expect(api.deleteNode).toHaveBeenLastCalledWith(`${root}/file.txt`, 'test-token', 'trash');
+  });
+
+  it('invalidates the cached treemap after a delete in the table', async () => {
+    vi.mocked(api.deleteNode).mockResolvedValue(undefined);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    await screen.findByRole('img', { name: 'Directory size treemap' });
+    expect(api.fetchTree).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Donut' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
+    await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(2));
+  });
+
+  it('shows the error when the delete fails', async () => {
+    vi.mocked(api.deleteNode).mockRejectedValue(new Error('deletion is disabled'));
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
+
+    expect(await screen.findByText('deletion is disabled')).toBeTruthy();
+  });
+
+  it('hides delete but keeps reveal when the backend disables deletion', async () => {
+    vi.mocked(api.fetchStatus).mockResolvedValue({ ...status, deleteAllowed: false });
+    vi.mocked(api.revealNode).mockResolvedValue(undefined);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reveal file.txt' }));
+
+    await waitFor(() =>
+      expect(api.revealNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token'),
+    );
+    expect(screen.queryByRole('button', { name: 'Delete file.txt' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete folder' })).toBeNull();
+  });
+
+  it('explains that actions are unavailable without an action token', async () => {
+    window.sessionStorage.clear();
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reveal file.txt' }));
+
+    expect(await screen.findByText(/no action token/i)).toBeTruthy();
+    expect(api.revealNode).not.toHaveBeenCalled();
+  });
+});

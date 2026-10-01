@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Node } from '../types';
-import { deleteNode, fetchTree, revealNode, type DeleteMode } from '../api';
+import { fetchTree } from '../api';
 import { useGduModel } from '../model';
-import { formatSize } from '../format';
 import { TreeMap } from './TreeMap';
-import { Modal } from './Modal';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { useLatest } from '../useLatest';
-
-// Shown instead of firing a request that is certain to come back as a bare
-// 403. The token is missing whenever this tab never received one - the page
-// was opened without the token gdu put in the URL, or session storage is
-// unavailable - and no API call can recover it.
-const noActionTokenMessage =
-  'Actions are unavailable: this page has no action token. Reopen the URL gdu printed, or restart gdu.';
+import { useItemActions } from '../useItemActions';
 
 // TreeMapView owns everything specific to the treemap: fetching (and
 // caching, via the model) the recursive tree, node selection, and the
@@ -28,24 +21,16 @@ export function TreeMapView() {
     setHoveredPath,
     navigateToPath,
     status,
-    actionToken,
     view,
     treeRoot,
     treePath,
     setTree,
     clearTree,
-    refreshNode,
-    setLoadError,
-    skipDeleteConfirm,
-    setSkipDeleteConfirm,
   } = useGduModel();
 
   const [treeLoading, setTreeLoading] = useState(false);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [deleteCandidate, setDeleteCandidate] = useState<Node | null>(null);
-  const [skipDeleteChoice, setSkipDeleteChoice] = useState(false);
-  const [actionPending, setActionPending] = useState(false);
 
   // Reset selection whenever the directory changes.
   useEffect(() => {
@@ -111,81 +96,22 @@ export function TreeMapView() {
     }
   }, [currentPath, setTree, clearTree]);
 
-  const refreshAfterMutation = useCallback(async () => {
-    const [nodeResp] = await Promise.all([refreshNode(), refreshTree()]);
-    setSelectedNode(null);
-    setHoveredPath(null);
-    // Deleting the last item leaves the current directory empty: staying
-    // put would show a blank chart with no way back except the breadcrumbs,
-    // so step up to the parent directory instead.
-    if (nodeResp.children.length === 0 && nodeResp.breadcrumbs.length > 1) {
-      const parent = nodeResp.breadcrumbs[nodeResp.breadcrumbs.length - 2];
-      navigateToPath(parent.path);
-    }
-  }, [refreshNode, refreshTree, setHoveredPath, navigateToPath]);
+  const clearSelection = useCallback(() => setSelectedNode(null), []);
 
-  const performDelete = useCallback(
-    async (node: Node, mode: DeleteMode) => {
-      if (actionPending) {
-        return;
-      }
-      if (!actionToken) {
-        setDeleteCandidate(null);
-        setLoadError(noActionTokenMessage);
-        return;
-      }
-      setActionPending(true);
-      setDeleteCandidate(null);
-      try {
-        await deleteNode(node.path, actionToken, mode);
-        await refreshAfterMutation();
-        setLoadError(null);
-      } catch (err: unknown) {
-        if (typeof err === 'object' && err !== null && 'status' in err && err.status === 404) {
-          try {
-            await refreshAfterMutation();
-          } catch {
-            // Keep the original action error; the regular loader can retry later.
-          }
-        }
-        setLoadError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setActionPending(false);
-      }
-    },
-    [actionPending, refreshAfterMutation, setLoadError, actionToken],
-  );
+  const actions = useItemActions({ refreshExtra: refreshTree, onRefreshed: clearSelection });
+  const { deleteCandidate, reveal, requestDelete: requestDeleteNode } = actions;
 
   const revealSelected = useCallback(async () => {
-    if (!selectedNode || actionPending) {
-      return;
+    if (selectedNode) {
+      await reveal(selectedNode);
     }
-    if (!actionToken) {
-      setLoadError(noActionTokenMessage);
-      return;
-    }
-    setActionPending(true);
-    try {
-      await revealNode(selectedNode.path, actionToken);
-      setLoadError(null);
-    } catch (err: unknown) {
-      setLoadError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setActionPending(false);
-    }
-  }, [actionPending, selectedNode, setLoadError, actionToken]);
+  }, [reveal, selectedNode]);
 
   const requestDelete = useCallback(() => {
-    if (!selectedNode || actionPending || !status.deleteAllowed) {
-      return;
+    if (selectedNode) {
+      requestDeleteNode(selectedNode);
     }
-    if (skipDeleteConfirm) {
-      void performDelete(selectedNode, skipDeleteConfirm);
-      return;
-    }
-    setSkipDeleteChoice(false);
-    setDeleteCandidate(selectedNode);
-  }, [actionPending, performDelete, selectedNode, skipDeleteConfirm, status.deleteAllowed]);
+  }, [requestDeleteNode, selectedNode]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -239,60 +165,7 @@ export function TreeMapView() {
         )}
       </section>
 
-      {deleteCandidate && (
-        <Modal
-          titleId="delete-title"
-          title="Delete item"
-          onClose={() => setDeleteCandidate(null)}
-        >
-          <p>Move the selected item to the trash, or delete it permanently right away.</p>
-          <code className="modal-path">{deleteCandidate.path}</code>
-          <span className="muted">
-            {formatSize(
-              effectiveApparent ? deleteCandidate.size : deleteCandidate.usage,
-              useSIPrefix,
-            )}
-          </span>
-          <label className="modal-checkbox">
-            <input
-              type="checkbox"
-              checked={skipDeleteChoice}
-              onChange={(event) => setSkipDeleteChoice(event.target.checked)}
-            />
-            Do not ask again this session
-          </label>
-          <div className="modal-actions">
-            <button type="button" autoFocus onClick={() => setDeleteCandidate(null)}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={actionPending}
-              onClick={() => {
-                if (skipDeleteChoice) {
-                  setSkipDeleteConfirm('trash');
-                }
-                void performDelete(deleteCandidate, 'trash');
-              }}
-            >
-              Move to Trash
-            </button>
-            <button
-              type="button"
-              className="danger"
-              disabled={actionPending}
-              onClick={() => {
-                if (skipDeleteChoice) {
-                  setSkipDeleteConfirm('permanent');
-                }
-                void performDelete(deleteCandidate, 'permanent');
-              }}
-            >
-              Delete Permanently
-            </button>
-          </div>
-        </Modal>
-      )}
+      <DeleteConfirmModal actions={actions} />
     </>
   );
 }

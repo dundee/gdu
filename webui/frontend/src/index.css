@@ -375,6 +375,38 @@ body {
   transition: width 0.4s ease;
 }
 
+.file-table th.actions-col {
+  cursor: default;
+}
+
+.file-table td.actions-cell {
+  white-space: nowrap;
+  text-align: right;
+  padding: 4px 8px;
+  cursor: default;
+}
+
+.row-action {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.row-action:hover:not(:disabled),
+.row-action:focus-visible {
+  background: var(--bg-row-hover);
+  border-color: var(--border);
+}
+
+.row-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .sort-arrow {
   color: var(--accent);
 }

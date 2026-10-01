@@ -15,6 +15,13 @@ interface FileTableProps {
   hoveredPath: string | null;
   onHover: (path: string | null) => void;
   onSelect: (node: Node) => void;
+  onReveal: (node: Node) => void;
+  onDelete: (node: Node) => void;
+  // Delete is hidden entirely (not just disabled) when the server does not
+  // allow it; reveal stays available.
+  canDelete: boolean;
+  // True while an action request is in flight; disables the buttons.
+  actionPending: boolean;
 }
 
 const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
@@ -36,6 +43,10 @@ export function FileTable({
   hoveredPath,
   onHover,
   onSelect,
+  onReveal,
+  onDelete,
+  canDelete,
+  actionPending,
 }: FileTableProps) {
   const maxValue = useMemo(
     () => children.reduce((max, n) => Math.max(max, metricValue(n, apparent)), 0),
@@ -58,6 +69,7 @@ export function FileTable({
               )}
             </th>
           ))}
+          <th className="actions-col" aria-label="Actions" />
         </tr>
       </thead>
       <tbody>
@@ -87,12 +99,36 @@ export function FileTable({
               <td className="num">{formatSize(value, useSIPrefix)}</td>
               <td className="num">{formatCount(node.itemCount)}</td>
               <td className="num muted">{formatMtime(node.mtime)}</td>
+              <td className="actions-cell" onClick={(event) => event.stopPropagation()}>
+                <button
+                  type="button"
+                  className="row-action"
+                  aria-label={`Reveal ${node.name}`}
+                  title="Reveal in file manager"
+                  disabled={actionPending}
+                  onClick={() => onReveal(node)}
+                >
+                  📂
+                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    className="row-action"
+                    aria-label={`Delete ${node.name}`}
+                    title="Delete"
+                    disabled={actionPending}
+                    onClick={() => onDelete(node)}
+                  >
+                    🗑
+                  </button>
+                )}
+              </td>
             </tr>
           );
         })}
         {children.length === 0 && (
           <tr>
-            <td colSpan={4} className="empty">
+            <td colSpan={5} className="empty">
               Empty directory
             </td>
           </tr>
@@ -102,7 +138,7 @@ export function FileTable({
         <tr>
           <td className="muted">{children.length} items</td>
           <td className="num">{formatSize(total, useSIPrefix)}</td>
-          <td className="num muted" colSpan={2}>
+          <td className="num muted" colSpan={3}>
             {percent(total, total) > 0 ? '100%' : ''}
           </td>
         </tr>
