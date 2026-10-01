@@ -27,6 +27,12 @@ export function HelpModal() {
             <dd>Open a directory</dd>
           </>
         )}
+        {view === 'donut' && (
+          <>
+            <dt>Row buttons</dt>
+            <dd>Reveal or delete an item in the table</dd>
+          </>
+        )}
         <dt>?</dt>
         <dd>Show this help</dd>
         <dt>Esc</dt>

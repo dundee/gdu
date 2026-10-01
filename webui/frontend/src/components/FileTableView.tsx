@@ -1,8 +1,11 @@
 import { useGduModel } from '../model';
+import { useItemActions } from '../useItemActions';
 import { FileTable } from './FileTable';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 
 export function FileTableView() {
   const {
+    status,
     children,
     colorMap,
     effectiveApparent,
@@ -15,6 +18,7 @@ export function FileTableView() {
     setHoveredPath,
     handleSelect,
   } = useGduModel();
+  const actions = useItemActions();
 
   return (
     <section className="table-panel">
@@ -30,7 +34,12 @@ export function FileTableView() {
         hoveredPath={hoveredPath}
         onHover={setHoveredPath}
         onSelect={handleSelect}
+        onReveal={(node) => void actions.reveal(node)}
+        onDelete={actions.requestDelete}
+        canDelete={status.deleteAllowed}
+        actionPending={actions.actionPending}
       />
+      <DeleteConfirmModal actions={actions} />
     </section>
   );
 }
