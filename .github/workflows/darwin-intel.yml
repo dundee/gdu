@@ -1,0 +1,26 @@
+name: Darwin Intel Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.27.x
+
+      - name: Build Darwin Intel binary
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o gdu-darwin-amd64 ./cmd/gdu
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdu-darwin-amd64
+          path: gdu-darwin-amd64
