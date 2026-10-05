@@ -69,6 +69,8 @@ only.
 
 **-m**, **\--max-cores** Set max cores that Gdu will use.
 
+**\--sequential**\[=false\] Use sequential scanning (intended for rotating HDDs)
+
 **-c**, **\--no-color**\[=false\] Do not use colorized output
 
 **-x**, **\--no-cross**\[=false\] Do not cross filesystem boundaries
@@ -77,6 +79,9 @@ only.
 
 **-L**, **\--follow-symlinks**\[=false\] Follow symlinks for files, i.e. show the
 size of the file to which symlink points to (symlinks to directories are not followed)
+
+**-A**, **\--show-annexed-size**\[=false\] Use apparent size of git-annex'ed files
+in case files are not present locally (real usage is zero)
 
 **-n**, **\--non-interactive**\[=false\] Do not run in interactive mode
 
@@ -91,9 +96,14 @@ non-interactive mode
 
 **-t**, **\--top**\[=0\] Show only top X largest files in non-interactive mode
 
+**\--reverse-sort**\[=false\] Reverse sorting order (smallest to largest) in non-interactive mode
+
 **-d**, **\--show-disks**\[=false\] Show all mounted disks
 
 **-a**, **\--show-apparent-size**\[=false\] Show apparent size
+
+**-B**, **\--show-relative-size**\[=false\] Show the size bar relative to the largest
+sibling instead of the parent directory
 
 **-C**, **\--show-item-count**\[=false\] Show number of items in directory
 
@@ -134,9 +144,24 @@ disk.
 
 **\--trash-command**=\"\" Command used to move items to trash instead of the built-in trash. Used by the terminal UI's D key and the web UI's "Move to Trash" action. The command is evaluated by /bin/sh with the absolute path of the item appended as an argument, which is also exported as GDU_TRASH_PATH. Commands taking their destination last can refer to the path as \"\$1\" instead, in which case it is not appended. The command must not be interactive. Not supported on Windows. For example: trash-put \--trash-dir \~/mytrash or mv -f \"\$1\" \~/mytrash/
 
+**\--web**\[=false\] Run the web UI (serves a browser interface instead of the
+terminal UI). Gdu scans the given directory, prints the URL and serves a
+read-only browser interface for it.
+
+**\--web-listen**=\"\" Address for the web UI to listen on. By default the server
+binds to localhost on a random free port. Binding to a non-loopback address
+makes scan details reachable by other hosts on the network.
+
+**\--web-open**\[=true\] Open the web UI in the default browser on start. Use
+\--web-open=false to only print the URL.
+
 **-f**, **\--input-file** Import analysis from JSON file. If the file is \"-\", read from standard input.
 
 **-o**, **\--output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
+
+**\--output-attrs** Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg,ino).
+Requires \--output-file. The *name* attribute is always included and directories always
+carry their *asize*, *dsize* and *items* summary stats so they can be preserved on import.
 
 **\--config-file**=\"$HOME/.gdu.yaml\"             Read config from file
 
