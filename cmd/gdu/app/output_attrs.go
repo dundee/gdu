@@ -19,7 +19,7 @@ func parseJSONAttributes(value string) (gfs.JSONAttributes, error) {
 	for _, attribute := range strings.Split(value, ",") {
 		attribute = strings.TrimSpace(attribute)
 		switch attribute {
-		case "name", "asize", "dsize", "items", "mtime", "notreg":
+		case "name", "asize", "dsize", "items", "mtime", "notreg", "ino":
 			attributes[attribute] = struct{}{}
 		default:
 			return nil, fmt.Errorf("unknown JSON output attribute %q", attribute)

@@ -96,7 +96,7 @@ func (f *File) EncodeJSON(writer io.Writer, _ bool, attributes fs.JSONAttributes
 	if attributes.Includes("notreg") && f.Flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
 	}
-	if attributes == nil && f.Flag == 'H' {
+	if attributes.Includes("ino") && f.Flag == 'H' {
 		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(f.Mli, 10)+`,"hlnkc":true`)...)
 	}
 
