@@ -106,3 +106,49 @@ func TestEncodeSelectedAttributes(t *testing.T) {
 	assert.NotContains(t, buff.String(), `"mtime"`)
 	assert.NotContains(t, buff.String(), `"notreg"`)
 }
+
+func TestEncodeSelectedAttributesWithIno(t *testing.T) {
+	dir := &Dir{
+		File: &File{
+			Name: "test_dir",
+		},
+		BasePath: ".",
+	}
+	dir.AddFile(&File{
+		Name: "link",
+		Size: 10,
+		Mli:  5678,
+		Flag: 'H',
+	})
+
+	var buff bytes.Buffer
+	err := dir.EncodeJSON(&buff, true, fs.JSONAttributes{"name": {}, "ino": {}})
+
+	assert.NoError(t, err)
+	assert.Contains(t, buff.String(), `"name":"link"`)
+	assert.Contains(t, buff.String(), `"ino":5678,"hlnkc":true`)
+	assert.NotContains(t, buff.String(), `"asize"`)
+}
+
+func TestEncodeSelectedAttributesWithoutIno(t *testing.T) {
+	dir := &Dir{
+		File: &File{
+			Name: "test_dir",
+		},
+		BasePath: ".",
+	}
+	dir.AddFile(&File{
+		Name: "link",
+		Size: 10,
+		Mli:  5678,
+		Flag: 'H',
+	})
+
+	var buff bytes.Buffer
+	err := dir.EncodeJSON(&buff, true, fs.JSONAttributes{"name": {}, "asize": {}})
+
+	assert.NoError(t, err)
+	assert.Contains(t, buff.String(), `"name":"link","asize":10`)
+	assert.NotContains(t, buff.String(), `"ino"`)
+	assert.NotContains(t, buff.String(), `"hlnkc"`)
+}

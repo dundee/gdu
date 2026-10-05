@@ -721,6 +721,13 @@ func TestSqliteItemEncodeJSONWithSpecialAttributes(t *testing.T) {
 	assert.Contains(t, buf.String(), `"notreg":true`)
 	assert.NotContains(t, buf.String(), `"ino"`)
 	assert.NotContains(t, buf.String(), `"mtime"`)
+
+	buf.Reset()
+	err = root.EncodeJSON(&buf, false, fs.JSONAttributes{"ino": {}})
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `"ino":123,"hlnkc":true`)
+	assert.NotContains(t, buf.String(), `"notreg"`)
+	assert.NotContains(t, buf.String(), `"mtime"`)
 }
 
 func TestCreateSqliteAnalyzer(t *testing.T) {

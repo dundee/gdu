@@ -727,7 +727,7 @@ func (i *SqliteItem) encodeFileJSON(writer io.Writer, attributes fs.JSONAttribut
 	if attributes.Includes("notreg") && i.flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
 	}
-	if attributes == nil && i.flag == 'H' {
+	if attributes.Includes("ino") && i.flag == 'H' {
 		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(i.mli, 10)+`,"hlnkc":true`)...)
 	}
 
