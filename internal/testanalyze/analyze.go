@@ -99,6 +99,9 @@ func (a *MockedAnalyzer) IsCancelled() bool {
 // SetFollowSymlinks does nothing
 func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {}
 
+// SetExclusiveSize does nothing
+func (a *MockedAnalyzer) SetExclusiveSize(v bool) {}
+
 // SetShowAnnexedSize does nothing
 func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {}
 

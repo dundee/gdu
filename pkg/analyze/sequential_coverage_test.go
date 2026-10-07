@@ -24,6 +24,14 @@ func TestSequentialAnalyzerSetShowAnnexedSize(t *testing.T) {
 	assert.False(t, analyzer.gitAnnexedSize)
 }
 
+func TestSequentialAnalyzerSetExclusiveSize(t *testing.T) {
+	analyzer := CreateSeqAnalyzer()
+	analyzer.SetExclusiveSize(true)
+	assert.True(t, analyzer.exclusiveSize)
+	analyzer.SetExclusiveSize(false)
+	assert.False(t, analyzer.exclusiveSize)
+}
+
 func TestSequentialAnalyzerUpdateProgress(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 

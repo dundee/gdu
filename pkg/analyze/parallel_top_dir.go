@@ -123,6 +123,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
+			usage = a.usageOf(entryPath, info, usage)
 			file.Usage = usage
 
 			if mli > 0 {
@@ -254,6 +255,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
+			usage = a.usageOf(entryPath, info, usage)
 
 			if mli > 0 {
 				if _, loaded := a.linkedItems.LoadOrStore(mli, struct{}{}); loaded {
