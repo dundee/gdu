@@ -2,12 +2,15 @@ package analyze
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -151,4 +154,38 @@ func TestEncodeSelectedAttributesWithoutIno(t *testing.T) {
 	assert.Contains(t, buff.String(), `"name":"link","asize":10`)
 	assert.NotContains(t, buff.String(), `"ino"`)
 	assert.NotContains(t, buff.String(), `"hlnkc"`)
+}
+
+func TestEncodeReadError(t *testing.T) {
+	dir := &Dir{File: &File{Name: "test_dir"}, BasePath: "."}
+	dir.AddFile(&Dir{File: &File{Name: "unreadable", Flag: '!'}})
+	dir.AddFile(&Dir{File: &File{Name: "partial", Flag: '.'}})
+
+	var buff bytes.Buffer
+	assert.NoError(t, dir.EncodeJSON(&buff, true, fs.JSONAttributes{"name": {}}))
+	assert.Contains(t, buff.String(), `[{"name":"unreadable","read_error":true}`)
+	assert.Contains(t, buff.String(), `[{"name":"partial"}`)
+	assert.Contains(t, buff.String(), `[{"name":"test_dir"}`)
+}
+
+func TestExportMarksAnUnreadableDirectory(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads every directory")
+	}
+	dir := t.TempDir()
+	locked := filepath.Join(dir, "locked")
+	require.NoError(t, os.Mkdir(locked, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(locked, "file"), []byte("x"), 0o600))
+	require.NoError(t, os.Chmod(locked, 0o000))
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+
+	a := CreateAnalyzer()
+	root := a.AnalyzeDir(dir, func(_, _ string) bool { return false }, func(_ string) bool { return false })
+	a.GetDone().Wait()
+	root.UpdateStats(make(fs.HardLinkedItems))
+
+	var buff bytes.Buffer
+	require.NoError(t, root.EncodeJSON(&buff, true, nil))
+	assert.Contains(t, buff.String(), `{"name":"locked"`)
+	assert.Contains(t, buff.String(), `"read_error":true`)
 }

@@ -190,3 +190,18 @@ type BrokenInput struct{}
 func (i *BrokenInput) Read(p []byte) (n int, err error) {
 	return 0, errors.New("IO error")
 }
+
+func TestReadAnalysisReadError(t *testing.T) {
+	buff := bytes.NewBuffer([]byte(`
+		[1,2,{"progname":"gdu","progver":"development","timestamp":1626806293},
+		[{"name":"/home/xxx"},
+		[{"name":"locked","read_error":true}],
+		[{"name":"fine"}]]]
+	`))
+
+	dir, err := ReadAnalysis(buff)
+
+	assert.Nil(t, err)
+	assert.Equal(t, '!', dir.Files[0].GetFlag())
+	assert.Equal(t, ' ', dir.Files[1].GetFlag())
+}

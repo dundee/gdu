@@ -118,6 +118,9 @@ func parseDirectoryMetadata(item any) (
 	if mtime, ok := dirMap["mtime"].(float64); ok {
 		dir.Mtime = time.Unix(int64(mtime), 0)
 	}
+	if readError, ok := dirMap["read_error"].(bool); ok && readError {
+		dir.Flag = '!'
+	}
 	if asize, ok := dirMap["asize"].(float64); ok {
 		dir.Size = int64(asize)
 		hasSize = true
