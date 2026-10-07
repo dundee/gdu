@@ -49,6 +49,7 @@ type UI interface {
 	SetIncludeTypes(types []string)
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
+	SetExclusiveSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
 	SetTimeFilter(timeFilter common.TimeFilter)
 	SetArchiveBrowsing(value bool)
@@ -80,6 +81,7 @@ type Flags struct {
 	ShowApparentSize    bool      `yaml:"show-apparent-size"`
 	ShowRelativeSize    bool      `yaml:"show-relative-size"`
 	ShowAnnexedSize     bool      `yaml:"show-annexed-size"`
+	ExclusiveSize       bool      `yaml:"exclusive-size"`
 	ShowVersion         bool      `yaml:"-"`
 	ShowItemCount       bool      `yaml:"show-item-count"`
 	ShowMTime           bool      `yaml:"show-mtime"`
@@ -300,6 +302,9 @@ func (a *App) Run() error {
 	}
 	if a.Flags.ShowAnnexedSize {
 		ui.SetShowAnnexedSize(true)
+	}
+	if a.Flags.ExclusiveSize {
+		ui.SetExclusiveSize(true)
 	}
 	if a.Flags.ArchiveBrowsing {
 		ui.SetArchiveBrowsing(true)

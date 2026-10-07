@@ -33,6 +33,15 @@ func TestSetShowAnnexedSize(t *testing.T) {
 	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ShowAnnexedSize)
 }
 
+func TestSetExclusiveSize(t *testing.T) {
+	ui := UI{
+		Analyzer: &MockedAnalyzer{},
+	}
+	ui.SetExclusiveSize(true)
+
+	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ExclusiveSize)
+}
+
 func TestSetEnableArchiveBrowsing(t *testing.T) {
 	ui := UI{
 		Analyzer: &MockedAnalyzer{},
@@ -59,6 +68,7 @@ func TestSetTimeFilter(t *testing.T) {
 type MockedAnalyzer struct {
 	FollowSymlinks  bool
 	ShowAnnexedSize bool
+	ExclusiveSize   bool
 	ArchiveBrowsing bool
 }
 
@@ -94,6 +104,11 @@ func (a *MockedAnalyzer) Cancel() {}
 // SetFollowSymlinks does nothing
 func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {
 	a.FollowSymlinks = v
+}
+
+// SetExclusiveSize records the value
+func (a *MockedAnalyzer) SetExclusiveSize(v bool) {
+	a.ExclusiveSize = v
 }
 
 // SetShowAnnexedSize does nothing

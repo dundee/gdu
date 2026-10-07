@@ -48,6 +48,7 @@ Flags:
       --depth int                      Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
       --enable-profiling               Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -E, --exclude-type strings           File types to exclude (e.g., --exclude-type yaml,json)
+      --exclusive-size                 Linux only: report file usage as the bytes not shared with other files (reflinks), i.e. what deleting them frees
   -L, --follow-symlinks                Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
   -h, --help                           help for gdu
   -i, --ignore-dirs strings            Paths to ignore (separated by comma). Can be absolute or relative to current directory (default [/proc,/dev,/sys,/run])
@@ -116,6 +117,7 @@ Basic list of actions in interactive mode (show help modal for more):
 
     gdu                                   # analyze current dir
     gdu -a                                # show apparent size instead of disk usage
+    gdu --exclusive-size                  # on XFS/btrfs: count only bytes not shared by reflinks
     gdu --no-delete                       # prevent write operations
     gdu --no-view-file                    # prevent viewing file contents
     gdu --trash-command 'trash-put --trash-dir ~/mytrash'   # use own trash command for the D key
@@ -286,6 +288,35 @@ flag with following meaning:
 * `H` Same file was already counted (hard link).
 
 * `e` Directory is empty.
+
+## Reflinks and shared extents
+
+On filesystems with reflink support (XFS, btrfs, bcachefs, ...) many files can
+share the same data. Disk usage as reported by `stat` counts shared data once
+per file, so the sum can exceed what the filesystem uses and deleting a file
+frees less than its size.
+
+With `--exclusive-size` (Linux only) Gdu asks the kernel for each regular file's
+extent map (`FS_IOC_FIEMAP`) and reports the total length of the extents that
+are not flagged as shared. That is what deleting the file would free, ignoring
+what other files still reference. It replaces the disk usage figure, so sorting,
+size bars, totals and `-o` exports (`dsize`) all use it; apparent size
+(`-a`) is unchanged. Details:
+
+* Data shared with another file counts as zero in every file sharing it, so a
+  directory holding only the clones of a file elsewhere shows nothing, and the
+  last copy standing shows its full size only once the others are gone.
+* Holes in sparse files count as nothing. Preallocated, delayed-allocation and
+  inline extents count as the file's own unless they are flagged as shared.
+  Sizes are logical: compressed extents (btrfs, ...) are counted uncompressed.
+* Hard links are counted once, as without the flag.
+* Where FIEMAP cannot be used (unsupported filesystem such as tmpfs or NFS, the
+  file cannot be opened, ...) the file keeps its allocated-blocks figure.
+  Files and filesystems that do not report shared extents (ext4) show the same
+  figure as without the flag. Symlinks, directories and archive contents are
+  not measured. Other platforms ignore the option.
+* It costs an `open` and at least one `ioctl` per file with allocated blocks.
+* The exported `dsize` does not record which metric produced it.
 
 ## Configuration file
 

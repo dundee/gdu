@@ -145,6 +145,10 @@ By default, `Ctrl+C` during a scan produces a stopped scan: no new work is sched
 
 Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
 
+#### `exclusive-size`
+
+Linux only: report disk usage of files as the bytes not shared with other files through reflinks, i.e. what deleting them would free. Falls back to allocated blocks where the filesystem cannot report extents.
+
 #### `profiling`
 
 Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/

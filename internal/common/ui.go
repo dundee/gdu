@@ -40,6 +40,11 @@ func (ui *UI) SetFollowSymlinks(v bool) {
 	ui.Analyzer.SetFollowSymlinks(v)
 }
 
+// SetExclusiveSize sets whether file usage is the bytes not shared with other files
+func (ui *UI) SetExclusiveSize(v bool) {
+	ui.Analyzer.SetExclusiveSize(v)
+}
+
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (ui *UI) SetShowAnnexedSize(v bool) {
 	ui.Analyzer.SetShowAnnexedSize(v)
