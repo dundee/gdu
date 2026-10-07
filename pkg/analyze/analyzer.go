@@ -87,6 +87,15 @@ func (a *BaseAnalyzer) usageOf(path string, info os.FileInfo, usage int64) int64
 	return usage
 }
 
+// setFileUsage refines file.Usage like usageOf and, when exclusive size is
+// enabled and could be measured, records the bytes in shared extents too.
+func (a *BaseAnalyzer) setFileUsage(file *File, path string, info os.FileInfo) {
+	if !a.exclusiveSize {
+		return
+	}
+	file.Usage, file.SharedUsage, _ = exclusiveAndSharedUsage(path, info, file.Usage)
+}
+
 // SetTimeFilter sets the time filter function for file inclusion
 func (a *BaseAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
 	a.matchesTimeFilterFn = matchesTimeFilterFn

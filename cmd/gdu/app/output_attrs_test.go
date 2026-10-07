@@ -14,10 +14,11 @@ func TestParseJSONAttributes(t *testing.T) {
 		excluded []string
 		valid    bool
 	}{
-		{name: "default", valid: true, included: []string{"asize", "dsize", "items", "mtime", "notreg", "ino"}},
+		{name: "default", valid: true, included: []string{"asize", "dsize", "shsize", "items", "mtime", "notreg", "ino"}},
 		{name: "selected", value: "asize, dsize", valid: true, included: []string{"asize", "dsize"}, excluded: []string{"items", "mtime", "notreg", "ino"}},
 		{name: "name", value: "name", valid: true, excluded: []string{"asize", "dsize", "items", "mtime", "notreg", "ino"}},
 		{name: "items", value: "items", valid: true, included: []string{"items"}, excluded: []string{"asize", "dsize", "mtime", "notreg", "ino"}},
+		{name: "shsize", value: "shsize", valid: true, included: []string{"shsize"}, excluded: []string{"asize", "dsize", "items", "mtime", "notreg", "ino"}},
 		{name: "ino", value: "ino", valid: true, included: []string{"ino"}, excluded: []string{"asize", "dsize", "items", "mtime", "notreg"}},
 		{name: "unknown", value: "size", valid: false},
 		{name: "empty selection", value: "asize,", valid: false},

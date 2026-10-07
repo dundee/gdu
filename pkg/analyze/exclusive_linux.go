@@ -64,22 +64,37 @@ var errFiemapNotSupported = errors.New("fiemap not supported")
 // by the file, so they are counted unless flagged as shared. Lengths are
 // logical: a compressed extent is counted at its uncompressed length.
 func exclusiveBytes(path string) (int64, error) {
-	return exclusiveBytesPaged(path, fiemapExtentsPerRequest)
+	excl, _, err := extentBytesPaged(path, fiemapExtentsPerRequest)
+	return excl, err
 }
 
 // exclusiveBytesPaged is exclusiveBytes asking the kernel for at most
 // perRequest extents per ioctl call, at most fiemapExtentsPerRequest.
 func exclusiveBytesPaged(path string, perRequest uint32) (int64, error) {
+	excl, _, err := extentBytesPaged(path, perRequest)
+	return excl, err
+}
+
+// extentBytes returns both halves of the extent map of the regular file at
+// path: the bytes not shared with any other file, and the bytes in extents
+// flagged FIEMAP_EXTENT_SHARED, which deleting the file alone does not free.
+func extentBytes(path string) (exclusive, shared int64, err error) {
+	return extentBytesPaged(path, fiemapExtentsPerRequest)
+}
+
+// extentBytesPaged is extentBytes asking the kernel for at most perRequest
+// extents per ioctl call, at most fiemapExtentsPerRequest.
+func extentBytesPaged(path string, perRequest uint32) (exclusive, shared int64, err error) {
 	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer unix.Close(fd) //nolint:errcheck
 
 	req := fiemapPool.Get().(*fiemapRequest)
 	defer fiemapPool.Put(req)
 
-	var total uint64
+	var total, sharedTotal uint64
 	var start uint64
 	for {
 		*req = fiemapRequest{} // the kernel only fills in what it maps
@@ -92,23 +107,25 @@ func exclusiveBytesPaged(path string, perRequest uint32) (int64, error) {
 			if errno == syscall.EINTR {
 				continue
 			}
-			return 0, errno
+			return 0, 0, errno
 		}
 
 		n := req.mappedCount
 		if n > perRequest {
-			return 0, errFiemapNotSupported
+			return 0, 0, errFiemapNotSupported
 		}
 		if n == 0 {
-			return int64(total), nil
+			return int64(total), int64(sharedTotal), nil
 		}
 		for i := range n {
 			e := &req.extents[i]
 			if e.flags&fiemapExtentShared == 0 {
 				total += e.length
+			} else {
+				sharedTotal += e.length
 			}
 			if e.flags&fiemapExtentLast != 0 {
-				return int64(total), nil
+				return int64(total), int64(sharedTotal), nil
 			}
 		}
 
@@ -116,7 +133,7 @@ func exclusiveBytesPaged(path string, perRequest uint32) (int64, error) {
 		next := last.logical + last.length
 		if next <= start || next < last.logical {
 			// No forward progress or overflow: stop rather than loop forever.
-			return 0, errFiemapNotSupported
+			return 0, 0, errFiemapNotSupported
 		}
 		start = next
 	}
@@ -126,13 +143,20 @@ func exclusiveBytesPaged(path string, perRequest uint32) (int64, error) {
 // exclusive bytes. ok is false when the value could not be measured, in which
 // case the caller keeps the st_blocks figure.
 func exclusiveUsage(path string, info os.FileInfo, usage int64) (int64, bool) {
+	excl, _, ok := exclusiveAndSharedUsage(path, info, usage)
+	return excl, ok
+}
+
+// exclusiveAndSharedUsage is exclusiveUsage that also returns the bytes in
+// shared extents. shared is 0 whenever ok is false.
+func exclusiveAndSharedUsage(path string, info os.FileInfo, usage int64) (excl, shared int64, ok bool) {
 	if !info.Mode().IsRegular() || usage == 0 {
 		// Nothing is allocated, so there is nothing that could be shared.
-		return usage, false
+		return usage, 0, false
 	}
-	excl, err := exclusiveBytes(path)
+	excl, shared, err := extentBytes(path)
 	if err != nil {
-		return usage, false
+		return usage, 0, false
 	}
-	return excl, true
+	return excl, shared, true
 }

@@ -164,7 +164,7 @@ makes scan details reachable by other hosts on the network.
 
 **-o**, **\--output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
 
-**\--output-attrs** Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg,ino).
+**\--output-attrs** Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino).
 Requires \--output-file. The *name* attribute is always included and directories always
 carry their *asize*, *dsize* and *items* summary stats so they can be preserved on import.
 

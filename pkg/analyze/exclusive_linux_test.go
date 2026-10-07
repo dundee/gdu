@@ -219,6 +219,97 @@ func TestExclusiveBytesReflink(t *testing.T) {
 	assert.Less(t, excl, int64(size), "most of the file is still shared")
 }
 
+func TestExtentBytesSplitsSharedFromExclusive(t *testing.T) {
+	dir := exclusiveTestDir(t)
+	const size = 1 << 19
+	src, dst := makeClone(t, dir, size)
+	if measure(t, src) != 0 {
+		t.Skip("filesystem does not report shared extents")
+	}
+
+	excl, shared, err := extentBytes(dst)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), excl)
+	assert.Equal(t, int64(size), shared)
+
+	f, err := os.OpenFile(dst, os.O_WRONLY, 0)
+	require.NoError(t, err)
+	_, err = f.WriteAt([]byte("changed"), 0)
+	require.NoError(t, err)
+	require.NoError(t, f.Sync())
+	require.NoError(t, f.Close())
+
+	excl, shared, err = extentBytes(dst)
+	require.NoError(t, err)
+	assert.Greater(t, excl, int64(0))
+	assert.Equal(t, int64(size), excl+shared, "every mapped byte is one or the other")
+
+	for _, perRequest := range []uint32{1, 2} {
+		e, s, err := extentBytesPaged(dst, perRequest)
+		require.NoError(t, err)
+		assert.Equal(t, excl, e)
+		assert.Equal(t, shared, s)
+	}
+
+	// A plain file shares nothing.
+	plain := filepath.Join(dir, "plain")
+	writeSynced(t, plain, make([]byte, 1<<16))
+	_, shared, err = extentBytes(plain)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), shared)
+}
+
+func TestAnalyzersRecordSharedUsage(t *testing.T) {
+	dir := exclusiveTestDir(t)
+	const size = 1 << 20
+	makeClone(t, dir, size)
+	if measure(t, filepath.Join(dir, "src")) != 0 {
+		t.Skip("filesystem does not report shared extents")
+	}
+	ignoreDir := func(_, _ string) bool { return false }
+	ignoreFile := func(_ string) bool { return false }
+
+	scanners := map[string]func(exclusive bool) fs.Item{
+		"sequential": func(exclusive bool) fs.Item {
+			a := CreateSeqAnalyzer()
+			a.SetExclusiveSize(exclusive)
+			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
+			a.GetDone().Wait()
+			return r
+		},
+		"parallel": func(exclusive bool) fs.Item {
+			a := CreateAnalyzer()
+			a.SetExclusiveSize(exclusive)
+			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
+			a.GetDone().Wait()
+			return r
+		},
+		"stable-order": func(exclusive bool) fs.Item {
+			a := CreateStableOrderAnalyzer()
+			a.SetExclusiveSize(exclusive)
+			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
+			a.GetDone().Wait()
+			return r
+		},
+	}
+	for name, scan := range scanners {
+		t.Run(name, func(t *testing.T) {
+			for _, exclusive := range []bool{false, true} {
+				root := scan(exclusive)
+				for f := range root.GetFiles(fs.SortByName, fs.SortAsc) {
+					file, ok := f.(*File)
+					require.True(t, ok)
+					if exclusive {
+						assert.Equal(t, int64(size), file.SharedUsage, f.GetName())
+					} else {
+						assert.Equal(t, int64(0), file.SharedUsage, "only measured with exclusive size")
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestHardLinksCountedOnce(t *testing.T) {
 	dir := exclusiveTestDir(t)
 	a := filepath.Join(dir, "a")
