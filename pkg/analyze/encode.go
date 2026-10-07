@@ -88,6 +88,10 @@ func (f *File) EncodeJSON(writer io.Writer, _ bool, attributes fs.JSONAttributes
 		buff = append(buff, []byte(`,"dsize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetUsage(), 10))...)
 	}
+	if attributes.Includes("shsize") && f.SharedUsage > 0 {
+		buff = append(buff, []byte(`,"shsize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(f.SharedUsage, 10))...)
+	}
 	if attributes.Includes("mtime") && !f.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)

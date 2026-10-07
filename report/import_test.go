@@ -190,3 +190,18 @@ type BrokenInput struct{}
 func (i *BrokenInput) Read(p []byte) (n int, err error) {
 	return 0, errors.New("IO error")
 }
+
+func TestReadAnalysisSharedUsage(t *testing.T) {
+	buff := bytes.NewBuffer([]byte(`
+		[1,2,{"progname":"gdu","progver":"development","timestamp":1626806293},
+		[{"name":"/home/xxx","asize":8192,"dsize":4096,"items":2},
+		{"name":"clone","asize":8192,"dsize":4096,"shsize":4096}]]
+	`))
+
+	dir, err := ReadAnalysis(buff)
+
+	assert.Nil(t, err)
+	clone := dir.Files[0].(*analyze.File)
+	assert.Equal(t, int64(4096), clone.Usage)
+	assert.Equal(t, int64(4096), clone.SharedUsage)
+}

@@ -141,7 +141,7 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 				Symlink: readSymlinkTarget(f.Type(), entryPath),
 			}
 			setPlatformSpecificAttrs(file, info)
-			file.Usage = a.usageOf(entryPath, info, file.Usage)
+			a.setFileUsage(file, entryPath, info)
 
 			totalSize += file.Usage
 

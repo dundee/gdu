@@ -152,3 +152,18 @@ func TestEncodeSelectedAttributesWithoutIno(t *testing.T) {
 	assert.NotContains(t, buff.String(), `"ino"`)
 	assert.NotContains(t, buff.String(), `"hlnkc"`)
 }
+
+func TestEncodeSharedUsage(t *testing.T) {
+	dir := &Dir{File: &File{Name: "test_dir"}, BasePath: "."}
+	dir.AddFile(&File{Name: "clone", Size: 8192, Usage: 4096, SharedUsage: 4096})
+	dir.AddFile(&File{Name: "plain", Size: 4096, Usage: 4096})
+
+	var buff bytes.Buffer
+	assert.NoError(t, dir.EncodeJSON(&buff, true, nil))
+	assert.Contains(t, buff.String(), `{"name":"clone","asize":8192,"dsize":4096,"shsize":4096}`)
+	assert.Contains(t, buff.String(), `{"name":"plain","asize":4096,"dsize":4096}`)
+
+	buff.Reset()
+	assert.NoError(t, dir.EncodeJSON(&buff, true, fs.JSONAttributes{"dsize": {}}))
+	assert.NotContains(t, buff.String(), `"shsize"`)
+}

@@ -66,6 +66,9 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 			if dsize, ok := item["dsize"].(float64); ok {
 				file.Usage = int64(dsize)
 			}
+			if shsize, ok := item["shsize"].(float64); ok {
+				file.SharedUsage = int64(shsize)
+			}
 			if mtime, ok := item["mtime"].(float64); ok {
 				file.Mtime = time.Unix(int64(mtime), 0)
 			}

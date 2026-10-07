@@ -9,3 +9,9 @@ import "os"
 func exclusiveUsage(_ string, _ os.FileInfo, usage int64) (int64, bool) {
 	return usage, false
 }
+
+// exclusiveAndSharedUsage is only implemented on Linux (FIEMAP); elsewhere the
+// st_blocks based usage is kept and nothing is reported as shared.
+func exclusiveAndSharedUsage(_ string, _ os.FileInfo, usage int64) (int64, int64, bool) {
+	return usage, 0, false
+}
