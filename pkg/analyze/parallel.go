@@ -103,6 +103,10 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			if a.isSnapshotDir(entryPath) {
+				dir.AddFile(snapshotPlaceholder(name, path, dir))
+				continue
+			}
 			dirCount++
 
 			go a.processQueuedDir(entryPath, dir, subDirChan)

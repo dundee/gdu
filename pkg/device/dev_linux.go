@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -170,4 +171,28 @@ func parseFilesystemID(value string) *uint64 {
 	}
 	id := unix.Mkdev(uint32(major), uint32(minor))
 	return &id
+}
+
+// btrfsSubvolumeInode is the inode number of every btrfs subvolume root
+const btrfsSubvolumeInode = 256
+
+// IsNestedBtrfsSubvolume reports whether path is the root of a btrfs subvolume that is not
+// a mount point, which is what snapshots (snapper, timeshift, ...) look like. They share
+// extents with the original, so counting them inflates usage far beyond the disk size.
+// Mounted subvolumes (like a separate /home) are real data and are not matched.
+func IsNestedBtrfsSubvolume(path string, mountPoints map[string]struct{}) bool {
+	var stat unix.Stat_t
+	if unix.Lstat(path, &stat) != nil || stat.Ino != btrfsSubvolumeInode {
+		return false
+	}
+	var fsInfo unix.Statfs_t
+	if unix.Statfs(path, &fsInfo) != nil || fsInfo.Type != unix.BTRFS_SUPER_MAGIC {
+		return false
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	_, mounted := mountPoints[absPath]
+	return !mounted
 }
