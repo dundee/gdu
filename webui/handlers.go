@@ -102,6 +102,9 @@ func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 
 	node, err := ui.findNode(path)
+	if err == nil {
+		node, err = ui.openSnapshot(r.Context(), node)
+	}
 	if err != nil {
 		writeNodeError(w, err)
 		return
@@ -113,6 +116,9 @@ func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 
 func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
 	node, err := ui.findNode(r.URL.Query().Get("path"))
+	if err == nil {
+		node, err = ui.openSnapshot(r.Context(), node)
+	}
 	if err != nil {
 		writeNodeError(w, err)
 		return
@@ -161,6 +167,10 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 	node, err := ui.findNode(r.URL.Query().Get("path"))
 	if err != nil {
 		writeNodeError(w, err)
+		return
+	}
+	if analyze.InSnapshotScope(node) {
+		writeError(w, http.StatusForbidden, errSnapshotReadOnly.Error())
 		return
 	}
 	parent := node.GetParent()
@@ -234,6 +244,8 @@ func writeNodeError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, errOutsideRoot):
 		writeError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, errSnapshotUnsupported):
+		writeError(w, http.StatusNotImplemented, err.Error())
 	case errors.Is(err, errNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
 	default:

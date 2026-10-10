@@ -81,6 +81,10 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			if a.isSnapshotDir(entryPath) {
+				dir.Files = append(dir.Files, SimpleFile{Name: name, Flag: snapshotFlag, ItemCount: 1, IsDir: true})
+				continue
+			}
 			topDir := &TopDir{
 				Name: name,
 				Flag: ' ',
@@ -215,6 +219,9 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 		entryPath := path + pathSep + name
 		if f.IsDir() {
 			if a.shouldSkipDir(name, entryPath) {
+				continue
+			}
+			if a.isSnapshotDir(entryPath) {
 				continue
 			}
 

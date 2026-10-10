@@ -86,6 +86,11 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			if a.isSnapshotDir(entryPath) {
+				itemChan <- indexedItem{itemCount, snapshotPlaceholder(name, path, dir)}
+				itemCount++
+				continue
+			}
 			currentIndex := itemCount
 			itemCount++
 			dirCount++

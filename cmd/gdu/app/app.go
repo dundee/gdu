@@ -42,6 +42,7 @@ type UI interface {
 	ReadFromStorage(storagePath, path string) error
 	SetIgnoreTypes(types []string)
 	SetIgnoreDirPaths(paths []string)
+	SetSkipBtrfsSubvolumes(mountPoints []string)
 	SetIgnoreDirPatterns(paths []string) error
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error
@@ -93,6 +94,7 @@ type Flags struct {
 	NoProgress          bool      `yaml:"no-progress"`
 	NoUnicode           bool      `yaml:"no-unicode"`
 	NoCross             bool      `yaml:"no-cross"`
+	IncludeSnapshots    bool      `yaml:"include-snapshots"`
 	NoHidden            bool      `yaml:"no-hidden"`
 	NoDelete            bool      `yaml:"no-delete"`
 	NoViewFile          bool      `yaml:"no-view-file"`
@@ -335,6 +337,7 @@ func (a *App) Run() error {
 	}
 
 	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
+	a.setSkipBtrfsSubvolumes(ui)
 
 	if len(a.Flags.IgnoreDirPatterns) > 0 {
 		if err := ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
@@ -761,6 +764,23 @@ func (a *App) setNoCross(path string) error {
 		a.Flags.IgnoreDirs = append(a.Flags.IgnoreDirs, paths...)
 	}
 	return nil
+}
+
+// setSkipBtrfsSubvolumes skips nested btrfs subvolumes (snapshots) unless asked not to
+func (a *App) setSkipBtrfsSubvolumes(ui UI) {
+	if a.Flags.IncludeSnapshots {
+		return
+	}
+	mounts, err := a.Getter.GetMounts()
+	if err != nil {
+		log.Printf("Cannot load mount points, btrfs snapshots will be counted: %s", err)
+		return
+	}
+	mountPoints := make([]string, 0, len(mounts))
+	for _, mount := range mounts {
+		mountPoints = append(mountPoints, mount.MountPoint)
+	}
+	ui.SetSkipBtrfsSubvolumes(mountPoints)
 }
 
 func (a *App) runAction(ui UI, paths []string) error {
