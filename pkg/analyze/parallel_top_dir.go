@@ -117,10 +117,11 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			file := SimpleFile{
-				Name:    name,
-				Flag:    getFlag(info),
-				Size:    info.Size(),
-				Symlink: readSymlinkTarget(f.Type(), entryPath),
+				Name:      name,
+				Flag:      getFlag(info),
+				Size:      info.Size(),
+				Symlink:   readSymlinkTarget(f.Type(), entryPath),
+				ItemCount: 1,
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info)
@@ -147,7 +148,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			Flag:      topDir.Flag,
 			Size:      size,
 			Usage:     usage,
-			ItemCount: itemCount,
+			ItemCount: itemCount + 1, // include the directory itself, like Dir does
 			IsDir:     true,
 		})
 	}

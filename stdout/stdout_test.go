@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -71,6 +72,35 @@ func TestShowItemCountInNonInteractiveMode(t *testing.T) {
 	assert.Regexp(t, regexp.MustCompile(`(?m)\s+5\s+/a$`), out)
 	assert.Regexp(t, regexp.MustCompile(`(?m)\s+10\s+/b$`), out)
 	assert.Regexp(t, regexp.MustCompile(`(?m)\s+15\s+/c$`), out)
+}
+
+func TestShowItemCountIsTheSameForEveryAnalyzer(t *testing.T) {
+	tmpDir := t.TempDir()
+	assert.Nil(t, os.MkdirAll(filepath.Join(tmpDir, "a", "sub"), 0o755))
+	assert.Nil(t, os.WriteFile(filepath.Join(tmpDir, "a", "f"), []byte("x"), 0o644))
+	assert.Nil(t, os.WriteFile(filepath.Join(tmpDir, "a", "sub", "f"), []byte("x"), 0o644))
+	assert.Nil(t, os.Mkdir(filepath.Join(tmpDir, "empty"), 0o755))
+
+	analyzers := map[string]func() common.Analyzer{
+		"top dir":    func() common.Analyzer { return analyze.CreateTopDirAnalyzer() },
+		"parallel":   func() common.Analyzer { return analyze.CreateAnalyzer() },
+		"sequential": func() common.Analyzer { return analyze.CreateSeqAnalyzer() },
+	}
+	for name, createAnalyzer := range analyzers {
+		t.Run(name, func(t *testing.T) {
+			output := bytes.NewBuffer(make([]byte, 10))
+			ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+			ui.SetAnalyzer(createAnalyzer())
+			ui.SetShowItemCount()
+
+			err := ui.AnalyzePath(tmpDir, nil)
+			assert.Nil(t, err)
+
+			out := output.String()
+			assert.Regexp(t, regexp.MustCompile(`(?m)\s+3\s+/a$`), out)
+			assert.Regexp(t, regexp.MustCompile(`(?m)\s+0\s+/empty$`), out)
+		})
+	}
 }
 
 func TestShowItemCountInNonInteractiveModeWithColorsAndFile(t *testing.T) {
