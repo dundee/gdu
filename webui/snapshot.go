@@ -65,7 +65,7 @@ func (ui *UI) openSnapshot(ctx context.Context, node fs.Item) (fs.Item, error) {
 
 	if err := analyze.AttachSnapshotScope(current, scanned); err != nil {
 		log.Printf("webui: attaching snapshot %s: %s", current.GetPath(), err)
-		return nil, fmt.Errorf("%w: %s", errSnapshotUnsupported, err)
+		return nil, fmt.Errorf("%w: %w", errSnapshotUnsupported, err)
 	}
 	return scanned, nil
 }
