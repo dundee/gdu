@@ -38,11 +38,14 @@ func (d *TopDir) SetFlag(flag rune) {
 }
 
 type SimpleFile struct {
-	Name      string
-	Symlink   string
-	Flag      rune
-	Size      int64
-	Usage     int64
+	Name    string
+	Symlink string
+	Flag    rune
+	Size    int64
+	Usage   int64
+	// OwnUsage mirrors File.OwnUsage: a directory's own blocks, kept so the
+	// top-dir analyzer reports the same usage as every other analyzer.
+	OwnUsage  int64
 	ItemCount int64
 	IsDir     bool
 }
@@ -112,11 +115,11 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 	if len(d.Files) == 0 {
 		d.ItemCount = 0
 		d.Size = EmptyDirSize
-		d.Usage = 0
+		d.Usage = d.OwnUsage
 	} else {
 		d.ItemCount = itemCount + 1
 		d.Size = totalSize
-		d.Usage = totalUsage
+		d.Usage = totalUsage + d.OwnUsage
 	}
 }
 func (d *SimpleDir) AddFile(fs.Item) { panic("not implemented") }
