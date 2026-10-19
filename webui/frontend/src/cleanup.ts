@@ -31,6 +31,7 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   'build-artifact': PALETTE[1],
   'package-cache': PALETTE[5],
   'app-cache': PALETTE[6],
+  toolchain: PALETTE[9],
   'ml-model': PALETTE[4],
   installer: PALETTE[0],
   'git-ignored': PALETTE[10],

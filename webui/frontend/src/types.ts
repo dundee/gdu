@@ -21,6 +21,7 @@ export type Category =
   | 'build-artifact'
   | 'package-cache'
   | 'app-cache'
+  | 'toolchain'
   | 'ml-model'
   | 'installer'
   | 'git-ignored';

@@ -267,3 +267,50 @@ func TestForgetSubtractsFromAncestors(t *testing.T) {
 	res.Forget(child(t, root, "p", "package.json"))
 	assert.Equal(t, Totals{MLModel: {Usage: 60, Size: 60}}, res.Totals(root))
 }
+
+func TestPathRulesUnderVirtualRoot(t *testing.T) {
+	// scanning several paths puts them under the virtual top level dir, whose
+	// own name must not leak into the paths path rules are matched against
+	goDir := build(home, dir("go", dir("pkg", dir("mod", file("m", 30)))))
+	gradle := build(home, dir(".gradle", dir("caches", file("c", 20))))
+	root := analyze.CreateVirtualRootDir(goDir, gradle)
+	res := newClassifier(t, Config{}).Analyze(root)
+
+	assert.Equal(t, Totals{PackageCache: {Usage: 50, Size: 50}}, res.Totals(root))
+	m, ok := res.Match(child(t, goDir, "pkg", "mod"))
+	require.True(t, ok)
+	assert.Equal(t, PackageCache, m.Category)
+}
+
+func TestDefaultCacheAndToolchainRules(t *testing.T) {
+	root := build("/home", dir("u",
+		dir(".cache", dir("uv", file("u", 1)), dir("thumbs", file("t", 1))),
+		dir(".gradle", dir("wrapper", dir("dists", file("d", 1))), dir("caches", file("c", 1))),
+		dir(".rustup", dir("toolchains", file("r", 1))),
+		dir(".bun", dir("install", dir("global", file("package.json", 1), dir("node_modules", file("n", 1))))),
+		dir("Library", dir("Caches", dir("go-build", file("g", 1)))),
+		dir("app", dir("App.xcodeproj", file("p", 1)), dir("DerivedData", file("d", 1))),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+
+	tests := []struct {
+		path     []string
+		category Category
+	}{
+		{[]string{".cache", "uv"}, PackageCache},
+		{[]string{".cache", "thumbs"}, AppCache},
+		{[]string{".gradle", "wrapper", "dists"}, PackageCache},
+		{[]string{".gradle", "caches"}, PackageCache},
+		{[]string{".rustup", "toolchains"}, Toolchain},
+		// global installs are not build artifacts despite their package.json
+		{[]string{".bun", "install", "global"}, Toolchain},
+		{[]string{"Library", "Caches", "go-build"}, PackageCache},
+		// glob marker: next to *.xcodeproj
+		{[]string{"app", "DerivedData"}, BuildArtifact},
+	}
+	for _, tt := range tests {
+		m, ok := res.Match(child(t, root, tt.path...))
+		assert.True(t, ok, tt.path)
+		assert.Equal(t, tt.category, m.Category, tt.path)
+	}
+}

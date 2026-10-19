@@ -18,6 +18,7 @@ const (
 	BuildArtifact Category = "build-artifact"
 	PackageCache  Category = "package-cache"
 	AppCache      Category = "app-cache"
+	Toolchain     Category = "toolchain"
 	MLModel       Category = "ml-model"
 	Installer     Category = "installer"
 	GitIgnored    Category = "git-ignored"
@@ -46,6 +47,7 @@ var Categories = []CategoryInfo{
 	{ID: BuildArtifact, Label: "Build artifacts"},
 	{ID: PackageCache, Label: "Package caches"},
 	{ID: AppCache, Label: "App caches"},
+	{ID: Toolchain, Label: "SDKs & toolchains"},
 	{ID: MLModel, Label: "ML models"},
 	{ID: Installer, Label: "Installers & archives"},
 	{ID: GitIgnored, Label: "Git-ignored"},
@@ -122,7 +124,8 @@ const downloadsDir = "~/Downloads"
 
 var (
 	jsMarkers     = []string{"package.json"}
-	pythonMarkers = []string{"pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"}
+	pythonMarkers = []string{"pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile", "tox.ini"}
+	zigMarkers    = []string{"build.zig"}
 	gradleMarkers = []string{"build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"}
 	buildMarkers  = []string{
 		"package.json", "CMakeLists.txt", "Makefile", "pyproject.toml", "setup.py",
@@ -130,35 +133,86 @@ var (
 	}
 )
 
+const (
+	dirTarget    = "target"
+	hintPnpm     = "pnpm store, `pnpm store prune`"
+	hintYarn     = "Yarn cache, `yarn cache clean`"
+	hintAppCache = "Apps rebuild caches; quit the app first"
+)
+
 // DefaultRules are evaluated after the user's rules. Path rules ending in "/*"
 // make each child its own unit, so a more specific rule (Hugging Face inside
-// ~/.cache) can still win for one child.
+// ~/.cache) can still win for one child. A path rule never matches an
+// ancestor of a more specific one, so the outer one is listed per child.
 var DefaultRules = []Rule{
 	// ML models: re-downloadable, but large and sometimes only removable
 	// cleanly through their tool.
 	{Category: MLModel, Confidence: Review, Path: "~/.ollama/models", Hint: "Remove models with `ollama rm`; deleting blobs by hand breaks Ollama"},
 	{Category: MLModel, Confidence: Review, Path: "~/.cache/huggingface", Hint: "Prune with `hf cache delete`"},
 	{Category: MLModel, Confidence: Review, Path: "~/.lmstudio/models", Hint: "Re-downloadable from LM Studio"},
+	{Category: MLModel, Confidence: Review, Path: "~/.cache/lm-studio/models", Hint: "Re-downloadable from LM Studio"},
+	{Category: MLModel, Confidence: Review, Path: "~/.cache/torch", Hint: "PyTorch hub cache, re-downloaded on use"},
 	{Category: MLModel, Confidence: Review, File: "*.gguf"},
 	{Category: MLModel, Confidence: Review, File: "*.safetensors"},
 	{Category: MLModel, Confidence: Review, File: "*.onnx"},
 	{Category: MLModel, Confidence: Review, File: "*.ckpt"},
 	{Category: MLModel, Confidence: Review, File: "*.pth"},
 
-	// Package manager caches.
-	{Category: PackageCache, Confidence: Safe, Path: "~/.npm/_cacache", Hint: "npm cache, `npm cache clean --force`"},
+	// Package manager and build caches, refilled on the next build.
 	{Category: PackageCache, Confidence: Safe, Path: "~/go/pkg/mod", Hint: "Go module cache, `go clean -modcache`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/go-build", Hint: "Go build cache, `go clean -cache`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.cache/go-build", Hint: "Go build cache, `go clean -cache`"},
 	{Category: PackageCache, Confidence: Safe, Path: "~/.cargo/registry", Hint: "Cargo registry cache"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.cargo/git", Hint: "Cargo git checkouts"},
 	{Category: PackageCache, Confidence: Safe, Path: "~/.gradle/caches", Hint: "Gradle cache"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.gradle/wrapper/dists", Hint: "Gradle distributions, downloaded again by the wrapper"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.gradle/daemon", Hint: "Gradle daemon logs"},
 	{Category: PackageCache, Confidence: Review, Path: "~/.m2/repository", Hint: "Maven repository; may hold locally installed artifacts"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.npm/_cacache", Hint: "npm cache, `npm cache clean --force`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.bun/install/cache", Hint: "Bun cache, `bun pm cache rm`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.npm/_npx", Hint: "npx cache, filled again on the next npx run"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/Library/pnpm/store", Hint: hintPnpm},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.local/share/pnpm/store", Hint: hintPnpm},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.pnpm-store", Hint: hintPnpm},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.yarn/berry/cache", Hint: hintYarn},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.cache/uv", Hint: "uv cache, `uv cache prune`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.cache/pip", Hint: "pip cache, `pip cache purge`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.cache/pypoetry", Hint: "Poetry cache, `poetry cache clear`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.cache/yarn", Hint: hintYarn},
 	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/pip", Hint: "pip cache, `pip cache purge`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/pypoetry", Hint: "Poetry cache, `poetry cache clear`"},
 	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/Homebrew", Hint: "Homebrew cache, `brew cleanup`"},
-	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/Yarn", Hint: "Yarn cache"},
-	{Category: PackageCache, Confidence: Safe, Path: "~/Library/pnpm/store", Hint: "pnpm store, `pnpm store prune`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/Yarn", Hint: hintYarn},
+	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/pnpm", Hint: "pnpm cache"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/Library/Caches/CocoaPods", Hint: "CocoaPods cache, `pod cache clean --all`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.cocoapods/repos", Hint: "CocoaPods specs, fetched again by `pod install`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.pub-cache", Hint: "Dart/Flutter packages, `dart pub cache clean`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.konan", Hint: "Kotlin/Native toolchain cache"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.composer/cache", Hint: "Composer cache, `composer clear-cache`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/miniconda3/pkgs", Hint: "conda package cache, `conda clean --all`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/anaconda3/pkgs", Hint: "conda package cache, `conda clean --all`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.stack/pantry", Hint: "Stack package index"},
+
+	// Installed SDKs and toolchains: re-installable, but probably in use.
+	// Global package installs are listed here so the node_modules inside
+	// them, next to a package.json, is not taken for a build artifact.
+	{Category: Toolchain, Confidence: Review, Path: "~/.bun/install/global", Hint: "Globally installed Bun packages, `bun remove -g`"},
+	{Category: Toolchain, Confidence: Review, Path: "~/.rustup/toolchains", Hint: "Remove unused ones with `rustup toolchain uninstall`"},
+	{Category: Toolchain, Confidence: Review, Path: "~/.nvm/versions", Hint: "Remove unused Node versions with `nvm uninstall`"},
+	{Category: Toolchain, Confidence: Review, Path: "~/.pyenv/versions", Hint: "Remove unused Pythons with `pyenv uninstall`"},
+	{Category: Toolchain, Confidence: Review, Path: "~/.sdkman/candidates", Hint: "Remove unused SDKs with `sdk uninstall`"},
+	{Category: Toolchain, Confidence: Review, Path: "~/.ghcup/ghc", Hint: "Remove unused GHCs with `ghcup rm`"},
+	{Category: Toolchain, Confidence: Review, Path: "~/.local/share/uv/python", Hint: "Remove unused Pythons with `uv python uninstall`"},
+	{Category: Toolchain, Confidence: Review, Path: "~/Library/Android/sdk/system-images", Hint: "Emulator images, re-downloadable with the SDK manager"},
+	{Category: Toolchain, Confidence: Review, Path: "~/.android/avd", Hint: "Android emulators; their data is lost"},
+	{Category: Toolchain, Confidence: Safe, Path: "~/Library/Developer/Xcode/iOS DeviceSupport", Hint: "Re-created when a device connects"},
+	{Category: Toolchain, Confidence: Review, Path: "~/Library/Developer/Xcode/Archives", Hint: "App archives; keep the ones you may need to symbolicate"},
+	{Category: Toolchain, Confidence: Review, Path: "~/Library/Developer/CoreSimulator/Devices", Hint: "Simulators, `xcrun simctl delete unavailable`"},
 
 	// Application caches.
-	{Category: AppCache, Confidence: Safe, Path: "~/Library/Caches/*", Hint: "Apps rebuild caches; quit the app first"},
-	{Category: AppCache, Confidence: Safe, Path: "~/.cache/*", Hint: "Apps rebuild caches; quit the app first"},
+	{Category: AppCache, Confidence: Safe, Path: "~/Library/Caches/*", Hint: hintAppCache},
+	{Category: AppCache, Confidence: Safe, Path: "~/.cache/*", Hint: hintAppCache},
+	{Category: AppCache, Confidence: Safe, Path: "~/Library/Developer/CoreSimulator/Caches", Hint: hintAppCache},
 	{Category: BuildArtifact, Confidence: Safe, Path: "~/Library/Developer/Xcode/DerivedData", Hint: "Xcode rebuilds it"},
 
 	// Project build artifacts, recognized by a project marker next to them.
@@ -168,11 +222,31 @@ var DefaultRules = []Rule{
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".svelte-kit", Markers: jsMarkers},
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".turbo", Markers: jsMarkers},
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".parcel-cache", Markers: jsMarkers},
-	{Category: BuildArtifact, Confidence: Safe, Dir: "target", Markers: []string{"Cargo.toml"}, Hint: "`cargo clean`"},
-	{Category: BuildArtifact, Confidence: Safe, Dir: "target", Markers: []string{"pom.xml"}, Hint: "`mvn clean`"},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".angular", Markers: []string{"angular.json"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".expo", Markers: jsMarkers},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "bower_components", Markers: []string{"bower.json"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: dirTarget, Markers: []string{"Cargo.toml"}, Hint: "`cargo clean`"},
+	{Category: BuildArtifact, Confidence: Safe, Dir: dirTarget, Markers: []string{"pom.xml"}, Hint: "`mvn clean`"},
+	{Category: BuildArtifact, Confidence: Safe, Dir: dirTarget, Markers: []string{"build.sbt"}, Hint: "`sbt clean`"},
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".gradle", Markers: gradleMarkers},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".cxx", Markers: gradleMarkers},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "Pods", Markers: []string{"Podfile"}, Hint: "Restored by `pod install`"},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "DerivedData", Markers: []string{"*.xcodeproj"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".dart_tool", Markers: []string{"pubspec.yaml"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".zig-cache", Markers: zigMarkers},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "zig-cache", Markers: zigMarkers},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "zig-out", Markers: zigMarkers},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".stack-work", Markers: []string{"stack.yaml"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "dist-newstyle", Markers: []string{"cabal.project", "*.cabal"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "_build", Markers: []string{"mix.exs", "dune-project", "rebar.config"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "deps", Markers: []string{"mix.exs"}, Hint: "Restored by `mix deps.get`"},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "elm-stuff", Markers: []string{"elm.json"}},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".terraform", Markers: []string{".terraform.lock.hcl"}, Hint: "Restored by `terraform init`"},
+	{Category: BuildArtifact, Confidence: Safe, Dir: "CMakeFiles", Markers: []string{"CMakeCache.txt"}},
 	{Category: BuildArtifact, Confidence: Review, Dir: ".venv", Markers: pythonMarkers, Hint: "Recreate the virtualenv after removing"},
 	{Category: BuildArtifact, Confidence: Review, Dir: "venv", Markers: pythonMarkers, Hint: "Recreate the virtualenv after removing"},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".tox", Markers: pythonMarkers},
+	{Category: BuildArtifact, Confidence: Safe, Dir: ".nox", Markers: []string{"noxfile.py"}},
 	{Category: BuildArtifact, Confidence: Review, Dir: "dist", Markers: buildMarkers, Hint: "Build output; check it is not committed"},
 	{Category: BuildArtifact, Confidence: Review, Dir: "build", Markers: buildMarkers, Hint: "Build output; check it is not committed"},
 	{Category: BuildArtifact, Confidence: Safe, Dir: "__pycache__"},

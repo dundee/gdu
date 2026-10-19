@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -215,12 +216,13 @@ func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}) Tot
 	popRepo := w.enterDir(path, names)
 	defer popRepo()
 
+	// children of the virtual top level dir are scanned roots: they carry
+	// their own absolute path, and the virtual dir has none
+	virtual := analyze.IsVirtualRootDir(it)
 	var totals Totals
 	for _, child := range children {
 		childPath := filepath.Join(path, child.GetName())
-		if path == "" {
-			// children of the virtual top level dir are scanned roots,
-			// labelled by their own absolute path
+		if virtual {
 			childPath = child.GetPath()
 		}
 		totals = totals.add(w.walk(child, childPath, names))
@@ -276,6 +278,14 @@ func (r *Rule) matches(it fs.Item, path string, siblings map[string]struct{}) bo
 	for _, marker := range r.Markers {
 		if _, ok := siblings[marker]; ok {
 			return true
+		}
+		if !strings.ContainsAny(marker, "*?[") {
+			continue
+		}
+		for sibling := range siblings {
+			if globMatch(marker, sibling) {
+				return true
+			}
 		}
 	}
 	return false

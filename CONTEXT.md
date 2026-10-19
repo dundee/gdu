@@ -95,7 +95,7 @@ items inside it are not candidates of their own.
 ## Category
 
 What kind of cleanup candidate an item is: build artifact, package cache, app
-cache, ML model, installer or archive, or git-ignored.
+cache, SDK or toolchain, ML model, installer or archive, or git-ignored.
 
 ## Confidence
 
