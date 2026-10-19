@@ -181,8 +181,14 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("mode") == deleteModeTrash {
 		removeFunc = ui.trasher
 	}
-	if _, err := ui.removeNode(removeFunc, parent, node); err != nil {
+	removed, err := ui.removeNode(removeFunc, parent, node)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !removed {
+		// a trash command may succeed and leave the item in place
+		writeError(w, http.StatusInternalServerError, "the item is still there after moving it to the trash")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

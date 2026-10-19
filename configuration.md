@@ -212,7 +212,7 @@ Further details:
 * When the command fails, its exit status and standard error output are shown in an error dialog and the item stays in the listing.
 * When the command succeeds but the item is still present on disk, the item stays in the listing as well. Only the selected item is refreshed, so an item moved elsewhere by the command is not picked up at its new location.
 * `no-delete` disables the `D` key regardless of this option.
-* Also used by the web UI's "Move to Trash" action, under the same contract.
+* Also used by the web UI's "Move to Trash" action, under the same contract. The web UI reports an item the command left in place as an error.
 * Not supported on Windows, which has no POSIX shell to evaluate the command in.
 
 #### `browse-parent-dirs`

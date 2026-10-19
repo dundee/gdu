@@ -313,6 +313,35 @@ func TestDeleteNodeEndpointReturnsErrorWhenRemoveFuncFails(t *testing.T) {
 	assert.NoError(t, err, "file must still exist after a failed delete")
 }
 
+func TestDeleteNodeEndpointReportsItemLeftInPlaceByTrash(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	// like a trash command that exits 0 without moving the item
+	ui.trasher = func(fs.Item, fs.Item) error { return nil }
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(
+		http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path)+"&mode=trash", nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "still there")
+	_, err = ui.findNode(path)
+	assert.NoError(t, err, "the item stays in the tree")
+}
+
 func TestDeleteEndpointRejectsChangedParent(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)
