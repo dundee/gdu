@@ -9,16 +9,17 @@ Accepted
 ## Context
 
 The built-in trash targets the FreeDesktop trash, which Finder ignores, so on
-darwin it was a stub that returned "not supported". ADR 0002 left macOS users a
-workaround (`--trash-command`) and noted that probing for a trash CLI remained
-open.
+darwin it was a stub that returned "not supported".
+[ADR 0002 (external trash command)](0002-external-trash-command.md) left macOS
+users a workaround (`--trash-command`) and noted that probing for a trash CLI
+remained open.
 
 The web UI's cleanup projections make moving many items to the trash a common
 action, so it has to work without configuration on the platform most of its
 users run.
 
-Current macOS ships `/usr/bin/trash`, which moves items into the Finder trash,
-where they can be put back.
+macOS 15 (Sequoia) and later ship `/usr/bin/trash`, which moves items into the
+Finder trash, where they can be put back. It is missing on macOS 14 and older.
 
 ## Decision
 

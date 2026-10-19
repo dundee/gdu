@@ -4,7 +4,9 @@ Date: 2026-09-02
 
 ## Status
 
-Accepted
+Accepted. The macOS consequence is partly superseded by
+[ADR 0003](0003-macos-trash-uses-system-trash-command.md): the built-in trash
+now runs `/usr/bin/trash` on macOS.
 
 ## Context
 
