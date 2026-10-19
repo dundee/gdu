@@ -197,6 +197,6 @@ install-dev-dependencies:
 	$(GOBIN) install gotest.tools/gotestsum@latest
 	$(GOBIN) install github.com/mitchellh/gox@latest
 	$(GOBIN) install honnef.co/go/gotraceui/cmd/gotraceui@latest
-	$(GOBIN) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+	$(GOBIN) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 
 .PHONY: run build build-static build-all build-web check test test-web gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
