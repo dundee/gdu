@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -219,17 +220,27 @@ func TestSetCleanupConfigAppliesExclusions(t *testing.T) {
 	assert.Error(t, ui.SetCleanupConfig(cleanup.Config{Rules: []cleanup.Rule{{Category: "junk", Dir: "x"}}}))
 }
 
-func TestClassificationDuringDeletionIsNotCached(t *testing.T) {
+func TestClassificationRunsInBackground(t *testing.T) {
 	ui := newTestUI()
 	scan(t, ui, makeCleanupTree(t))
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	assert.False(t, ui.buildStatus().Classifying)
+	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", nil))
 
-	// a deletion is running: the walk may see the tree before or after it
+	// while a deletion runs, a walk may see the tree before or after it, so
+	// classification waits for the deletion to end
 	ui.removalSeq.Add(1)
-	during := ui.cleanupResult()
-	require.NotNil(t, during)
-	assert.NotSame(t, during, ui.cleanupResult(), "a walk that overlapped a deletion is not reused")
+	ui.treeChanged()
+	require.Eventually(t, func() bool { return !ui.buildStatus().Classifying }, 5*time.Second, 10*time.Millisecond)
+	assert.Nil(t, ui.cleanupResult())
+	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, srv, "/api/v1/categories", nil))
+	var node nodeResponse
+	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/nodes", &node), "browsing does not wait for it")
+	assert.Empty(t, node.Node.CategoryTotals)
 
 	ui.removalSeq.Add(1)
-	after := ui.cleanupResult()
-	assert.Same(t, after, ui.cleanupResult())
+	ui.classify()
+	waitClassified(t, ui)
+	assert.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", nil))
 }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import * as api from './api';
@@ -16,6 +16,7 @@ const status: Status = {
   showRelativeSize: false,
   useSIPrefix: false,
   deleteAllowed: true,
+  classifying: false,
 };
 const nodeResponse: NodeResponse = {
   node: {
@@ -668,6 +669,30 @@ describe('projections', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(file.getAttribute('data-focus')).toBeNull();
     expect(file.getAttribute('opacity')).toBe('1');
+  });
+
+  it('shows that classification runs and reloads once it is done', async () => {
+    let publish: (status: Status) => void = () => undefined;
+    vi.mocked(api.subscribeStatus).mockImplementation((onStatus) => {
+      publish = onStatus;
+      return () => undefined;
+    });
+    vi.mocked(api.fetchStatus).mockResolvedValue({ ...status, classifying: true });
+    await openTreemap();
+    expect(screen.getByRole('status').textContent).toBe('classifying…');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'category' },
+    });
+    expect(screen.getByText('Classifying…', { selector: '.treemap-loading span' })).toBeTruthy();
+    expect(api.fetchCategories).not.toHaveBeenCalled();
+    expect(api.fetchTree).toHaveBeenCalledTimes(1);
+
+    act(() => publish(status));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(root, true));
+    await waitFor(() => expect(api.fetchCategories).toHaveBeenCalledWith(root));
+    expect(api.fetchNode).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('cycles projections with P', async () => {

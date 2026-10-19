@@ -23,6 +23,9 @@ type statusResponse struct {
 	ShowRelativeSize bool         `json:"showRelativeSize"`
 	UseSIPrefix      bool         `json:"useSIPrefix"`
 	DeleteAllowed    bool         `json:"deleteAllowed"`
+	// Classifying is set while cleanup candidates are being classified, which
+	// starts once a scan is done.
+	Classifying bool `json:"classifying"`
 }
 
 type progressJSON struct {
@@ -77,6 +80,7 @@ func (ui *UI) buildStatus() statusResponse {
 		ShowApparentSize: ui.ShowApparentSize,
 		ShowRelativeSize: ui.ShowRelativeSize,
 		UseSIPrefix:      ui.UseSIPrefix,
+		Classifying:      ui.classifying.Load(),
 	}
 	reason, _ := ui.deleteDisabledReason(ui.noDelete, ui.scanning)
 	resp.DeleteAllowed = reason == ""

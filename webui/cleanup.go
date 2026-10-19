@@ -18,13 +18,15 @@ import (
 // on it are refused.
 const categoryNodePrefix = "category:"
 
-// cleanupCache memoizes the classification of the current tree. It is valid
-// while the root and the tree generation it was computed for are current.
+// cleanupCache holds the classification of the current tree, which is
+// computed in the background. It is valid while the root and the tree
+// generation it was computed for are current.
 type cleanupCache struct {
-	mu   sync.Mutex
-	root fs.Item
-	gen  uint64
-	res  *cleanup.Result
+	mu      sync.Mutex
+	root    fs.Item
+	gen     uint64
+	res     *cleanup.Result
+	running bool
 }
 
 // userHomeDir returns the home directory "~/" in cleanup rules stands for, or
@@ -49,32 +51,32 @@ func (ui *UI) SetCleanupConfig(cfg cleanup.Config) error {
 	return nil
 }
 
-// cleanupResult returns the classification of the current tree, computing it
-// on first use after a scan or a deletion. It is nil while scanning.
-func (ui *UI) cleanupResult() *cleanup.Result {
+// currentTree returns the tree to classify and its generation; ok is false
+// while there is none or a scan runs.
+func (ui *UI) currentTree() (root fs.Item, gen uint64, ok bool) {
 	ui.mu.RLock()
 	root, scanning := ui.topDir, ui.scanning
 	ui.mu.RUnlock()
-	if root == nil || scanning {
+	return root, ui.treeGen.Load(), root != nil && !scanning
+}
+
+// cleanupResult returns the classification of the current tree. It is nil
+// while scanning and while the classification is computed, which this starts
+// if needed.
+func (ui *UI) cleanupResult() *cleanup.Result {
+	root, gen, ok := ui.currentTree()
+	if !ok {
 		return nil
 	}
-
-	gen := ui.treeGen.Load()
 	c := &ui.cleanup
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	if c.res != nil && c.root == root && c.gen == gen {
+		defer c.mu.Unlock()
 		return c.res
 	}
-	seq := ui.removalSeq.Load()
-	res := ui.classifier.Analyze(root)
-	if seq%2 != 0 || ui.removalSeq.Load() != seq {
-		// a deletion ran during the walk, which may have seen the tree
-		// before or after it, so the result cannot be updated for it
-		return res
-	}
-	c.root, c.gen, c.res = root, gen, res
-	return c.res
+	c.mu.Unlock()
+	ui.classify()
+	return nil
 }
 
 // requireCleanupResult is cleanupResult for requests that cannot be answered
@@ -82,21 +84,87 @@ func (ui *UI) cleanupResult() *cleanup.Result {
 func (ui *UI) requireCleanupResult(w http.ResponseWriter) *cleanup.Result {
 	res := ui.cleanupResult()
 	if res == nil {
-		writeError(w, http.StatusServiceUnavailable, "classification is unavailable while scanning")
+		msg := "classification is still running"
+		if _, _, ok := ui.currentTree(); !ok {
+			msg = "classification is unavailable while scanning"
+		}
+		writeError(w, http.StatusServiceUnavailable, msg)
 	}
 	return res
 }
 
-// treeChanged invalidates everything derived from the tree.
+// classify starts classifying the current tree in the background, unless its
+// classification is cached or already being computed.
+func (ui *UI) classify() {
+	c := &ui.cleanup
+	c.mu.Lock()
+	root, gen, ok := ui.currentTree()
+	if !ok || c.running || (c.res != nil && c.root == root && c.gen == gen) {
+		c.mu.Unlock()
+		return
+	}
+	c.running = true
+	ui.classifying.Store(true)
+	c.mu.Unlock()
+
+	ui.hub.publish(ui.statusJSON())
+	go ui.runClassification()
+}
+
+// runClassification classifies the current tree until the result is cached. A
+// walk that overlapped a deletion or another change of the tree is discarded,
+// since it may have seen the tree before or after the change.
+func (ui *UI) runClassification() {
+	c := &ui.cleanup
+	for {
+		c.mu.Lock()
+		root, gen, ok := ui.currentTree()
+		seq := ui.removalSeq.Load()
+		if !ok || seq%2 != 0 {
+			// the end of the scan or deletion starts classification again
+			ui.stopClassifyingLocked()
+			return
+		}
+		c.mu.Unlock()
+
+		res := ui.classifier.Analyze(root)
+
+		c.mu.Lock()
+		nowRoot, nowGen, ok := ui.currentTree()
+		if ok && nowRoot == root && nowGen == gen && ui.removalSeq.Load() == seq {
+			c.root, c.gen, c.res = root, gen, res
+			ui.stopClassifyingLocked()
+			return
+		}
+		c.mu.Unlock()
+	}
+}
+
+// stopClassifyingLocked ends a classification run. It is called with the
+// cache locked and unlocks it.
+func (ui *UI) stopClassifyingLocked() {
+	ui.cleanup.running = false
+	ui.classifying.Store(false)
+	ui.cleanup.mu.Unlock()
+	ui.hub.publish(ui.statusJSON())
+}
+
+// treeChanged invalidates everything derived from the tree and classifies it
+// again.
 func (ui *UI) treeChanged() {
 	ui.treeGen.Add(1)
+	ui.classify()
 }
 
 // removeNode runs removeFunc and updates the classification for the removal.
 // It reports whether the item is gone from the tree.
 func (ui *UI) removeNode(removeFunc func(fs.Item, fs.Item) error, parent, node fs.Item) (bool, error) {
 	ui.removalSeq.Add(1)
-	defer ui.removalSeq.Add(1)
+	defer func() {
+		ui.removalSeq.Add(1)
+		// a classification the deletion interrupted starts again
+		ui.classify()
+	}()
 
 	if err := removeFunc(parent, node); err != nil {
 		// a failed removal may still have removed part of the tree

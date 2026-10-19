@@ -252,6 +252,18 @@ export function useGduModelState() {
     };
   }, [currentPath, sort, order, status?.state, reloadKey]);
 
+  // Data loaded while the classification ran lacks cleanup candidates:
+  // reload it once the classification is done.
+  const classifying = status?.classifying ?? false;
+  const wasClassifyingRef = useRef(classifying);
+  useEffect(() => {
+    if (wasClassifyingRef.current && !classifying) {
+      setTreePath(null);
+      setReloadKey((k) => k + 1);
+    }
+    wasClassifyingRef.current = classifying;
+  }, [classifying]);
+
   // Global "?" shortcut to open the help overlay; works from any view.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

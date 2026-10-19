@@ -61,6 +61,15 @@ export function Header() {
           {effectiveApparent ? 'Apparent size' : 'Disk usage'}
         </button>
         {status.state === 'scanning' && <span className="scanning-badge">scanning…</span>}
+        {status.classifying && (
+          <span
+            className="scanning-badge"
+            role="status"
+            title="Looking for cleanup candidates; the cleanup projections fill in when it is done"
+          >
+            classifying…
+          </span>
+        )}
         {deletionsInFlight > 0 && (
           <span
             className="scanning-badge"

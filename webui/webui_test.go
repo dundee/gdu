@@ -47,12 +47,19 @@ func makeTree(t *testing.T) string {
 	return root
 }
 
+// scan analyzes path and waits until the scan and the classification of its
+// cleanup candidates are done.
 func scan(t *testing.T, ui *UI, path string) {
 	t.Helper()
 	require.NoError(t, ui.AnalyzePath(path, nil))
+	waitClassified(t, ui)
+}
+
+func waitClassified(t *testing.T, ui *UI) {
+	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		if ui.buildStatus().State == "done" {
+		if ui.buildStatus().State == "done" && ui.cleanupResult() != nil {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)

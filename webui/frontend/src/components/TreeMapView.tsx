@@ -62,13 +62,18 @@ export function TreeMapView() {
     setCategoryFilter(null);
   }, [currentPath]);
 
-  // Category totals are scoped to the current directory.
+  // Category totals are scoped to the current directory. While the
+  // classification runs, the legend says so instead.
+  const classifying = status.classifying;
   useEffect(() => {
     if (view !== 'treemap' || !showsCategories || currentPath === null) {
       return;
     }
     let cancelled = false;
     setCategories(null);
+    if (classifying) {
+      return;
+    }
     fetchCategories(currentPath)
       .then((resp) => {
         if (!cancelled) {
@@ -79,13 +84,13 @@ export function TreeMapView() {
     return () => {
       cancelled = true;
     };
-  }, [currentPath, showsCategories, view]);
+  }, [currentPath, showsCategories, view, classifying]);
 
   // Load (and cache, via the model) the recursive tree for the current
   // directory. Cached in the model rather than here so toggling back to this
   // view for the same path does not re-fetch.
   useEffect(() => {
-    if (view !== 'treemap' || currentPath === null || treePath === treeKey) {
+    if (view !== 'treemap' || currentPath === null || treePath === treeKey || (byCategory && classifying)) {
       return;
     }
     let cancelled = false;
@@ -110,7 +115,7 @@ export function TreeMapView() {
     return () => {
       cancelled = true;
     };
-  }, [currentPath, treePath, treeKey, byCategory, view, setTree]);
+  }, [currentPath, treePath, treeKey, byCategory, classifying, view, setTree]);
 
   const actions = useItemActions();
 
@@ -283,7 +288,9 @@ export function TreeMapView() {
         ) : (
           <div className="treemap-loading">
             {treeLoading && <span className="spinner compact" />}
-            <span>{treeError ? 'Treemap unavailable' : 'Loading treemap…'}</span>
+            <span>
+              {treeError ? 'Treemap unavailable' : byCategory && classifying ? 'Classifying…' : 'Loading treemap…'}
+            </span>
           </div>
         )}
       </section>

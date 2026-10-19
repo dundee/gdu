@@ -60,6 +60,8 @@ type UI struct {
 	// removalSeq is odd while a deletion runs, from before the tree changes
 	// until the classification has been updated for it.
 	removalSeq atomic.Uint64
+	// classifying is set while the classification runs in the background.
+	classifying atomic.Bool
 
 	hub *hub
 }
@@ -224,6 +226,7 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 		ui.topDirPath = dir.GetPath()
 		ui.scanning = false
 		ui.mu.Unlock()
+		ui.treeChanged()
 
 		ui.hub.publish(ui.statusJSON())
 	}()
@@ -252,6 +255,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	ui.topDirPath = dir.GetPath()
 	ui.scanning = false
 	ui.mu.Unlock()
+	ui.treeChanged()
 	return nil
 }
 
@@ -272,6 +276,7 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	ui.topDirPath = dir.GetPath()
 	ui.scanning = false
 	ui.mu.Unlock()
+	ui.treeChanged()
 	return nil
 }
 
