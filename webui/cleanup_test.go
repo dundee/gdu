@@ -218,3 +218,18 @@ func TestSetCleanupConfigAppliesExclusions(t *testing.T) {
 
 	assert.Error(t, ui.SetCleanupConfig(cleanup.Config{Rules: []cleanup.Rule{{Category: "junk", Dir: "x"}}}))
 }
+
+func TestClassificationDuringDeletionIsNotCached(t *testing.T) {
+	ui := newTestUI()
+	scan(t, ui, makeCleanupTree(t))
+
+	// a deletion is running: the walk may see the tree before or after it
+	ui.removalSeq.Add(1)
+	during := ui.cleanupResult()
+	require.NotNil(t, during)
+	assert.NotSame(t, during, ui.cleanupResult(), "a walk that overlapped a deletion is not reused")
+
+	ui.removalSeq.Add(1)
+	after := ui.cleanupResult()
+	assert.Same(t, after, ui.cleanupResult())
+}

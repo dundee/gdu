@@ -65,13 +65,39 @@ func (ui *UI) cleanupResult() *cleanup.Result {
 	if c.res != nil && c.root == root && c.gen == gen {
 		return c.res
 	}
-	c.root, c.gen, c.res = root, gen, ui.classifier.Analyze(root)
+	seq := ui.removalSeq.Load()
+	res := ui.classifier.Analyze(root)
+	if seq%2 != 0 || ui.removalSeq.Load() != seq {
+		// a deletion ran during the walk, which may have seen the tree
+		// before or after it, so the result cannot be updated for it
+		return res
+	}
+	c.root, c.gen, c.res = root, gen, res
 	return c.res
 }
 
 // treeChanged invalidates everything derived from the tree.
 func (ui *UI) treeChanged() {
 	ui.treeGen.Add(1)
+}
+
+// removeNode runs removeFunc and updates the classification for the removal.
+// It reports whether the item is gone from the tree.
+func (ui *UI) removeNode(removeFunc func(fs.Item, fs.Item) error, parent, node fs.Item) (bool, error) {
+	ui.removalSeq.Add(1)
+	defer ui.removalSeq.Add(1)
+
+	if err := removeFunc(parent, node); err != nil {
+		// a failed removal may still have removed part of the tree
+		ui.treeChanged()
+		return false, err
+	}
+	// a trash command may succeed and leave the item in place
+	if current, ok := childByName(parent, node.GetName()); ok && current == node {
+		return false, nil
+	}
+	ui.itemRemoved(node)
+	return true, nil
 }
 
 // itemRemoved updates the cached classification for one item that was removed

@@ -57,6 +57,9 @@ type UI struct {
 	// treeGen counts changes to the tree that keep its root, such as a
 	// deletion or a rescan of a subdirectory.
 	treeGen atomic.Uint64
+	// removalSeq is odd while a deletion runs, from before the tree changes
+	// until the classification has been updated for it.
+	removalSeq atomic.Uint64
 
 	hub *hub
 }
