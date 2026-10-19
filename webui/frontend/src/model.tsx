@@ -11,6 +11,7 @@ import type { Node, NodeResponse, SortKey, SortOrder, Status, TreeNode } from '.
 import { fetchNode, fetchStatus, subscribeStatus, type DeleteMode } from './api';
 import { colorMapFor, computeSlices } from './slices';
 import { useLatest } from './useLatest';
+import type { Projection } from './cleanup';
 
 export type ChartView = 'donut' | 'treemap';
 
@@ -63,6 +64,10 @@ export interface GduModel {
   onSortChange: (key: SortKey) => void;
   view: ChartView;
   toggleView: () => void;
+  // projection is how the treemap is colored (and, for "categories", shaped).
+  // Kept here so it survives toggling the view.
+  projection: Projection;
+  setProjection: (projection: Projection) => void;
   toggleApparent: () => void;
   hoveredPath: string | null;
   setHoveredPath: (path: string | null) => void;
@@ -121,6 +126,7 @@ export function useGduModelState() {
   const [order, setOrder] = useState<SortOrder>('desc');
   const [apparent, setApparent] = useState<boolean | null>(null);
   const [view, setView] = useState<ChartView>('donut');
+  const [projection, setProjection] = useState<Projection>('location');
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
@@ -287,6 +293,8 @@ export function useGduModelState() {
     onSortChange,
     view,
     toggleView,
+    projection,
+    setProjection,
     toggleApparent,
     hoveredPath,
     setHoveredPath,

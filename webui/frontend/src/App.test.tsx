@@ -99,7 +99,7 @@ describe('chart view', () => {
     fireEvent.click(toggle);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Donut' })).toBeTruthy());
-    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledWith(root));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledWith(root, false));
     expect(screen.getByRole('img', { name: 'Directory size treemap' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /nested\.bin/ })).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
@@ -301,7 +301,7 @@ describe('treemap actions', () => {
     await waitFor(() =>
       expect(api.fetchNode).toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc'),
     );
-    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`, false));
     fireEvent.keyDown(window, { code: 'KeyD' });
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
     expect(api.deleteNode).not.toHaveBeenCalled();
@@ -316,7 +316,7 @@ describe('treemap actions', () => {
     await waitFor(() =>
       expect(api.fetchNode).toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc'),
     );
-    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`, false));
   });
 
   it('does not offer deletion when the backend disables it', async () => {
@@ -559,5 +559,102 @@ describe('table actions', () => {
 
     expect(await screen.findByText(/no action token/i)).toBeTruthy();
     expect(api.revealNode).not.toHaveBeenCalled();
+  });
+});
+
+describe('projections', () => {
+  const categoriesResponse = {
+    total: { usage: 100, size: 100 },
+    categories: [{ id: 'ml-model' as const, label: 'ML models', usage: 50, size: 50 }],
+  };
+  const pivotResponse: TreeNode = {
+    ...nodeResponse.node,
+    children: [
+      {
+        name: 'ML models',
+        path: 'category:ml-model',
+        isDir: true,
+        size: 50,
+        usage: 50,
+        itemCount: 1,
+        mtime: 0,
+        category: 'ml-model',
+        children: [
+          {
+            name: 'nested.bin',
+            path: `${root}/folder/nested.bin`,
+            isDir: false,
+            size: 50,
+            usage: 50,
+            itemCount: 1,
+            mtime: 0,
+            category: 'ml-model',
+            confidence: 'review',
+            children: [],
+          },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.mocked(api.fetchCategories).mockResolvedValue(categoriesResponse);
+  });
+
+  async function openTreemap() {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    await screen.findByRole('img', { name: 'Directory size treemap' });
+  }
+
+  it('loads category totals for the current directory in the cleanup projection', async () => {
+    await openTreemap();
+    expect(api.fetchCategories).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'cleanup' },
+    });
+    await waitFor(() => expect(api.fetchCategories).toHaveBeenCalledWith(root));
+    expect(await screen.findByRole('button', { name: /ML models · 50 B · 50%/ })).toBeTruthy();
+
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchCategories).toHaveBeenLastCalledWith(`${root}/folder`));
+  });
+
+  it('loads the pivoted tree and keeps category nodes out of actions', async () => {
+    vi.mocked(api.fetchTree).mockImplementation((_path, pivot) =>
+      Promise.resolve(pivot ? pivotResponse : treeResponse),
+    );
+    await openTreemap();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'categories' },
+    });
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(root, true));
+    const group = await screen.findByRole('button', { name: /^ML models, / });
+
+    fireEvent.click(group);
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+
+    fireEvent.doubleClick(group);
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+
+    // a real candidate inside the group stays actionable
+    fireEvent.click(screen.getByRole('button', { name: /nested\.bin/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    expect(await screen.findByRole('dialog', { name: 'Delete item' })).toBeTruthy();
+  });
+
+  it('cycles projections with P', async () => {
+    await openTreemap();
+    const select = screen.getByRole('combobox', { name: 'Treemap projection' }) as HTMLSelectElement;
+    expect(select.value).toBe('location');
+
+    fireEvent.keyDown(window, { code: 'KeyP' });
+    expect(select.value).toBe('cleanup');
+    fireEvent.keyDown(window, { code: 'KeyP' });
+    expect(select.value).toBe('age');
+    expect(screen.getByText('Last change')).toBeTruthy();
   });
 });

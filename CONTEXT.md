@@ -79,3 +79,26 @@ What a bar is measured against. Two modes, applying to every bar alike:
 
 Rows the user has ignored are excluded from the denominator and draw an empty
 bar.
+
+## Projection
+
+A way of coloring (and, for one projection, regrouping) the web UI treemap
+other than by location. Area always stays the item's size; a projection only
+changes what the color says.
+
+## Cleanup candidate
+
+An item that is likely safe to remove to free space, because a tool can
+regenerate or re-download it. A directory that is a candidate is a unit: the
+items inside it are not candidates of their own.
+
+## Category
+
+What kind of cleanup candidate an item is: build artifact, package cache, app
+cache, ML model, installer or archive, or git-ignored.
+
+## Confidence
+
+How safe removing a cleanup candidate is: **safe** (regenerated on demand) or
+**review** (probably unneeded, but may hold the only copy of something or need
+its own tool to be removed cleanly).

@@ -104,7 +104,7 @@ func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sortBy, order := parseSort(r.URL.Query().Get("sort"), r.URL.Query().Get("order"))
-	writeJSON(w, http.StatusOK, buildNodeResponse(node, sortBy, order))
+	writeJSON(w, http.StatusOK, buildNodeResponse(node, sortBy, order, ui.cleanupResult()))
 }
 
 func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +113,16 @@ func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
 		writeNodeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, buildTree(node))
+	res := ui.cleanupResult()
+	if r.URL.Query().Get("pivot") == "category" {
+		if res == nil {
+			writeError(w, http.StatusServiceUnavailable, "classification is unavailable while scanning")
+			return
+		}
+		writeJSON(w, http.StatusOK, buildPivotTree(node, res))
+		return
+	}
+	writeJSON(w, http.StatusOK, buildTree(node, res))
 }
 
 // deleteDisabledReason reports why deletion is currently refused given the
@@ -169,7 +178,10 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("mode") == deleteModeTrash {
 		removeFunc = ui.trasher
 	}
-	if err := removeFunc(parent, node); err != nil {
+	err = removeFunc(parent, node)
+	// even a failed removal may have removed part of the tree
+	ui.treeChanged()
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

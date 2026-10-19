@@ -103,13 +103,13 @@ The color channel is never used for size: area already encodes size.
 - Create: `pkg/cleanup/classify.go`
 - Create: `pkg/cleanup/classify_test.go`
 
-- [ ] define `Category` (`build-artifact`, `package-cache`, `system-cache`, `ml-model`, `installer`, `git-ignored`) and `Confidence` (`safe`, `review`) with label and hint (e.g. "remove with `ollama rm`")
-- [ ] define `Rule` (category, confidence, directory-name or path glob or file extension, optional sibling marker files, optional hint)
-- [ ] embed default rule table: `node_modules`+`package.json`, `target`+`Cargo.toml`, `.next`/`dist`/`build` only with a project marker, `__pycache__`, `.venv`+`pyproject.toml|requirements.txt`, `.gradle`, `DerivedData`, `~/Library/Caches`, `~/.cache`, `~/.npm`, `go/pkg/mod/cache`, `~/.cargo/registry`; `~/.ollama/models` and `~/.cache/huggingface` as `ml-model`/`review`; `*.gguf`, `*.safetensors`, `*.onnx`, `*.ckpt` as `ml-model`/`review`; `*.dmg`, `*.pkg`, `*.iso` and archives under `~/Downloads` as `installer`/`review`
-- [ ] implement `Classifier.Classify(item fs.Item) (Match, bool)`: a matched directory is a unit (descendants inherit, not re-matched); marker check looks up siblings in the in-memory tree, no disk access
-- [ ] support exclusions: an excluded path and everything below it never matches
-- [ ] write tests: marker present vs absent, nested match inherits, extension rules, `~` expansion, exclusions
-- [ ] run `make test` - must pass before next task
+- [x] define `Category` (`build-artifact`, `package-cache`, `system-cache`, `ml-model`, `installer`, `git-ignored`) and `Confidence` (`safe`, `review`) with label and hint (e.g. "remove with `ollama rm`")
+- [x] define `Rule` (category, confidence, directory-name or path glob or file extension, optional sibling marker files, optional hint)
+- [x] embed default rule table: `node_modules`+`package.json`, `target`+`Cargo.toml`, `.next`/`dist`/`build` only with a project marker, `__pycache__`, `.venv`+`pyproject.toml|requirements.txt`, `.gradle`, `DerivedData`, `~/Library/Caches`, `~/.cache`, `~/.npm`, `go/pkg/mod/cache`, `~/.cargo/registry`; `~/.ollama/models` and `~/.cache/huggingface` as `ml-model`/`review`; `*.gguf`, `*.safetensors`, `*.onnx`, `*.ckpt` as `ml-model`/`review`; `*.dmg`, `*.pkg`, `*.iso` and archives under `~/Downloads` as `installer`/`review`
+- [x] implement `Classifier.Classify(item fs.Item) (Match, bool)`: a matched directory is a unit (descendants inherit, not re-matched); marker check looks up siblings in the in-memory tree, no disk access
+- [x] support exclusions: an excluded path and everything below it never matches
+- [x] write tests: marker present vs absent, nested match inherits, extension rules, `~` expansion, exclusions
+- [x] run `make test` - must pass before next task
 
 ### Task 2: `.gitignore` signal
 
@@ -118,12 +118,12 @@ The color channel is never used for size: area already encodes size.
 - Create: `pkg/cleanup/gitignore_test.go`
 - Modify: `go.mod`, `go.sum`
 
-- [ ] pick a maintained gitignore matcher (candidate: `github.com/go-git/go-git/v5/plumbing/format/gitignore`, which handles nested `.gitignore` files); avoid a custom matcher
-- [ ] detect repository roots from `.git` entries in the scanned tree; read their `.gitignore` files from disk once per classification pass
-- [ ] an ignored item that matched no rule gets `git-ignored`/`review`; a rule match keeps its own category but `review` is upgraded to `safe` when also git-ignored
-- [ ] items outside any repository are unaffected
-- [ ] write tests with a temp repo: ignored dir, negated pattern, nested `.gitignore`, no repo
-- [ ] run `make test` - must pass before next task
+- [x] pick a maintained gitignore matcher (candidate: `github.com/go-git/go-git/v5/plumbing/format/gitignore`, which handles nested `.gitignore` files); avoid a custom matcher
+- [x] detect repository roots from `.git` entries in the scanned tree; read their `.gitignore` files from disk once per classification pass
+- [x] an ignored item that matched no rule gets `git-ignored`/`review`; a rule match keeps its own category but `review` is upgraded to `safe` when also git-ignored
+- [x] items outside any repository are unaffected
+- [x] write tests with a temp repo: ignored dir, negated pattern, nested `.gitignore`, no repo
+- [x] run `make test` - must pass before next task
 
 ### Task 3: Full-tree aggregation
 
@@ -131,10 +131,10 @@ The color channel is never used for size: area already encodes size.
 - Create: `pkg/cleanup/aggregate.go`
 - Create: `pkg/cleanup/aggregate_test.go`
 
-- [ ] implement one post-order pass over the full tree producing, per directory, bytes by category for both disk usage and apparent size, plus global totals
-- [ ] store results in a map keyed by `fs.Item`; hard-linked files counted the way gdu already counts them
-- [ ] write tests: mixed directory, unit directory, empty tree, apparent vs usage
-- [ ] run `make test` - must pass before next task
+- [x] implement one post-order pass over the full tree producing, per directory, bytes by category for both disk usage and apparent size, plus global totals
+- [x] store results in a map keyed by `fs.Item`; hard-linked files counted the way gdu already counts them
+- [x] write tests: mixed directory, unit directory, empty tree, apparent vs usage
+- [x] run `make test` - must pass before next task
 
 ### Task 4: Config for rules and exclusions
 
@@ -143,11 +143,11 @@ The color channel is never used for size: area already encodes size.
 - Modify: `cmd/gdu/app/app_test.go`
 - Modify: `webui/webui.go`
 
-- [ ] add `cleanup:` section to `Flags`: `exclude: []string`, `rules: []` (same fields as `Rule`); user rules are evaluated before defaults
-- [ ] validate rules at startup (unknown category, empty matcher) and fail with a clear error
-- [ ] pass the built `Classifier` into `webui.CreateUI`
-- [ ] write tests: valid config, invalid category, exclusion with `~`
-- [ ] run `make test` - must pass before next task
+- [x] add `cleanup:` section to `Flags`: `exclude: []string`, `rules: []` (same fields as `Rule`); user rules are evaluated before defaults
+- [x] validate rules at startup (unknown category, empty matcher) and fail with a clear error
+- [x] pass the built `Classifier` into `webui.CreateUI`
+- [x] write tests: valid config, invalid category, exclusion with `~`
+- [x] run `make test` - must pass before next task
 
 ### Task 5: Expose classification in the API
 
@@ -157,12 +157,12 @@ The color channel is never used for size: area already encodes size.
 - Modify: `webui/handlers.go`
 - Modify: `webui/webui_test.go`
 
-- [ ] compute classification + aggregation once after the scan finishes; recompute after a successful delete/trash
-- [ ] extend `nodeJSON` with `category`, `confidence`, `hint` (unit matches only) and, for directories, `categoryUsage` / `categorySize` maps
-- [ ] add `GET /api/v1/categories?path=<dir>`: category list with label, confidence, hint and totals for that directory's subtree (read from the cached per-directory aggregation; no `path` = scan root); unknown path → 404, as `/api/v1/nodes`
-- [ ] return 503 (or `pending`) from `/api/v1/categories` while scanning, consistent with existing status handling
-- [ ] write handler tests: payload fields, totals for root and a nested `path`, unknown path, recompute after delete, during scan
-- [ ] run `make test` - must pass before next task
+- [x] compute classification + aggregation once after the scan finishes; recompute after a successful delete/trash
+- [x] extend `nodeJSON` with `category`, `confidence`, `hint` (unit matches only) and, for directories, `categoryUsage` / `categorySize` maps
+- [x] add `GET /api/v1/categories?path=<dir>`: category list with label, confidence, hint and totals for that directory's subtree (read from the cached per-directory aggregation; no `path` = scan root); unknown path → 404, as `/api/v1/nodes`
+- [x] return 503 (or `pending`) from `/api/v1/categories` while scanning, consistent with existing status handling
+- [x] write handler tests: payload fields, totals for root and a nested `path`, unknown path, recompute after delete, during scan
+- [x] run `make test` - must pass before next task
 
 ### Task 6: Projection switch and color functions
 
@@ -176,13 +176,13 @@ The color channel is never used for size: area already encodes size.
 - Modify: `webui/frontend/src/components/Header.tsx`
 - Create: `webui/frontend/src/colors.test.ts`
 
-- [ ] add `projection: 'default' | 'cleanup' | 'age'` to the model, with a header control and a keyboard shortcut
-- [ ] `cleanup` color: unit match → accent hue (`safe` strong, `review` light); directory without own match → tinted by its candidate share (`sum(categoryUsage) / usage`); everything else neutral grey; excluded paths grey
-- [ ] `age` color: sequential scale over latest mtime (e.g. < 1 month, < 6 months, < 1 year, older)
-- [ ] tooltip line for candidates, e.g. "14 GB of build cache, unchanged for 4 months" plus hint
-- [ ] colors must pass contrast in light and dark themes
-- [ ] write tests for color functions and tooltip text
-- [ ] run `make test-web` - must pass before next task
+- [x] add `projection: 'default' | 'cleanup' | 'age'` to the model, with a header control and a keyboard shortcut
+- [x] `cleanup` color: unit match → accent hue (`safe` strong, `review` light); directory without own match → tinted by its candidate share (`sum(categoryUsage) / usage`); everything else neutral grey; excluded paths grey
+- [x] `age` color: sequential scale over latest mtime (e.g. < 1 month, < 6 months, < 1 year, older)
+- [x] tooltip line for candidates, e.g. "14 GB of build cache, unchanged for 4 months" plus hint
+- [x] colors must pass contrast in light and dark themes
+- [x] write tests for color functions and tooltip text
+- [x] run `make test-web` - must pass before next task
 
 ### Task 7: Legend with totals and highlight filter
 
@@ -192,11 +192,11 @@ The color channel is never used for size: area already encodes size.
 - Modify: `webui/frontend/src/components/TreeMapView.tsx`
 - Modify: `webui/frontend/src/components/HelpModal.tsx`
 
-- [ ] show legend in `cleanup` projection for the current directory: category, total size, share of the directory's size; refetch on navigation
-- [ ] click a category to dim every rectangle that does not contain it; click again to clear
-- [ ] document projections and shortcut in the help modal
-- [ ] write tests: totals rendered, totals change after drilling into a subdirectory, filter toggling dims rectangles
-- [ ] run `make test-web` - must pass before next task
+- [x] show legend in `cleanup` projection for the current directory: category, total size, share of the directory's size; refetch on navigation
+- [x] click a category to dim every rectangle that does not contain it; click again to clear
+- [x] document projections and shortcut in the help modal
+- [x] write tests: totals rendered, totals change after drilling into a subdirectory, filter toggling dims rectangles
+- [x] run `make test-web` - must pass before next task
 
 ### Phase 2
 
@@ -207,10 +207,10 @@ The color channel is never used for size: area already encodes size.
 - Modify: `webui/server.go`
 - Modify: `webui/webui_test.go`
 
-- [ ] add `GET /api/v1/tree?path=<dir>&pivot=category`: virtual root (the current directory) → one virtual node per category → topmost matched directories/files inside `<dir>` with their real paths, using the same 5000-node budget
-- [ ] virtual category nodes have no path and are not deletable (same rule as the virtual top-level directory, ADR 0002-multiple-scanned-roots)
-- [ ] write tests: pivot shape at root and at a nested `path`, budget, virtual nodes rejected by delete
-- [ ] run `make test` - must pass before next task
+- [x] add `GET /api/v1/tree?path=<dir>&pivot=category`: virtual root (the current directory) → one virtual node per category → topmost matched directories/files inside `<dir>` with their real paths, using the same 5000-node budget
+- [x] virtual category nodes have no path and are not deletable (same rule as the virtual top-level directory, ADR 0002-multiple-scanned-roots)
+- [x] write tests: pivot shape at root and at a nested `path`, budget, virtual nodes rejected by delete
+- [x] run `make test` - must pass before next task
 
 ### Task 9: "By category" projection in the frontend
 
@@ -221,10 +221,10 @@ The color channel is never used for size: area already encodes size.
 - Modify: `webui/frontend/src/components/treemap/treeLayout.ts`
 - Modify: `webui/frontend/src/components/treemap/treeLayout.test.ts`
 
-- [ ] add `categories` projection that loads the pivot tree for the current directory; top-level blocks colored per category, children inherit; navigating reloads it
-- [ ] clicking a real node shows its real path in breadcrumbs/tooltip; reveal works as in the normal tree
-- [ ] write tests: layout over pivot tree, virtual node not actionable
-- [ ] run `make test-web` - must pass before next task
+- [x] add `categories` projection that loads the pivot tree for the current directory; top-level blocks colored per category, children inherit; navigating reloads it
+- [x] clicking a real node shows its real path in breadcrumbs/tooltip; reveal works as in the normal tree
+- [x] write tests: layout over pivot tree, virtual node not actionable
+- [x] run `make test-web` - must pass before next task
 
 ### Task 10: macOS trash
 
@@ -233,15 +233,20 @@ The color channel is never used for size: area already encodes size.
 - Modify: `pkg/remove/trash_darwin_test.go`
 - Create: `docs/adr/0003-macos-trash-uses-system-trash-command.md`
 
-- [ ] implement `MoveItemToTrash` on darwin via `/usr/bin/trash` (exec without a shell, path as an argument); clear error when the binary is missing, pointing at the external trash command option
-- [ ] record the decision in an ADR
-- [ ] write tests: successful move of a temp file, missing binary error
-- [ ] run `make test` - must pass before next task
+- [x] implement `MoveItemToTrash` on darwin via `/usr/bin/trash` (exec without a shell, path as an argument); clear error when the binary is missing, pointing at the external trash command option
+- [x] record the decision in an ADR
+- [x] write tests: successful move of a temp file, missing binary error
+- [x] run `make test` - must pass before next task
 
 ### Task 11 (optional, lightweight): Multi-select and batch trash
 
 Existing single-item delete/trash from the treemap stays the primary flow. Do
 this task only if it stays small; otherwise drop it and note it here.
+
+⚠️ Skipped: multi-select needs the shared single-item delete workflow
+(`useItemActions`, `DeleteConfirmModal`, also used by the donut table) to
+become multi-item, which is not a small change. Candidates are already
+visible as individual tiles in the "By category" projection.
 
 **Files:**
 - Modify: `webui/frontend/src/model.tsx`
@@ -258,16 +263,33 @@ this task only if it stays small; otherwise drop it and note it here.
 
 ### Task 12: Verify acceptance criteria
 
-- [ ] verify every Overview item is implemented for both phases
-- [ ] verify edge cases: multi-root scans, archives/virtual nodes, stopped scan, deletion recompute
-- [ ] run full suite: `make check`
-- [ ] rebuild embedded bundle: `make build-web`
+- [x] verify every Overview item is implemented for both phases
+- [x] verify edge cases: multi-root scans, archives/virtual nodes, stopped scan, deletion recompute
+- [x] run full suite: `make check`
+- [x] rebuild embedded bundle: `make build-web`
 
 ### Task 13: [Final] Update documentation
 
-- [ ] add glossary terms to `CONTEXT.md`: Projection, Cleanup candidate, Category, Confidence
-- [ ] document `cleanup:` config and projections in `README.md`; regenerate man page if flags changed
-- [ ] move this plan to `docs/plans/completed/`
+- [x] add glossary terms to `CONTEXT.md`: Projection, Cleanup candidate, Category, Confidence
+- [x] document `cleanup:` config and projections in `README.md`; regenerate man page if flags changed
+- [x] move this plan to `docs/plans/completed/`
+
+## Implementation Notes
+
+- ➕ Aggregation lives in `pkg/cleanup/classify.go` together with the walk
+  (one pass classifies and aggregates); there is no separate `aggregate.go`.
+- ➕ Classification is computed lazily on the first request after a scan and
+  cached per root and tree generation (`webui/cleanup.go`); deletions and
+  rescans bump the generation.
+- ➕ Wire format: `category`, `confidence`, `hint` and
+  `categoryTotals: {<category>: {usage, size}}` on nodes, built by
+  `toNodeJSON(it, res)`.
+- ➕ Category nodes of the pivoted tree use paths `category:<id>`, which
+  `findNode` rejects, so they can never be deleted or revealed.
+- ➕ Projections: `location` (default), `cleanup`, `age`, `categories`; `P`
+  cycles them.
+- ➕ Gitignore matching uses `github.com/go-git/go-git/v5/plumbing/format/gitignore`;
+  `.gitignore` files are read only for repositories found in the scanned tree.
 
 ## Technical Details
 

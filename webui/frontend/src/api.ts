@@ -1,4 +1,4 @@
-import type { NodeResponse, SortKey, SortOrder, Status, TreeNode } from './types';
+import type { CategoriesResponse, NodeResponse, SortKey, SortOrder, Status, TreeNode } from './types';
 
 async function responseError(res: Response): Promise<Error & { status: number }> {
   let message = `request failed: ${res.status}`;
@@ -34,9 +34,21 @@ export function fetchNode(
   return getJSON<NodeResponse>(`api/v1/nodes?${params.toString()}`);
 }
 
-export function fetchTree(path: string): Promise<TreeNode> {
+// fetchTree loads the recursive tree below path. With pivot, the tree is
+// regrouped by cleanup category: one synthetic node per category (its path
+// starts with PIVOT_PATH_PREFIX, see cleanup.ts) holding the candidates with
+// their real paths.
+export function fetchTree(path: string, pivot = false): Promise<TreeNode> {
   const params = new URLSearchParams({ path });
+  if (pivot) {
+    params.set('pivot', 'category');
+  }
   return getJSON<TreeNode>(`api/v1/tree?${params.toString()}`);
+}
+
+export function fetchCategories(path: string): Promise<CategoriesResponse> {
+  const params = new URLSearchParams({ path });
+  return getJSON<CategoriesResponse>(`api/v1/categories?${params.toString()}`);
 }
 
 // requestAction sends a mutating request carrying the per-process action

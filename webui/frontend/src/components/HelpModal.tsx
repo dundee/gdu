@@ -25,6 +25,11 @@ export function HelpModal() {
             <dd>Select a treemap item</dd>
             <dt>Double-click</dt>
             <dd>Open a directory</dd>
+            <dt>P</dt>
+            <dd>
+              Switch projection: location, cleanup candidates (safe / review first), age of the
+              last change, or candidates grouped by category
+            </dd>
           </>
         )}
         {view === 'donut' && (

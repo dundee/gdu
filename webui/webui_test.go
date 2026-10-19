@@ -1087,15 +1087,15 @@ func TestToNodeJSONFlag(t *testing.T) {
 
 	// A file with a meaningful flag exposes it in the JSON payload.
 	flagged := &analyze.File{Name: "denied", Flag: '!', Parent: parent}
-	assert.Equal(t, "!", toNodeJSON(flagged).Flag)
+	assert.Equal(t, "!", toNodeJSON(flagged, nil).Flag)
 
 	// A blank flag (space) is omitted.
 	blank := &analyze.File{Name: "ok", Flag: ' ', Parent: parent}
-	assert.Empty(t, toNodeJSON(blank).Flag)
+	assert.Empty(t, toNodeJSON(blank, nil).Flag)
 
 	// A zero flag is also omitted.
 	zero := &analyze.File{Name: "zero", Parent: parent}
-	assert.Empty(t, toNodeJSON(zero).Flag)
+	assert.Empty(t, toNodeJSON(zero, nil).Flag)
 }
 
 // TestToNodeJSONItemCount pins the wire format to the displayed item count, so
@@ -1105,13 +1105,13 @@ func TestToNodeJSONItemCount(t *testing.T) {
 
 	// A directory reports what it contains, not counting itself.
 	dir := &analyze.Dir{File: &analyze.File{Name: "sub", Parent: parent}, ItemCount: 4}
-	if got := toNodeJSON(dir).ItemCount; got != 3 {
+	if got := toNodeJSON(dir, nil).ItemCount; got != 3 {
 		t.Errorf("dir itemCount = %d, want 3", got)
 	}
 
 	// A file counts itself.
 	file := &analyze.File{Name: "leaf", Parent: parent}
-	if got := toNodeJSON(file).ItemCount; got != 1 {
+	if got := toNodeJSON(file, nil).ItemCount; got != 1 {
 		t.Errorf("file itemCount = %d, want 1", got)
 	}
 }

@@ -1,10 +1,22 @@
 import { useGduModel } from '../model';
 import { formatSize } from '../format';
 import { Breadcrumbs } from './Breadcrumbs';
+import { PROJECTIONS, type Projection } from '../cleanup';
 
 export function Header() {
-  const { status, nodeResp, total, useSIPrefix, view, toggleView, effectiveApparent, toggleApparent, handleSelect } =
-    useGduModel();
+  const {
+    status,
+    nodeResp,
+    total,
+    useSIPrefix,
+    view,
+    toggleView,
+    projection,
+    setProjection,
+    effectiveApparent,
+    toggleApparent,
+    handleSelect,
+  } = useGduModel();
 
   return (
     <header className="app-header">
@@ -22,6 +34,21 @@ export function Header() {
         >
           {view === 'donut' ? 'Treemap' : 'Donut'}
         </button>
+        {view === 'treemap' && (
+          <select
+            className="toggle"
+            aria-label="Treemap projection"
+            title="Color the treemap by location, cleanup candidates or age (P)"
+            value={projection}
+            onChange={(event) => setProjection(event.target.value as Projection)}
+          >
+            {PROJECTIONS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           type="button"
           className="toggle"

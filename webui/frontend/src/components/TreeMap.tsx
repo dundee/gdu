@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Node, TreeNode } from '../types';
 import { metricValue } from '../slices';
 import { formatCount, formatSize, percent } from '../format';
-import { layoutTree } from './treemap/treeLayout';
+import { layoutTree, type TreeLayoutRect } from './treemap/treeLayout';
 import { OTHER_COLOR } from '../colors';
 
 interface TreeMapProps {
@@ -18,6 +18,12 @@ interface TreeMapProps {
   // a directory, or its immediate parent when it is a file (there is nothing
   // to "open" for a file, so this reveals the directory that contains it).
   onOpen: (path: string) => void;
+  // colorFor overrides the location coloring (colorMap) for a projection.
+  colorFor?: (rect: TreeLayoutRect) => string;
+  // muted tiles are faded, e.g. by a legend filter.
+  muted?: (node: Node) => boolean;
+  // tooltipDetail adds a line to the hover tooltip.
+  tooltipDetail?: (node: Node) => string | null;
 }
 
 const DEFAULT_WIDTH = 300;
@@ -36,6 +42,9 @@ export function TreeMap({
   onHover,
   onSelect,
   onOpen,
+  colorFor,
+  muted,
+  tooltipDetail,
 }: TreeMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
@@ -120,7 +129,8 @@ export function TreeMap({
           const isHovered = node.path === hoveredPath;
           const isAncestor = !isHovered && outlinedPaths.has(node.path);
           const isSelected = node.path === selectedPath;
-          const dimmed = hoveredNode !== null && !outlinedPaths.has(node.path);
+          const dimmed =
+            (hoveredNode !== null && !outlinedPaths.has(node.path)) || (muted?.(node) ?? false);
           const showLabel = !node.isDir && rect.w > 34 && rect.h > 16;
           const showSize = showLabel && rect.w > 60 && rect.h > 30;
           const width = Math.max(rect.w - 0.5, 0);
@@ -156,7 +166,7 @@ export function TreeMap({
                 y={rect.y}
                 width={width}
                 height={height}
-                fill={colorMap.get(rect.colorPath) ?? OTHER_COLOR}
+                fill={colorFor ? colorFor(rect) : (colorMap.get(rect.colorPath) ?? OTHER_COLOR)}
                 stroke={
                   isHovered || isAncestor
                     ? '#fff'
@@ -206,6 +216,9 @@ export function TreeMap({
               ? ` · ${formatCount(hoveredNode.itemCount)} item${hoveredNode.itemCount === 1 ? '' : 's'}`
               : ''}
           </span>
+          {tooltipDetail?.(hoveredNode) && (
+            <span className="treemap-tooltip-detail">{tooltipDetail(hoveredNode)}</span>
+          )}
         </div>
       )}
     </div>
