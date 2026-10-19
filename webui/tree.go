@@ -80,7 +80,10 @@ func toNodeJSON(it fs.Item, res *cleanup.Result) nodeJSON {
 		if m, ok := res.Match(it); ok {
 			n.Category = m.Category
 			n.Confidence = m.Confidence
-			n.Hint = m.Hint
+			// the hint is about the matched directory, shown on it alone
+			if !m.Inherited {
+				n.Hint = m.Hint
+			}
 		}
 		n.CategoryTotals = res.Totals(it)
 	}

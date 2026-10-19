@@ -86,15 +86,27 @@ func TestMarkerRequired(t *testing.T) {
 	assert.False(t, ok, "node_modules without package.json is not a candidate")
 }
 
-func TestUnitMatchHidesDescendants(t *testing.T) {
+func TestUnitMatchIsInheritedByDescendants(t *testing.T) {
 	root := build("/home", dir("u",
 		dir("app", file("package.json", 1), dir("node_modules", dir("pkg", file("model.gguf", 10)))),
 	))
 	res := newClassifier(t, Config{}).Analyze(root)
 
-	_, ok := res.Match(child(t, root, "app", "node_modules", "pkg", "model.gguf"))
-	assert.False(t, ok)
+	// the model inside node_modules is part of the build artifact, not a
+	// model of its own, and is not counted twice
+	inner := child(t, root, "app", "node_modules", "pkg", "model.gguf")
+	m, ok := res.Match(inner)
+	require.True(t, ok)
+	assert.Equal(t, Match{Category: BuildArtifact, Confidence: Safe, Hint: m.Hint, Inherited: true}, m)
+	assert.Equal(t, Totals{BuildArtifact: {Usage: 10, Size: 10}}, res.Totals(inner))
 	assert.Equal(t, Totals{BuildArtifact: {Usage: 10, Size: 10}}, res.Totals(child(t, root, "app")))
+
+	own, ok := res.Match(child(t, root, "app", "node_modules"))
+	require.True(t, ok)
+	assert.False(t, own.Inherited)
+
+	_, ok = res.Match(child(t, root, "app", "package.json"))
+	assert.False(t, ok)
 }
 
 func TestPathRulesAndPrecedence(t *testing.T) {
@@ -313,4 +325,20 @@ func TestDefaultCacheAndToolchainRules(t *testing.T) {
 		assert.True(t, ok, tt.path)
 		assert.Equal(t, tt.category, m.Category, tt.path)
 	}
+}
+
+func TestForgetInsideMatchedDirectory(t *testing.T) {
+	root := build("/home", dir("u",
+		dir(".cache", dir("uv", dir("archive", file("a", 30), file("b", 20)))),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+	require.Equal(t, Totals{PackageCache: {Usage: 50, Size: 50}}, res.Totals(root))
+
+	archive := child(t, root, ".cache", "uv", "archive").(*analyze.Dir)
+	a := child(t, archive, "a")
+	res.Forget(a)
+	archive.RemoveFile(a)
+
+	assert.Equal(t, Totals{PackageCache: {Usage: 20, Size: 20}}, res.Totals(root))
+	assert.Equal(t, Totals{PackageCache: {Usage: 20, Size: 20}}, res.Totals(child(t, root, ".cache", "uv")))
 }

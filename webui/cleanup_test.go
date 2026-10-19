@@ -119,6 +119,11 @@ func TestTreeEndpointAnnotatesCandidates(t *testing.T) {
 	assert.Equal(t, cleanup.Safe, modules.Confidence)
 	assert.NotEmpty(t, modules.Hint)
 
+	// items inside a matched directory inherit it, without repeating the hint
+	lib := byName(modules, "lib.js")
+	assert.Equal(t, cleanup.BuildArtifact, lib.Category)
+	assert.Empty(t, lib.Hint)
+
 	docs := byName(&tree, "docs")
 	assert.Empty(t, docs.Category)
 	assert.Empty(t, docs.CategoryTotals)

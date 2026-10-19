@@ -74,6 +74,9 @@ type Match struct {
 	Category   Category
 	Confidence Confidence
 	Hint       string
+	// Inherited is set for items inside a matched directory: they are
+	// candidates as part of it, not on their own.
+	Inherited bool
 }
 
 // Amount is an amount of space in both metrics.
@@ -110,13 +113,26 @@ type Result struct {
 	totals  map[fs.Item]Totals
 }
 
-// Match returns the classification of an item that is a unit on its own.
-// Descendants of a matched directory report no match of their own.
+// Match returns the classification of an item. Items inside a matched
+// directory inherit its classification, with Inherited set, so they still
+// show as candidates once the user opens the directory.
 func (r *Result) Match(it fs.Item) (Match, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	m, ok := r.matches[it]
-	return m, ok
+	return r.matchLocked(it)
+}
+
+func (r *Result) matchLocked(it fs.Item) (Match, bool) {
+	if m, ok := r.matches[it]; ok {
+		return m, true
+	}
+	for p := it.GetParent(); p != nil; p = p.GetParent() {
+		if m, ok := r.matches[p]; ok {
+			m.Inherited = true
+			return m, true
+		}
+	}
+	return Match{}, false
 }
 
 // Totals returns the space taken by each category within the item, including
@@ -167,7 +183,9 @@ func (r *Result) totalsLocked(it fs.Item) Totals {
 	if t, ok := r.totals[it]; ok {
 		return t
 	}
-	if m, ok := r.matches[it]; ok {
+	// a directory holding candidates has an entry, so only matched items
+	// (and their descendants) get here with a match
+	if m, ok := r.matchLocked(it); ok {
 		return Totals{m.Category: {Usage: it.GetUsage(), Size: it.GetSize()}}
 	}
 	return nil

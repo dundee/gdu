@@ -170,6 +170,7 @@ var DefaultRules = []Rule{
 	{Category: PackageCache, Confidence: Review, Path: "~/.m2/repository", Hint: "Maven repository; may hold locally installed artifacts"},
 	{Category: PackageCache, Confidence: Safe, Path: "~/.npm/_cacache", Hint: "npm cache, `npm cache clean --force`"},
 	{Category: PackageCache, Confidence: Safe, Path: "~/.bun/install/cache", Hint: "Bun cache, `bun pm cache rm`"},
+	{Category: PackageCache, Confidence: Safe, Path: "~/.nvm/.cache", Hint: "Downloaded Node archives, `nvm cache clear`"},
 	{Category: PackageCache, Confidence: Safe, Path: "~/.npm/_npx", Hint: "npx cache, filled again on the next npx run"},
 	{Category: PackageCache, Confidence: Safe, Path: "~/Library/pnpm/store", Hint: hintPnpm},
 	{Category: PackageCache, Confidence: Safe, Path: "~/.local/share/pnpm/store", Hint: hintPnpm},
