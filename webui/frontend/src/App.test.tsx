@@ -749,10 +749,6 @@ describe('optimistic deletion', () => {
     expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('aria-busy')).toBe('true');
     expect(screen.getByRole('status').textContent).toBe('deleting 2…');
 
-    // navigation waits until every request has finished
-    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
-    expect(api.fetchNode).toHaveBeenCalledTimes(1);
-
     first.resolve();
     await waitFor(() => expect(screen.getByRole('status').textContent).toBe('deleting 1…'));
     expect(api.fetchNode).toHaveBeenCalledTimes(1);
@@ -765,9 +761,42 @@ describe('optimistic deletion', () => {
     expect(api.fetchNode).toHaveBeenCalledTimes(1);
     expect(api.fetchTree).toHaveBeenCalledTimes(1);
 
-    // with every request done, navigation works again and reloads
+    // navigation reloads
     fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
     await waitFor(() => expect(api.fetchNode).toHaveBeenCalledTimes(2));
+  });
+
+  it('keeps browsing while a deletion runs and keeps its item marked', async () => {
+    const pending = deferred();
+    vi.mocked(api.deleteNode).mockReturnValueOnce(pending.promise);
+    await openTreemap();
+
+    deleteTile(/nested\.bin/);
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchNode).toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc'));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    // the reloaded data still holds the item until the deletion is done
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /nested\.bin/ }).getAttribute('aria-busy')).toBe('true'),
+    );
+
+    pending.resolve();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /nested\.bin/ }).getAttribute('data-deletion')).toBe('deleted'),
+    );
+    // the data is stale again, so the next navigation reloads
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(3));
+  });
+
+  it('does not open an item that is being deleted', async () => {
+    vi.mocked(api.deleteNode).mockReturnValue(deferred().promise);
+    await openTreemap();
+
+    deleteTile(/folder/);
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
   });
 
   it('puts a failed item back and says why', async () => {

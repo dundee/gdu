@@ -91,14 +91,14 @@ export interface GduModel {
   // donut/treemap, which unmounts TreeMapView and would otherwise reset it.
   skipDeleteConfirm: DeleteMode | null;
   setSkipDeleteConfirm: (mode: DeleteMode | null) => void;
-  // Optimistic deletion: items in the current directory whose deletion is
-  // running ("pending") or done ("deleted"). Deleted items keep their place
+  // Optimistic deletion: items whose deletion is running ("pending") or was
+  // done in the current directory ("deleted"). Deleted items keep their place
   // and are only marked, so the layout does not jump under the cursor; the
   // directory is reloaded once the user navigates. Lives here so every view
   // sees the same state.
   deletions: ReadonlyMap<string, Deletion>;
-  // Requests still running. Navigation is blocked while it is non-zero, so
-  // every result lands in the directory it was started from.
+  // Requests still running. Navigating meanwhile keeps their items marked
+  // wherever they show up; an item being deleted cannot be opened.
   deletionsInFlight: number;
   beginDeletion: (node: Node) => void;
   // settleDeletion records a finished request; a failed one (error set) is
@@ -193,9 +193,10 @@ export function useGduModelState() {
   const [deletions, setDeletions] = useState<ReadonlyMap<string, Deletion>>(() => new Map());
   const [deletionsInFlight, setDeletionsInFlight] = useState(0);
   const inFlightRef = useRef(0);
-  // Set once anything was deleted here: the shown data is stale from then on
-  // and is reloaded on the next navigation.
+  // Set once anything was deleted: the shown data is stale from then on and
+  // is reloaded on the next navigation.
   const staleRef = useRef(false);
+  const deletionsRef = useLatest(deletions);
   const [reloadKey, setReloadKey] = useState(0);
   const deletionErrorsRef = useRef<string[]>([]);
   const [skipDeleteConfirm, setSkipDeleteConfirmState] = useState<DeleteMode | null>(() => {
@@ -306,12 +307,15 @@ export function useGduModelState() {
   );
 
   const navigateToPath = useCallback((path: string) => {
-    if (inFlightRef.current > 0) {
+    // the contents of an item being deleted are going away
+    if (deletionsRef.current && deletionStateOf(deletionsRef.current, path)) {
       return;
     }
     if (staleRef.current) {
-      staleRef.current = false;
-      setDeletions(new Map());
+      // running deletions stay marked in the reloaded data, which is stale
+      // again once they finish
+      staleRef.current = inFlightRef.current > 0;
+      setDeletions((prev) => new Map([...prev].filter(([, d]) => d.state === 'pending')));
       setTreePath(null);
       setTreeRoot(null);
       // reload even when navigating to the directory already shown
@@ -319,7 +323,7 @@ export function useGduModelState() {
     }
     setCurrentPath(path);
     setHoveredPath(null);
-  }, []);
+  }, [deletionsRef]);
 
   const beginDeletion = useCallback((node: Node) => {
     inFlightRef.current += 1;
@@ -341,6 +345,9 @@ export function useGduModelState() {
       }
       return next;
     });
+    if (error === null) {
+      staleRef.current = true;
+    }
     if (error !== null) {
       deletionErrorsRef.current.push(error);
     }

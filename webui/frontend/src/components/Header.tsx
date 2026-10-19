@@ -74,7 +74,7 @@ export function Header() {
           <span
             className="scanning-badge"
             role="status"
-            title="Opening other directories is paused until the deletions finish"
+            title="Deleting in the background; you can keep browsing"
           >
             deleting {deletionsInFlight}…
           </span>
