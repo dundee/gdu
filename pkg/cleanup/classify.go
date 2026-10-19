@@ -3,6 +3,7 @@ package cleanup
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -114,8 +115,12 @@ func (t Totals) add(other Totals) Totals {
 // Forget. It is safe for concurrent use.
 type Result struct {
 	mu      sync.RWMutex
+	c       *Classifier
 	matches map[fs.Item]Match
 	totals  map[fs.Item]Totals
+	// splits holds the match of each split directory, which its children got
+	// unless a rule matched them on their own.
+	splits map[fs.Item]Match
 }
 
 // Match returns the classification of an item. Items inside a matched
@@ -151,8 +156,10 @@ func (r *Result) Totals(it fs.Item) Totals {
 
 // Forget updates the result for it having been removed from the tree: its
 // space is subtracted from every ancestor, which is far cheaper than
-// classifying the whole tree again. Ancestors are found through GetParent, so
-// the removed item must keep its parent link.
+// classifying the whole tree again. When it was a project marker, a .gitignore
+// or a .git directory, the classification of its siblings may depend on it, so
+// they are classified again. Ancestors are found through GetParent, so the
+// removed item must keep its parent link.
 func (r *Result) Forget(it fs.Item) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -161,26 +168,89 @@ func (r *Result) Forget(it fs.Item) {
 	// entries of its descendants are unreachable from now on and left in place
 	delete(r.matches, it)
 	delete(r.totals, it)
-	if len(removed) == 0 {
+	delete(r.splits, it)
+	parent := it.GetParent()
+	r.addToAncestors(parent, removed, -1)
+	if parent != nil && r.c.affectsSiblings(it.GetName()) {
+		r.reclassifyChildren(parent)
+	}
+}
+
+// addToAncestors adds sign times delta to the totals of from and everything
+// above it.
+func (r *Result) addToAncestors(from fs.Item, delta Totals, sign int64) {
+	if len(delta) == 0 {
 		return
 	}
-	for p := it.GetParent(); p != nil; p = p.GetParent() {
-		old := r.totals[p]
+	for p := from; p != nil; p = p.GetParent() {
 		// copy, since earlier callers of Totals may still hold the old map
-		left := make(Totals, len(old))
-		for c, a := range old {
-			sub := removed[c]
-			a.Usage -= sub.Usage
-			a.Size -= sub.Size
+		next := make(Totals, len(r.totals[p])+len(delta))
+		for c, a := range r.totals[p] {
+			next[c] = a
+		}
+		for c, d := range delta {
+			a := next[c]
+			a.Usage += sign * d.Usage
+			a.Size += sign * d.Size
 			if a.Usage > 0 || a.Size > 0 {
-				left[c] = a
+				next[c] = a
+			} else {
+				delete(next, c)
 			}
 		}
-		if len(left) == 0 {
+		if len(next) == 0 {
 			delete(r.totals, p)
 		} else {
-			r.totals[p] = left
+			r.totals[p] = next
 		}
+	}
+}
+
+// reclassifyChildren classifies everything below dir again and passes the
+// change of its totals on to its ancestors.
+func (r *Result) reclassifyChildren(dir fs.Item) {
+	if _, ok := r.matchLocked(dir); ok {
+		// nothing inside a unit is classified on its own
+		return
+	}
+	old := r.totals[dir]
+	for child := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		r.clear(child)
+	}
+	delete(r.totals, dir)
+
+	w := &walker{c: r.c, result: r}
+	// rebuild the .gitignore context the walk had when it reached dir
+	var ancestors []fs.Item
+	for p := dir.GetParent(); p != nil && !analyze.IsVirtualRootDir(p); p = p.GetParent() {
+		ancestors = append(ancestors, p)
+	}
+	for _, a := range slices.Backward(ancestors) {
+		w.enterDir(a.GetPath(), childNames(a))
+	}
+	var carried *Match
+	if m, ok := r.splits[dir]; ok {
+		carried = &m
+	}
+	totals := w.walkChildren(dir, dir.GetPath(), carried)
+
+	r.addToAncestors(dir.GetParent(), old, -1)
+	r.addToAncestors(dir.GetParent(), totals, 1)
+}
+
+// clear drops the entries of it and everything below it.
+func (r *Result) clear(it fs.Item) {
+	_, hasTotals := r.totals[it]
+	_, split := r.splits[it]
+	delete(r.matches, it)
+	delete(r.totals, it)
+	delete(r.splits, it)
+	// only directories the walk went into have entries below them
+	if !hasTotals && !split {
+		return
+	}
+	for child := range it.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		r.clear(child)
 	}
 }
 
@@ -203,8 +273,10 @@ func (c *Classifier) Analyze(root fs.Item) *Result {
 	w := &walker{
 		c: c,
 		result: &Result{
+			c:       c,
 			matches: make(map[fs.Item]Match),
 			totals:  make(map[fs.Item]Totals),
+			splits:  make(map[fs.Item]Match),
 		},
 	}
 	w.walk(root, root.GetPath(), nil, nil)
@@ -235,12 +307,18 @@ func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}, car
 		// Deleting it as a unit would take an excluded path or one a more
 		// specific rule has a say about with it, so it is split: its
 		// children become units of their own.
+		w.result.splits[it] = m
 		carried = &m
 	}
 	if !it.IsDir() {
 		return nil
 	}
+	return w.walkChildren(it, path, carried)
+}
 
+// walkChildren walks the children of the directory it and records their
+// totals as its own.
+func (w *walker) walkChildren(it fs.Item, path string, carried *Match) Totals {
 	var children []fs.Item
 	names := make(map[string]struct{})
 	for child := range it.GetFilesLocked(fs.SortByName, fs.SortAsc) {
@@ -324,6 +402,30 @@ func (r *Rule) matches(it fs.Item, path string, siblings map[string]struct{}) bo
 		}
 	}
 	return false
+}
+
+// affectsSiblings reports whether an item of this name decides how its
+// siblings are classified: a project marker, a .gitignore or a repository.
+func (c *Classifier) affectsSiblings(name string) bool {
+	if name == ".gitignore" || name == ".git" {
+		return true
+	}
+	for i := range c.rules {
+		for _, marker := range c.rules[i].Markers {
+			if globMatch(marker, name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func childNames(dir fs.Item) map[string]struct{} {
+	names := make(map[string]struct{})
+	for child := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		names[child.GetName()] = struct{}{}
+	}
+	return names
 }
 
 func globMatch(pattern, name string) bool {

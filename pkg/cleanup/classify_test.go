@@ -261,16 +261,22 @@ func TestNoRepoNoGitIgnoreSignal(t *testing.T) {
 	assert.False(t, ok)
 }
 
+// remove takes it out of the tree and reports it, as a deletion does.
+func remove(res *Result, it fs.Item) {
+	it.GetParent().(*analyze.Dir).RemoveFile(it)
+	res.Forget(it)
+}
+
 func TestForgetSubtractsFromAncestors(t *testing.T) {
 	root := build("/home", dir("u",
-		dir("p", file("package.json", 1), dir("node_modules", file("x", 100)), file("a.gguf", 40)),
+		dir("p", file("package.json", 1), dir("node_modules", file("x", 100)), file("a.gguf", 40), file("notes.txt", 2)),
 		file("b.gguf", 60),
 	))
 	res := newClassifier(t, Config{}).Analyze(root)
 	before := res.Totals(root)
 
 	modules := child(t, root, "p", "node_modules")
-	res.Forget(modules)
+	remove(res, modules)
 
 	_, ok := res.Match(modules)
 	assert.False(t, ok)
@@ -279,12 +285,85 @@ func TestForgetSubtractsFromAncestors(t *testing.T) {
 	// maps handed out earlier are not modified
 	assert.Equal(t, int64(100), before[BuildArtifact].Usage)
 
-	res.Forget(child(t, root, "p", "a.gguf"))
+	remove(res, child(t, root, "p", "a.gguf"))
 	assert.Nil(t, res.Totals(child(t, root, "p")))
 
 	// forgetting an item without candidates changes nothing
-	res.Forget(child(t, root, "p", "package.json"))
+	remove(res, child(t, root, "p", "notes.txt"))
 	assert.Equal(t, Totals{MLModel: {Usage: 60, Size: 60}}, res.Totals(root))
+}
+
+func TestForgetMarkerReclassifiesSiblings(t *testing.T) {
+	root := build("/home", dir("u",
+		dir("p", file("package.json", 1), dir("node_modules", file("x", 100)), file("a.gguf", 40)),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+	before := res.Totals(root)
+
+	remove(res, child(t, root, "p", "package.json"))
+
+	_, ok := res.Match(child(t, root, "p", "node_modules"))
+	assert.False(t, ok, "node_modules without package.json is no build artifact")
+	assert.Equal(t, Totals{MLModel: {Usage: 40, Size: 40}}, res.Totals(child(t, root, "p")))
+	assert.Equal(t, Totals{MLModel: {Usage: 40, Size: 40}}, res.Totals(root))
+	assert.Equal(t, int64(100), before[BuildArtifact].Usage)
+}
+
+func TestForgetGitignoreReclassifiesBelowIt(t *testing.T) {
+	base := t.TempDir()
+	repoDir := filepath.Join(base, "repo")
+	require.NoError(t, os.MkdirAll(filepath.Join(repoDir, "sub"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(repoDir, ".gitignore"), []byte("*.log\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(repoDir, "sub", ".gitignore"), []byte("out/\n"), 0o644))
+
+	root := build(base, dir("repo",
+		dir(".git", file("HEAD", 1)),
+		file(".gitignore", 1),
+		dir("sub", file(".gitignore", 1), dir("out", dir("o", file("x", 10))), file("a.log", 2)),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+	require.Equal(t, Totals{GitIgnored: {Usage: 12, Size: 12}}, res.Totals(root))
+
+	gitignore := child(t, root, "sub", ".gitignore")
+	require.NoError(t, os.Remove(filepath.Join(repoDir, "sub", ".gitignore")))
+	remove(res, gitignore)
+
+	_, ok := res.Match(child(t, root, "sub", "out"))
+	assert.False(t, ok)
+	m, ok := res.Match(child(t, root, "sub", "a.log"))
+	require.True(t, ok, "patterns of the .gitignore files above still apply")
+	assert.Equal(t, GitIgnored, m.Category)
+	assert.Equal(t, Totals{GitIgnored: {Usage: 2, Size: 2}}, res.Totals(root))
+}
+
+func TestForgetInsideUnitKeepsClassification(t *testing.T) {
+	root := build("/home", dir("u",
+		dir("p", file("package.json", 1), dir("node_modules", dir("dep", file("package.json", 1), file("i", 9)))),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+
+	remove(res, child(t, root, "p", "node_modules", "dep", "package.json"))
+
+	m, ok := res.Match(child(t, root, "p", "node_modules"))
+	require.True(t, ok)
+	assert.Equal(t, BuildArtifact, m.Category)
+	assert.Equal(t, Totals{BuildArtifact: {Usage: 9, Size: 9}}, res.Totals(root))
+}
+
+func TestForgetMarkerInsideSplitDirectory(t *testing.T) {
+	root := build("/home", dir("u",
+		dir(".cache", dir("lm-studio",
+			dir("models", file("m", 50)),
+			dir("app", file("package.json", 1), dir("node_modules", file("n", 7))),
+		)),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+	require.Equal(t, Totals{MLModel: {Usage: 50, Size: 50}, AppCache: {Usage: 8, Size: 8}}, res.Totals(root))
+
+	// app is a unit carried from the split lm-studio directory, so nothing in
+	// it is classified on its own and a marker inside it changes nothing
+	remove(res, child(t, root, ".cache", "lm-studio", "app", "package.json"))
+	assert.Equal(t, Totals{MLModel: {Usage: 50, Size: 50}, AppCache: {Usage: 7, Size: 7}}, res.Totals(root))
 }
 
 func TestPathRulesUnderVirtualRoot(t *testing.T) {
@@ -428,4 +507,25 @@ func TestGlobPathRuleSplitsUnit(t *testing.T) {
 	m, ok = res.Match(child(t, modules, "lib"))
 	require.True(t, ok)
 	assert.Equal(t, BuildArtifact, m.Category)
+}
+
+func TestForgetMarkerInSplitDirectoryCarriesItsMatch(t *testing.T) {
+	root := build("/home", dir("u",
+		dir(".cache", dir("lm-studio",
+			dir("models", file("m", 50)),
+			file("package.json", 1),
+			dir("node_modules", file("n", 7)),
+		)),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+	modules := child(t, root, ".cache", "lm-studio", "node_modules")
+	m, _ := res.Match(modules)
+	require.Equal(t, BuildArtifact, m.Category)
+
+	remove(res, child(t, root, ".cache", "lm-studio", "package.json"))
+
+	m, ok := res.Match(modules)
+	require.True(t, ok)
+	assert.Equal(t, AppCache, m.Category, "without its marker it gets the split directory's match")
+	assert.Equal(t, Totals{MLModel: {Usage: 50, Size: 50}, AppCache: {Usage: 7, Size: 7}}, res.Totals(root))
 }
