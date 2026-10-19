@@ -349,3 +349,83 @@ func TestForgetInsideMatchedDirectory(t *testing.T) {
 	assert.Equal(t, Totals{PackageCache: {Usage: 20, Size: 20}}, res.Totals(root))
 	assert.Equal(t, Totals{PackageCache: {Usage: 20, Size: 20}}, res.Totals(child(t, root, ".cache", "uv")))
 }
+
+func TestMoreSpecificPathRuleSplitsUnit(t *testing.T) {
+	root := build("/home", dir("u",
+		dir(".cache", dir("lm-studio",
+			dir("models", file("m.gguf", 50)),
+			dir("logs", file("l", 3)),
+			file("state.json", 2),
+		)),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+
+	_, ok := res.Match(child(t, root, ".cache", "lm-studio"))
+	assert.False(t, ok, "a directory holding a more specific rule's path is not a unit")
+
+	m, ok := res.Match(child(t, root, ".cache", "lm-studio", "models"))
+	require.True(t, ok)
+	assert.Equal(t, MLModel, m.Category)
+	assert.Equal(t, Review, m.Confidence)
+	assert.False(t, m.Inherited)
+
+	for _, name := range []string{"logs", "state.json"} {
+		m, ok := res.Match(child(t, root, ".cache", "lm-studio", name))
+		require.True(t, ok, name)
+		assert.Equal(t, Match{Category: AppCache, Confidence: Safe, Hint: hintAppCache}, m, name)
+	}
+	assert.Equal(t, Totals{
+		MLModel:  {Usage: 50, Size: 50},
+		AppCache: {Usage: 5, Size: 5},
+	}, res.Totals(child(t, root, ".cache", "lm-studio")))
+}
+
+func TestExclusionSplitsUnit(t *testing.T) {
+	root := build("/home", dir("u",
+		dir("Library", dir("Caches", dir("foo",
+			dir("keep", file("k", 40)),
+			dir("tmp", dir("deep", file("t", 6))),
+		))),
+	))
+	res := newClassifier(t, Config{Exclude: []string{"~/Library/Caches/foo/keep"}}).Analyze(root)
+
+	_, ok := res.Match(child(t, root, "Library", "Caches", "foo"))
+	assert.False(t, ok)
+
+	keep := child(t, root, "Library", "Caches", "foo", "keep")
+	_, ok = res.Match(keep)
+	assert.False(t, ok, "an excluded path inside a matched directory is no candidate")
+	_, ok = res.Match(child(t, keep, "k"))
+	assert.False(t, ok, "nor is anything below it")
+
+	m, ok := res.Match(child(t, root, "Library", "Caches", "foo", "tmp"))
+	require.True(t, ok)
+	assert.Equal(t, AppCache, m.Category)
+	assert.False(t, m.Inherited)
+
+	assert.Equal(t, Totals{AppCache: {Usage: 6, Size: 6}}, res.Totals(root))
+}
+
+func TestGlobPathRuleSplitsUnit(t *testing.T) {
+	root := build("/home", dir("u",
+		dir("projects", dir("a",
+			file("package.json", 1),
+			dir("node_modules", dir("models", file("w", 20)), dir("lib", file("l", 4))),
+		)),
+	))
+	res := newClassifier(t, Config{
+		Rules: []Rule{{Category: MLModel, Path: "~/projects/*/node_modules/models"}},
+	}).Analyze(root)
+
+	modules := child(t, root, "projects", "a", "node_modules")
+	_, ok := res.Match(modules)
+	assert.False(t, ok)
+
+	m, ok := res.Match(child(t, modules, "models"))
+	require.True(t, ok)
+	assert.Equal(t, MLModel, m.Category)
+
+	m, ok = res.Match(child(t, modules, "lib"))
+	require.True(t, ok)
+	assert.Equal(t, BuildArtifact, m.Category)
+}

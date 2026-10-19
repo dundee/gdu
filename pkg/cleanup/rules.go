@@ -55,7 +55,9 @@ var Categories = []CategoryInfo{
 
 // Rule matches items of one category. Exactly one of Dir, File and Path is
 // set. A directory matched by a rule is a unit: its descendants are not
-// classified on their own.
+// classified on their own. When an excluded path or a more specific path rule
+// lies below it, it is split instead: its children become units, with its
+// classification unless a rule of their own matches them.
 type Rule struct {
 	Category   Category   `yaml:"category"`
 	Confidence Confidence `yaml:"confidence"`
@@ -146,8 +148,8 @@ const (
 
 // DefaultRules are evaluated after the user's rules. Path rules ending in "/*"
 // make each child its own unit, so a more specific rule (Hugging Face inside
-// ~/.cache) can still win for one child. A path rule never matches an
-// ancestor of a more specific one, so the outer one is listed per child.
+// ~/.cache) can still win for one child. Deeper ones (LM Studio models inside
+// ~/.cache/lm-studio) win because the unit above them is split.
 var DefaultRules = []Rule{
 	// ML models: re-downloadable, but large and sometimes only removable
 	// cleanly through their tool.

@@ -24,6 +24,8 @@ type Config struct {
 type Classifier struct {
 	rules    []Rule
 	excludes []string
+	// pathRules are the segments of every path rule's pattern, see pinnedBelow.
+	pathRules [][]string
 }
 
 // NewClassifier validates the user's config and combines it with
@@ -43,6 +45,9 @@ func NewClassifier(cfg Config, home string) (*Classifier, error) {
 	c.rules = append(c.rules, DefaultRules...)
 	for i := range c.rules {
 		c.rules[i].compile(home)
+		if c.rules[i].Path != "" {
+			c.pathRules = append(c.pathRules, splitPath(c.rules[i].Path))
+		}
 	}
 	for _, path := range cfg.Exclude {
 		c.excludes = append(c.excludes, filepath.Clean(expandHome(path, home)))
@@ -202,7 +207,7 @@ func (c *Classifier) Analyze(root fs.Item) *Result {
 			totals:  make(map[fs.Item]Totals),
 		},
 	}
-	w.walk(root, root.GetPath(), nil)
+	w.walk(root, root.GetPath(), nil, nil)
 	return w.result
 }
 
@@ -212,13 +217,25 @@ type walker struct {
 	repos  []*repo
 }
 
-func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}) Totals {
+// walk classifies it and everything below it. carried is the match of a
+// split directory above it, which it gets unless a rule matches it on its own.
+func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}, carried *Match) Totals {
 	if w.c.excluded(path) {
 		return nil
 	}
-	if m, ok := w.classify(it, path, siblings); ok {
-		w.result.matches[it] = m
-		return w.result.totalsLocked(it)
+	m, ok := w.classify(it, path, siblings)
+	if !ok && carried != nil {
+		m, ok = *carried, true
+	}
+	if ok {
+		if !it.IsDir() || !w.c.pinnedBelow(path) {
+			w.result.matches[it] = m
+			return w.result.totalsLocked(it)
+		}
+		// Deleting it as a unit would take an excluded path or one a more
+		// specific rule has a say about with it, so it is split: its
+		// children become units of their own.
+		carried = &m
 	}
 	if !it.IsDir() {
 		return nil
@@ -243,7 +260,7 @@ func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}) Tot
 		if virtual {
 			childPath = child.GetPath()
 		}
-		totals = totals.add(w.walk(child, childPath, names))
+		totals = totals.add(w.walk(child, childPath, names, carried))
 	}
 	if len(totals) > 0 {
 		w.result.totals[it] = totals
@@ -321,6 +338,37 @@ func (c *Classifier) excluded(path string) bool {
 		}
 	}
 	return false
+}
+
+// pinnedBelow reports whether something strictly below the directory at path
+// is excluded or may be matched by a path rule, so the directory must not be a
+// unit. Path rules are compared segment by segment, so globs pin too.
+func (c *Classifier) pinnedBelow(path string) bool {
+	for _, ex := range c.excludes {
+		if isBelow(ex, path) {
+			return true
+		}
+	}
+	segments := splitPath(path)
+	for _, pattern := range c.pathRules {
+		if len(pattern) > len(segments) && segmentsMatch(pattern[:len(segments)], segments) {
+			return true
+		}
+	}
+	return false
+}
+
+func segmentsMatch(patterns, segments []string) bool {
+	for i, pattern := range patterns {
+		if !globMatch(pattern, segments[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func splitPath(path string) []string {
+	return strings.Split(filepath.Clean(path), string(filepath.Separator))
 }
 
 // isBelow reports whether path is strictly inside dir.
