@@ -534,7 +534,7 @@ describe('projections', () => {
     total: { usage: 100, size: 100 },
     categories: [{ id: 'ml-model' as const, label: 'ML models', usage: 50, size: 50 }],
   };
-  const pivotResponse: TreeNode = {
+  const categoryTreeResponse: TreeNode = {
     ...nodeResponse.node,
     children: [
       {
@@ -588,14 +588,14 @@ describe('projections', () => {
     await waitFor(() => expect(api.fetchCategories).toHaveBeenLastCalledWith(`${root}/folder`));
   });
 
-  it('loads the pivoted tree and keeps category nodes out of actions', async () => {
-    vi.mocked(api.fetchTree).mockImplementation((_path, pivot) =>
-      Promise.resolve(pivot ? pivotResponse : treeResponse),
+  it('loads the tree grouped by category and keeps category nodes out of actions', async () => {
+    vi.mocked(api.fetchTree).mockImplementation((_path, byCategory) =>
+      Promise.resolve(byCategory ? categoryTreeResponse : treeResponse),
     );
     await openTreemap();
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
-      target: { value: 'categories' },
+      target: { value: 'category' },
     });
     await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(root, true));
     const group = await screen.findByRole('button', { name: /^ML models, / });

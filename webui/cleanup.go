@@ -13,9 +13,10 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-// pivotPathPrefix marks the synthetic category nodes of a pivoted tree. Such a
-// path never resolves through findNode, so actions on it are refused.
-const pivotPathPrefix = "category:"
+// categoryNodePrefix marks the synthetic category nodes of the "By category"
+// projection's tree. Such a path never resolves through findNode, so actions
+// on it are refused.
+const categoryNodePrefix = "category:"
 
 // cleanupCache memoizes the classification of the current tree. It is valid
 // while the root and the tree generation it was computed for are current.
@@ -146,11 +147,11 @@ func (ui *UI) handleCategories(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// buildPivotTree regroups the candidates below it by category: a synthetic
+// buildCategoryTree regroups the candidates below it by category: a synthetic
 // node per category holds the matched items (the topmost ones, which are
 // units) with their real paths, largest first. Category nodes report the full
 // category total even when the node budget cuts off their smallest items.
-func buildPivotTree(it fs.Item, res *cleanup.Result) treeJSON {
+func buildCategoryTree(it fs.Item, res *cleanup.Result) treeJSON {
 	root := treeJSON{nodeJSON: toNodeJSON(it, res), Children: []*treeJSON{}}
 	totals := res.Totals(it)
 
@@ -183,7 +184,7 @@ func buildPivotTree(it fs.Item, res *cleanup.Result) treeJSON {
 		node := &treeJSON{
 			nodeJSON: nodeJSON{
 				Name:      info.Label,
-				Path:      pivotPathPrefix + string(info.ID),
+				Path:      categoryNodePrefix + string(info.ID),
 				IsDir:     true,
 				Size:      amount.Size,
 				Usage:     amount.Usage,

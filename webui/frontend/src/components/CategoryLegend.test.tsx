@@ -36,7 +36,7 @@ describe('CategoryLegend', () => {
     const onFilter = vi.fn();
     const { rerender } = render(
       <CategoryLegend
-        projection="categories"
+        projection="category"
         categories={categories}
         apparent={false}
         useSIPrefix={false}
@@ -49,7 +49,7 @@ describe('CategoryLegend', () => {
 
     rerender(
       <CategoryLegend
-        projection="categories"
+        projection="category"
         categories={categories}
         apparent={false}
         useSIPrefix={false}

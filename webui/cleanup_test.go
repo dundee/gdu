@@ -91,7 +91,7 @@ func TestCategoriesEndpointUnavailableWhileScanning(t *testing.T) {
 	defer srv.Close()
 
 	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, srv, "/api/v1/categories", nil))
-	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, srv, "/api/v1/tree?pivot=category", nil))
+	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, srv, "/api/v1/tree?projection=category", nil))
 }
 
 func TestTreeEndpointAnnotatesCandidates(t *testing.T) {
@@ -129,7 +129,7 @@ func TestTreeEndpointAnnotatesCandidates(t *testing.T) {
 	assert.Empty(t, docs.CategoryTotals)
 }
 
-func TestPivotTreeGroupsCandidatesByCategory(t *testing.T) {
+func TestTreeByCategoryGroupsCandidates(t *testing.T) {
 	ui := newTestUI()
 	root := makeCleanupTree(t)
 	scan(t, ui, root)
@@ -137,13 +137,13 @@ func TestPivotTreeGroupsCandidatesByCategory(t *testing.T) {
 	defer srv.Close()
 
 	var tree treeJSON
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/tree?pivot=category", &tree))
+	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/tree?projection=category", &tree))
 	assert.Equal(t, root, tree.Path)
 	require.Len(t, tree.Children, 2)
 
 	// categories come in display order
 	build, models := tree.Children[0], tree.Children[1]
-	assert.Equal(t, pivotPathPrefix+string(cleanup.BuildArtifact), build.Path)
+	assert.Equal(t, categoryNodePrefix+string(cleanup.BuildArtifact), build.Path)
 	assert.Equal(t, int64(8192), build.Size)
 	require.Len(t, build.Children, 1)
 	assert.Equal(t, filepath.Join(root, "app", "node_modules"), build.Children[0].Path)
@@ -155,19 +155,19 @@ func TestPivotTreeGroupsCandidatesByCategory(t *testing.T) {
 	// scoped to a subdirectory, only its candidates remain
 	var scoped treeJSON
 	require.Equal(t, http.StatusOK,
-		getJSON(t, srv, "/api/v1/tree?pivot=category&path="+url.QueryEscape(filepath.Join(root, "app")), &scoped))
+		getJSON(t, srv, "/api/v1/tree?projection=category&path="+url.QueryEscape(filepath.Join(root, "app")), &scoped))
 	require.Len(t, scoped.Children, 1)
 	assert.Equal(t, cleanup.BuildArtifact, scoped.Children[0].Category)
 }
 
-func TestPivotCategoryNodesAreNotActionable(t *testing.T) {
+func TestCategoryNodesAreNotActionable(t *testing.T) {
 	ui := newTestUI()
 	scan(t, ui, makeCleanupTree(t))
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
 	req, err := http.NewRequest(http.MethodDelete,
-		srv.URL+"/api/v1/nodes?path="+url.QueryEscape(pivotPathPrefix+string(cleanup.MLModel)), nil)
+		srv.URL+"/api/v1/nodes?path="+url.QueryEscape(categoryNodePrefix+string(cleanup.MLModel)), nil)
 	require.NoError(t, err)
 	req.Header.Set("X-GDU-Action", ui.actionToken)
 	resp, err := http.DefaultClient.Do(req)

@@ -11,7 +11,7 @@ import {
   candidateSummary,
   cleanupColor,
   containsCategory,
-  isPivotNode,
+  isCategoryNode,
 } from './cleanup';
 
 const DAY = 24 * 60 * 60;
@@ -107,7 +107,7 @@ describe('candidateSummary', () => {
   });
 });
 
-describe('containsCategory and isPivotNode', () => {
+describe('containsCategory and isCategoryNode', () => {
   it('matches own category or contained totals', () => {
     expect(containsCategory(node({ category: 'ml-model' }), 'ml-model')).toBe(true);
     expect(containsCategory(node({ categoryTotals: { 'ml-model': { usage: 1, size: 1 } } }), 'ml-model')).toBe(true);
@@ -115,7 +115,7 @@ describe('containsCategory and isPivotNode', () => {
   });
 
   it('recognizes synthetic category nodes', () => {
-    expect(isPivotNode(node({ path: 'category:ml-model' }))).toBe(true);
-    expect(isPivotNode(node())).toBe(false);
+    expect(isCategoryNode(node({ path: 'category:ml-model' }))).toBe(true);
+    expect(isCategoryNode(node())).toBe(false);
   });
 });

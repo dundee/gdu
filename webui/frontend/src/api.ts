@@ -34,14 +34,14 @@ export function fetchNode(
   return getJSON<NodeResponse>(`api/v1/nodes?${params.toString()}`);
 }
 
-// fetchTree loads the recursive tree below path. With pivot, the tree is
-// regrouped by cleanup category: one synthetic node per category (its path
-// starts with PIVOT_PATH_PREFIX, see cleanup.ts) holding the candidates with
-// their real paths.
-export function fetchTree(path: string, pivot = false): Promise<TreeNode> {
+// fetchTree loads the recursive tree below path. With byCategory, it is the
+// tree of the "By category" projection: one synthetic node per cleanup
+// category (its path starts with CATEGORY_NODE_PREFIX, see cleanup.ts)
+// holding the candidates with their real paths.
+export function fetchTree(path: string, byCategory = false): Promise<TreeNode> {
   const params = new URLSearchParams({ path });
-  if (pivot) {
-    params.set('pivot', 'category');
+  if (byCategory) {
+    params.set('projection', 'category');
   }
   return getJSON<TreeNode>(`api/v1/tree?${params.toString()}`);
 }

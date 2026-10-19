@@ -4,21 +4,21 @@ import type { Category, Node } from './types';
 import { formatSize } from './format';
 import { PALETTE } from './colors';
 
-export type Projection = 'location' | 'cleanup' | 'age' | 'categories';
+export type Projection = 'location' | 'cleanup' | 'age' | 'category';
 
 export const PROJECTIONS: Array<{ id: Projection; label: string }> = [
   { id: 'location', label: 'Location' },
   { id: 'cleanup', label: 'Cleanup' },
   { id: 'age', label: 'Age' },
-  { id: 'categories', label: 'By category' },
+  { id: 'category', label: 'By category' },
 ];
 
-// Path prefix of the synthetic category nodes of a pivoted tree
-// (pivotPathPrefix in webui/cleanup.go). They are not real items.
-export const PIVOT_PATH_PREFIX = 'category:';
+// Path prefix of the synthetic category nodes of the tree grouped by category
+// (categoryNodePrefix in webui/cleanup.go). They are not real items.
+export const CATEGORY_NODE_PREFIX = 'category:';
 
-export function isPivotNode(node: Node): boolean {
-  return node.path.startsWith(PIVOT_PATH_PREFIX);
+export function isCategoryNode(node: Node): boolean {
+  return node.path.startsWith(CATEGORY_NODE_PREFIX);
 }
 
 // Everything that is not a candidate recedes into this grey, so candidates

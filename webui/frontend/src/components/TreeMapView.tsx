@@ -11,14 +11,14 @@ import type { TileFocus } from './TreeMap';
 import {
   CATEGORY_COLORS,
   NEUTRAL_COLOR,
-  PIVOT_PATH_PREFIX,
+  CATEGORY_NODE_PREFIX,
   PROJECTIONS,
   ageColor,
   ageText,
   candidateSummary,
   cleanupColor,
   containsCategory,
-  isPivotNode,
+  isCategoryNode,
 } from '../cleanup';
 
 // TreeMapView owns everything specific to the treemap: fetching (and
@@ -50,11 +50,11 @@ export function TreeMapView() {
   const [categories, setCategories] = useState<CategoriesResponse | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | null>(null);
 
-  const pivot = projection === 'categories';
-  const showsCategories = projection === 'cleanup' || pivot;
-  // The pivoted tree is cached under its own key, so switching projections
+  const byCategory = projection === 'category';
+  const showsCategories = projection === 'cleanup' || byCategory;
+  // The tree grouped by category is cached under its own key, so switching projections
   // back and forth does not mix up the two shapes of the same directory.
-  const treeKey = pivot ? PIVOT_PATH_PREFIX + currentPath : currentPath;
+  const treeKey = byCategory ? CATEGORY_NODE_PREFIX + currentPath : currentPath;
 
   // Reset selection whenever the directory changes.
   useEffect(() => {
@@ -91,7 +91,7 @@ export function TreeMapView() {
     let cancelled = false;
     setTreeLoading(true);
     setTreeError(null);
-    fetchTree(currentPath, pivot)
+    fetchTree(currentPath, byCategory)
       .then((root) => {
         if (!cancelled) {
           setTree(treeKey, root);
@@ -110,7 +110,7 @@ export function TreeMapView() {
     return () => {
       cancelled = true;
     };
-  }, [currentPath, treePath, treeKey, pivot, view, setTree]);
+  }, [currentPath, treePath, treeKey, byCategory, view, setTree]);
 
   const actions = useItemActions();
 
@@ -191,9 +191,9 @@ export function TreeMapView() {
         return (rect: TreeLayoutRect) => cleanupColor(rect.node, effectiveApparent);
       case 'age':
         return (rect: TreeLayoutRect) => ageColor(rect.node.mtime, now);
-      case 'categories':
+      case 'category':
         return (rect: TreeLayoutRect) => {
-          const category = rect.colorPath.slice(PIVOT_PATH_PREFIX.length) as Category;
+          const category = rect.colorPath.slice(CATEGORY_NODE_PREFIX.length) as Category;
           return CATEGORY_COLORS[category] ?? NEUTRAL_COLOR;
         };
       default:
@@ -206,7 +206,7 @@ export function TreeMapView() {
       return undefined;
     }
     return (node: Node): TileFocus => {
-      if (isPivotNode(node)) {
+      if (isCategoryNode(node)) {
         return node.category === categoryFilter ? 'contains' : 'none';
       }
       if (node.category === categoryFilter) {
@@ -224,7 +224,7 @@ export function TreeMapView() {
       return (node: Node) => ageText(node.mtime, now);
     }
     return (node: Node) => {
-      if (isPivotNode(node)) {
+      if (isCategoryNode(node)) {
         return null;
       }
       const summary = candidateSummary(node, effectiveApparent, useSIPrefix, labels, now);
@@ -232,11 +232,11 @@ export function TreeMapView() {
     };
   }, [projection, effectiveApparent, useSIPrefix, labels, now]);
 
-  // Synthetic category nodes of the pivoted tree are not items: they can be
+  // Synthetic category nodes of the tree grouped by category are not items: they can be
   // neither selected for an action nor opened.
   const selectNode = useCallback(
     (node: Node) => {
-      if (!isPivotNode(node) && !deletionStateOf(deletions, node.path)) {
+      if (!isCategoryNode(node) && !deletionStateOf(deletions, node.path)) {
         setSelectedNode(node);
       }
     },
@@ -244,7 +244,7 @@ export function TreeMapView() {
   );
   const openPath = useCallback(
     (path: string) => {
-      if (!path.startsWith(PIVOT_PATH_PREFIX)) {
+      if (!path.startsWith(CATEGORY_NODE_PREFIX)) {
         navigateToPath(path);
       }
     },
