@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import * as api from './api';
 import type { NodeResponse, Status, TreeNode } from './types';
+import { CATEGORY_COLORS } from './cleanup';
 
 vi.mock('./api');
 
@@ -626,6 +627,47 @@ describe('projections', () => {
     });
     fireEvent.mouseEnter(file);
     expect(folder.getAttribute('opacity')).toBe('1');
+  });
+
+  it('singles out the filtered category on the map', async () => {
+    const tagged: TreeNode = {
+      ...treeResponse,
+      children: [
+        {
+          ...treeResponse.children[0],
+          categoryTotals: { 'ml-model': { usage: 50, size: 50 } },
+          children: [
+            {
+              ...treeResponse.children[0].children[0],
+              category: 'ml-model',
+              confidence: 'review',
+            },
+          ],
+        },
+        treeResponse.children[1],
+      ],
+    };
+    vi.mocked(api.fetchTree).mockResolvedValue(tagged);
+    await openTreemap();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'cleanup' },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /ML models · 50 B/ }));
+
+    const nested = screen.getByRole('button', { name: /nested\.bin/ });
+    const folder = screen.getByRole('button', { name: /folder/ });
+    const file = screen.getByRole('button', { name: /file\.txt/ });
+    expect(nested.getAttribute('data-focus')).toBe('match');
+    expect(nested.querySelector('rect')?.getAttribute('fill')).toBe(CATEGORY_COLORS['ml-model']);
+    expect(nested.querySelector('rect')?.getAttribute('stroke')).toBe('#ffe066');
+    expect(folder.getAttribute('data-focus')).toBe('contains');
+    expect(folder.getAttribute('opacity')).toBe('1');
+    expect(file.getAttribute('data-focus')).toBe('none');
+    expect(file.getAttribute('opacity')).toBe('0.14');
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(file.getAttribute('data-focus')).toBeNull();
+    expect(file.getAttribute('opacity')).toBe('1');
   });
 
   it('cycles projections with P', async () => {

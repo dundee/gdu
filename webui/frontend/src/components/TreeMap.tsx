@@ -6,6 +6,10 @@ import { layoutTree, type TreeLayoutRect } from './treemap/treeLayout';
 import { OTHER_COLOR } from '../colors';
 import { deletionStateOf, type Deletion } from '../model';
 
+export type TileFocus = 'match' | 'contains' | 'none';
+
+const FOCUS_OUTLINE = '#ffe066';
+
 interface TreeMapProps {
   root: TreeNode;
   apparent: boolean;
@@ -21,8 +25,11 @@ interface TreeMapProps {
   onOpen: (path: string) => void;
   // colorFor overrides the location coloring (colorMap) for a projection.
   colorFor?: (rect: TreeLayoutRect) => string;
-  // muted tiles are faded, e.g. by a legend filter.
-  muted?: (node: Node) => boolean;
+  // focus, when set, singles out some tiles (e.g. a legend filter): matches
+  // are drawn in focusColor and the topmost ones outlined, tiles merely
+  // containing matches stay as they are, and everything else fades.
+  focus?: (node: Node) => TileFocus;
+  focusColor?: string;
   // tooltipDetail adds a line to the hover tooltip.
   tooltipDetail?: (node: Node) => string | null;
   // Items being deleted in the background (hatched) or already deleted
@@ -51,7 +58,8 @@ export function TreeMap({
   onSelect,
   onOpen,
   colorFor,
-  muted,
+  focus,
+  focusColor,
   tooltipDetail,
   deletions,
   dimOnHover = true,
@@ -103,6 +111,12 @@ export function TreeMap({
     return { hoveredNode: node, outlinedPaths: paths };
   }, [rects, hoveredPath, root]);
   const rootHovered = hoveredNode?.path === root.path;
+  const focusByPath = useMemo(() => {
+    if (!focus) {
+      return null;
+    }
+    return new Map(rects.map((rect) => [rect.node.path, focus(rect.node)]));
+  }, [focus, rects]);
 
   return (
     <div
@@ -161,9 +175,13 @@ export function TreeMap({
           const isAncestor = !isHovered && outlinedPaths.has(node.path);
           const isSelected = node.path === selectedPath;
           const deletion = deletions ? deletionStateOf(deletions, node.path) : null;
-          const dimmed =
-            (dimOnHover && hoveredNode !== null && !outlinedPaths.has(node.path)) ||
-            (muted?.(node) ?? false);
+          const tileFocus = focusByPath?.get(node.path) ?? null;
+          const parentPath = rect.ancestorPaths[rect.ancestorPaths.length - 1];
+          // only the outermost match is outlined, not everything inside it
+          const focusEdge =
+            tileFocus === 'match' && focusByPath?.get(parentPath) !== 'match';
+          const dimmed = dimOnHover && hoveredNode !== null && !outlinedPaths.has(node.path);
+          const opacity = tileFocus === 'none' ? 0.14 : dimmed ? 0.42 : 1;
           const showLabel = !node.isDir && rect.w > 34 && rect.h > 16;
           const showSize = showLabel && rect.w > 60 && rect.h > 30;
           const width = Math.max(rect.w - 0.5, 0);
@@ -175,11 +193,12 @@ export function TreeMap({
               className={`treemap-tile ${isHovered ? 'hovered' : ''} ${isAncestor ? 'ancestor' : ''} ${isSelected ? 'selected' : ''} ${deletion ?? ''}`}
               aria-busy={deletion === 'pending' || undefined}
               data-deletion={deletion ?? undefined}
+              data-focus={tileFocus ?? undefined}
               role="button"
               aria-label={`${node.name}, ${formatSize(metricValue(node, apparent), useSIPrefix)}`}
               tabIndex={0}
               style={{ cursor: 'pointer' }}
-              opacity={dimmed ? 0.42 : 1}
+              opacity={opacity}
               onMouseEnter={() => onHover(node.path)}
               onMouseLeave={() => onHover(null)}
               onClick={(event) => {
@@ -204,18 +223,24 @@ export function TreeMap({
                 fill={
                   deletion
                     ? `url(#treemap-${deletion})`
-                    : colorFor
-                      ? colorFor(rect)
-                      : (colorMap.get(rect.colorPath) ?? OTHER_COLOR)
+                    : tileFocus === 'match' && focusColor
+                      ? focusColor
+                      : colorFor
+                        ? colorFor(rect)
+                        : (colorMap.get(rect.colorPath) ?? OTHER_COLOR)
                 }
                 stroke={
                   isHovered || isAncestor
                     ? '#fff'
                     : isSelected
                       ? '#55b6ff'
-                      : 'rgba(0,0,0,0.35)'
+                      : focusEdge
+                        ? FOCUS_OUTLINE
+                        : 'rgba(0,0,0,0.35)'
                 }
-                strokeWidth={isHovered ? 1.5 : isAncestor || isSelected ? 1.1 : 0.4}
+                strokeWidth={
+                  isHovered ? 1.5 : focusEdge ? 2 : isAncestor || isSelected ? 1.1 : 0.4
+                }
               />
               {!deletion && (
                 <rect

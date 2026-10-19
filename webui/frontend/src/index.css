@@ -390,6 +390,16 @@ body {
 
 .legend-chip.active {
   background: var(--bg-row-hover);
+  font-weight: 600;
+}
+
+.legend-clear {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 3px 4px;
 }
 
 .treemap-tooltip b {

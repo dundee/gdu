@@ -79,18 +79,29 @@ export function CategoryLegend({
           </span>
         </>
       )}
-      {present.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          className={`legend-chip ${filter === c.id ? 'active' : ''}`}
-          aria-pressed={filter === c.id}
-          onClick={() => onFilter(filter === c.id ? null : c.id)}
-        >
-          {projection === 'categories' && <Swatch color={CATEGORY_COLORS[c.id]} />}
-          {c.label} · {formatSize(c.bytes, useSIPrefix)} · {percent(c.bytes, total).toFixed(0)}%
+      {present.map((c) => {
+        const active = filter === c.id;
+        const color = CATEGORY_COLORS[c.id];
+        return (
+          <button
+            key={c.id}
+            type="button"
+            className={`legend-chip ${active ? 'active' : ''}`}
+            aria-pressed={active}
+            title={active ? 'Show all categories (Esc)' : `Highlight ${c.label.toLowerCase()}`}
+            style={active ? { borderColor: color, boxShadow: `inset 0 0 0 1px ${color}` } : undefined}
+            onClick={() => onFilter(active ? null : c.id)}
+          >
+            <Swatch color={color} />
+            {c.label} · {formatSize(c.bytes, useSIPrefix)} · {percent(c.bytes, total).toFixed(0)}%
+          </button>
+        );
+      })}
+      {filter && (
+        <button type="button" className="legend-clear" onClick={() => onFilter(null)}>
+          Show all
         </button>
-      ))}
+      )}
     </div>
   );
 }

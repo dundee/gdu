@@ -7,6 +7,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { useItemActions } from '../useItemActions';
 import { CategoryLegend } from './CategoryLegend';
 import type { TreeLayoutRect } from './treemap/treeLayout';
+import type { TileFocus } from './TreeMap';
 import {
   CATEGORY_COLORS,
   NEUTRAL_COLOR,
@@ -142,7 +143,10 @@ export function TreeMapView() {
       if (deleteCandidate) {
         return;
       }
-      if (event.code === 'KeyP' && !event.metaKey && !event.ctrlKey) {
+      if (event.key === 'Escape' && categoryFilter) {
+        event.preventDefault();
+        setCategoryFilter(null);
+      } else if (event.code === 'KeyP' && !event.metaKey && !event.ctrlKey) {
         event.preventDefault();
         const index = PROJECTIONS.findIndex((p) => p.id === projection);
         setProjection(PROJECTIONS[(index + 1) % PROJECTIONS.length].id);
@@ -172,6 +176,7 @@ export function TreeMapView() {
     status.deleteAllowed,
     projection,
     setProjection,
+    categoryFilter,
   ]);
 
   const labels = useMemo(
@@ -196,13 +201,20 @@ export function TreeMapView() {
     }
   }, [projection, effectiveApparent, now]);
 
-  const muted = useMemo(
-    () =>
-      showsCategories && categoryFilter
-        ? (node: Node) => !isPivotNode(node) && !containsCategory(node, categoryFilter)
-        : undefined,
-    [showsCategories, categoryFilter],
-  );
+  const focus = useMemo(() => {
+    if (!showsCategories || !categoryFilter) {
+      return undefined;
+    }
+    return (node: Node): TileFocus => {
+      if (isPivotNode(node)) {
+        return node.category === categoryFilter ? 'contains' : 'none';
+      }
+      if (node.category === categoryFilter) {
+        return 'match';
+      }
+      return containsCategory(node, categoryFilter) ? 'contains' : 'none';
+    };
+  }, [showsCategories, categoryFilter]);
 
   const tooltipDetail = useMemo(() => {
     if (projection === 'location') {
@@ -262,7 +274,8 @@ export function TreeMapView() {
             onSelect={selectNode}
             onOpen={openPath}
             colorFor={colorFor}
-            muted={muted}
+            focus={focus}
+            focusColor={categoryFilter ? CATEGORY_COLORS[categoryFilter] : undefined}
             tooltipDetail={tooltipDetail}
             deletions={deletions}
             dimOnHover={projection === 'location'}

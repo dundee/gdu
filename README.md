@@ -235,7 +235,8 @@ without touching anything important. Area always stays size.
   one block.
 
 The legend shows how much each category takes within the current directory;
-click a category to highlight only the tiles that hold it. Hovering a candidate
+click a category to single it out: its items are drawn in the category's color
+and outlined, everything else fades (`Esc` shows all again). Hovering a candidate
 shows what it is and how to remove it cleanly (e.g. `ollama rm` for Ollama
 models). Build-like directories only count next to a project marker, and
 anything ignored by a repository's `.gitignore` is flagged for review.

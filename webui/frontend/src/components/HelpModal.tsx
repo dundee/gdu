@@ -41,7 +41,7 @@ export function HelpModal() {
         <dt>?</dt>
         <dd>Show this help</dd>
         <dt>Esc</dt>
-        <dd>Close a dialog</dd>
+        <dd>Close a dialog, or show all categories again</dd>
       </dl>
       <div className="modal-actions">
         <button type="button" autoFocus onClick={() => setShowHelp(false)}>
