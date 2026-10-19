@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Node, SortKey, SortOrder } from '../types';
+import type { Deletion } from '../model';
 import { metricValue } from '../slices';
 import { formatCount, formatMtime, formatSize, percent } from '../format';
 
@@ -22,8 +23,9 @@ interface FileTableProps {
   canDelete: boolean;
   // True while a reveal request is in flight; disables the reveal buttons.
   actionPending: boolean;
-  // Paths being deleted in the background; their rows are drawn faded.
-  deleting: ReadonlySet<string>;
+  // Items being deleted in the background, or already deleted; their rows
+  // are drawn faded until the directory is reloaded.
+  deletions: ReadonlyMap<string, Deletion>;
 }
 
 const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
@@ -49,7 +51,7 @@ export function FileTable({
   onDelete,
   canDelete,
   actionPending,
-  deleting,
+  deletions,
 }: FileTableProps) {
   const maxValue = useMemo(
     () => children.reduce((max, n) => Math.max(max, metricValue(n, apparent)), 0),
@@ -81,12 +83,13 @@ export function FileTable({
           const barWidth = maxValue > 0 ? (value / maxValue) * 100 : 0;
           const color = colorMap.get(node.path) ?? 'var(--other)';
           const isHovered = node.path === hoveredPath;
-          const isDeleting = deleting.has(node.path);
+          const deletion = deletions.get(node.path)?.state;
+          const isDeleting = deletion !== undefined;
 
           return (
             <tr
               key={node.path}
-              className={`${isHovered ? 'hovered' : ''} ${isDeleting ? 'deleting' : ''}`}
+              className={`${isHovered ? 'hovered' : ''} ${deletion ?? ''}`}
               aria-busy={isDeleting || undefined}
               onMouseEnter={() => onHover(node.path)}
               onMouseLeave={() => onHover(null)}
@@ -98,7 +101,9 @@ export function FileTable({
                 <span className="name">
                   {node.isDir ? '📁' : '📄'} {node.name}
                   {node.flag === '!' && <span className="flag-error" title="Access error"> !</span>}
-                  {isDeleting && <span className="muted"> · deleting…</span>}
+                  {deletion && (
+                    <span className="muted"> · {deletion === 'pending' ? 'deleting…' : 'deleted'}</span>
+                  )}
                 </span>
                 <span className="bar" style={{ width: `${barWidth}%`, backgroundColor: color }} />
               </td>

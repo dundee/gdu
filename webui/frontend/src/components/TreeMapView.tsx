@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CategoriesResponse, Category, Node } from '../types';
 import { fetchCategories, fetchTree } from '../api';
-import { isBeingDeleted, useGduModel } from '../model';
+import { deletionStateOf, useGduModel } from '../model';
 import { TreeMap } from './TreeMap';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
-import { useLatest } from '../useLatest';
 import { useItemActions } from '../useItemActions';
 import { CategoryLegend } from './CategoryLegend';
 import type { TreeLayoutRect } from './treemap/treeLayout';
@@ -39,10 +38,9 @@ export function TreeMapView() {
     treeRoot,
     treePath,
     setTree,
-    clearTree,
     projection,
     setProjection,
-    deleting,
+    deletions,
   } = useGduModel();
 
   const [treeLoading, setTreeLoading] = useState(false);
@@ -82,11 +80,6 @@ export function TreeMapView() {
     };
   }, [currentPath, showsCategories, view]);
 
-  // Tracks the latest currentPath so an in-flight refreshTree() call (e.g.
-  // one started before breadcrumb navigation) can tell its result is stale
-  // once it resolves.
-  const currentPathRef = useLatest(currentPath);
-
   // Load (and cache, via the model) the recursive tree for the current
   // directory. Cached in the model rather than here so toggling back to this
   // view for the same path does not re-fetch.
@@ -118,41 +111,14 @@ export function TreeMapView() {
     };
   }, [currentPath, treePath, treeKey, pivot, view, setTree]);
 
-  const refreshTree = useCallback(async () => {
-    if (currentPath === null) {
-      return;
-    }
-    const path = currentPath;
-    if (showsCategories) {
-      fetchCategories(path)
-        .then((resp) => {
-          if (currentPathRef.current === path) {
-            setCategories(resp);
-          }
-        })
-        .catch(() => undefined);
-    }
-    try {
-      const root = await fetchTree(path, pivot);
-      if (currentPathRef.current === path) {
-        setTree(treeKey, root);
-        setTreeError(null);
-      }
-    } catch (err: unknown) {
-      // Invalidate the cache instead of leaving the pre-mutation treeRoot/
-      // treePath in place: otherwise they would still match currentPath and
-      // the stale tree would keep rendering as if it were up to date, with
-      // treeError never shown.
-      if (currentPathRef.current === path) {
-        setTreeError(err instanceof Error ? err.message : String(err));
-        clearTree();
-      }
-    }
-  }, [currentPath, pivot, showsCategories, treeKey, setTree, clearTree]);
+  const actions = useItemActions();
 
-  const clearSelection = useCallback(() => setSelectedNode(null), []);
-
-  const actions = useItemActions({ refreshExtra: refreshTree, onRefreshed: clearSelection });
+  // A deleted item stays on screen, but can no longer be acted on.
+  useEffect(() => {
+    if (selectedNode && deletionStateOf(deletions, selectedNode.path)) {
+      setSelectedNode(null);
+    }
+  }, [deletions, selectedNode]);
   const { deleteCandidate, reveal, requestDelete: requestDeleteNode } = actions;
 
   const revealSelected = useCallback(async () => {
@@ -258,11 +224,11 @@ export function TreeMapView() {
   // neither selected for an action nor opened.
   const selectNode = useCallback(
     (node: Node) => {
-      if (!isPivotNode(node) && !isBeingDeleted(deleting, node.path)) {
+      if (!isPivotNode(node) && !deletionStateOf(deletions, node.path)) {
         setSelectedNode(node);
       }
     },
-    [deleting],
+    [deletions],
   );
   const openPath = useCallback(
     (path: string) => {
@@ -298,7 +264,8 @@ export function TreeMapView() {
             colorFor={colorFor}
             muted={muted}
             tooltipDetail={tooltipDetail}
-            deleting={deleting}
+            deletions={deletions}
+            dimOnHover={projection === 'location'}
           />
         ) : (
           <div className="treemap-loading">

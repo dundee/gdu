@@ -17,7 +17,7 @@ export function FileTableView() {
     hoveredPath,
     setHoveredPath,
     handleSelect,
-    deleting,
+    deletions,
   } = useGduModel();
   const actions = useItemActions();
 
@@ -39,7 +39,7 @@ export function FileTableView() {
         onDelete={actions.requestDelete}
         canDelete={status.deleteAllowed}
         actionPending={actions.actionPending}
-        deleting={deleting}
+        deletions={deletions}
       />
       <DeleteConfirmModal actions={actions} />
     </section>
