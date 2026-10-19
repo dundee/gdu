@@ -74,6 +74,17 @@ func (ui *UI) treeChanged() {
 	ui.treeGen.Add(1)
 }
 
+// itemRemoved updates the cached classification for one item that was removed
+// from the tree, instead of invalidating it.
+func (ui *UI) itemRemoved(it fs.Item) {
+	c := &ui.cleanup
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.res != nil && c.gen == ui.treeGen.Load() {
+		c.res.Forget(it)
+	}
+}
+
 type categoryJSON struct {
 	cleanup.CategoryInfo
 	cleanup.Amount

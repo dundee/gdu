@@ -423,7 +423,7 @@ describe('treemap actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete Permanently' }));
 
     await waitFor(() => expect(api.fetchNode).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText('node not found')).toBeTruthy();
+    expect(await screen.findByText('Could not delete file.txt: node not found')).toBeTruthy();
   });
 });
 
@@ -534,7 +534,7 @@ describe('table actions', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
     fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
 
-    expect(await screen.findByText('deletion is disabled')).toBeTruthy();
+    expect(await screen.findByText('Could not delete file.txt: deletion is disabled')).toBeTruthy();
   });
 
   it('hides delete but keeps reveal when the backend disables deletion', async () => {
@@ -656,5 +656,89 @@ describe('projections', () => {
     fireEvent.keyDown(window, { code: 'KeyP' });
     expect(select.value).toBe('age');
     expect(screen.getByText('Last change')).toBeTruthy();
+  });
+});
+
+describe('optimistic deletion', () => {
+  function deferred() {
+    let resolve!: () => void;
+    let reject!: (err: Error) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  beforeEach(() => {
+    window.sessionStorage.setItem('gdu.skipDeleteConfirm', 'trash');
+  });
+
+  async function openTreemap() {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    await screen.findByRole('img', { name: 'Directory size treemap' });
+  }
+
+  function deleteTile(name: RegExp) {
+    fireEvent.click(screen.getByRole('button', { name }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+  }
+
+  it('marks items at once, runs deletions in parallel and refreshes once', async () => {
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(api.deleteNode)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    await openTreemap();
+
+    deleteTile(/file\.txt/);
+    deleteTile(/nested\.bin/);
+
+    expect(api.deleteNode).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('aria-busy')).toBe('true');
+    expect(screen.getByRole('status').textContent).toBe('deleting 2…');
+
+    // navigation waits until every request has finished
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+
+    first.resolve();
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('deleting 1…'));
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+
+    second.resolve();
+    await waitFor(() => expect(api.fetchNode).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+    expect(api.fetchTree).toHaveBeenCalledTimes(2);
+  });
+
+  it('puts a failed item back and says why', async () => {
+    const pending = deferred();
+    vi.mocked(api.deleteNode).mockReturnValueOnce(pending.promise);
+    await openTreemap();
+
+    deleteTile(/file\.txt/);
+    expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('aria-busy')).toBe('true');
+
+    pending.reject(new Error('permission denied'));
+    expect(await screen.findByText('Could not delete file.txt: permission denied')).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('aria-busy')).toBeNull(),
+    );
+  });
+
+  it('does not delete an item twice', async () => {
+    vi.mocked(api.deleteNode).mockReturnValue(deferred().promise);
+    await openTreemap();
+
+    deleteTile(/folder/);
+    // the nested file is inside the folder being deleted
+    fireEvent.click(screen.getByRole('button', { name: /nested\.bin/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    deleteTile(/folder/);
+
+    expect(api.deleteNode).toHaveBeenCalledTimes(1);
   });
 });

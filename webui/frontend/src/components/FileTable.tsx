@@ -20,8 +20,10 @@ interface FileTableProps {
   // Delete is hidden entirely (not just disabled) when the server does not
   // allow it; reveal stays available.
   canDelete: boolean;
-  // True while an action request is in flight; disables the buttons.
+  // True while a reveal request is in flight; disables the reveal buttons.
   actionPending: boolean;
+  // Paths being deleted in the background; their rows are drawn faded.
+  deleting: ReadonlySet<string>;
 }
 
 const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
@@ -47,6 +49,7 @@ export function FileTable({
   onDelete,
   canDelete,
   actionPending,
+  deleting,
 }: FileTableProps) {
   const maxValue = useMemo(
     () => children.reduce((max, n) => Math.max(max, metricValue(n, apparent)), 0),
@@ -78,11 +81,13 @@ export function FileTable({
           const barWidth = maxValue > 0 ? (value / maxValue) * 100 : 0;
           const color = colorMap.get(node.path) ?? 'var(--other)';
           const isHovered = node.path === hoveredPath;
+          const isDeleting = deleting.has(node.path);
 
           return (
             <tr
               key={node.path}
-              className={isHovered ? 'hovered' : ''}
+              className={`${isHovered ? 'hovered' : ''} ${isDeleting ? 'deleting' : ''}`}
+              aria-busy={isDeleting || undefined}
               onMouseEnter={() => onHover(node.path)}
               onMouseLeave={() => onHover(null)}
               onClick={() => node.isDir && onSelect(node)}
@@ -93,6 +98,7 @@ export function FileTable({
                 <span className="name">
                   {node.isDir ? '📁' : '📄'} {node.name}
                   {node.flag === '!' && <span className="flag-error" title="Access error"> !</span>}
+                  {isDeleting && <span className="muted"> · deleting…</span>}
                 </span>
                 <span className="bar" style={{ width: `${barWidth}%`, backgroundColor: color }} />
               </td>
@@ -116,7 +122,7 @@ export function FileTable({
                     className="row-action"
                     aria-label={`Delete ${node.name}`}
                     title="Delete"
-                    disabled={actionPending}
+                    disabled={isDeleting}
                     onClick={() => onDelete(node)}
                   >
                     🗑

@@ -178,12 +178,15 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("mode") == deleteModeTrash {
 		removeFunc = ui.trasher
 	}
-	err = removeFunc(parent, node)
-	// even a failed removal may have removed part of the tree
-	ui.treeChanged()
-	if err != nil {
+	if err := removeFunc(parent, node); err != nil {
+		// a failed removal may still have removed part of the tree
+		ui.treeChanged()
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	// a trash command may succeed and leave the item in place
+	if current, ok := childByName(parent, node.GetName()); !ok || current != node {
+		ui.itemRemoved(node)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

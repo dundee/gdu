@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -95,6 +96,37 @@ export interface GduModel {
   // donut/treemap, which unmounts TreeMapView and would otherwise reset it.
   skipDeleteConfirm: DeleteMode | null;
   setSkipDeleteConfirm: (mode: DeleteMode | null) => void;
+  // Optimistic deletion: paths whose deletion was sent and is either still
+  // running or succeeded but not yet reflected by a refresh. Views draw them
+  // as "being deleted". Lives here so every view sees the same state.
+  deleting: ReadonlySet<string>;
+  // Requests still running. Navigation is blocked while it is non-zero, so
+  // every result lands in the directory it was started from.
+  deletionsInFlight: number;
+  beginDeletion: (path: string) => void;
+  // settleDeletion records a finished request; a failed one (error set) is
+  // dropped from deleting so its item is drawn normally again. Once no
+  // request is running it returns the errors of the whole batch, otherwise
+  // null.
+  settleDeletion: (path: string, error: string | null) => string[] | null;
+  clearDeleting: () => void;
+}
+
+// isBeingDeleted reports whether path or one of its ancestors is being deleted.
+export function isBeingDeleted(deleting: ReadonlySet<string>, path: string): boolean {
+  if (deleting.size === 0) {
+    return false;
+  }
+  for (const pending of deleting) {
+    if (path === pending) {
+      return true;
+    }
+    const separator = path[pending.length];
+    if (path.startsWith(pending) && (separator === '/' || separator === '\\')) {
+      return true;
+    }
+  }
+  return false;
 }
 
 const GduModelContext = createContext<GduModel | null>(null);
@@ -132,6 +164,10 @@ export function useGduModelState() {
   const [showHelp, setShowHelp] = useState(false);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<ReadonlySet<string>>(() => new Set());
+  const [deletionsInFlight, setDeletionsInFlight] = useState(0);
+  const inFlightRef = useRef(0);
+  const deletionErrorsRef = useRef<string[]>([]);
   const [skipDeleteConfirm, setSkipDeleteConfirmState] = useState<DeleteMode | null>(() => {
     const mode = readSessionStorage(deleteModeStorageKey);
     return mode === 'trash' || mode === 'permanent' ? mode : null;
@@ -228,9 +264,39 @@ export function useGduModelState() {
   );
 
   const navigateToPath = useCallback((path: string) => {
+    if (inFlightRef.current > 0) {
+      return;
+    }
     setCurrentPath(path);
     setHoveredPath(null);
   }, []);
+
+  const beginDeletion = useCallback((path: string) => {
+    inFlightRef.current += 1;
+    setDeletionsInFlight(inFlightRef.current);
+    setDeleting((prev) => new Set(prev).add(path));
+  }, []);
+
+  const settleDeletion = useCallback((path: string, error: string | null) => {
+    inFlightRef.current = Math.max(inFlightRef.current - 1, 0);
+    setDeletionsInFlight(inFlightRef.current);
+    if (error !== null) {
+      deletionErrorsRef.current.push(error);
+      setDeleting((prev) => {
+        const next = new Set(prev);
+        next.delete(path);
+        return next;
+      });
+    }
+    if (inFlightRef.current > 0) {
+      return null;
+    }
+    const errors = deletionErrorsRef.current;
+    deletionErrorsRef.current = [];
+    return errors;
+  }, []);
+
+  const clearDeleting = useCallback(() => setDeleting(new Set()), []);
 
   const handleSelect = useCallback(
     (node: Node) => {
@@ -311,5 +377,10 @@ export function useGduModelState() {
     clearTree,
     skipDeleteConfirm,
     setSkipDeleteConfirm,
+    deleting,
+    deletionsInFlight,
+    beginDeletion,
+    settleDeletion,
+    clearDeleting,
   };
 }

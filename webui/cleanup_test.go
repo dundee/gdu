@@ -171,7 +171,7 @@ func TestPivotCategoryNodesAreNotActionable(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
-func TestClassificationRecomputedAfterDelete(t *testing.T) {
+func TestClassificationUpdatedAfterDelete(t *testing.T) {
 	ui := newTestUI()
 	root := makeCleanupTree(t)
 	scan(t, ui, root)
@@ -181,6 +181,7 @@ func TestClassificationRecomputedAfterDelete(t *testing.T) {
 	var before categoriesResponse
 	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", &before))
 	require.NotZero(t, categoryAmounts(before)[cleanup.MLModel].Size)
+	cached := ui.cleanupResult()
 
 	req, err := http.NewRequest(http.MethodDelete,
 		srv.URL+"/api/v1/nodes?path="+url.QueryEscape(filepath.Join(root, "models", "a.gguf")), nil)
@@ -195,6 +196,7 @@ func TestClassificationRecomputedAfterDelete(t *testing.T) {
 	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", &after))
 	assert.Zero(t, categoryAmounts(after)[cleanup.MLModel].Size)
 	assert.NotZero(t, categoryAmounts(after)[cleanup.BuildArtifact].Size)
+	assert.Same(t, cached, ui.cleanupResult(), "a deletion updates the classification instead of recomputing it")
 }
 
 func TestSetCleanupConfigAppliesExclusions(t *testing.T) {

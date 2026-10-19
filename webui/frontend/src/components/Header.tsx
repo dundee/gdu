@@ -16,6 +16,7 @@ export function Header() {
     effectiveApparent,
     toggleApparent,
     handleSelect,
+    deletionsInFlight,
   } = useGduModel();
 
   return (
@@ -58,6 +59,15 @@ export function Header() {
           {effectiveApparent ? 'Apparent size' : 'Disk usage'}
         </button>
         {status.state === 'scanning' && <span className="scanning-badge">scanning…</span>}
+        {deletionsInFlight > 0 && (
+          <span
+            className="scanning-badge"
+            role="status"
+            title="Opening other directories is paused until the deletions finish"
+          >
+            deleting {deletionsInFlight}…
+          </span>
+        )}
       </div>
     </header>
   );

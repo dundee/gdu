@@ -203,7 +203,10 @@ its own reveal and delete buttons that act on that item; deletion asks for
 confirmation with the same dialog. The deletion dialog can suppress further
 confirmations for the current browser session, for both the treemap and the
 table, so with "permanent" chosen a single click on a row's delete button
-deletes immediately. The `--no-delete` flag and
+deletes immediately. Deletion runs in the background: the item is drawn
+hatched right away, more items can be deleted meanwhile, and a failed deletion
+puts the item back with the reason. Opening another directory waits until the
+running deletions finish. The `--no-delete` flag and
 filtered-scan deletion restrictions apply to the web UI as well as the
 terminal UI. Reveal remains available with `--no-delete` because it does not
 modify scanned data. To deliberately allow deletion while filters are active,

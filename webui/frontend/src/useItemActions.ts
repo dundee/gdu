@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import type { Node } from './types';
 import { deleteNode, revealNode, type DeleteMode } from './api';
-import { useGduModel } from './model';
+import { isBeingDeleted, useGduModel } from './model';
+import { useLatest } from './useLatest';
 
 // Shown instead of firing a request that is certain to come back as a bare
 // 403. The token is missing whenever this tab never received one - the page
@@ -20,6 +21,8 @@ export interface ItemActionsOptions {
 }
 
 export interface ItemActions {
+  // actionPending is true while a reveal runs. Deletions never block: they
+  // are optimistic, see performDelete.
   actionPending: boolean;
   deleteCandidate: Node | null;
   skipDeleteChoice: boolean;
@@ -28,6 +31,10 @@ export interface ItemActions {
   // opted out of confirmation this session, otherwise opens the modal.
   requestDelete: (node: Node) => void;
   cancelDelete: () => void;
+  // performDelete marks the item as being deleted right away and sends the
+  // request in the background, so more items can be deleted meanwhile. A
+  // failed deletion puts the item back and reports why. Once the last
+  // running request finishes, the data is refreshed once.
   performDelete: (node: Node, mode: DeleteMode) => Promise<void>;
   reveal: (node: Node) => Promise<void>;
 }
@@ -46,6 +53,10 @@ export function useItemActions(options: ItemActionsOptions = {}): ItemActions {
     refreshNode,
     clearTree,
     setLoadError,
+    deleting,
+    beginDeletion,
+    settleDeletion,
+    clearDeleting,
   } = useGduModel();
 
   const [deleteCandidate, setDeleteCandidate] = useState<Node | null>(null);
@@ -59,45 +70,60 @@ export function useItemActions(options: ItemActionsOptions = {}): ItemActions {
     ]);
     onRefreshed?.();
     setHoveredPath(null);
-    // Deleting the last item leaves the current directory empty: staying
-    // put would show a blank chart with no way back except the breadcrumbs,
-    // so step up to the parent directory instead.
-    if (nodeResp.children.length === 0 && nodeResp.breadcrumbs.length > 1) {
-      const parent = nodeResp.breadcrumbs[nodeResp.breadcrumbs.length - 2];
-      navigateToPath(parent.path);
+    return nodeResp;
+  }, [refreshNode, refreshExtra, clearTree, onRefreshed, setHoveredPath]);
+  // A deletion can outlive the render that started it; settle it with the
+  // latest refresh so the view that is shown when it finishes is updated.
+  const refreshRef = useLatest(refreshAfterMutation);
+
+  // finishDeletions refreshes once after a batch of deletions. Errors are
+  // shown after the refresh, which would otherwise clear them.
+  const finishDeletions = useCallback(async (errors: string[]) => {
+    try {
+      const refresh = refreshRef.current ?? refreshAfterMutation;
+      const nodeResp = await refresh();
+      clearDeleting();
+      if (errors.length > 0) {
+        setLoadError(errors.join('\n'));
+      }
+      // Deleting the last item leaves the current directory empty: staying
+      // put would show a blank chart with no way back except the breadcrumbs,
+      // so step up to the parent directory instead.
+      if (nodeResp.children.length === 0 && nodeResp.breadcrumbs.length > 1) {
+        const parent = nodeResp.breadcrumbs[nodeResp.breadcrumbs.length - 2];
+        navigateToPath(parent.path);
+      }
+    } catch (err: unknown) {
+      clearDeleting();
+      setLoadError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshNode, refreshExtra, clearTree, onRefreshed, setHoveredPath, navigateToPath]);
+  }, [refreshRef, refreshAfterMutation, clearDeleting, navigateToPath, setLoadError]);
 
   const performDelete = useCallback(
     async (node: Node, mode: DeleteMode) => {
-      if (actionPending) {
-        return;
-      }
+      setDeleteCandidate(null);
       if (!actionToken) {
-        setDeleteCandidate(null);
         setLoadError(noActionTokenMessage);
         return;
       }
-      setActionPending(true);
-      setDeleteCandidate(null);
+      if (isBeingDeleted(deleting, node.path)) {
+        return;
+      }
+      beginDeletion(node.path);
+      let error: string | null = null;
       try {
         await deleteNode(node.path, actionToken, mode);
-        await refreshAfterMutation();
-        setLoadError(null);
       } catch (err: unknown) {
-        if (typeof err === 'object' && err !== null && 'status' in err && err.status === 404) {
-          try {
-            await refreshAfterMutation();
-          } catch {
-            // Keep the original action error; the regular loader can retry later.
-          }
-        }
-        setLoadError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setActionPending(false);
+        error = `Could not delete ${node.name}: ${err instanceof Error ? err.message : String(err)}`;
+        // show it right away; it is shown again after the batch refresh
+        setLoadError(error);
+      }
+      const errors = settleDeletion(node.path, error);
+      if (errors) {
+        await finishDeletions(errors);
       }
     },
-    [actionPending, refreshAfterMutation, setLoadError, actionToken],
+    [actionToken, deleting, beginDeletion, settleDeletion, finishDeletions, setLoadError],
   );
 
   const reveal = useCallback(
@@ -124,7 +150,7 @@ export function useItemActions(options: ItemActionsOptions = {}): ItemActions {
 
   const requestDelete = useCallback(
     (node: Node) => {
-      if (actionPending || !status.deleteAllowed) {
+      if (!status.deleteAllowed || isBeingDeleted(deleting, node.path)) {
         return;
       }
       if (skipDeleteConfirm) {
@@ -134,7 +160,7 @@ export function useItemActions(options: ItemActionsOptions = {}): ItemActions {
       setSkipDeleteChoice(false);
       setDeleteCandidate(node);
     },
-    [actionPending, performDelete, skipDeleteConfirm, status.deleteAllowed],
+    [deleting, performDelete, skipDeleteConfirm, status.deleteAllowed],
   );
 
   const cancelDelete = useCallback(() => setDeleteCandidate(null), []);

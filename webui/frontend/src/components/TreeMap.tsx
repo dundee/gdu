@@ -4,6 +4,7 @@ import { metricValue } from '../slices';
 import { formatCount, formatSize, percent } from '../format';
 import { layoutTree, type TreeLayoutRect } from './treemap/treeLayout';
 import { OTHER_COLOR } from '../colors';
+import { isBeingDeleted } from '../model';
 
 interface TreeMapProps {
   root: TreeNode;
@@ -24,6 +25,9 @@ interface TreeMapProps {
   muted?: (node: Node) => boolean;
   // tooltipDetail adds a line to the hover tooltip.
   tooltipDetail?: (node: Node) => string | null;
+  // Paths being deleted in the background; they and everything inside them
+  // are drawn hatched until the deletion is confirmed or fails.
+  deleting?: ReadonlySet<string>;
 }
 
 const DEFAULT_WIDTH = 300;
@@ -45,6 +49,7 @@ export function TreeMap({
   colorFor,
   muted,
   tooltipDetail,
+  deleting,
 }: TreeMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
@@ -108,6 +113,16 @@ export function TreeMap({
         height="100%"
       >
         <defs>
+          <pattern
+            id="treemap-deleting"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <rect width="6" height="6" fill="#14171c" />
+            <rect width="2" height="6" fill="#3a4150" />
+          </pattern>
           <linearGradient id="treemap-shine" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
             <stop offset="0.48" stopColor="#fff" stopOpacity="0.04" />
@@ -129,6 +144,7 @@ export function TreeMap({
           const isHovered = node.path === hoveredPath;
           const isAncestor = !isHovered && outlinedPaths.has(node.path);
           const isSelected = node.path === selectedPath;
+          const isDeleting = deleting ? isBeingDeleted(deleting, node.path) : false;
           const dimmed =
             (hoveredNode !== null && !outlinedPaths.has(node.path)) || (muted?.(node) ?? false);
           const showLabel = !node.isDir && rect.w > 34 && rect.h > 16;
@@ -139,7 +155,8 @@ export function TreeMap({
           return (
             <g
               key={node.path}
-              className={`treemap-tile ${isHovered ? 'hovered' : ''} ${isAncestor ? 'ancestor' : ''} ${isSelected ? 'selected' : ''}`}
+              className={`treemap-tile ${isHovered ? 'hovered' : ''} ${isAncestor ? 'ancestor' : ''} ${isSelected ? 'selected' : ''} ${isDeleting ? 'deleting' : ''}`}
+              aria-busy={isDeleting || undefined}
               role="button"
               aria-label={`${node.name}, ${formatSize(metricValue(node, apparent), useSIPrefix)}`}
               tabIndex={0}
@@ -166,7 +183,13 @@ export function TreeMap({
                 y={rect.y}
                 width={width}
                 height={height}
-                fill={colorFor ? colorFor(rect) : (colorMap.get(rect.colorPath) ?? OTHER_COLOR)}
+                fill={
+                  isDeleting
+                    ? 'url(#treemap-deleting)'
+                    : colorFor
+                      ? colorFor(rect)
+                      : (colorMap.get(rect.colorPath) ?? OTHER_COLOR)
+                }
                 stroke={
                   isHovered || isAncestor
                     ? '#fff'
@@ -176,14 +199,16 @@ export function TreeMap({
                 }
                 strokeWidth={isHovered ? 1.5 : isAncestor || isSelected ? 1.1 : 0.4}
               />
-              <rect
-                className="treemap-shine"
-                x={rect.x}
-                y={rect.y}
-                width={width}
-                height={height}
-                fill="url(#treemap-shine)"
-              />
+              {!isDeleting && (
+                <rect
+                  className="treemap-shine"
+                  x={rect.x}
+                  y={rect.y}
+                  width={width}
+                  height={height}
+                  fill="url(#treemap-shine)"
+                />
+              )}
               {showLabel && (
                 <foreignObject
                   x={rect.x + 1.5}

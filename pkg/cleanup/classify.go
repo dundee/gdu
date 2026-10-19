@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -100,8 +101,10 @@ func (t Totals) add(other Totals) Totals {
 }
 
 // Result holds the classification of one tree. Items are keyed by identity, so
-// a Result goes stale once the tree changes and must be recomputed.
+// a Result goes stale once the tree changes, except for removals reported via
+// Forget. It is safe for concurrent use.
 type Result struct {
+	mu      sync.RWMutex
 	matches map[fs.Item]Match
 	totals  map[fs.Item]Totals
 }
@@ -109,14 +112,57 @@ type Result struct {
 // Match returns the classification of an item that is a unit on its own.
 // Descendants of a matched directory report no match of their own.
 func (r *Result) Match(it fs.Item) (Match, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	m, ok := r.matches[it]
 	return m, ok
 }
 
 // Totals returns the space taken by each category within the item, including
 // the item itself when it is a match. It is empty for items with no
-// candidates.
+// candidates. The returned map must not be modified.
 func (r *Result) Totals(it fs.Item) Totals {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.totalsLocked(it)
+}
+
+// Forget updates the result for it having been removed from the tree: its
+// space is subtracted from every ancestor, which is far cheaper than
+// classifying the whole tree again. Ancestors are found through GetParent, so
+// the removed item must keep its parent link.
+func (r *Result) Forget(it fs.Item) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	removed := r.totalsLocked(it)
+	// entries of its descendants are unreachable from now on and left in place
+	delete(r.matches, it)
+	delete(r.totals, it)
+	if len(removed) == 0 {
+		return
+	}
+	for p := it.GetParent(); p != nil; p = p.GetParent() {
+		old := r.totals[p]
+		// copy, since earlier callers of Totals may still hold the old map
+		left := make(Totals, len(old))
+		for c, a := range old {
+			sub := removed[c]
+			a.Usage -= sub.Usage
+			a.Size -= sub.Size
+			if a.Usage > 0 || a.Size > 0 {
+				left[c] = a
+			}
+		}
+		if len(left) == 0 {
+			delete(r.totals, p)
+		} else {
+			r.totals[p] = left
+		}
+	}
+}
+
+func (r *Result) totalsLocked(it fs.Item) Totals {
 	if t, ok := r.totals[it]; ok {
 		return t
 	}
@@ -153,7 +199,7 @@ func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}) Tot
 	}
 	if m, ok := w.classify(it, path, siblings); ok {
 		w.result.matches[it] = m
-		return w.result.Totals(it)
+		return w.result.totalsLocked(it)
 	}
 	if !it.IsDir() {
 		return nil

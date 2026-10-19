@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CategoriesResponse, Category, Node } from '../types';
 import { fetchCategories, fetchTree } from '../api';
-import { useGduModel } from '../model';
+import { isBeingDeleted, useGduModel } from '../model';
 import { TreeMap } from './TreeMap';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { useLatest } from '../useLatest';
@@ -42,6 +42,7 @@ export function TreeMapView() {
     clearTree,
     projection,
     setProjection,
+    deleting,
   } = useGduModel();
 
   const [treeLoading, setTreeLoading] = useState(false);
@@ -255,11 +256,14 @@ export function TreeMapView() {
 
   // Synthetic category nodes of the pivoted tree are not items: they can be
   // neither selected for an action nor opened.
-  const selectNode = useCallback((node: Node) => {
-    if (!isPivotNode(node)) {
-      setSelectedNode(node);
-    }
-  }, []);
+  const selectNode = useCallback(
+    (node: Node) => {
+      if (!isPivotNode(node) && !isBeingDeleted(deleting, node.path)) {
+        setSelectedNode(node);
+      }
+    },
+    [deleting],
+  );
   const openPath = useCallback(
     (path: string) => {
       if (!path.startsWith(PIVOT_PATH_PREFIX)) {
@@ -294,6 +298,7 @@ export function TreeMapView() {
             colorFor={colorFor}
             muted={muted}
             tooltipDetail={tooltipDetail}
+            deleting={deleting}
           />
         ) : (
           <div className="treemap-loading">

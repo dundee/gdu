@@ -241,3 +241,29 @@ func TestNoRepoNoGitIgnoreSignal(t *testing.T) {
 	_, ok := res.Match(child(t, root, "out"))
 	assert.False(t, ok)
 }
+
+func TestForgetSubtractsFromAncestors(t *testing.T) {
+	root := build("/home", dir("u",
+		dir("p", file("package.json", 1), dir("node_modules", file("x", 100)), file("a.gguf", 40)),
+		file("b.gguf", 60),
+	))
+	res := newClassifier(t, Config{}).Analyze(root)
+	before := res.Totals(root)
+
+	modules := child(t, root, "p", "node_modules")
+	res.Forget(modules)
+
+	_, ok := res.Match(modules)
+	assert.False(t, ok)
+	assert.Equal(t, Totals{MLModel: {Usage: 40, Size: 40}}, res.Totals(child(t, root, "p")))
+	assert.Equal(t, Totals{MLModel: {Usage: 100, Size: 100}}, res.Totals(root))
+	// maps handed out earlier are not modified
+	assert.Equal(t, int64(100), before[BuildArtifact].Usage)
+
+	res.Forget(child(t, root, "p", "a.gguf"))
+	assert.Nil(t, res.Totals(child(t, root, "p")))
+
+	// forgetting an item without candidates changes nothing
+	res.Forget(child(t, root, "p", "package.json"))
+	assert.Equal(t, Totals{MLModel: {Usage: 60, Size: 60}}, res.Totals(root))
+}
