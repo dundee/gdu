@@ -1,4 +1,4 @@
-import { useGduModel } from '../model';
+import { freedBytes, useGduModel } from '../model';
 import { formatSize } from '../format';
 import { Breadcrumbs } from './Breadcrumbs';
 import { PROJECTIONS, type Projection } from '../cleanup';
@@ -17,7 +17,9 @@ export function Header() {
     toggleApparent,
     handleSelect,
     deletionsInFlight,
+    deletions,
   } = useGduModel();
+  const freed = freedBytes(deletions, effectiveApparent);
 
   return (
     <header className="app-header">
@@ -66,6 +68,14 @@ export function Header() {
             title="Opening other directories is paused until the deletions finish"
           >
             deleting {deletionsInFlight}…
+          </span>
+        )}
+        {freed > 0 && (
+          <span
+            className="freed-badge"
+            title="Freed by deletions in this directory; sizes update when you open another directory"
+          >
+            freed {formatSize(freed, useSIPrefix)}
           </span>
         )}
       </div>

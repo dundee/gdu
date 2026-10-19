@@ -693,6 +693,8 @@ describe('optimistic deletion', () => {
     second.resolve();
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
     expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('data-deletion')).toBe('deleted');
+    // file.txt (30 B) and nested.bin (50 B)
+    expect(screen.getByText('freed 80 B')).toBeTruthy();
     expect(api.fetchNode).toHaveBeenCalledTimes(1);
     expect(api.fetchTree).toHaveBeenCalledTimes(1);
 

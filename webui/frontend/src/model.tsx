@@ -137,6 +137,24 @@ export function deletionStateOf(
   return null;
 }
 
+// freedBytes is the space freed by the confirmed deletions. An item deleted
+// after something inside it was is counted once, with the size it had when
+// the user deleted it.
+export function freedBytes(deletions: ReadonlyMap<string, Deletion>, apparent: boolean): number {
+  let total = 0;
+  for (const [path, { state, node }] of deletions) {
+    if (state !== 'deleted') {
+      continue;
+    }
+    const parent = path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
+    if (parent && deletionStateOf(deletions, parent) === 'deleted') {
+      continue;
+    }
+    total += apparent ? node.size : node.usage;
+  }
+  return total;
+}
+
 const GduModelContext = createContext<GduModel | null>(null);
 
 export function useGduModel(): GduModel {

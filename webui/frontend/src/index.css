@@ -87,6 +87,11 @@ body {
   border-color: var(--accent);
 }
 
+.freed-badge {
+  color: #7bd88f;
+  font-weight: 600;
+}
+
 .scanning-badge {
   color: var(--text-muted);
   font-style: italic;
