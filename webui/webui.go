@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/cleanup"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/remove"
@@ -49,6 +51,17 @@ type UI struct {
 	progress     common.CurrentProgress
 	noDelete     bool
 	trasher      func(fs.Item, fs.Item) error
+
+	classifier *cleanup.Classifier
+	cleanup    cleanupCache
+	// treeGen counts changes to the tree that keep its root, such as a
+	// deletion or a rescan of a subdirectory.
+	treeGen atomic.Uint64
+	// removalSeq is odd while a deletion runs, from before the tree changes
+	// until the classification has been updated for it.
+	removalSeq atomic.Uint64
+	// classifying is set while the classification runs in the background.
+	classifying atomic.Bool
 
 	hub *hub
 }
@@ -95,6 +108,7 @@ func CreateUI(
 		linkedItems: make(fs.HardLinkedItems),
 		hub:         newHub(),
 	}
+	ui.classifier = cleanup.NewDefaultClassifier(userHomeDir())
 	if listenAddr == "" {
 		ui.listenAddr = "localhost:0"
 	}
@@ -162,6 +176,7 @@ func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
 		}
 		ui.scanning = false
 		ui.mu.Unlock()
+		ui.treeChanged()
 
 		close(scanDone)
 		ui.hub.publish(ui.statusJSON())
@@ -211,6 +226,7 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 		ui.topDirPath = dir.GetPath()
 		ui.scanning = false
 		ui.mu.Unlock()
+		ui.treeChanged()
 
 		ui.hub.publish(ui.statusJSON())
 	}()
@@ -239,6 +255,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	ui.topDirPath = dir.GetPath()
 	ui.scanning = false
 	ui.mu.Unlock()
+	ui.treeChanged()
 	return nil
 }
 
@@ -259,6 +276,7 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	ui.topDirPath = dir.GetPath()
 	ui.scanning = false
 	ui.mu.Unlock()
+	ui.treeChanged()
 	return nil
 }
 

@@ -20,6 +20,7 @@ import (
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/cleanup"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/timefilter"
@@ -119,6 +120,9 @@ type Flags struct {
 	BrowseParentDirs    bool      `yaml:"browse-parent-dirs"`
 	Web                 bool      `yaml:"-"`
 	WebConfig           WebConfig `yaml:"web"`
+	// Cleanup holds user rules and exclusions for the web UI's cleanup
+	// projections.
+	Cleanup cleanup.Config `yaml:"cleanup"`
 }
 
 // WebConfig defines the web UI options that can be set from the config file.
@@ -495,6 +499,9 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 		}
 		if a.Flags.TrashCommand != "" {
 			webUI.SetTrashCommand(a.Flags.TrashCommand)
+		}
+		if err := webUI.SetCleanupConfig(a.Flags.Cleanup); err != nil {
+			return nil, fmt.Errorf("cleanup config: %w", err)
 		}
 		ui = webUI
 	case a.Flags.OutputFile != "":

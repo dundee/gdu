@@ -47,12 +47,19 @@ func makeTree(t *testing.T) string {
 	return root
 }
 
+// scan analyzes path and waits until the scan and the classification of its
+// cleanup candidates are done.
 func scan(t *testing.T, ui *UI, path string) {
 	t.Helper()
 	require.NoError(t, ui.AnalyzePath(path, nil))
+	waitClassified(t, ui)
+}
+
+func waitClassified(t *testing.T, ui *UI) {
+	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		if ui.buildStatus().State == "done" {
+		if ui.buildStatus().State == "done" && ui.cleanupResult() != nil {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -304,6 +311,35 @@ func TestDeleteNodeEndpointReturnsErrorWhenRemoveFuncFails(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	_, err = os.Stat(path)
 	assert.NoError(t, err, "file must still exist after a failed delete")
+}
+
+func TestDeleteNodeEndpointReportsItemLeftInPlaceByTrash(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+
+	// like a trash command that exits 0 without moving the item
+	ui.trasher = func(fs.Item, fs.Item) error { return nil }
+
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	path := filepath.Join(root, "big.bin")
+	req, err := http.NewRequest(
+		http.MethodDelete, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(path)+"&mode=trash", nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("X-GDU-Action", ui.actionToken)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "still there")
+	_, err = ui.findNode(path)
+	assert.NoError(t, err, "the item stays in the tree")
 }
 
 func TestDeleteEndpointRejectsChangedParent(t *testing.T) {
@@ -1087,15 +1123,15 @@ func TestToNodeJSONFlag(t *testing.T) {
 
 	// A file with a meaningful flag exposes it in the JSON payload.
 	flagged := &analyze.File{Name: "denied", Flag: '!', Parent: parent}
-	assert.Equal(t, "!", toNodeJSON(flagged).Flag)
+	assert.Equal(t, "!", toNodeJSON(flagged, nil).Flag)
 
 	// A blank flag (space) is omitted.
 	blank := &analyze.File{Name: "ok", Flag: ' ', Parent: parent}
-	assert.Empty(t, toNodeJSON(blank).Flag)
+	assert.Empty(t, toNodeJSON(blank, nil).Flag)
 
 	// A zero flag is also omitted.
 	zero := &analyze.File{Name: "zero", Parent: parent}
-	assert.Empty(t, toNodeJSON(zero).Flag)
+	assert.Empty(t, toNodeJSON(zero, nil).Flag)
 }
 
 // TestToNodeJSONItemCount pins the wire format to the displayed item count, so
@@ -1105,13 +1141,13 @@ func TestToNodeJSONItemCount(t *testing.T) {
 
 	// A directory reports what it contains, not counting itself.
 	dir := &analyze.Dir{File: &analyze.File{Name: "sub", Parent: parent}, ItemCount: 4}
-	if got := toNodeJSON(dir).ItemCount; got != 3 {
+	if got := toNodeJSON(dir, nil).ItemCount; got != 3 {
 		t.Errorf("dir itemCount = %d, want 3", got)
 	}
 
 	// A file counts itself.
 	file := &analyze.File{Name: "leaf", Parent: parent}
-	if got := toNodeJSON(file).ItemCount; got != 1 {
+	if got := toNodeJSON(file, nil).ItemCount; got != 1 {
 		t.Errorf("file itemCount = %d, want 1", got)
 	}
 }

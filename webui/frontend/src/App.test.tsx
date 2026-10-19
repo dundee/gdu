@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import * as api from './api';
 import type { NodeResponse, Status, TreeNode } from './types';
+import { CATEGORY_COLORS } from './cleanup';
 
 vi.mock('./api');
 
@@ -15,6 +16,7 @@ const status: Status = {
   showRelativeSize: false,
   useSIPrefix: false,
   deleteAllowed: true,
+  classifying: false,
 };
 const nodeResponse: NodeResponse = {
   node: {
@@ -99,7 +101,7 @@ describe('chart view', () => {
     fireEvent.click(toggle);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Donut' })).toBeTruthy());
-    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledWith(root));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledWith(root, false));
     expect(screen.getByRole('img', { name: 'Directory size treemap' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /nested\.bin/ })).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
@@ -167,12 +169,25 @@ describe('treemap actions', () => {
     await waitFor(() =>
       expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token', 'permanent'),
     );
-    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('data-deletion')).toBe(
+        'deleted',
+      ),
+    );
 
-    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+    // a deleted item can no longer be selected or deleted again
+    fireEvent.click(screen.getByRole('button', { name: /file\.txt/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    expect(api.deleteNode).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /nested\.bin/ }));
     fireEvent.keyDown(window, { code: 'KeyD' });
     await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(2));
-    expect(api.deleteNode).toHaveBeenLastCalledWith(`${root}/file.txt`, 'test-token', 'permanent');
+    expect(api.deleteNode).toHaveBeenLastCalledWith(
+      `${root}/folder/nested.bin`,
+      'test-token',
+      'permanent',
+    );
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
 
     firstRender.unmount();
@@ -301,7 +316,7 @@ describe('treemap actions', () => {
     await waitFor(() =>
       expect(api.fetchNode).toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc'),
     );
-    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`, false));
     fireEvent.keyDown(window, { code: 'KeyD' });
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
     expect(api.deleteNode).not.toHaveBeenCalled();
@@ -316,7 +331,7 @@ describe('treemap actions', () => {
     await waitFor(() =>
       expect(api.fetchNode).toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc'),
     );
-    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`, false));
   });
 
   it('does not offer deletion when the backend disables it', async () => {
@@ -334,15 +349,8 @@ describe('treemap actions', () => {
     expect(api.deleteNode).not.toHaveBeenCalled();
   });
 
-  it('invalidates the stale treemap instead of leaving it displayed when the post-delete refresh fails', async () => {
+  it('keeps the layout after a deletion and reloads on navigation', async () => {
     vi.mocked(api.deleteNode).mockResolvedValue(undefined);
-    // First call (initial load) succeeds; every call after that (the
-    // post-delete refresh, and the automatic retry it unblocks by
-    // invalidating the cache) fails, so the failure is not masked by an
-    // immediate successful retry.
-    vi.mocked(api.fetchTree)
-      .mockResolvedValueOnce(treeResponse)
-      .mockRejectedValue(new Error('tree refresh failed'));
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
@@ -352,66 +360,20 @@ describe('treemap actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete Permanently' }));
 
     await waitFor(() =>
-      expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token', 'permanent'),
-    );
-    await screen.findByText('Treemap unavailable');
-    expect(screen.queryByRole('img', { name: 'Directory size treemap' })).toBeNull();
-  });
-
-  it('navigates up to the parent directory when the last item in it is deleted', async () => {
-    const folderPath = `${root}/folder`;
-    const onlyChild = {
-      name: 'onlyfile.bin',
-      path: `${folderPath}/onlyfile.bin`,
-      isDir: false,
-      size: 5,
-      usage: 5,
-      itemCount: 1,
-      mtime: 0,
-    };
-    const folderNodeResponse: NodeResponse = {
-      node: nodeResponse.children[0],
-      breadcrumbs: [nodeResponse.node, nodeResponse.children[0]],
-      children: [onlyChild],
-    };
-    const emptyFolderNodeResponse: NodeResponse = { ...folderNodeResponse, children: [] };
-    const folderTreeResponse: TreeNode = {
-      ...folderNodeResponse.node,
-      children: [{ ...onlyChild, children: [] }],
-    };
-
-    let folderEmptied = false;
-    vi.mocked(api.fetchNode).mockImplementation((path) =>
-      Promise.resolve(
-        path === folderPath
-          ? folderEmptied
-            ? emptyFolderNodeResponse
-            : folderNodeResponse
-          : nodeResponse,
+      expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('data-deletion')).toBe(
+        'deleted',
       ),
     );
-    vi.mocked(api.fetchTree).mockImplementation((path) =>
-      Promise.resolve(path === folderPath ? folderTreeResponse : treeResponse),
-    );
-    vi.mocked(api.deleteNode).mockImplementation(async () => {
-      folderEmptied = true;
-    });
+    expect(api.fetchTree).toHaveBeenCalledTimes(1);
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
 
-    render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
-    fireEvent.doubleClick(await screen.findByRole('button', { name: /folder/ }));
-    await waitFor(() => expect(api.fetchNode).toHaveBeenLastCalledWith(folderPath, 'size', 'desc'));
-
-    fireEvent.click(await screen.findByRole('button', { name: /onlyfile\.bin/ }));
-    fireEvent.keyDown(window, { code: 'KeyD' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete Permanently' }));
-
-    await waitFor(() =>
-      expect(api.fetchNode).toHaveBeenLastCalledWith(root, 'size', 'desc'),
-    );
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(`${root}/folder`, false));
+    // the marks belong to the directory they were made in
+    expect(screen.queryByRole('button', { name: /file\.txt/ })?.getAttribute('data-deletion') ?? null).toBeNull();
   });
 
-  it('refreshes the current directory when a selected item disappeared', async () => {
+  it('puts the item back when it already disappeared', async () => {
     vi.mocked(api.deleteNode).mockRejectedValue(
       Object.assign(new Error('node not found'), { status: 404 }),
     );
@@ -422,8 +384,9 @@ describe('treemap actions', () => {
     fireEvent.keyDown(window, { code: 'KeyD' });
     fireEvent.click(screen.getByRole('button', { name: 'Delete Permanently' }));
 
-    await waitFor(() => expect(api.fetchNode).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText('node not found')).toBeTruthy();
+    expect(await screen.findByText('Could not delete file.txt: node not found')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('data-deletion')).toBeNull();
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -467,7 +430,7 @@ describe('table actions', () => {
     await waitFor(() =>
       expect(api.deleteNode).toHaveBeenCalledWith(`${root}/file.txt`, 'test-token', 'trash'),
     );
-    await waitFor(() => expect(api.fetchNode).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('· deleted', { exact: false })).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
   });
 
@@ -503,14 +466,14 @@ describe('table actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
     await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete folder' }));
 
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
     await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(2));
-    expect(api.deleteNode).toHaveBeenLastCalledWith(`${root}/file.txt`, 'test-token', 'trash');
+    expect(api.deleteNode).toHaveBeenLastCalledWith(`${root}/folder`, 'test-token', 'trash');
   });
 
-  it('invalidates the cached treemap after a delete in the table', async () => {
+  it('shows a deletion made in the table on the cached treemap', async () => {
     vi.mocked(api.deleteNode).mockResolvedValue(undefined);
     render(<App />);
 
@@ -524,7 +487,12 @@ describe('table actions', () => {
     await waitFor(() => expect(api.deleteNode).toHaveBeenCalledTimes(1));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
-    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('data-deletion')).toBe(
+        'deleted',
+      ),
+    );
+    expect(api.fetchTree).toHaveBeenCalledTimes(1);
   });
 
   it('shows the error when the delete fails', async () => {
@@ -534,7 +502,7 @@ describe('table actions', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Delete file.txt' }));
     fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
 
-    expect(await screen.findByText('deletion is disabled')).toBeTruthy();
+    expect(await screen.findByText('Could not delete file.txt: deletion is disabled')).toBeTruthy();
   });
 
   it('hides delete but keeps reveal when the backend disables deletion', async () => {
@@ -559,5 +527,303 @@ describe('table actions', () => {
 
     expect(await screen.findByText(/no action token/i)).toBeTruthy();
     expect(api.revealNode).not.toHaveBeenCalled();
+  });
+});
+
+describe('projections', () => {
+  const categoriesResponse = {
+    total: { usage: 100, size: 100 },
+    categories: [{ id: 'ml-model' as const, label: 'ML models', usage: 50, size: 50 }],
+  };
+  const categoryTreeResponse: TreeNode = {
+    ...nodeResponse.node,
+    children: [
+      {
+        name: 'ML models',
+        path: 'category:ml-model',
+        isDir: true,
+        size: 50,
+        usage: 50,
+        itemCount: 1,
+        mtime: 0,
+        category: 'ml-model',
+        children: [
+          {
+            name: 'nested.bin',
+            path: `${root}/folder/nested.bin`,
+            isDir: false,
+            size: 50,
+            usage: 50,
+            itemCount: 1,
+            mtime: 0,
+            category: 'ml-model',
+            confidence: 'review',
+            children: [],
+          },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.mocked(api.fetchCategories).mockResolvedValue(categoriesResponse);
+  });
+
+  async function openTreemap() {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    await screen.findByRole('img', { name: 'Directory size treemap' });
+  }
+
+  it('loads category totals for the current directory in the cleanup projection', async () => {
+    await openTreemap();
+    expect(api.fetchCategories).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'cleanup' },
+    });
+    await waitFor(() => expect(api.fetchCategories).toHaveBeenCalledWith(root));
+    expect(await screen.findByRole('button', { name: /ML models · 50 B · 50%/ })).toBeTruthy();
+
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchCategories).toHaveBeenLastCalledWith(`${root}/folder`));
+  });
+
+  it('loads the tree grouped by category and keeps category nodes out of actions', async () => {
+    vi.mocked(api.fetchTree).mockImplementation((_path, byCategory) =>
+      Promise.resolve(byCategory ? categoryTreeResponse : treeResponse),
+    );
+    await openTreemap();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'category' },
+    });
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(root, true));
+    const group = await screen.findByRole('button', { name: /^ML models, / });
+
+    fireEvent.click(group);
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+
+    fireEvent.doubleClick(group);
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+
+    // a real candidate inside the group stays actionable
+    fireEvent.click(screen.getByRole('button', { name: /nested\.bin/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    expect(await screen.findByRole('dialog', { name: 'Delete item' })).toBeTruthy();
+  });
+
+  it('fades the rest of the map on hover only in the location projection', async () => {
+    await openTreemap();
+    const file = screen.getByRole('button', { name: /file\.txt/ });
+    const folder = screen.getByRole('button', { name: /folder/ });
+
+    fireEvent.mouseEnter(file);
+    expect(folder.getAttribute('opacity')).toBe('0.42');
+    fireEvent.mouseLeave(file);
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'cleanup' },
+    });
+    fireEvent.mouseEnter(file);
+    expect(folder.getAttribute('opacity')).toBe('1');
+  });
+
+  it('singles out the filtered category on the map', async () => {
+    const tagged: TreeNode = {
+      ...treeResponse,
+      children: [
+        {
+          ...treeResponse.children[0],
+          categoryTotals: { 'ml-model': { usage: 50, size: 50 } },
+          children: [
+            {
+              ...treeResponse.children[0].children[0],
+              category: 'ml-model',
+              confidence: 'review',
+            },
+          ],
+        },
+        treeResponse.children[1],
+      ],
+    };
+    vi.mocked(api.fetchTree).mockResolvedValue(tagged);
+    await openTreemap();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'cleanup' },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /ML models · 50 B/ }));
+
+    const nested = screen.getByRole('button', { name: /nested\.bin/ });
+    const folder = screen.getByRole('button', { name: /folder/ });
+    const file = screen.getByRole('button', { name: /file\.txt/ });
+    expect(nested.getAttribute('data-focus')).toBe('match');
+    expect(nested.querySelector('rect')?.getAttribute('fill')).toBe(CATEGORY_COLORS['ml-model']);
+    expect(nested.querySelector('rect')?.getAttribute('stroke')).toBe('#ffe066');
+    expect(folder.getAttribute('data-focus')).toBe('contains');
+    expect(folder.getAttribute('opacity')).toBe('1');
+    expect(file.getAttribute('data-focus')).toBe('none');
+    expect(file.getAttribute('opacity')).toBe('0.14');
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(file.getAttribute('data-focus')).toBeNull();
+    expect(file.getAttribute('opacity')).toBe('1');
+  });
+
+  it('shows that classification runs and reloads once it is done', async () => {
+    let publish: (status: Status) => void = () => undefined;
+    vi.mocked(api.subscribeStatus).mockImplementation((onStatus) => {
+      publish = onStatus;
+      return () => undefined;
+    });
+    vi.mocked(api.fetchStatus).mockResolvedValue({ ...status, classifying: true });
+    await openTreemap();
+    expect(screen.getByRole('status').textContent).toBe('classifying…');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Treemap projection' }), {
+      target: { value: 'category' },
+    });
+    expect(screen.getByText('Classifying…', { selector: '.treemap-loading span' })).toBeTruthy();
+    expect(api.fetchCategories).not.toHaveBeenCalled();
+    expect(api.fetchTree).toHaveBeenCalledTimes(1);
+
+    act(() => publish(status));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenLastCalledWith(root, true));
+    await waitFor(() => expect(api.fetchCategories).toHaveBeenCalledWith(root));
+    expect(api.fetchNode).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('cycles projections with P', async () => {
+    await openTreemap();
+    const select = screen.getByRole('combobox', { name: 'Treemap projection' }) as HTMLSelectElement;
+    expect(select.value).toBe('location');
+
+    fireEvent.keyDown(window, { code: 'KeyP' });
+    expect(select.value).toBe('cleanup');
+    fireEvent.keyDown(window, { code: 'KeyP' });
+    expect(select.value).toBe('age');
+    expect(screen.getByText('Last change')).toBeTruthy();
+  });
+});
+
+describe('optimistic deletion', () => {
+  function deferred() {
+    let resolve!: () => void;
+    let reject!: (err: Error) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  beforeEach(() => {
+    window.sessionStorage.setItem('gdu.skipDeleteConfirm', 'trash');
+  });
+
+  async function openTreemap() {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    await screen.findByRole('img', { name: 'Directory size treemap' });
+  }
+
+  function deleteTile(name: RegExp) {
+    fireEvent.click(screen.getByRole('button', { name }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+  }
+
+  it('marks items at once and runs deletions in parallel without reloading', async () => {
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(api.deleteNode)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    await openTreemap();
+
+    deleteTile(/file\.txt/);
+    deleteTile(/nested\.bin/);
+
+    expect(api.deleteNode).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('aria-busy')).toBe('true');
+    expect(screen.getByRole('status').textContent).toBe('deleting 2…');
+
+    first.resolve();
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('deleting 1…'));
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+
+    second.resolve();
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+    expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('data-deletion')).toBe('deleted');
+    // file.txt (30 B) and nested.bin (50 B)
+    expect(screen.getByText('freed 80 B')).toBeTruthy();
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+    expect(api.fetchTree).toHaveBeenCalledTimes(1);
+
+    // navigation reloads
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchNode).toHaveBeenCalledTimes(2));
+  });
+
+  it('keeps browsing while a deletion runs and keeps its item marked', async () => {
+    const pending = deferred();
+    vi.mocked(api.deleteNode).mockReturnValueOnce(pending.promise);
+    await openTreemap();
+
+    deleteTile(/nested\.bin/);
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchNode).toHaveBeenLastCalledWith(`${root}/folder`, 'size', 'desc'));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    // the reloaded data still holds the item until the deletion is done
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /nested\.bin/ }).getAttribute('aria-busy')).toBe('true'),
+    );
+
+    pending.resolve();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /nested\.bin/ }).getAttribute('data-deletion')).toBe('deleted'),
+    );
+    // the data is stale again, so the next navigation reloads
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    await waitFor(() => expect(api.fetchTree).toHaveBeenCalledTimes(3));
+  });
+
+  it('does not open an item that is being deleted', async () => {
+    vi.mocked(api.deleteNode).mockReturnValue(deferred().promise);
+    await openTreemap();
+
+    deleteTile(/folder/);
+    fireEvent.doubleClick(screen.getByRole('button', { name: /folder/ }));
+    expect(api.fetchNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts a failed item back and says why', async () => {
+    const pending = deferred();
+    vi.mocked(api.deleteNode).mockReturnValueOnce(pending.promise);
+    await openTreemap();
+
+    deleteTile(/file\.txt/);
+    expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('aria-busy')).toBe('true');
+
+    pending.reject(new Error('permission denied'));
+    expect(await screen.findByText('Could not delete file.txt: permission denied')).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /file\.txt/ }).getAttribute('aria-busy')).toBeNull(),
+    );
+  });
+
+  it('does not delete an item twice', async () => {
+    vi.mocked(api.deleteNode).mockReturnValue(deferred().promise);
+    await openTreemap();
+
+    deleteTile(/folder/);
+    // the nested file is inside the folder being deleted
+    fireEvent.click(screen.getByRole('button', { name: /nested\.bin/ }));
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    deleteTile(/folder/);
+
+    expect(api.deleteNode).toHaveBeenCalledTimes(1);
   });
 });

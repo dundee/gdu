@@ -69,6 +69,7 @@ func (ui *UI) routes() http.Handler {
 	mux.HandleFunc("/api/v1/status", ui.handleStatus)
 	mux.HandleFunc("GET /api/v1/nodes", ui.handleNodes)
 	mux.HandleFunc("GET /api/v1/tree", ui.handleTree)
+	mux.HandleFunc("GET /api/v1/categories", ui.handleCategories)
 	mux.HandleFunc("DELETE /api/v1/nodes", ui.requireLocalAction(ui.handleDeleteNode))
 	mux.HandleFunc("POST /api/v1/reveal", ui.requireLocalAction(ui.handleReveal))
 	mux.HandleFunc("/api/v1/devices", ui.handleDevices)
