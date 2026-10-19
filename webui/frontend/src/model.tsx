@@ -12,7 +12,7 @@ import type { Node, NodeResponse, SortKey, SortOrder, Status, TreeNode } from '.
 import { fetchNode, fetchStatus, subscribeStatus, type DeleteMode } from './api';
 import { colorMapFor, computeSlices } from './slices';
 import { useLatest } from './useLatest';
-import type { Projection } from './cleanup';
+import { amountValue, type Projection } from './cleanup';
 
 export type ChartView = 'donut' | 'treemap';
 
@@ -150,7 +150,7 @@ export function freedBytes(deletions: ReadonlyMap<string, Deletion>, apparent: b
     if (parent && deletionStateOf(deletions, parent) === 'deleted') {
       continue;
     }
-    total += apparent ? node.size : node.usage;
+    total += amountValue(node, apparent);
   }
   return total;
 }

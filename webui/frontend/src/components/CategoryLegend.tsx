@@ -5,6 +5,7 @@ import {
   CATEGORY_COLORS,
   REVIEW_COLOR,
   SAFE_COLOR,
+  amountValue,
   type Projection,
 } from '../cleanup';
 
@@ -52,9 +53,9 @@ export function CategoryLegend({
     return <div className="legend legend-loading">Classifying…</div>;
   }
 
-  const total = apparent ? categories.total.size : categories.total.usage;
+  const total = amountValue(categories.total, apparent);
   const present = categories.categories
-    .map((c) => ({ ...c, bytes: apparent ? c.size : c.usage }))
+    .map((c) => ({ ...c, bytes: amountValue(c, apparent) }))
     .filter((c) => c.bytes > 0);
   const reclaimable = present.reduce((sum, c) => sum + c.bytes, 0);
 

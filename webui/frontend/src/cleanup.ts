@@ -1,6 +1,6 @@
 // Projections color the treemap by something other than location, to draw
 // attention to space that is likely safe to free. Area always stays size.
-import type { Category, Node } from './types';
+import type { Amount, Category, Node } from './types';
 import { formatSize } from './format';
 import { PALETTE } from './colors';
 
@@ -37,8 +37,10 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   'git-ignored': PALETTE[10],
 };
 
-function amountOf(node: Node, apparent: boolean): number {
-  return apparent ? node.size : node.usage;
+// amountValue picks the shown metric of an amount (or of a node, which has
+// both): apparent size or disk usage.
+export function amountValue(amount: Amount, apparent: boolean): number {
+  return apparent ? amount.size : amount.usage;
 }
 
 // candidateBytes is the space taken by candidates within node.
@@ -46,7 +48,7 @@ export function candidateBytes(node: Node, apparent: boolean): number {
   let sum = 0;
   for (const amount of Object.values(node.categoryTotals ?? {})) {
     if (amount) {
-      sum += apparent ? amount.size : amount.usage;
+      sum += amountValue(amount, apparent);
     }
   }
   return sum;
@@ -54,7 +56,7 @@ export function candidateBytes(node: Node, apparent: boolean): number {
 
 // candidateShare is the fraction (0..1) of node taken by candidates.
 export function candidateShare(node: Node, apparent: boolean): number {
-  const total = amountOf(node, apparent);
+  const total = amountValue(node, apparent);
   if (total <= 0) {
     return 0;
   }
@@ -131,7 +133,7 @@ export function candidateSummary(
   const entries = Object.entries(node.categoryTotals ?? {})
     .map(([category, amount]) => ({
       category: category as Category,
-      bytes: amount ? (apparent ? amount.size : amount.usage) : 0,
+      bytes: amount ? amountValue(amount, apparent) : 0,
     }))
     .filter((e) => e.bytes > 0)
     .sort((a, b) => b.bytes - a.bytes);
