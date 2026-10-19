@@ -240,9 +240,7 @@ and outlined, everything else fades (`Esc` shows all again). Hovering a candidat
 shows what it is and how to remove it cleanly (e.g. `ollama rm` for Ollama
 models). Build-like directories only count next to a project marker, and
 anything ignored by a repository's `.gitignore` is flagged for review.
-Candidates are only highlighted: deleting stays a deliberate action. On macOS,
-"move to trash" uses the system `trash` command, so items can be put back from
-Finder.
+Candidates are only highlighted: deleting stays a deliberate action.
 
 Rules can be extended and paths excluded in the config file; user rules are
 checked before the built-in ones:
