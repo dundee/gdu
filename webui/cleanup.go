@@ -77,6 +77,16 @@ func (ui *UI) cleanupResult() *cleanup.Result {
 	return c.res
 }
 
+// requireCleanupResult is cleanupResult for requests that cannot be answered
+// without it: when there is none, it responds 503 and returns nil.
+func (ui *UI) requireCleanupResult(w http.ResponseWriter) *cleanup.Result {
+	res := ui.cleanupResult()
+	if res == nil {
+		writeError(w, http.StatusServiceUnavailable, "classification is unavailable while scanning")
+	}
+	return res
+}
+
 // treeChanged invalidates everything derived from the tree.
 func (ui *UI) treeChanged() {
 	ui.treeGen.Add(1)
@@ -130,9 +140,8 @@ func (ui *UI) handleCategories(w http.ResponseWriter, r *http.Request) {
 		writeNodeError(w, err)
 		return
 	}
-	res := ui.cleanupResult()
+	res := ui.requireCleanupResult(w)
 	if res == nil {
-		writeError(w, http.StatusServiceUnavailable, "classification is unavailable while scanning")
 		return
 	}
 

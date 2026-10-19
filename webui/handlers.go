@@ -113,16 +113,15 @@ func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
 		writeNodeError(w, err)
 		return
 	}
-	res := ui.cleanupResult()
 	if r.URL.Query().Get("projection") == "category" {
+		res := ui.requireCleanupResult(w)
 		if res == nil {
-			writeError(w, http.StatusServiceUnavailable, "classification is unavailable while scanning")
 			return
 		}
 		writeJSON(w, http.StatusOK, buildCategoryTree(node, res))
 		return
 	}
-	writeJSON(w, http.StatusOK, buildTree(node, res))
+	writeJSON(w, http.StatusOK, buildTree(node, ui.cleanupResult()))
 }
 
 // deleteDisabledReason reports why deletion is currently refused given the
