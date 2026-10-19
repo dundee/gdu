@@ -90,7 +90,17 @@ changes what the color says.
 
 An item that is likely safe to remove to free space, because a tool can
 regenerate or re-download it. A directory that is a candidate is a unit: the
-items inside it are not candidates of their own.
+items inside it show its category, but they are not candidates of their own,
+its space is counted once, and the "By category" projection lists only the
+unit. A matched directory that holds an excluded path, or a path a more
+specific rule matches, is split instead: its children become the units, so
+deleting any candidate never takes an excluded item with it.
+
+## Classification
+
+Finding the cleanup candidates of the scanned tree and the space they take
+per directory. It runs in the background once a scan ends or the tree
+changes; the cleanup projections fill in when it is done.
 
 ## Category
 
