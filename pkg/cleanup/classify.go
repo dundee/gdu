@@ -259,8 +259,8 @@ func (w *walker) classify(it fs.Item, path string, siblings map[string]struct{})
 			continue
 		}
 		m := Match{Category: r.Category, Confidence: r.Confidence, Hint: r.Hint}
-		if ignored {
-			// git-ignored output of a recognized tool is regenerable
+		if ignored && r.safeWhenIgnored {
+			// git-ignored build output is not committed, so it is regenerable
 			m.Confidence = Safe
 		}
 		return m, true

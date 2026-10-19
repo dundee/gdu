@@ -73,6 +73,10 @@ type Rule struct {
 	Markers []string `yaml:"markers"`
 	// Hint is shown to the user next to the candidate.
 	Hint string `yaml:"hint"`
+
+	// safeWhenIgnored upgrades a review match to safe when it is git-ignored,
+	// for build output whose only doubt is whether it is committed.
+	safeWhenIgnored bool
 }
 
 var errNoMatcher = errors.New("exactly one of dir, file or path must be set")
@@ -248,8 +252,8 @@ var DefaultRules = []Rule{
 	{Category: BuildArtifact, Confidence: Review, Dir: "venv", Markers: pythonMarkers, Hint: "Recreate the virtualenv after removing"},
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".tox", Markers: pythonMarkers},
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".nox", Markers: []string{"noxfile.py"}},
-	{Category: BuildArtifact, Confidence: Review, Dir: "dist", Markers: buildMarkers, Hint: "Build output; check it is not committed"},
-	{Category: BuildArtifact, Confidence: Review, Dir: "build", Markers: buildMarkers, Hint: "Build output; check it is not committed"},
+	{Category: BuildArtifact, Confidence: Review, Dir: "dist", Markers: buildMarkers, Hint: "Build output; check it is not committed", safeWhenIgnored: true},
+	{Category: BuildArtifact, Confidence: Review, Dir: "build", Markers: buildMarkers, Hint: "Build output; check it is not committed", safeWhenIgnored: true},
 	{Category: BuildArtifact, Confidence: Safe, Dir: "__pycache__"},
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".pytest_cache"},
 	{Category: BuildArtifact, Confidence: Safe, Dir: ".mypy_cache"},

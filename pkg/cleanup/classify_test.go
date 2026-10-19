@@ -203,13 +203,16 @@ func TestGitIgnoreSignal(t *testing.T) {
 	base := t.TempDir()
 	repoDir := filepath.Join(base, "repo")
 	require.NoError(t, os.MkdirAll(filepath.Join(repoDir, "sub"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(repoDir, ".gitignore"), []byte("# c\nout/\n*.log\n!keep.log\ndist\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(repoDir, ".gitignore"), []byte("# c\nout/\n*.log\n!keep.log\ndist\n.venv\n*.gguf\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(repoDir, "sub", ".gitignore"), []byte("local/\n"), 0o644))
 
 	root := build(base, dir("repo",
 		dir(".git", file("HEAD", 1)),
 		file(".gitignore", 1),
 		file("package.json", 1),
+		file("pyproject.toml", 1),
+		dir(".venv", file("v", 7)),
+		file("model.gguf", 8),
 		dir("out", file("o", 10)),
 		file("app.log", 2),
 		file("keep.log", 3),
@@ -228,8 +231,12 @@ func TestGitIgnoreSignal(t *testing.T) {
 		{[]string{"out"}, true, GitIgnored, Review},
 		{[]string{"app.log"}, true, GitIgnored, Review},
 		{[]string{"keep.log"}, false, "", ""},
-		// a rule match that is also git-ignored is upgraded to safe
+		// build output that is also git-ignored is upgraded to safe
 		{[]string{"dist"}, true, BuildArtifact, Safe},
+		// other matches keep their confidence: being ignored does not make
+		// them regenerable
+		{[]string{".venv"}, true, BuildArtifact, Review},
+		{[]string{"model.gguf"}, true, MLModel, Review},
 		{[]string{"sub", "local"}, true, GitIgnored, Review},
 		{[]string{"src"}, false, "", ""},
 		{[]string{".git"}, false, "", ""},
