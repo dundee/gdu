@@ -19,8 +19,8 @@ make install-dev-dependencies
 ## Project layout
 
 - `cmd/gdu` — CLI entrypoint and flag wiring.
-- `pkg/` — reusable libraries: `analyze`, `device`, `fs`, `path`, `remove`,
-  `timefilter`, `annex`.
+- `pkg/` — reusable libraries: `analyze`, `cleanup`, `device`, `fs`, `path`,
+  `remove`, `timefilter`, `annex`.
 - `stdout/`, `report/`, `tui/` — output backends (non-interactive stdout, JSON
   export/import, and the interactive terminal UI).
 - `webui/` — the optional React web UI (compiled output is committed).

@@ -239,22 +239,17 @@ click a category to single it out: its items are drawn in the category's color
 and outlined, everything else fades (`Esc` shows all again). Hovering a candidate
 shows what it is and how to remove it cleanly (e.g. `ollama rm` for Ollama
 models). Build-like directories only count next to a project marker, and
-anything ignored by a repository's `.gitignore` is flagged for review.
-Candidates are only highlighted: deleting stays a deliberate action.
+anything ignored by a repository's `.gitignore` is flagged for review (ignored
+`dist`/`build` output counts as safe). Candidates are found in the background
+after a scan, while the header shows "classifying…". They are only
+highlighted: deleting stays a deliberate action.
 
-Rules can be extended and paths excluded in the config file; user rules are
-checked before the built-in ones:
+Paths can be excluded and rules added in the `cleanup` section of the config
+file, see [configuration.md](configuration.md#cleanupexclude):
 
 ```yaml
 cleanup:
-  exclude:
-    - ~/work/current-project
-  rules:
-    - category: build-artifact   # build-artifact, package-cache, app-cache,
-      confidence: safe           # toolchain, ml-model, installer, git-ignored
-      dir: .gradle               # or file: "*.ext", or path: "~/some/path"
-      markers: [build.gradle]    # optional sibling that must exist
-      hint: Rebuilt by Gradle
+  exclude: [~/work/current-project]
 ```
 
 By default the server binds to `localhost` on a random free port. Use

@@ -232,6 +232,48 @@ Whether the web UI opens in the default browser on start. Enabled by default. Th
 
 Override the command used to open the browser (the URL is appended as the final argument), e.g. `firefox --new-window`. When empty (the default), the operating system's default handler is used.
 
+#### `cleanup.exclude`
+
+Paths the web UI's cleanup projections never mark as candidates, nor anything below them. A leading `~/` stands for the home directory.
+
+A matched directory that holds an excluded path is not offered as a whole: its other children are marked instead, so deleting a highlighted candidate never takes an excluded item with it. Excluding a path does not protect it from a deliberate deletion.
+
+```yaml
+cleanup:
+  exclude:
+    - ~/work/current-project
+```
+
+#### `cleanup.rules`
+
+Extra rules for the web UI's cleanup projections, checked before the built-in ones. The first rule that matches an item decides its category. Each rule has:
+
+* `category` - required, one of `build-artifact`, `package-cache`, `app-cache`, `toolchain`, `ml-model`, `installer` and `git-ignored`.
+* `confidence` - `safe` (regenerated on demand) or `review` (probably unneeded, but check first). Defaults to `review`.
+* Exactly one of:
+  * `dir` - a glob matched against the name of directories, e.g. `.gradle`.
+  * `file` - a glob matched against the name of files, e.g. `*.gguf`.
+  * `path` - a glob matched against the absolute path of any item, e.g. `~/.cache/my-tool`. A leading `~/` stands for the home directory, and `*` does not match `/`.
+* `under` - only match items below this directory, e.g. `~/Downloads`.
+* `markers` - only match when the item has a sibling with one of these names, e.g. `package.json` for `node_modules`. Markers may be globs, e.g. `*.xcodeproj`.
+* `hint` - shown with the candidate, e.g. how to remove it cleanly.
+
+A matched directory is a unit: the items inside it show its category but are not candidates of their own. When an excluded path or the path of a more specific `path` rule lies below it, it is split instead and its children become units, so the more specific rule wins where it matches.
+
+Items no rule matches but a repository's `.gitignore` ignores are `git-ignored` candidates to review.
+
+```yaml
+cleanup:
+  rules:
+    - category: build-artifact
+      confidence: safe
+      dir: .gradle
+      markers: [build.gradle, build.gradle.kts]
+      hint: Rebuilt by Gradle
+    - category: ml-model
+      path: ~/models/*
+```
+
 
 #### `style.selected-row.text-color`
 
