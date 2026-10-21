@@ -80,6 +80,9 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 				Name: name,
 				Flag: ' ',
 			}
+			if info, infoErr := f.Info(); infoErr == nil {
+				topDir.Mtime = info.ModTime()
+			}
 			topDirs = append(topDirs, topDir)
 			go func(entryPath string) {
 				a.processSubDir(entryPath, topDir)
@@ -118,6 +121,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 
 			file := SimpleFile{
 				Name:    name,
+				Mtime:   info.ModTime(),
 				Flag:    getFlag(info),
 				Size:    info.Size(),
 				Symlink: readSymlinkTarget(f.Type(), entryPath),
@@ -144,6 +148,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		size, usage, itemCount := topDir.GetUsage()
 		dir.Files = append(dir.Files, SimpleFile{
 			Name:      topDir.Name,
+			Mtime:     topDir.Mtime,
 			Flag:      topDir.Flag,
 			Size:      size,
 			Usage:     usage,
