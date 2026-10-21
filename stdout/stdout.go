@@ -35,6 +35,8 @@ type UI struct {
 	fixedBase         float64
 	fixedSuffix       string
 	reverseSort       bool
+	configuredSortBy  string
+	configuredOrder   string
 }
 
 var (
@@ -330,16 +332,25 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	return nil
 }
 
-// sortSettings returns the field and the direction the file list is sorted by,
-// honoring --show-apparent-size and --reverse-sort.
+// SetDefaultSorting applies the configured directory-listing order.
+func (ui *UI) SetDefaultSorting(by, order string) {
+	ui.configuredSortBy = by
+	ui.configuredOrder = order
+}
+
+// sortSettings honors the config, the displayed size metric and --reverse-sort.
 func (ui *UI) sortSettings() (fs.SortBy, fs.SortOrder) {
-	sortOrder := fs.SortDesc
+	sortOrder := fs.ParseSortOrder(ui.configuredOrder)
 	if ui.reverseSort {
-		sortOrder = fs.SortAsc
+		if sortOrder == fs.SortAsc {
+			sortOrder = fs.SortDesc
+		} else {
+			sortOrder = fs.SortAsc
+		}
 	}
 
-	sortBy := fs.SortBySize
-	if ui.ShowApparentSize {
+	sortBy := fs.ParseSortBy(ui.configuredSortBy)
+	if sortBy == fs.SortBySize && ui.ShowApparentSize {
 		sortBy = fs.SortByApparentSize
 	}
 
