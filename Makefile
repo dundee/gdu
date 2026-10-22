@@ -5,7 +5,7 @@ CMD_GDU := cmd/gdu
 VERSION := $(shell git describe --tags 2>/dev/null)
 NAMEVER := $(NAME)-$(subst v,,$(VERSION))
 DATE := $(shell date +'%Y-%m-%d')
-GOBIN := go
+GO := go
 GOFLAGS ?= -buildmode=pie -trimpath -mod=readonly -modcacherw -pgo=default.pgo
 GOFLAGS_STATIC ?= -trimpath -mod=readonly -modcacherw -pgo=default.pgo
 LDFLAGS := -s -w -extldflags '-static' \
@@ -34,12 +34,12 @@ tarball: vendor
 build:
 	@echo "Version: " $(VERSION)
 	mkdir -p dist
-	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 $(GO) build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
 
 build-static:
 	@echo "Version: " $(VERSION)
 	mkdir -p dist
-	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 $(GO) build -ldflags="$(LDFLAGS)" -o dist/$(NAME) $(PACKAGE)/$(CMD_GDU)
 
 # build-web compiles and minifies the React web UI into webui/dist, which is
 # committed and embedded into the binary. Requires Node.js. Pure-Go builds
@@ -61,8 +61,8 @@ build-all:
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
 
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_windows_amd64.exe $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_windows_arm64.exe $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_windows_amd64.exe $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_windows_arm64.exe $(PACKAGE)/$(CMD_GDU)
 
 	CGO_ENABLED=0 gox \
 		-os="linux freebsd netbsd openbsd" \
@@ -70,14 +70,14 @@ build-all:
 		-ldflags="$(LDFLAGS)" \
 		$(PACKAGE)/$(CMD_GDU)
 
-	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64 $(PACKAGE)/$(CMD_GDU)
-	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64_static $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64 $(PACKAGE)/$(CMD_GDU)
+	GOFLAGS="$(GOFLAGS_STATIC)" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_amd64_static $(PACKAGE)/$(CMD_GDU)
 
-	CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv5l $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv6l $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv7l $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
-	CGO_ENABLED=0 GOOS=android GOARCH=arm64 $(GOBIN) build -ldflags="$(LDFLAGS)" -o dist/gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=5 GOARCH=arm $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv5l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=6 GOARCH=arm $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv6l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARM=7 GOARCH=arm $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_armv7l $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_linux_arm64 $(PACKAGE)/$(CMD_GDU)
+	CGO_ENABLED=0 GOOS=android GOARCH=arm64 $(GO) build -ldflags="$(LDFLAGS)" -o dist/gdu_android_arm64 $(PACKAGE)/$(CMD_GDU)
 
 	cd dist; for file in gdu_linux_* gdu_darwin_* gdu_netbsd_* gdu_openbsd_* gdu_freebsd_* gdu_android_*; do tar czf $$file.tgz $$file; done
 	cd dist; for file in gdu_windows_*; do zip $$file.zip $$file; done
@@ -105,17 +105,17 @@ coverage:
 	gotestsum -- -race -coverprofile=coverage.txt -covermode=atomic ./...
 
 coverage-html: coverage
-	$(GOBIN) tool cover -html=coverage.txt
+	$(GO) tool cover -html=coverage.txt
 
 gobench:
-	$(GOBIN) test -bench=. $(PACKAGE)/pkg/analyze
+	$(GO) test -bench=. $(PACKAGE)/pkg/analyze
 
 heap-profile:
-	$(GOBIN) tool pprof -web http://localhost:6060/debug/pprof/heap
+	$(GO) tool pprof -web http://localhost:6060/debug/pprof/heap
 
 pgo:
 	wget -O cpu.pprof http://localhost:6060/debug/pprof/profile?seconds=30
-	$(GOBIN) tool pprof -proto cpu.pprof default.pgo > merged.pprof
+	$(GO) tool pprof -proto cpu.pprof default.pgo > merged.pprof
 	mv merged.pprof default.pgo
 
 trace:
@@ -124,7 +124,7 @@ trace:
 
 profile:
 	wget -O cpu.pprof http://localhost:6060/debug/pprof/profile?seconds=30
-	$(GOBIN) tool pprof -web cpu.pprof
+	$(GO) tool pprof -web cpu.pprof
 
 benchmark:
 	sudo cpupower frequency-set -g performance
@@ -177,7 +177,7 @@ lint:
 	golangci-lint run -c .golangci.yml
 
 clean:
-	$(GOBIN) mod tidy
+	$(GO) mod tidy
 	-rm coverage.txt
 	-rm -r test_dir
 	-rm -r vendor
@@ -194,9 +194,8 @@ release:
 	gh release create -t "gdu $(VERSION)" $(VERSION) ./dist/*
 
 install-dev-dependencies:
-	$(GOBIN) install gotest.tools/gotestsum@latest
-	$(GOBIN) install github.com/mitchellh/gox@latest
-	$(GOBIN) install honnef.co/go/gotraceui/cmd/gotraceui@latest
-	$(GOBIN) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+	$(GO) install gotest.tools/gotestsum@latest
+	$(GO) install github.com/mitchellh/gox@latest
+	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 
 .PHONY: run build build-static build-all build-web check test test-web gobench benchmark coverage coverage-html clean clean-uncompressed-dist man show-man release dev-build
