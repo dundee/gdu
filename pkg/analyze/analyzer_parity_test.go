@@ -62,6 +62,17 @@ func collectStats(root fs.Item) map[string]itemStats {
 	return stats
 }
 
+// usageOf returns the disk usage stat reports for a path, which is what gdu
+// must count for it: 0 for an XFS inline directory, the real block count
+// elsewhere.
+func usageOf(t *testing.T, path string) int64 {
+	t.Helper()
+	info, err := os.Lstat(path)
+	assert.NoError(t, err)
+	usage, _ := getPlatformSpecificUsageAndMli(info)
+	return usage
+}
+
 // scanWith runs an unfiltered scan. The nil file type filter is significant:
 // per common.UI.CreateFileTypeFilter, nil is how "no filtering" is expressed,
 // and analyzers that finalize stats during the scan read it to pick between
@@ -101,22 +112,31 @@ func scanFilteringAllFiles(
 func TestEmptyDirStatsAcrossAnalyzers(t *testing.T) {
 	root := createEmptyDirTree(t)
 
-	// disk usage depends on the filesystem block size, take it from stat
-	info, err := os.Lstat(filepath.Join(root, "withfile", "f"))
-	assert.NoError(t, err)
-	fileUsage, _ := getPlatformSpecificUsageAndMli(info)
+	// Disk usage depends on the filesystem block size, so take every expected
+	// value from stat. A directory is charged for the blocks it actually
+	// occupies -- 0 for an XFS inline directory, a real block elsewhere
+	// (issue #393) -- and a directory's usage also carries its children's.
+	fileUsage := usageOf(t, filepath.Join(root, "withfile", "f"))
+	emptyUsage := usageOf(t, filepath.Join(root, "empty"))
+	subEmptyUsage := usageOf(t, filepath.Join(root, "onlyempty", "sub"))
+	onlyemptyUsage := subEmptyUsage + usageOf(t, filepath.Join(root, "onlyempty"))
+	leafUsage := usageOf(t, filepath.Join(root, "deep", "a", "b", "c"))
+	deepBUsage := leafUsage + usageOf(t, filepath.Join(root, "deep", "a", "b"))
+	deepAUsage := deepBUsage + usageOf(t, filepath.Join(root, "deep", "a"))
+	deepUsage := deepAUsage + usageOf(t, filepath.Join(root, "deep"))
 
 	want := map[string]itemStats{
-		".":         {size: 1541, usage: fileUsage, itemCount: 10, flag: ' '},
-		"empty":     {size: EmptyDirSize, usage: 0, itemCount: 1, flag: 'e'},
-		"onlyempty": {size: EmptyDirSize, usage: 0, itemCount: 2, flag: ' '},
+		".": {size: 1541, usage: fileUsage + deepUsage + onlyemptyUsage + emptyUsage +
+			usageOf(t, filepath.Join(root, "withfile")) + usageOf(t, root), itemCount: 10, flag: ' '},
+		"empty":     {size: EmptyDirSize, usage: emptyUsage, itemCount: 1, flag: 'e'},
+		"onlyempty": {size: EmptyDirSize, usage: onlyemptyUsage, itemCount: 2, flag: ' '},
 		"onlyempty/sub": {
-			size: EmptyDirSize, usage: 0, itemCount: 1, flag: 'e',
+			size: EmptyDirSize, usage: subEmptyUsage, itemCount: 1, flag: 'e',
 		},
-		"deep":       {size: EmptyDirSize, usage: 0, itemCount: 4, flag: ' '},
-		"deep/a":     {size: EmptyDirSize, usage: 0, itemCount: 3, flag: ' '},
-		"deep/a/b":   {size: EmptyDirSize, usage: 0, itemCount: 2, flag: ' '},
-		"deep/a/b/c": {size: EmptyDirSize, usage: 0, itemCount: 1, flag: 'e'},
+		"deep":       {size: EmptyDirSize, usage: deepUsage, itemCount: 4, flag: ' '},
+		"deep/a":     {size: EmptyDirSize, usage: deepAUsage, itemCount: 3, flag: ' '},
+		"deep/a/b":   {size: EmptyDirSize, usage: deepBUsage, itemCount: 2, flag: ' '},
+		"deep/a/b/c": {size: EmptyDirSize, usage: leafUsage, itemCount: 1, flag: 'e'},
 	}
 
 	parallel := scanWith(t, CreateAnalyzer(), root)
@@ -127,14 +147,17 @@ func TestEmptyDirStatsAcrossAnalyzers(t *testing.T) {
 	for path, expected := range want {
 		assert.Equal(t, expected, parallel[path], "parallel analyzer at %q", path)
 	}
-	assert.Equal(t, int64(0), parallel["empty"].usage, "an empty dir must use no disk")
-	assert.Equal(t, int64(0), parallel["deep"].usage, "a tree of empty dirs must use no disk")
+	assert.Equal(t, emptyUsage, parallel["empty"].usage,
+		"an empty dir must cost its own blocks, and nothing else")
+	assert.Equal(t, deepUsage, parallel["deep"].usage,
+		"a tree of empty dirs must cost the blocks those dirs actually occupy")
 
 	// Under file filtering the whole tree collapses, because every directory
-	// ends up holding nothing but empty directories.
+	// ends up holding nothing but empty directories. The root reports a single
+	// item and costs only the blocks the root itself occupies.
 	wantFiltered := scanFilteringAllFiles(t, CreateAnalyzer(), root)
 	assert.Equal(t, int64(1), wantFiltered["."].itemCount)
-	assert.Equal(t, int64(0), wantFiltered["."].usage)
+	assert.Equal(t, usageOf(t, root), wantFiltered["."].usage)
 
 	for _, tc := range parityAnalyzers() {
 		t.Run(tc.name, func(t *testing.T) {

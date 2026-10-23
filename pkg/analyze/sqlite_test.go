@@ -998,10 +998,11 @@ func TestSqliteAnalyzerIgnoreFileType(t *testing.T) {
 
 	// Every file was filtered out, so the whole tree is nothing but empty
 	// directories and collapses to a single item, exactly as
-	// Dir.UpdateStatsWithFileFiltering does (see resolveDirStats).
+	// Dir.UpdateStatsWithFileFiltering does (see resolveDirStats). The one
+	// remaining directory still costs the blocks it occupies, as du reports.
 	assert.Equal(t, "test_dir", dir.GetName())
 	assert.Equal(t, int64(1), dir.GetItemCount())
-	assert.Equal(t, int64(0), dir.GetUsage())
+	assert.Equal(t, usageOf(t, "test_dir"), dir.GetUsage())
 }
 
 func TestSqliteAnalyzerHardlinks(t *testing.T) {
@@ -1131,9 +1132,10 @@ func TestSqliteAnalyzerTimeFilter(t *testing.T) {
 
 	analyzer.GetDone().Wait()
 
-	// As above: nothing survives the filter, so the tree collapses to one item.
+	// As above: nothing survives the filter, so the tree collapses to one item,
+	// which still costs the blocks the directory occupies.
 	assert.Equal(t, int64(1), dir.GetItemCount())
-	assert.Equal(t, int64(0), dir.GetUsage())
+	assert.Equal(t, usageOf(t, "test_dir"), dir.GetUsage())
 }
 
 func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {

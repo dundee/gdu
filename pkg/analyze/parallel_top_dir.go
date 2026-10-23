@@ -63,6 +63,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		},
 		Files: make([]SimpleFile, 0, len(files)),
 	}
+	dir.OwnUsage = dirOwnUsage(path)
 
 	var topDirs []*TopDir
 
@@ -169,11 +170,20 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 		info       os.FileInfo
 	)
 
+	if a.IsCancelled() {
+		return
+	}
+
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
 		topDir.SetFlag('.')
 	}
+
+	// Every directory in the subtree contributes its own allocated blocks, so
+	// the fast path agrees with du (issue #393): 0 for an XFS inline directory,
+	// the real block count elsewhere.
+	totalUsage += dirOwnUsage(path)
 
 	for _, f := range files {
 		if a.IsCancelled() {
@@ -245,8 +255,10 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	}
 
 	if len(files) == 0 {
+		// Empty dir: apparent size is the sentinel, usage is only the blocks
+		// the directory itself occupies.
 		totalSize = EmptyDirSize
-		totalUsage = 0
+		totalUsage = dirOwnUsage(path)
 	}
 
 	a.progressItemCount.Add(totalCount)
