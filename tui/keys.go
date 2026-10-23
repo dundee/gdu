@@ -611,6 +611,11 @@ func (ui *UI) handleDelete(action DeleteAction) {
 		return
 	}
 
+	if ui.selectionInSnapshotScope() {
+		ui.showMessage(snapshotReadOnlyMessage)
+		return
+	}
+
 	if ui.askBeforeDelete {
 		ui.confirmDeletion(action)
 	} else {

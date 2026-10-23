@@ -100,6 +100,14 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			if a.isSnapshotDir(entryPath) {
+				placeholder := &StoredDir{Dir: snapshotPlaceholder(name, path, nil)}
+				dir.AddFile(placeholder)
+				if err := a.storage.StoreDir(placeholder); err != nil {
+					log.Print(err.Error())
+				}
+				continue
+			}
 			dirCount++
 
 			subdir := &StoredDir{
@@ -406,6 +414,11 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 	curMtime := f.Mtime
 	curFlag := f.Flag
 	f.m.RUnlock()
+
+	// a skipped subvolume stays a zero sized placeholder, not an empty dir
+	if curFlag == snapshotFlag {
+		return
+	}
 
 	files := f.loadFilesLocked()
 	totals, mtime, flag := aggregateDirEntries(files, curMtime, curFlag, linkedItems, filteringFiles)

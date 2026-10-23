@@ -74,6 +74,10 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			if a.isSnapshotDir(entryPath) {
+				dir.AddFile(snapshotPlaceholder(name, path, dir))
+				continue
+			}
 			dirCount++
 
 			subdir := a.processDir(entryPath)

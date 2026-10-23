@@ -473,6 +473,10 @@ func (f *Dir) GetPath() string {
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
 func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
+	// a skipped subvolume is its own scope, whatever was scanned inside never counts for the parent
+	if f.GetFlag() == snapshotFlag {
+		return 1, 0, 0
+	}
 	f.updateStats(linkedItems, filteringFiles)
 	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }
@@ -500,6 +504,11 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	mtime := f.Mtime
 	flag := f.Flag
 	f.m.RUnlock()
+
+	// a skipped subvolume stays a zero sized placeholder, not an empty dir
+	if flag == snapshotFlag {
+		return
+	}
 
 	totals, mtime, flag := aggregateDirEntries(files, mtime, flag, linkedItems, filteringFiles)
 

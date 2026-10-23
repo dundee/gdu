@@ -57,6 +57,7 @@ Flags:
   -f, --input-file string              Import analysis from JSON file
       --interactive                    Force interactive mode even when output is not a TTY
   -l, --log-file string                Path to a logfile (default "/dev/null")
+      --include-snapshots              Count nested btrfs subvolumes (snapshots), shown as empty 0 B entries by default
       --max-age string                 Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
   -m, --max-cores int                  Set max cores that Gdu will use. 8 cores available (default 8)
       --min-age string                 Include files with mtime at least DURATION old (e.g., 30d, 1w)

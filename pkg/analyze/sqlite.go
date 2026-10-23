@@ -1117,6 +1117,21 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			if a.isSnapshotDir(entryPath) {
+				var placeholderMtime time.Time
+				if info, err := f.Info(); err != nil {
+					log.Print(err.Error())
+				} else {
+					placeholderMtime = info.ModTime()
+				}
+				if _, err := a.insertItemLocked(&dirID, name, true, 0, 0, placeholderMtime, 1, 0, snapshotFlag); err != nil {
+					log.Print(err.Error())
+					continue
+				}
+				totals.itemCount++
+				totals.entries++
+				continue
+			}
 			dirCount++
 
 			go func(entryPath string) {
