@@ -23,6 +23,9 @@ type statusResponse struct {
 	ShowRelativeSize bool         `json:"showRelativeSize"`
 	UseSIPrefix      bool         `json:"useSIPrefix"`
 	DeleteAllowed    bool         `json:"deleteAllowed"`
+	// Classifying is set while cleanup candidates are being classified, which
+	// starts once a scan is done.
+	Classifying bool `json:"classifying"`
 }
 
 type progressJSON struct {
@@ -77,6 +80,7 @@ func (ui *UI) buildStatus() statusResponse {
 		ShowApparentSize: ui.ShowApparentSize,
 		ShowRelativeSize: ui.ShowRelativeSize,
 		UseSIPrefix:      ui.UseSIPrefix,
+		Classifying:      ui.classifying.Load(),
 	}
 	reason, _ := ui.deleteDisabledReason(ui.noDelete, ui.scanning)
 	resp.DeleteAllowed = reason == ""
@@ -107,7 +111,7 @@ func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sortBy, order := parseSort(r.URL.Query().Get("sort"), r.URL.Query().Get("order"))
-	writeJSON(w, http.StatusOK, buildNodeResponse(node, sortBy, order))
+	writeJSON(w, http.StatusOK, buildNodeResponse(node, sortBy, order, ui.cleanupResult()))
 }
 
 func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +123,15 @@ func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
 		writeNodeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, buildTree(node))
+	if r.URL.Query().Get("projection") == "category" {
+		res := ui.requireCleanupResult(w)
+		if res == nil {
+			return
+		}
+		writeJSON(w, http.StatusOK, buildCategoryTree(node, res))
+		return
+	}
+	writeJSON(w, http.StatusOK, buildTree(node, ui.cleanupResult()))
 }
 
 // deleteDisabledReason reports why deletion is currently refused given the
@@ -179,8 +191,14 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("mode") == deleteModeTrash {
 		removeFunc = ui.trasher
 	}
-	if err := removeFunc(parent, node); err != nil {
+	removed, err := ui.removeNode(removeFunc, parent, node)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !removed {
+		// a trash command may succeed and leave the item in place
+		writeError(w, http.StatusInternalServerError, "the item is still there after moving it to the trash")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

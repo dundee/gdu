@@ -9,6 +9,39 @@ export interface Node {
   itemCount: number;
   mtime: number;
   flag?: string;
+  // Set when the item is a cleanup candidate on its own (see pkg/cleanup).
+  category?: Category;
+  confidence?: Confidence;
+  hint?: string;
+  // Space taken by cleanup candidates within the item, per category.
+  categoryTotals?: Partial<Record<Category, Amount>>;
+}
+
+export type Category =
+  | 'build-artifact'
+  | 'package-cache'
+  | 'app-cache'
+  | 'toolchain'
+  | 'ml-model'
+  | 'installer'
+  | 'git-ignored';
+
+export type Confidence = 'safe' | 'review';
+
+export interface Amount {
+  usage: number;
+  size: number;
+}
+
+export interface CategoryTotal extends Amount {
+  id: Category;
+  label: string;
+}
+
+// GET /api/v1/categories: candidates within one directory.
+export interface CategoriesResponse {
+  total: Amount;
+  categories: CategoryTotal[];
 }
 
 export interface TreeNode extends Node {
@@ -38,6 +71,9 @@ export interface Status {
   showRelativeSize: boolean;
   useSIPrefix: boolean;
   deleteAllowed: boolean;
+  // Set while cleanup candidates are being classified, after a scan or a
+  // change of the tree. Cleanup data is missing from responses meanwhile.
+  classifying: boolean;
 }
 
 export type SortKey = 'size' | 'name' | 'itemCount' | 'mtime';

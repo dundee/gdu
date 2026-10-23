@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/cleanup"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -29,6 +30,14 @@ type nodeJSON struct {
 	ItemCount int64  `json:"itemCount"`
 	Mtime     int64  `json:"mtime"`
 	Flag      string `json:"flag,omitempty"`
+
+	// Category, Confidence and Hint are set when the item is a cleanup
+	// candidate on its own; CategoryTotals is the space candidates take
+	// within it.
+	Category       cleanup.Category   `json:"category,omitempty"`
+	Confidence     cleanup.Confidence `json:"confidence,omitempty"`
+	Hint           string             `json:"hint,omitempty"`
+	CategoryTotals cleanup.Totals     `json:"categoryTotals,omitempty"`
 }
 
 // nodeResponse is the payload of GET /api/v1/nodes: the node itself, its
@@ -48,12 +57,14 @@ type treeJSON struct {
 	Children []*treeJSON `json:"children"`
 }
 
-func toNodeJSON(it fs.Item) nodeJSON {
+// toNodeJSON converts an item, adding its cleanup classification when res is
+// not nil.
+func toNodeJSON(it fs.Item, res *cleanup.Result) nodeJSON {
 	flag := ""
 	if f := it.GetFlag(); f != ' ' && f != 0 {
 		flag = string(f)
 	}
-	return nodeJSON{
+	n := nodeJSON{
 		// scanned roots are labelled with their absolute path, since their base
 		// names collide when the roots come from different parent directories
 		Name:      analyze.ItemDisplayName(it.GetParent(), it),
@@ -65,6 +76,18 @@ func toNodeJSON(it fs.Item) nodeJSON {
 		Mtime:     it.GetMtime().Unix(),
 		Flag:      flag,
 	}
+	if res != nil {
+		if m, ok := res.Match(it); ok {
+			n.Category = m.Category
+			n.Confidence = m.Confidence
+			// the hint is about the matched directory, shown on it alone
+			if !m.Inherited {
+				n.Hint = m.Hint
+			}
+		}
+		n.CategoryTotals = res.Totals(it)
+	}
+	return n
 }
 
 // findNode locates an item by absolute path, descending from the scanned root.
@@ -281,15 +304,15 @@ func childByName(parent fs.Item, name string) (fs.Item, bool) {
 
 // buildNodeResponse assembles a node, its breadcrumbs, and immediate children,
 // sorted as requested.
-func buildNodeResponse(it fs.Item, sortBy fs.SortBy, order fs.SortOrder) nodeResponse {
+func buildNodeResponse(it fs.Item, sortBy fs.SortBy, order fs.SortOrder, res *cleanup.Result) nodeResponse {
 	resp := nodeResponse{
-		Node:        toNodeJSON(it),
+		Node:        toNodeJSON(it, res),
 		Breadcrumbs: breadcrumbs(it),
 		Children:    []nodeJSON{},
 	}
 	if it.IsDir() {
 		for child := range it.GetFilesLocked(sortBy, order) {
-			resp.Children = append(resp.Children, toNodeJSON(child))
+			resp.Children = append(resp.Children, toNodeJSON(child, res))
 		}
 	}
 	return resp
@@ -332,8 +355,8 @@ func (q *expansionQueue) Pop() any {
 	return last
 }
 
-func buildTree(it fs.Item) treeJSON {
-	root := &treeJSON{nodeJSON: toNodeJSON(it), Children: []*treeJSON{}}
+func buildTree(it fs.Item, res *cleanup.Result) treeJSON {
+	root := &treeJSON{nodeJSON: toNodeJSON(it, res), Children: []*treeJSON{}}
 	if !it.IsDir() {
 		return *root
 	}
@@ -347,7 +370,7 @@ func buildTree(it fs.Item) treeJSON {
 				break
 			}
 			remaining--
-			childJSON := &treeJSON{nodeJSON: toNodeJSON(child), Children: []*treeJSON{}}
+			childJSON := &treeJSON{nodeJSON: toNodeJSON(child, res), Children: []*treeJSON{}}
 			next.slot.Children = append(next.slot.Children, childJSON)
 			if child.IsDir() {
 				heap.Push(queue, pendingExpansion{item: child, slot: childJSON})
@@ -362,7 +385,7 @@ func buildTree(it fs.Item) treeJSON {
 func breadcrumbs(it fs.Item) []nodeJSON {
 	var chain []nodeJSON
 	for cur := it; cur != nil; cur = cur.GetParent() {
-		chain = append(chain, toNodeJSON(cur))
+		chain = append(chain, toNodeJSON(cur, nil))
 	}
 	// reverse so the root comes first
 	for i, j := 0, len(chain)-1; i < j; i, j = i+1, j-1 {

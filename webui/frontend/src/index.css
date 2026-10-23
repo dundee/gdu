@@ -87,6 +87,11 @@ body {
   border-color: var(--accent);
 }
 
+.freed-badge {
+  color: #7bd88f;
+  font-weight: 600;
+}
+
 .scanning-badge {
   color: var(--text-muted);
   font-style: italic;
@@ -288,11 +293,12 @@ body {
   position: absolute;
   left: 8px;
   bottom: 8px;
-  background: rgba(27, 31, 39, 0.94);
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 5px 8px;
   pointer-events: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -302,6 +308,98 @@ body {
 .treemap-tooltip span {
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.treemap-tooltip .treemap-tooltip-detail {
+  color: var(--text);
+}
+
+.file-table tr.pending td,
+.file-table tr.deleted td {
+  opacity: 0.45;
+}
+
+.file-table tr.deleted .name {
+  text-decoration: line-through;
+}
+
+.treemap-tile.pending {
+  cursor: progress !important;
+}
+
+.treemap-tile.deleted {
+  cursor: default !important;
+}
+
+.chart-panel.with-legend {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.chart-panel.with-legend .treemap,
+.chart-panel.with-legend .treemap-loading {
+  flex: 1;
+  min-height: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.legend-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.legend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--track);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.legend-chip:hover,
+.legend-chip.active {
+  border-color: var(--accent);
+}
+
+.legend-chip.active {
+  background: var(--bg-row-hover);
+  font-weight: 600;
+}
+
+.legend-clear {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 3px 4px;
 }
 
 .treemap-tooltip b {
@@ -484,6 +582,7 @@ body {
   padding: 8px 16px;
   margin: 0 16px;
   border-radius: 6px;
+  white-space: pre-line;
 }
 
 .modal-backdrop {

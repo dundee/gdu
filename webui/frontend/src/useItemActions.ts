@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { Node } from './types';
 import { deleteNode, revealNode, type DeleteMode } from './api';
-import { useGduModel } from './model';
+import { deletionStateOf, useGduModel } from './model';
 
 // Shown instead of firing a request that is certain to come back as a bare
 // 403. The token is missing whenever this tab never received one - the page
@@ -10,16 +10,9 @@ import { useGduModel } from './model';
 const noActionTokenMessage =
   'Actions are unavailable: this page has no action token. Reopen the URL gdu printed, or restart gdu.';
 
-export interface ItemActionsOptions {
-  // Refreshes view-specific data after a mutation. Defaults to invalidating
-  // the cached recursive tree, so the treemap re-fetches the next time it is
-  // shown. The treemap passes a function that re-fetches it right away.
-  refreshExtra?: () => Promise<void>;
-  // Runs after a successful refresh, e.g. to clear a view-local selection.
-  onRefreshed?: () => void;
-}
-
 export interface ItemActions {
+  // actionPending is true while a reveal runs. Deletions never block: they
+  // are optimistic, see performDelete.
   actionPending: boolean;
   deleteCandidate: Node | null;
   skipDeleteChoice: boolean;
@@ -28,6 +21,10 @@ export interface ItemActions {
   // opted out of confirmation this session, otherwise opens the modal.
   requestDelete: (node: Node) => void;
   cancelDelete: () => void;
+  // performDelete marks the item as being deleted right away and sends the
+  // request in the background, so more items can be deleted meanwhile. A
+  // deleted item stays in place, marked, until the user navigates; a failed
+  // deletion puts the item back and reports why.
   performDelete: (node: Node, mode: DeleteMode) => Promise<void>;
   reveal: (node: Node) => Promise<void>;
 }
@@ -35,69 +32,46 @@ export interface ItemActions {
 // useItemActions is the delete/reveal workflow shared by every view that can
 // act on a single item (the treemap and the file table). The confirmation
 // modal is rendered by DeleteConfirmModal from the state returned here.
-export function useItemActions(options: ItemActionsOptions = {}): ItemActions {
-  const { refreshExtra, onRefreshed } = options;
+export function useItemActions(): ItemActions {
   const {
     actionToken,
     status,
     skipDeleteConfirm,
-    setHoveredPath,
-    navigateToPath,
-    refreshNode,
-    clearTree,
     setLoadError,
+    deletions,
+    beginDeletion,
+    settleDeletion,
   } = useGduModel();
 
   const [deleteCandidate, setDeleteCandidate] = useState<Node | null>(null);
   const [skipDeleteChoice, setSkipDeleteChoice] = useState(false);
   const [actionPending, setActionPending] = useState(false);
 
-  const refreshAfterMutation = useCallback(async () => {
-    const [nodeResp] = await Promise.all([
-      refreshNode(),
-      refreshExtra ? refreshExtra() : Promise.resolve(clearTree()),
-    ]);
-    onRefreshed?.();
-    setHoveredPath(null);
-    // Deleting the last item leaves the current directory empty: staying
-    // put would show a blank chart with no way back except the breadcrumbs,
-    // so step up to the parent directory instead.
-    if (nodeResp.children.length === 0 && nodeResp.breadcrumbs.length > 1) {
-      const parent = nodeResp.breadcrumbs[nodeResp.breadcrumbs.length - 2];
-      navigateToPath(parent.path);
-    }
-  }, [refreshNode, refreshExtra, clearTree, onRefreshed, setHoveredPath, navigateToPath]);
-
   const performDelete = useCallback(
     async (node: Node, mode: DeleteMode) => {
-      if (actionPending) {
-        return;
-      }
+      setDeleteCandidate(null);
       if (!actionToken) {
-        setDeleteCandidate(null);
         setLoadError(noActionTokenMessage);
         return;
       }
-      setActionPending(true);
-      setDeleteCandidate(null);
+      if (deletionStateOf(deletions, node.path)) {
+        return;
+      }
+      beginDeletion(node);
+      let error: string | null = null;
       try {
         await deleteNode(node.path, actionToken, mode);
-        await refreshAfterMutation();
-        setLoadError(null);
       } catch (err: unknown) {
-        if (typeof err === 'object' && err !== null && 'status' in err && err.status === 404) {
-          try {
-            await refreshAfterMutation();
-          } catch {
-            // Keep the original action error; the regular loader can retry later.
-          }
-        }
-        setLoadError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setActionPending(false);
+        error = `Could not delete ${node.name}: ${err instanceof Error ? err.message : String(err)}`;
+      }
+      const errors = settleDeletion(node.path, error);
+      if (errors && errors.length > 0) {
+        setLoadError(errors.join('\n'));
+      } else if (error) {
+        setLoadError(error);
       }
     },
-    [actionPending, refreshAfterMutation, setLoadError, actionToken],
+    [actionToken, deletions, beginDeletion, settleDeletion, setLoadError],
   );
 
   const reveal = useCallback(
@@ -124,7 +98,7 @@ export function useItemActions(options: ItemActionsOptions = {}): ItemActions {
 
   const requestDelete = useCallback(
     (node: Node) => {
-      if (actionPending || !status.deleteAllowed) {
+      if (!status.deleteAllowed || deletionStateOf(deletions, node.path)) {
         return;
       }
       if (skipDeleteConfirm) {
@@ -134,7 +108,7 @@ export function useItemActions(options: ItemActionsOptions = {}): ItemActions {
       setSkipDeleteChoice(false);
       setDeleteCandidate(node);
     },
-    [actionPending, performDelete, skipDeleteConfirm, status.deleteAllowed],
+    [deletions, performDelete, skipDeleteConfirm, status.deleteAllowed],
   );
 
   const cancelDelete = useCallback(() => setDeleteCandidate(null), []);
