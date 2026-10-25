@@ -46,6 +46,13 @@ func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 		return
 	}
 	dir.Mtime = stat.ModTime()
+	dir.OwnUsage = dirOwnUsage(path)
+}
+
+// dirOwnUsage returns 0: these platforms expose no block allocation for a
+// directory, so gdu charges it nothing rather than guessing a block.
+func dirOwnUsage(path string) int64 {
+	return 0
 }
 
 // getSyscallStats extracts usage and inode info from os.FileInfo using syscall

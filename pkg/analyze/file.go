@@ -26,8 +26,13 @@ type File struct {
 	Symlink string
 	Size    int64
 	Usage   int64
-	Mli     uint64
-	Flag    rune
+	// OwnUsage is the disk usage of this directory's own blocks, from
+	// st_blocks*512. It is 0 for regular files, whose Usage is already the
+	// value itself. Kept separately so recomputing a directory's stats does
+	// not lose the blocks the filesystem allocated to the directory.
+	OwnUsage int64
+	Mli      uint64
+	Flag     rune
 }
 
 // GetName returns name of dir
@@ -178,6 +183,9 @@ func (f *File) RemoveFileByName(name string) {
 // size) written by updateStats, SimpleDir.UpdateStats and the parallel top-dir
 // analyzer, and recognised again on import. Keep every producer and consumer
 // of this value referencing this constant so they can never drift apart.
+//
+// This is an apparent size only. A directory's disk usage always comes from
+// its own st_blocks (see dirTotals.ownUsage), never from this constant.
 const EmptyDirSize int64 = 512
 
 // dirTotals is the aggregate of a directory's counted children, before gdu's
@@ -186,10 +194,16 @@ const EmptyDirSize int64 = 512
 // itemCount includes the directory itself, so it starts at 1. entries is the
 // number of children that were counted, and hasFiles records whether any of
 // them was not itself a directory.
+//
+// ownUsage is the directory's own allocated disk usage, from its st_blocks.
+// Directories are not always charged for a block: on XFS a small directory is
+// stored inline in the inode and st_blocks is 0, which is what du reports for
+// it. The value must therefore be read from the filesystem, never assumed.
 type dirTotals struct {
 	size      int64
 	usage     int64
 	itemCount int64
+	ownUsage  int64
 	entries   int
 	hasFiles  bool
 }
@@ -199,9 +213,10 @@ type dirTotals struct {
 //
 // A directory that counted no children — or, when file filtering is active,
 // one whose entries are all themselves empty directories — reports EmptyDirSize
-// as its apparent size and zero real usage. gdu deliberately does not charge a
-// directory for the block the filesystem allocates to it, so a tree containing
-// nothing but empty directories reports no disk usage at all.
+// as its apparent size. Either way its disk usage is exactly the usage of the
+// blocks the filesystem actually allocated to it (totals.ownUsage), so a tree
+// containing nothing but empty directories costs only what those directories
+// really occupy, matching du.
 //
 // This is the single definition of that rule. Every analyzer must route through
 // it, otherwise the numbers gdu reports depend on which analyzer produced them.
@@ -210,9 +225,9 @@ func resolveDirStats(totals dirTotals, filteringFiles bool) (itemCount, size, us
 		totals.itemCount == int64(totals.entries+1)
 
 	if totals.entries == 0 || onlyEmptyDirs {
-		return 1, totals.size + EmptyDirSize, 0
+		return 1, totals.size + EmptyDirSize, totals.ownUsage
 	}
-	return totals.itemCount, totals.size, totals.usage
+	return totals.itemCount, totals.size, totals.usage + totals.ownUsage
 }
 
 // aggregateDirEntries folds the stats of entries into the totals their parent
@@ -336,7 +351,7 @@ func reparentSnapshotChildren(dir *Dir, parent fs.Item) {
 }
 
 func snapshotFile(source, parent fs.Item) *File {
-	return &File{
+	f := &File{
 		Mtime:  source.GetMtime(),
 		Parent: parent,
 		Name:   source.GetName(),
@@ -345,6 +360,10 @@ func snapshotFile(source, parent fs.Item) *File {
 		Mli:    source.GetMultiLinkedInode(),
 		Flag:   source.GetFlag(),
 	}
+	if d, ok := source.(*Dir); ok {
+		f.OwnUsage = d.OwnUsage
+	}
+	return f
 }
 
 // AddFile add item to files
@@ -376,7 +395,7 @@ func (f *Dir) SetStatsFromJSON() {
 // real content always exports with ItemCount >= 2, so it can never be mistaken
 // for a placeholder and its stats are always preserved.
 func (f *Dir) HasEmptyDirPlaceholderStats() bool {
-	return f.Size == EmptyDirSize && f.Usage == 0 && f.ItemCount == 1
+	return f.Size == EmptyDirSize && f.OwnUsage == 0 && f.Usage == 0 && f.ItemCount == 1
 }
 
 // GetFiles returns all files in directory as a sorted iterator
@@ -507,6 +526,7 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	defer f.m.Unlock()
 	f.Mtime = mtime
 	f.Flag = flag
+	totals.ownUsage = f.OwnUsage
 	f.ItemCount, f.Size, f.Usage = resolveDirStats(totals, filteringFiles)
 }
 

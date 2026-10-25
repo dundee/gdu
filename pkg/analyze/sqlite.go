@@ -1045,7 +1045,6 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	// pass, but it must land on the same numbers: totals cover the children
 	// only, and resolveDirStats applies the empty-directory rule at the end.
 	var (
-		totals     = dirTotals{itemCount: 1}
 		filesSize  int64 // only files in this directory, for progress reporting
 		subDirChan = make(chan *SqliteItem)
 		dirCount   int
@@ -1078,12 +1077,17 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		log.Print(err.Error())
 	}
 
-	// Get directory info for mtime
+	// Get directory info for mtime and for the directory's own blocks, so this
+	// analyzer charges directories the same usage as the in-memory ones.
 	dirInfo, statErr := os.Stat(path)
 	var dirMtime time.Time
+	var dirBlockUsage int64
 	if statErr == nil {
 		dirMtime = dirInfo.ModTime()
+		dirBlockUsage, _ = getSyscallStats(dirInfo)
 	}
+
+	totals := dirTotals{itemCount: 1, ownUsage: dirBlockUsage}
 
 	dirFlag := getDirFlag(err, len(files))
 

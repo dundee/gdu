@@ -38,6 +38,17 @@ func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 	}
 
 	dir.Mtime = time.Unix(int64(stat.Mtimespec.Sec), int64(stat.Mtimespec.Nsec))
+	dir.OwnUsage = dirOwnUsage(path)
+}
+
+// dirOwnUsage returns the disk usage of a directory's own blocks, as du counts
+// them.
+func dirOwnUsage(path string) int64 {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(path, &stat); err != nil {
+		return 0
+	}
+	return stat.Blocks * devBSize
 }
 
 // getSyscallStats extracts usage and inode info from os.FileInfo using syscall
