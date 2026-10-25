@@ -435,7 +435,7 @@ func (ui *UI) printItem(parent, file fs.Item) {
 			lineFormat,
 			string(file.GetFlag()),
 			ui.formatSize(size),
-			ui.formatCount(file.GetItemCount()),
+			ui.formatCount(fs.DisplayedItemCount(file)),
 			name,
 		)
 		return
