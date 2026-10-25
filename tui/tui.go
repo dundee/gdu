@@ -113,11 +113,13 @@ type UI struct {
 	// clears the analyzer's own cancelled flag, so the request has to survive
 	// somewhere the scanning goroutine can safely read it.
 	scanCancelRequested atomic.Bool
-	scanStart           time.Time
-	scanDuration        time.Duration
-	previewing          bool
-	previewSavedDir     fs.Item
-	progressFlex        *tview.Flex
+	// scopeAnalyzer is the analyzer of a running snapshot scope scan, nil otherwise
+	scopeAnalyzer   common.Analyzer
+	scanStart       time.Time
+	scanDuration    time.Duration
+	previewing      bool
+	previewSavedDir fs.Item
+	progressFlex    *tview.Flex
 }
 
 type deleteQueueItem struct {
@@ -448,7 +450,11 @@ func (ui *UI) cancelScan() bool {
 		return false
 	}
 
-	ui.Analyzer.Cancel()
+	if ui.scopeAnalyzer != nil {
+		ui.scopeAnalyzer.Cancel()
+	} else {
+		ui.Analyzer.Cancel()
+	}
 	ui.scanCancelled = true
 	ui.scanCancelRequested.Store(true)
 	ui.progress.SetTitle(" Stopping scan... ")
@@ -587,6 +593,12 @@ func (ui *UI) fileItemSelected(row, column int) {
 		return
 	}
 
+	// row 0 below the top dir is the way up, never a snapshot to scan
+	if (row != 0 || ui.currentDirPath == ui.topDirPath) && analyze.IsUnscannedSnapshot(selectedDir) {
+		ui.scanSnapshotScope(selectedDir)
+		return
+	}
+
 	origDir := ui.currentDir
 	ui.currentDir = selectedDir
 	ui.hideFilterInput()
@@ -660,6 +672,11 @@ func (ui *UI) deviceItemSelected(row, column int) {
 func (ui *UI) confirmDeletion(action DeleteAction) {
 	if ui.noDelete {
 		ui.showMessage(" Deletion is disabled!")
+		return
+	}
+
+	if ui.selectionInSnapshotScope() {
+		ui.showMessage(snapshotReadOnlyMessage)
 		return
 	}
 

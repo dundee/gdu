@@ -1016,6 +1016,7 @@ func (m *uiTimeFilterMock) ReadAnalysis(input io.Reader) error                { 
 func (m *uiTimeFilterMock) ReadFromStorage(storagePath, path string) error    { return nil }
 func (m *uiTimeFilterMock) SetIgnoreTypes(types []string)                     {}
 func (m *uiTimeFilterMock) SetIgnoreDirPaths(paths []string)                  {}
+func (m *uiTimeFilterMock) SetSkipBtrfsSubvolumes(mountPoints []string)       {}
 func (m *uiTimeFilterMock) SetIgnoreDirPatterns(paths []string) error         { return nil }
 func (m *uiTimeFilterMock) SetIgnoreFromFile(ignoreFile string) error         { return nil }
 func (m *uiTimeFilterMock) SetIgnoreHidden(value bool)                        {}

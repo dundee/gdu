@@ -66,6 +66,20 @@ func addSubDir(parent, child *Dir) {
 	}
 }
 
+// queueSubDir reports whether a child directory should be scanned. ignored and
+// snapshot subvolumes return false; a snapshot subvolume is recorded as an
+// empty placeholder that the ui expands on demand.
+func (a *ParallelAnalyzer) queueSubDir(name, parentPath, entryPath string, dir *Dir) bool {
+	if a.shouldSkipDir(name, entryPath) {
+		return false
+	}
+	if a.isSnapshotDir(entryPath) {
+		dir.AddFile(snapshotPlaceholder(name, parentPath, dir))
+		return false
+	}
+	return true
+}
+
 func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
 		file       fs.Item
@@ -100,12 +114,10 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.shouldSkipDir(name, entryPath) {
-				continue
+			if a.queueSubDir(name, path, entryPath, dir) {
+				dirCount++
+				go a.processQueuedDir(entryPath, dir, subDirChan)
 			}
-			dirCount++
-
-			go a.processQueuedDir(entryPath, dir, subDirChan)
 		} else {
 			// Apply file type filter if set
 			if a.ignoreFileType != nil && a.ignoreFileType(name) {

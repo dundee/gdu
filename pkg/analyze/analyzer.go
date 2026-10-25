@@ -5,8 +5,16 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	log "github.com/sirupsen/logrus"
 )
+
+// snapshotFlag marks a nested btrfs subvolume (snapshot) that is listed but not scanned
+const snapshotFlag = 'S'
+
+// isNestedBtrfsSubvolume is a variable so tests can fake a subvolume without btrfs
+var isNestedBtrfsSubvolume = device.IsNestedBtrfsSubvolume
 
 // BaseAnalyzer provides common logic for all analyzers
 type BaseAnalyzer struct {
@@ -25,7 +33,9 @@ type BaseAnalyzer struct {
 	gitAnnexedSize          bool
 	matchesTimeFilterFn     common.TimeFilter
 	archiveBrowsing         bool
-	progressTicker          *time.Ticker
+	// mount points, non-nil enables showing nested btrfs subvolumes as empty placeholders
+	skipSubvolumeMountPoints map[string]struct{}
+	progressTicker           *time.Ticker
 }
 
 // Init initializes the BaseAnalyzer
@@ -77,6 +87,35 @@ func (a *BaseAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
 // SetArchiveBrowsing sets whether browsing of zip/jar/tar archives is enabled
 func (a *BaseAnalyzer) SetArchiveBrowsing(v bool) {
 	a.archiveBrowsing = v
+}
+
+// SetSkipBtrfsSubvolumes makes nested btrfs subvolumes (snapshots) show up as empty
+// flagged entries instead of being scanned. Their data is shared with the original,
+// so counting it would inflate usage far beyond the disk size. Mounted subvolumes
+// (given by mountPoints) are real data and are scanned normally.
+func (a *BaseAnalyzer) SetSkipBtrfsSubvolumes(mountPoints []string) {
+	a.skipSubvolumeMountPoints = make(map[string]struct{}, len(mountPoints))
+	for _, mountPoint := range mountPoints {
+		a.skipSubvolumeMountPoints[mountPoint] = struct{}{}
+	}
+}
+
+// isSnapshotDir reports whether path is a nested btrfs subvolume that should not be scanned
+func (a *BaseAnalyzer) isSnapshotDir(path string) bool {
+	if a.skipSubvolumeMountPoints == nil || !isNestedBtrfsSubvolume(path, a.skipSubvolumeMountPoints) {
+		return false
+	}
+	log.Printf("Directory %s not scanned, it is a nested btrfs subvolume (snapshot)", path)
+	return true
+}
+
+// snapshotPlaceholder is the empty zero sized entry shown in place of a skipped subvolume
+func snapshotPlaceholder(name, basePath string, parent fs.Item) *Dir {
+	return &Dir{
+		File:      &File{Name: name, Flag: snapshotFlag, Parent: parent},
+		BasePath:  basePath,
+		ItemCount: 1,
+	}
 }
 
 // SetFileTypeFilter sets the file type filter function

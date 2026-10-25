@@ -105,6 +105,8 @@ func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {
 func (a *MockedAnalyzer) SetTimeFilter(timeFilter TimeFilter) {}
 
 // SetArchiveBrowsing sets EnableArchiveBrowsing
+func (a *MockedAnalyzer) SetSkipBtrfsSubvolumes(mountPoints []string) {}
+
 func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {
 	a.ArchiveBrowsing = v
 }
