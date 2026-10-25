@@ -355,8 +355,14 @@ Sort items. Possible values:
 * itemCount - number of items contained in the folder tree (the same number shown by `show-item-count`)
 * mtime - modification time
 
+Applies to interactive listings and non-interactive listings, including `--depth`.
+`--top` keeps selecting the largest files by the displayed size metric.
+
 #### `sorting.order`
 
 Set sorting order. Possible values:
 * asc - ascending order
 * desc - descending order
+
+In non-interactive mode, `--reverse-sort` reverses the configured order. With no
+configured order, the default remains largest first.

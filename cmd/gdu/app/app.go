@@ -544,6 +544,9 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 			a.Flags.ReverseSort,
 			a.Flags.Depth,
 		)
+		if a.Flags.Top <= 0 {
+			stdoutUI.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
+		}
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()
 		}
