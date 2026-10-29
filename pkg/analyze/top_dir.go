@@ -45,6 +45,10 @@ type SimpleFile struct {
 	Usage     int64
 	ItemCount int64
 	IsDir     bool
+
+	// alreadyCounted excludes duplicate hard links from totals without changing
+	// the size displayed for each individual file.
+	alreadyCounted bool
 }
 
 type SimpleDir struct {
@@ -98,8 +102,10 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 	var totalUsage int64
 	var itemCount int64
 	for _, entry := range d.Files {
-		totalSize += entry.Size
-		totalUsage += entry.Usage
+		if !entry.alreadyCounted {
+			totalSize += entry.Size
+			totalUsage += entry.Usage
+		}
 		itemCount += entry.ItemCount
 
 		switch entry.Flag {
