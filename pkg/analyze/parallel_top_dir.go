@@ -40,6 +40,7 @@ func CreateTopDirAnalyzer() *TopDirAnalyzer {
 func (a *TopDirAnalyzer) AnalyzeDir(
 	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
+	a.linkedItems.Clear()
 	a.ignoreDir = ignore
 	if fileTypeFilter != nil {
 		a.ignoreFileType = fileTypeFilter
@@ -81,10 +82,6 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 				Flag: ' ',
 			}
 			topDirs = append(topDirs, topDir)
-			go func(entryPath string) {
-				a.processSubDir(entryPath, topDir)
-				subDirChan <- struct{}{}
-			}(entryPath)
 		} else {
 			var info os.FileInfo
 			// Apply file type filter if set
@@ -128,10 +125,20 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 
 			if mli > 0 {
 				file.Flag = 'H'
+				_, file.alreadyCounted = a.linkedItems.LoadOrStore(mli, struct{}{})
 			}
 
 			dir.Files = append(dir.Files, file)
 		}
+	}
+
+	// Register root-level hard links before scanning subdirectories so their
+	// storage is counted at the root, while every file keeps its displayed size.
+	for _, topDir := range topDirs {
+		go func() {
+			a.processSubDir(filepath.Join(path, topDir.Name), topDir)
+			subDirChan <- struct{}{}
+		}()
 	}
 
 	for i := 0; i < len(topDirs); i++ {
