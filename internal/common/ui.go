@@ -10,18 +10,19 @@ import (
 
 // UI struct
 type UI struct {
-	Analyzer              Analyzer
-	IgnoreDirPaths        map[string]struct{}
-	IgnoreDirPathPatterns *regexp.Regexp
-	IgnoreHidden          bool
-	IgnoreTypes           []string
-	IncludeTypes          []string
-	UseColors             bool
-	UseSIPrefix           bool
-	ShowProgress          bool
-	ShowApparentSize      bool
-	ShowRelativeSize      bool
-	FilteringFiles        bool
+	Analyzer               Analyzer
+	IgnoreDirPaths         map[string]struct{}
+	IgnoreDirPathPatterns  *regexp.Regexp
+	IgnoreHidden           bool
+	IgnoreOtherFilesystems bool
+	IgnoreTypes            []string
+	IncludeTypes           []string
+	UseColors              bool
+	UseSIPrefix            bool
+	ShowProgress           bool
+	ShowApparentSize       bool
+	ShowRelativeSize       bool
+	FilteringFiles         bool
 	// regex fragments contributed by every pattern source (-I, -X, -G),
 	// kept so that a later source can be combined with the earlier ones
 	// instead of replacing them
