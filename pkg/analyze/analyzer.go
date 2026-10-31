@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -23,6 +24,7 @@ type BaseAnalyzer struct {
 	ignoreFileType          common.ShouldFileBeIgnored
 	followSymlinks          bool
 	gitAnnexedSize          bool
+	exclusiveSize           bool
 	matchesTimeFilterFn     common.TimeFilter
 	archiveBrowsing         bool
 	progressTicker          *time.Ticker
@@ -67,6 +69,31 @@ func (a *BaseAnalyzer) SetFollowSymlinks(v bool) {
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (a *BaseAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
+}
+
+// SetExclusiveSize sets whether disk usage of files is the number of bytes not
+// shared with other files (Linux only, measured with FIEMAP)
+func (a *BaseAnalyzer) SetExclusiveSize(v bool) {
+	a.exclusiveSize = v
+}
+
+// usageOf returns the disk usage to record for a file. It is the given
+// st_blocks based usage unless exclusive size is enabled and could be measured.
+func (a *BaseAnalyzer) usageOf(path string, info os.FileInfo, usage int64) int64 {
+	if !a.exclusiveSize {
+		return usage
+	}
+	usage, _ = exclusiveUsage(path, info, usage)
+	return usage
+}
+
+// setFileUsage refines file.Usage like usageOf and, when exclusive size is
+// enabled and could be measured, records the bytes in shared extents too.
+func (a *BaseAnalyzer) setFileUsage(file *File, path string, info os.FileInfo) {
+	if !a.exclusiveSize {
+		return
+	}
+	file.Usage, file.SharedUsage, _ = exclusiveAndSharedUsage(path, info, file.Usage)
 }
 
 // SetTimeFilter sets the time filter function for file inclusion

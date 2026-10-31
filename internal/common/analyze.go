@@ -26,6 +26,7 @@ type Analyzer interface {
 	AnalyzeDir(path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored) fs.Item
 	SetFollowSymlinks(bool)
 	SetShowAnnexedSize(bool)
+	SetExclusiveSize(bool)
 	SetTimeFilter(timeFilter TimeFilter)
 	SetArchiveBrowsing(bool)
 	SetFileTypeFilter(filter ShouldFileBeIgnored)

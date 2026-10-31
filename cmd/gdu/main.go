@@ -51,7 +51,7 @@ func init() {
 	flags.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
-	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg,ino)")
+	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino)")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
 	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
@@ -75,6 +75,10 @@ func init() {
 	flags.BoolVarP(
 		&af.ShowAnnexedSize, "show-annexed-size", "A", false,
 		"Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)",
+	)
+	flags.BoolVar(
+		&af.ExclusiveSize, "exclusive-size", false,
+		"Linux only: report file usage as the bytes not shared with other files (reflinks), i.e. what deleting them frees",
 	)
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")

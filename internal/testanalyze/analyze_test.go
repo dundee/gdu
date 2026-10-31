@@ -119,6 +119,14 @@ func TestSetShowAnnexedSize(t *testing.T) {
 	})
 }
 
+func TestSetExclusiveSize(t *testing.T) {
+	a := &MockedAnalyzer{}
+	assert.NotPanics(t, func() {
+		a.SetExclusiveSize(true)
+		a.SetExclusiveSize(false)
+	})
+}
+
 func TestSetTimeFilter(t *testing.T) {
 	a := &MockedAnalyzer{}
 	assert.NotPanics(t, func() {

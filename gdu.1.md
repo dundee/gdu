@@ -83,6 +83,11 @@ size of the file to which symlink points to (symlinks to directories are not fol
 **-A**, **\--show-annexed-size**\[=false\] Use apparent size of git-annex'ed files
 in case files are not present locally (real usage is zero)
 
+**\--exclusive-size**\[=false\] Linux only: report disk usage of files as the
+bytes not shared with other files through reflinks (FS_IOC_FIEMAP extents without
+the shared flag), i.e. what deleting them would free. Falls back to the allocated
+blocks where this cannot be measured; ignored on other platforms
+
 **-n**, **\--non-interactive**\[=false\] Do not run in interactive mode
 
 **\--interactive**\[=false\] Force interactive mode even when output is not a TTY
@@ -159,7 +164,7 @@ makes scan details reachable by other hosts on the network.
 
 **-o**, **\--output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
 
-**\--output-attrs** Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg,ino).
+**\--output-attrs** Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino).
 Requires \--output-file. The *name* attribute is always included and directories always
 carry their *asize*, *dsize* and *items* summary stats so they can be preserved on import.
 

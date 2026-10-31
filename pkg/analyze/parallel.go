@@ -186,6 +186,7 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 				// Only set platform-specific attributes for regular files
 				if regularFile, ok := file.(*File); ok {
 					setPlatformSpecificAttrs(regularFile, info)
+					a.setFileUsage(regularFile, entryPath, info)
 				}
 				totalUsage += file.GetUsage()
 				dir.AddFile(file)
