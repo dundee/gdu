@@ -1019,6 +1019,7 @@ func (m *uiTimeFilterMock) SetIgnoreDirPaths(paths []string)                  {}
 func (m *uiTimeFilterMock) SetIgnoreDirPatterns(paths []string) error         { return nil }
 func (m *uiTimeFilterMock) SetIgnoreFromFile(ignoreFile string) error         { return nil }
 func (m *uiTimeFilterMock) SetIgnoreHidden(value bool)                        {}
+func (m *uiTimeFilterMock) SetIgnoreOtherFilesystems(value bool)              {}
 func (m *uiTimeFilterMock) SetIncludeTypes(types []string)                    {}
 func (m *uiTimeFilterMock) SetFollowSymlinks(value bool)                      {}
 func (m *uiTimeFilterMock) SetShowAnnexedSize(value bool)                     {}
