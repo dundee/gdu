@@ -183,16 +183,45 @@ func makeClone(t *testing.T, dir string, size int) (src, dst string) {
 	return src, dst
 }
 
+// fiemapFlagSync is FIEMAP_FLAG_SYNC: write the file back before mapping it.
+const fiemapFlagSync = 0x00000001
+
+// requireSharedExtents skips the test unless FIEMAP flags the extents of the
+// cloned file as shared, which is not the case on every filesystem that
+// accepts FICLONE.
+func requireSharedExtents(t *testing.T, path string) {
+	t.Helper()
+	_, shared, err := extentBytes(path)
+	if errors.Is(err, syscall.EOPNOTSUPP) || errors.Is(err, syscall.ENOTTY) {
+		t.Skipf("FIEMAP is not supported on this filesystem: %v", err)
+	}
+	require.NoError(t, err)
+	if shared == 0 {
+		t.Skip("filesystem does not report shared extents")
+	}
+}
+
+// syncFiemap makes every FIEMAP call write back the file first. fsync on the
+// writing descriptor is not enough on an overlayfs mounted with fsync=volatile,
+// as container engines do by default: the overlay then skips the flush, the
+// copy-on-write data stays delayed on the underlying inode and FIEMAP keeps
+// reporting the old shared extent.
+func syncFiemap(t *testing.T) {
+	t.Helper()
+	orig := fiemapIoctl
+	fiemapIoctl = func(fd int, req *fiemapRequest) syscall.Errno {
+		req.flags |= fiemapFlagSync
+		return orig(fd, req)
+	}
+	t.Cleanup(func() { fiemapIoctl = orig })
+}
+
 func TestExclusiveBytesReflink(t *testing.T) {
 	dir := exclusiveTestDir(t)
 	const size = 1 << 20
 	src, dst := makeClone(t, dir, size)
-
-	// Skip, rather than fail, where the filesystem clones but FIEMAP does
-	// not flag the shared extents.
-	if measure(t, src) != 0 {
-		t.Skip("filesystem does not report shared extents")
-	}
+	syncFiemap(t)
+	requireSharedExtents(t, src)
 
 	assert.Equal(t, int64(0), measure(t, src))
 	assert.Equal(t, int64(0), measure(t, dst))
@@ -223,9 +252,8 @@ func TestExtentBytesSplitsSharedFromExclusive(t *testing.T) {
 	dir := exclusiveTestDir(t)
 	const size = 1 << 19
 	src, dst := makeClone(t, dir, size)
-	if measure(t, src) != 0 {
-		t.Skip("filesystem does not report shared extents")
-	}
+	syncFiemap(t)
+	requireSharedExtents(t, src)
 
 	excl, shared, err := extentBytes(dst)
 	require.NoError(t, err)
@@ -403,4 +431,139 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 			assert.Equal(t, int64(0), exclusive, "everything is shared")
 		})
 	}
+}
+
+// fakeFiemap replaces the FIEMAP ioctl with the given replies, one per call,
+// and returns a pointer to the number of calls made.
+func fakeFiemap(t *testing.T, replies ...func(req *fiemapRequest) syscall.Errno) *int {
+	t.Helper()
+	orig := fiemapIoctl
+	t.Cleanup(func() { fiemapIoctl = orig })
+	calls := 0
+	fiemapIoctl = func(_ int, req *fiemapRequest) syscall.Errno {
+		reply := replies[min(calls, len(replies)-1)]
+		calls++
+		return reply(req)
+	}
+	return &calls
+}
+
+func mapExtents(extents ...fiemapExtent) func(req *fiemapRequest) syscall.Errno {
+	return func(req *fiemapRequest) syscall.Errno {
+		req.mappedCount = uint32(copy(req.extents[:], extents))
+		return 0
+	}
+}
+
+func TestExtentBytesRetriesInterruptedIoctl(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, []byte("x"))
+	calls := fakeFiemap(t,
+		func(*fiemapRequest) syscall.Errno { return syscall.EINTR },
+		mapExtents(fiemapExtent{length: 4096, flags: fiemapExtentLast}),
+	)
+
+	excl, shared, err := extentBytes(path)
+	require.NoError(t, err)
+	assert.Equal(t, int64(4096), excl)
+	assert.Equal(t, int64(0), shared)
+	assert.Equal(t, 2, *calls)
+}
+
+func TestExtentBytesReturnsIoctlError(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, []byte("x"))
+	fakeFiemap(t, func(*fiemapRequest) syscall.Errno { return syscall.EIO })
+
+	_, _, err := extentBytes(path)
+	assert.ErrorIs(t, err, syscall.EIO)
+}
+
+func TestExtentBytesRejectsOverfullReply(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, []byte("x"))
+	fakeFiemap(t, func(req *fiemapRequest) syscall.Errno {
+		req.mappedCount = req.extentCount + 1
+		return 0
+	})
+
+	_, _, err := extentBytes(path)
+	assert.ErrorIs(t, err, errFiemapNotSupported)
+}
+
+func TestExtentBytesStopsWithoutForwardProgress(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, []byte("x"))
+
+	// the extent ends where the request started, and the kernel never says LAST
+	fakeFiemap(t, mapExtents(fiemapExtent{logical: 0, length: 0}))
+	_, _, err := extentBytes(path)
+	assert.ErrorIs(t, err, errFiemapNotSupported)
+
+	// logical + length wraps around
+	fakeFiemap(t, mapExtents(fiemapExtent{logical: ^uint64(0) - 1, length: 8}))
+	_, _, err = extentBytes(path)
+	assert.ErrorIs(t, err, errFiemapNotSupported)
+}
+
+func TestExtentBytesPagesAndSplitsSharedWithFakeKernel(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, []byte("x"))
+	calls := fakeFiemap(t,
+		mapExtents(fiemapExtent{logical: 0, length: 4096}),
+		mapExtents(
+			fiemapExtent{logical: 4096, length: 8192, flags: fiemapExtentShared},
+			fiemapExtent{logical: 12288, length: 4096, flags: fiemapExtentLast},
+		),
+	)
+
+	excl, shared, err := extentBytes(path)
+	require.NoError(t, err)
+	assert.Equal(t, int64(8192), excl)
+	assert.Equal(t, int64(8192), shared)
+	assert.Equal(t, 2, *calls)
+
+	fakeFiemap(t, mapExtents())
+	excl, shared, err = extentBytes(path)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), excl+shared, "no extents is an empty map")
+}
+
+func TestExclusiveUsageFallsBackOnIoctlError(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, make([]byte, 8192))
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	fakeFiemap(t, func(*fiemapRequest) syscall.Errno { return syscall.EOPNOTSUPP })
+
+	excl, shared, ok := exclusiveAndSharedUsage(path, info, 8192)
+	assert.False(t, ok)
+	assert.Equal(t, int64(8192), excl)
+	assert.Equal(t, int64(0), shared)
+}
+
+func TestAnalyzerUsageHelpersWithFakeKernel(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, make([]byte, 8192))
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	fakeFiemap(t, mapExtents(
+		fiemapExtent{length: 4096},
+		fiemapExtent{logical: 4096, length: 12288, flags: fiemapExtentShared | fiemapExtentLast},
+	))
+
+	off := &BaseAnalyzer{}
+	assert.Equal(t, int64(8192), off.usageOf(path, info, 8192), "disabled keeps st_blocks")
+	file := &File{Usage: 8192}
+	off.setFileUsage(file, path, info)
+	assert.Equal(t, int64(8192), file.Usage)
+	assert.Equal(t, int64(0), file.SharedUsage)
+
+	on := &BaseAnalyzer{}
+	on.SetExclusiveSize(true)
+	assert.Equal(t, int64(4096), on.usageOf(path, info, 8192))
+	file = &File{Usage: 8192}
+	on.setFileUsage(file, path, info)
+	assert.Equal(t, int64(4096), file.Usage)
+	assert.Equal(t, int64(12288), file.SharedUsage)
 }

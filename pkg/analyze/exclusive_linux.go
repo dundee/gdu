@@ -48,6 +48,13 @@ type fiemapRequest struct {
 // same top two bits.
 const ioctlFiemap = 0xC020660B
 
+// fiemapIoctl issues FS_IOC_FIEMAP. It is a variable so that tests can feed
+// extent maps the kernel would not hand out on demand.
+var fiemapIoctl = func(fd int, req *fiemapRequest) syscall.Errno {
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), ioctlFiemap, uintptr(unsafe.Pointer(req)))
+	return errno
+}
+
 var fiemapPool = sync.Pool{New: func() any { return new(fiemapRequest) }}
 
 // errFiemapNotSupported is returned when exclusive bytes cannot be measured
@@ -102,7 +109,7 @@ func extentBytesPaged(path string, perRequest uint32) (exclusive, shared int64, 
 		req.length = fiemapMaxOffset - start
 		req.extentCount = perRequest
 
-		_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), ioctlFiemap, uintptr(unsafe.Pointer(req)))
+		errno := fiemapIoctl(fd, req)
 		if errno != 0 {
 			if errno == syscall.EINTR {
 				continue
