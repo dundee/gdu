@@ -182,7 +182,7 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			if file != nil {
 				// Only set platform-specific attributes for regular files
 				if regularFile, ok := file.(*File); ok {
-					setPlatformSpecificAttrs(regularFile, info)
+					setPlatformSpecificAttrs(regularFile, info, entryPath)
 				}
 				totalUsage += file.GetUsage()
 				dir.AddFile(file)

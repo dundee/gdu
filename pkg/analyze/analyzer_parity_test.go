@@ -67,7 +67,7 @@ func usageOf(t *testing.T, path string) int64 {
 	t.Helper()
 	info, err := os.Lstat(path)
 	assert.NoError(t, err)
-	usage, _ := getPlatformSpecificUsageAndMli(info)
+	usage, _ := getPlatformSpecificUsageAndMli(info, path)
 	return usage
 }
 

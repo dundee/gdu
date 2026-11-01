@@ -44,7 +44,7 @@ func TestStoredAnalyzer(t *testing.T) {
 	// disk usage depends on the filesystem block size, take it from stat
 	info, err := os.Lstat("test_dir/nested/file2")
 	assert.NoError(t, err)
-	wantUsage, _ := getPlatformSpecificUsageAndMli(info)
+	wantUsage, _ := getPlatformSpecificUsageAndMli(info, "test_dir/nested/file2")
 
 	a := CreateStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(

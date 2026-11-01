@@ -3,12 +3,19 @@
 package analyze
 
 import (
+	"bytes"
 	"os"
+	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 
+	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 type mockWinFileInfo struct {
@@ -47,7 +54,7 @@ func TestSetPlatformSpecificAttrsRegularFile(t *testing.T) {
 		Size: 1024,
 	}
 
-	setPlatformSpecificAttrs(file, info)
+	setPlatformSpecificAttrs(file, info, file.Name)
 
 	assert.Equal(t, int64(1024), file.Size)
 	assert.Equal(t, int64(1024), file.Usage)
@@ -67,7 +74,7 @@ func TestSetPlatformSpecificAttrsRecallOnOpen(t *testing.T) {
 		Size: 2048,
 	}
 
-	setPlatformSpecificAttrs(file, info)
+	setPlatformSpecificAttrs(file, info, file.Name)
 
 	assert.Equal(t, int64(2048), file.Size)
 	assert.Equal(t, int64(0), file.Usage)
@@ -87,7 +94,7 @@ func TestSetPlatformSpecificAttrsRecallOnDataAccess(t *testing.T) {
 		Size: 4096,
 	}
 
-	setPlatformSpecificAttrs(file, info)
+	setPlatformSpecificAttrs(file, info, file.Name)
 
 	assert.Equal(t, int64(4096), file.Size)
 	assert.Equal(t, int64(0), file.Usage)
@@ -107,7 +114,7 @@ func TestSetPlatformSpecificAttrsBothRecallAttributes(t *testing.T) {
 		Size: 8192,
 	}
 
-	setPlatformSpecificAttrs(file, info)
+	setPlatformSpecificAttrs(file, info, file.Name)
 
 	assert.Equal(t, int64(8192), file.Size)
 	assert.Equal(t, int64(0), file.Usage)
@@ -125,7 +132,7 @@ func TestSetPlatformSpecificAttrsNonWinSys(t *testing.T) {
 		Size: 512,
 	}
 
-	setPlatformSpecificAttrs(file, info)
+	setPlatformSpecificAttrs(file, info, file.Name)
 
 	assert.Equal(t, int64(512), file.Size)
 	assert.Equal(t, int64(512), file.Usage)
@@ -155,7 +162,7 @@ func TestGetPlatformSpecificUsageAndMli(t *testing.T) {
 			FileAttributes: 0,
 		},
 	}
-	usage, ino := getPlatformSpecificUsageAndMli(regularInfo)
+	usage, ino := getPlatformSpecificUsageAndMli(regularInfo, regularInfo.name)
 	assert.Equal(t, int64(3000), usage)
 	assert.Equal(t, uint64(0), ino)
 
@@ -166,7 +173,31 @@ func TestGetPlatformSpecificUsageAndMli(t *testing.T) {
 			FileAttributes: fileAttributeRecallOnDataAccess,
 		},
 	}
-	usage, ino = getPlatformSpecificUsageAndMli(cloudInfo)
+	usage, ino = getPlatformSpecificUsageAndMli(cloudInfo, cloudInfo.name)
+	assert.Equal(t, int64(0), usage)
+	assert.Equal(t, uint64(0), ino)
+
+	compressedInfo := mockWinFileInfo{
+		name: "file.bin",
+		size: 3000,
+		sys: &syscall.Win32FileAttributeData{
+			FileAttributes: windows.FILE_ATTRIBUTE_COMPRESSED,
+		},
+	}
+	usage, ino = getPlatformSpecificUsageAndMli(compressedInfo, filepath.Join(t.TempDir(), "missing.bin"))
+	assert.Equal(t, int64(3000), usage)
+	assert.Equal(t, uint64(0), ino)
+
+	target := filepath.Join(t.TempDir(), "target.bin")
+	require.NoError(t, os.WriteFile(target, make([]byte, 3000), 0o600))
+	symlinkInfo := mockWinFileInfo{
+		name: "link.bin",
+		mode: os.ModeSymlink,
+		sys: &syscall.Win32FileAttributeData{
+			FileAttributes: windows.FILE_ATTRIBUTE_COMPRESSED | windows.FILE_ATTRIBUTE_REPARSE_POINT,
+		},
+	}
+	usage, ino = getPlatformSpecificUsageAndMli(symlinkInfo, target)
 	assert.Equal(t, int64(0), usage)
 	assert.Equal(t, uint64(0), ino)
 }
@@ -179,7 +210,7 @@ func TestGetSyscallStats(t *testing.T) {
 			FileAttributes: 0,
 		},
 	}
-	usage, mli := getSyscallStats(regularInfo)
+	usage, mli := getSyscallStats(regularInfo, regularInfo.name)
 	assert.Equal(t, int64(5000), usage)
 	assert.Equal(t, uint64(0), mli)
 
@@ -190,7 +221,81 @@ func TestGetSyscallStats(t *testing.T) {
 			FileAttributes: fileAttributeRecallOnOpen,
 		},
 	}
-	usage, mli = getSyscallStats(cloudInfo)
+	usage, mli = getSyscallStats(cloudInfo, cloudInfo.name)
 	assert.Equal(t, int64(0), usage)
 	assert.Equal(t, uint64(0), mli)
+}
+
+const testFileSize = 4 << 20
+
+// createCompressedAndSparseFiles creates an NTFS compressed file (as "compact /c" does)
+// and a sparse file without data, both testFileSize bytes long
+func createCompressedAndSparseFiles(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	var returned uint32
+
+	compressed, err := os.Create(filepath.Join(root, "compressed"))
+	require.NoError(t, err)
+	defer compressed.Close()
+	_, err = compressed.Write(bytes.Repeat([]byte{'a'}, testFileSize))
+	require.NoError(t, err)
+	format := uint16(1) // COMPRESSION_FORMAT_DEFAULT
+	err = windows.DeviceIoControl(
+		windows.Handle(compressed.Fd()), windows.FSCTL_SET_COMPRESSION,
+		(*byte)(unsafe.Pointer(&format)), uint32(unsafe.Sizeof(format)), nil, 0, &returned, nil,
+	)
+	if err != nil {
+		t.Skipf("file compression is not supported: %v", err)
+	}
+
+	sparse, err := os.Create(filepath.Join(root, "sparse"))
+	require.NoError(t, err)
+	defer sparse.Close()
+	err = windows.DeviceIoControl(windows.Handle(sparse.Fd()), windows.FSCTL_SET_SPARSE, nil, 0, nil, 0, &returned, nil)
+	if err != nil {
+		t.Skipf("sparse files are not supported: %v", err)
+	}
+	require.NoError(t, sparse.Truncate(testFileSize))
+
+	return root
+}
+
+func TestCompressedAndSparseFilesUsage(t *testing.T) {
+	root := createCompressedAndSparseFiles(t)
+
+	for _, name := range []string{"compressed", "sparse"} {
+		path := filepath.Join(root, name)
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+
+		file := CreateFileItem(path, info)
+		assert.Equal(t, name, file.GetName())
+		assert.Equal(t, int64(testFileSize), file.GetSize(), name)
+		assert.Less(t, file.GetUsage(), int64(testFileSize/2), name)
+
+		usage, _ := getSyscallStats(info, path)
+		assert.Equal(t, file.GetUsage(), usage, name)
+	}
+
+	analyzers := append([]parityAnalyzer{{
+		name:     "parallel",
+		analyzer: func(*testing.T) common.Analyzer { return CreateAnalyzer() },
+	}}, parityAnalyzers()...)
+	for _, tc := range analyzers {
+		t.Run(tc.name, func(t *testing.T) {
+			got := scanWith(t, tc.analyzer(t), root)["."]
+			assert.GreaterOrEqual(t, got.size, int64(2*testFileSize))
+			assert.Less(t, got.usage, int64(testFileSize))
+		})
+	}
+
+	t.Run("top dir", func(t *testing.T) {
+		analyzer := CreateTopDirAnalyzer()
+		dir := analyzer.AnalyzeDir(root, func(_, _ string) bool { return false }, func(_ string) bool { return false })
+		analyzer.GetDone().Wait()
+		dir.UpdateStats(make(fs.HardLinkedItems))
+		assert.GreaterOrEqual(t, dir.GetSize(), int64(2*testFileSize))
+		assert.Less(t, dir.GetUsage(), int64(testFileSize))
+	})
 }
