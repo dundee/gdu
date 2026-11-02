@@ -38,14 +38,11 @@ func (d *TopDir) SetFlag(flag rune) {
 }
 
 type SimpleFile struct {
-	Name    string
-	Symlink string
-	Flag    rune
-	Size    int64
-	Usage   int64
-	// OwnUsage mirrors File.OwnUsage: a directory's own blocks, kept so the
-	// top-dir analyzer reports the same usage as every other analyzer.
-	OwnUsage  int64
+	Name      string
+	Symlink   string
+	Flag      rune
+	Size      int64
+	Usage     int64
 	ItemCount int64
 	IsDir     bool
 }
@@ -54,6 +51,9 @@ type SimpleDir struct {
 	SimpleFile
 	Files    []SimpleFile
 	BasePath string
+	// OwnUsage is the disk usage of the blocks allocated to the directory
+	// itself, excluding its entries.
+	OwnUsage int64
 }
 
 func (d *SimpleDir) GetName() string {

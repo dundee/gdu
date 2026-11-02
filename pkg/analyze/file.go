@@ -26,13 +26,8 @@ type File struct {
 	Symlink string
 	Size    int64
 	Usage   int64
-	// OwnUsage is the disk usage of this directory's own blocks, from
-	// st_blocks*512. It is 0 for regular files, whose Usage is already the
-	// value itself. Kept separately so recomputing a directory's stats does
-	// not lose the blocks the filesystem allocated to the directory.
-	OwnUsage int64
-	Mli      uint64
-	Flag     rune
+	Mli     uint64
+	Flag    rune
 }
 
 // GetName returns name of dir
@@ -270,9 +265,12 @@ func aggregateDirEntries(
 // Dir struct
 type Dir struct {
 	*File
-	BasePath      string
-	Files         fs.Files
-	ItemCount     int64
+	BasePath  string
+	Files     fs.Files
+	ItemCount int64
+	// OwnUsage is the disk usage of the blocks allocated to the directory
+	// itself, excluding its entries.
+	OwnUsage      int64
 	statsFromJSON bool
 	m             sync.RWMutex
 }
@@ -351,7 +349,7 @@ func reparentSnapshotChildren(dir *Dir, parent fs.Item) {
 }
 
 func snapshotFile(source, parent fs.Item) *File {
-	f := &File{
+	return &File{
 		Mtime:  source.GetMtime(),
 		Parent: parent,
 		Name:   source.GetName(),
@@ -360,10 +358,6 @@ func snapshotFile(source, parent fs.Item) *File {
 		Mli:    source.GetMultiLinkedInode(),
 		Flag:   source.GetFlag(),
 	}
-	if d, ok := source.(*Dir); ok {
-		f.OwnUsage = d.OwnUsage
-	}
-	return f
 }
 
 // AddFile add item to files
