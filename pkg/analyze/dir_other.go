@@ -34,12 +34,16 @@ func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 		return
 	}
 	dir.Mtime = stat.ModTime()
-	dir.OwnUsage = dirOwnUsage(path)
 }
 
 // dirOwnUsage returns 0: these platforms expose no block allocation for a
 // directory, so gdu charges it nothing rather than guessing a block.
-func dirOwnUsage(path string) int64 {
+func dirOwnUsage(string) int64 {
+	return 0
+}
+
+// dirInfoOwnUsage is dirOwnUsage for a directory that has already been stat'ed.
+func dirInfoOwnUsage(os.FileInfo) int64 {
 	return 0
 }
 
