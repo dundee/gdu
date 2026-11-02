@@ -41,6 +41,9 @@ jobs:
       uses: actions/checkout@v7
     - name: Run tests
       run: go test -v -covermode=count ./...
+      env:
+        # lets the darwin-only test move a file into the runner's real Trash
+        GDU_TEST_SYSTEM_TRASH: "1"
 
   coverage:
     runs-on: ubuntu-latest

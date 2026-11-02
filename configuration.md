@@ -183,7 +183,7 @@ Delete items in parallel, which might increase the speed of deletion
 
 #### `trash-command`
 
-Command used by the `D` key to move items to trash, replacing the built-in [FreeDesktop trash](https://specifications.freedesktop.org/trash-spec/latest/) implementation. Useful to trash into a non-default location, or to use a trash tool on systems where the built-in trash is not available (macOS).
+Command used by the `D` key to move items to trash, replacing the built-in [FreeDesktop trash](https://specifications.freedesktop.org/trash-spec/latest/) implementation. Useful to trash into a non-default location, or to use a different trash tool. On macOS the built-in trash runs the system `/usr/bin/trash` (macOS 15 and later), which moves items into the Finder trash; on older releases set this option to a trash CLI instead.
 
 The command is evaluated by `/bin/sh` with the absolute path of the item appended as an argument, so shell syntax such as variable expansion works:
 
