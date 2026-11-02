@@ -385,7 +385,7 @@ func (f *Dir) SetStatsFromJSON() {
 // real content always exports with ItemCount >= 2, so it can never be mistaken
 // for a placeholder and its stats are always preserved.
 func (f *Dir) HasEmptyDirPlaceholderStats() bool {
-	return f.Size == EmptyDirSize && f.OwnUsage == 0 && f.Usage == 0 && f.ItemCount == 1
+	return f.Size == EmptyDirSize && f.Usage == f.OwnUsage && f.ItemCount == 1
 }
 
 // GetFiles returns all files in directory as a sorted iterator

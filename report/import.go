@@ -93,9 +93,24 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 			dir.AddFile(subdir)
 		}
 	}
+	if hasUsage {
+		dir.OwnUsage = exportedOwnUsage(dir)
+	}
 	preserveTruncatedStats(dir, hasSize, hasUsage, hasItemCount)
 
 	return dir, nil
+}
+
+// exportedOwnUsage recovers the disk usage of the directory itself, which the
+// export folds into the directory's total. A hard-linked file counted elsewhere
+// in the tree can make the entries add up to more than the total, so the
+// result is clamped at zero rather than going negative.
+func exportedOwnUsage(dir *analyze.Dir) int64 {
+	own := dir.Usage
+	for _, item := range dir.Files {
+		own -= item.GetUsage()
+	}
+	return max(own, 0)
 }
 
 func parseDirectoryMetadata(item any) (
