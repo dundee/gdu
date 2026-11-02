@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/dgraph-io/badger/v4 v4.9.6
-	github.com/ebitengine/purego v0.10.2
+	github.com/ebitengine/purego v0.11.2
 	github.com/fatih/color v1.19.0
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/go-git/go-git/v5 v5.19.3
