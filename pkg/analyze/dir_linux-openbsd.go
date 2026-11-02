@@ -39,6 +39,26 @@ func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 	}
 
 	dir.Mtime = time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec))
+	dir.OwnUsage = stat.Blocks * devBSize
+}
+
+// dirOwnUsage returns the disk usage of the blocks allocated to the directory
+// itself. It is 0 when the filesystem stores the entries in the inode, e.g. a
+// small directory on XFS.
+func dirOwnUsage(path string) int64 {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(path, &stat); err != nil {
+		return 0
+	}
+	return stat.Blocks * devBSize
+}
+
+// dirInfoOwnUsage is dirOwnUsage for a directory that has already been stat'ed.
+func dirInfoOwnUsage(info os.FileInfo) int64 {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		return stat.Blocks * devBSize
+	}
+	return 0
 }
 
 // getSyscallStats extracts usage and inode info from os.FileInfo using syscall

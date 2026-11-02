@@ -63,6 +63,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		},
 		Files: make([]SimpleFile, 0, len(files)),
 	}
+	dir.OwnUsage = dirOwnUsage(path)
 
 	var topDirs []*TopDir
 
@@ -170,11 +171,17 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 		info       os.FileInfo
 	)
 
+	if a.IsCancelled() {
+		return
+	}
+
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
 		topDir.SetFlag('.')
 	}
+
+	totalUsage += dirOwnUsage(path)
 
 	for _, f := range files {
 		if a.IsCancelled() {
@@ -247,7 +254,6 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 
 	if len(files) == 0 {
 		totalSize = EmptyDirSize
-		totalUsage = 0
 	}
 
 	a.progressItemCount.Add(totalCount)

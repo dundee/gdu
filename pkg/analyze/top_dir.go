@@ -51,6 +51,9 @@ type SimpleDir struct {
 	SimpleFile
 	Files    []SimpleFile
 	BasePath string
+	// OwnUsage is the disk usage of the blocks allocated to the directory
+	// itself, excluding its entries.
+	OwnUsage int64
 }
 
 func (d *SimpleDir) GetName() string {
@@ -112,11 +115,11 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 	if len(d.Files) == 0 {
 		d.ItemCount = 0
 		d.Size = EmptyDirSize
-		d.Usage = 0
+		d.Usage = d.OwnUsage
 	} else {
 		d.ItemCount = itemCount + 1
 		d.Size = totalSize
-		d.Usage = totalUsage
+		d.Usage = totalUsage + d.OwnUsage
 	}
 }
 func (d *SimpleDir) AddFile(fs.Item) { panic("not implemented") }

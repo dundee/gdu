@@ -86,6 +86,32 @@ func TestReadAnalysisRecomputesEmptyDirStats(t *testing.T) {
 	assert.Equal(t, int64(1), dir.GetItemCount())
 }
 
+// A directory's exported dsize includes the blocks of the directory itself,
+// which must survive recomputing the stats after import.
+func TestReadAnalysisKeepsDirOwnUsage(t *testing.T) {
+	input := bytes.NewBufferString(`
+		[1,2,{"progname":"gdu","progver":"development","timestamp":0},
+		[{"name":"/root","asize":1536,"dsize":20480,"items":5},
+		{"name":"a","asize":1,"dsize":4096},
+		[{"name":"sub","asize":1,"dsize":8192,"items":2},
+		{"name":"b","asize":1,"dsize":4096}],
+		[{"name":"empty","asize":512,"dsize":4096,"items":1}]]]
+	`)
+
+	dir, err := ReadAnalysis(input)
+	assert.NoError(t, err)
+	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+
+	assert.Equal(t, int64(20480), dir.GetUsage())
+	assert.Equal(t, int64(5), dir.GetItemCount())
+	sub := dir.Files[1].(*analyze.Dir)
+	assert.Equal(t, int64(8192), sub.GetUsage())
+	empty := dir.Files[2].(*analyze.Dir)
+	assert.Equal(t, int64(4096), empty.GetUsage())
+	assert.Equal(t, int64(512), empty.GetSize())
+	assert.Equal(t, int64(1), empty.GetItemCount())
+}
+
 // A depth-truncated directory that held real content exports with items >= 2,
 // so even when its apparent size coincides with the empty-dir placeholder its
 // stats must be preserved (not recomputed to zero). This pins the items == 1
