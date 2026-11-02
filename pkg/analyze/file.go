@@ -290,6 +290,7 @@ func snapshotDir(source *Dir, parent fs.Item) *Dir {
 		BasePath:  source.BasePath,
 		Files:     make(fs.Files, 0, len(source.Files)),
 		ItemCount: source.ItemCount,
+		OwnUsage:  source.OwnUsage,
 	}
 	children := append(fs.Files(nil), source.Files...)
 	source.m.RUnlock()

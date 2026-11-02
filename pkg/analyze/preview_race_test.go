@@ -102,6 +102,30 @@ func TestCurrentDirSnapshotCannotOverwriteLiveStats(t *testing.T) {
 	assert.Empty(t, itemNames(snapshot))
 }
 
+func TestCurrentDirSnapshotKeepsDirOwnUsage(t *testing.T) {
+	live := &Dir{
+		File:      &File{Name: "root"},
+		Files:     make(fs.Files, 0, 1),
+		ItemCount: 1,
+		OwnUsage:  4096,
+	}
+	sub := &Dir{
+		File:      &File{Name: "sub", Parent: live},
+		Files:     make(fs.Files, 0, 1),
+		ItemCount: 1,
+		OwnUsage:  4096,
+	}
+	sub.AddFile(&File{Name: "f", Size: 1, Usage: 4096, Parent: sub})
+	live.AddFile(sub)
+
+	analyzer := CreateAnalyzer()
+	analyzer.setCurrentDir(live)
+	snapshot := analyzer.GetCurrentDir()
+	snapshot.UpdateStats(make(fs.HardLinkedItems))
+
+	assert.Equal(t, int64(3*4096), snapshot.GetUsage())
+}
+
 func TestCurrentDirSnapshotPreservesArchiveItems(t *testing.T) {
 	live := &Dir{
 		File:     &File{Name: "root"},
