@@ -284,6 +284,29 @@ func TestUpdateStatsWithFileFiltering(t *testing.T) {
 	assert.Equal(t, 43, dir.GetMtime().Minute())
 }
 
+func TestDirOwnUsageIsCounted(t *testing.T) {
+	newTree := func() *Dir {
+		root := &Dir{File: &File{Name: "root"}, ItemCount: 1, OwnUsage: 4096}
+		sub := &Dir{File: &File{Name: "sub", Parent: root}, ItemCount: 1, OwnUsage: 4096}
+		leaf := &Dir{File: &File{Name: "leaf", Parent: sub}, ItemCount: 1}
+		sub.Files = fs.Files{leaf}
+		root.Files = fs.Files{sub}
+		return root
+	}
+
+	root := newTree()
+	root.UpdateStats(make(fs.HardLinkedItems))
+	assert.Equal(t, int64(2*4096), root.GetUsage())
+	assert.Equal(t, int64(3), root.GetItemCount())
+
+	// Filtering collapses a tree of empty dirs to one item, but the blocks the
+	// directories occupy are still counted.
+	root = newTree()
+	root.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
+	assert.Equal(t, int64(2*4096), root.GetUsage())
+	assert.Equal(t, int64(1), root.GetItemCount())
+}
+
 func TestGetMultiLinkedInode(t *testing.T) {
 	file := &File{
 		Name: "xxx",

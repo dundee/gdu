@@ -177,10 +177,8 @@ func (f *File) RemoveFileByName(name string) {
 // counted children. It is a fixed sentinel (not the real filesystem block
 // size) written by updateStats, SimpleDir.UpdateStats and the parallel top-dir
 // analyzer, and recognised again on import. Keep every producer and consumer
-// of this value referencing this constant so they can never drift apart.
-//
-// This is an apparent size only. A directory's disk usage always comes from
-// its own st_blocks (see dirTotals.ownUsage), never from this constant.
+// of this value referencing this constant so they can never drift apart. It is
+// an apparent size only; it never affects disk usage.
 const EmptyDirSize int64 = 512
 
 // dirTotals is the aggregate of a directory's counted children, before gdu's
@@ -188,12 +186,9 @@ const EmptyDirSize int64 = 512
 //
 // itemCount includes the directory itself, so it starts at 1. entries is the
 // number of children that were counted, and hasFiles records whether any of
-// them was not itself a directory.
-//
-// ownUsage is the directory's own allocated disk usage, from its st_blocks.
-// Directories are not always charged for a block: on XFS a small directory is
-// stored inline in the inode and st_blocks is 0, which is what du reports for
-// it. The value must therefore be read from the filesystem, never assumed.
+// them was not itself a directory. ownUsage is the disk usage of the directory
+// itself (see Dir.OwnUsage), which is read from the filesystem, never assumed:
+// a small directory on XFS, for example, occupies no block of its own.
 type dirTotals struct {
 	size      int64
 	usage     int64
@@ -208,10 +203,9 @@ type dirTotals struct {
 //
 // A directory that counted no children — or, when file filtering is active,
 // one whose entries are all themselves empty directories — reports EmptyDirSize
-// as its apparent size. Either way its disk usage is exactly the usage of the
-// blocks the filesystem actually allocated to it (totals.ownUsage), so a tree
-// containing nothing but empty directories costs only what those directories
-// really occupy, matching du.
+// as its apparent size and collapses to a single item. Its disk usage is never
+// collapsed: every directory is charged the blocks it really occupies, as du
+// does, so a tree of empty directories costs what those directories allocate.
 //
 // This is the single definition of that rule. Every analyzer must route through
 // it, otherwise the numbers gdu reports depend on which analyzer produced them.
@@ -219,10 +213,11 @@ func resolveDirStats(totals dirTotals, filteringFiles bool) (itemCount, size, us
 	onlyEmptyDirs := !totals.hasFiles && filteringFiles &&
 		totals.itemCount == int64(totals.entries+1)
 
+	usage = totals.usage + totals.ownUsage
 	if totals.entries == 0 || onlyEmptyDirs {
-		return 1, totals.size + EmptyDirSize, totals.ownUsage
+		return 1, totals.size + EmptyDirSize, usage
 	}
-	return totals.itemCount, totals.size, totals.usage + totals.ownUsage
+	return totals.itemCount, totals.size, usage
 }
 
 // aggregateDirEntries folds the stats of entries into the totals their parent
