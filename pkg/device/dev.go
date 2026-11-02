@@ -49,29 +49,39 @@ func (f ByName) Less(i, j int) bool {
 }
 
 // GetNestedMountpointsPaths returns nested mount points on other or unknown filesystems.
+// Mount points are real paths, so they are matched against path with symlinks resolved,
+// and returned under path, where the scan finds them
+// (e.g. /Volumes/Macintosh HD/dev when scanning /Volumes/Macintosh HD -> /).
 func GetNestedMountpointsPaths(path string, mounts Devices) []string {
+	realPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		realPath = path
+	}
 	paths := make([]string, 0, len(mounts))
-	filesystemID, known := getFilesystemID(path)
+	filesystemID, known := getFilesystemID(realPath)
 
 	for _, mount := range mounts {
-		mountPoint := mount.MountPoint
-		if !isNestedPath(path, mountPoint) {
-			alias, ok := getMountPointAlias(mountPoint)
-			if !ok || !isNestedPath(path, alias) {
+		relative, nested := nestedPath(realPath, mount.MountPoint)
+		if !nested {
+			alias, ok := getMountPointAlias(mount.MountPoint)
+			if !ok {
 				continue
 			}
-			mountPoint = alias
+			if relative, nested = nestedPath(realPath, alias); !nested {
+				continue
+			}
 		}
 		if known && mount.FilesystemID != nil && filesystemID == *mount.FilesystemID {
 			continue
 		}
-		paths = append(paths, mountPoint)
+		paths = append(paths, filepath.Join(path, relative))
 	}
 	return paths
 }
 
-func isNestedPath(basePath, path string) bool {
+// nestedPath returns path relative to basePath, and whether path is nested inside basePath.
+func nestedPath(basePath, path string) (string, bool) {
 	relative, err := filepath.Rel(basePath, path)
-	return err == nil && relative != "." && relative != ".." &&
+	return relative, err == nil && relative != "." && relative != ".." &&
 		!strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }

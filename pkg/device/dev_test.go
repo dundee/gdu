@@ -1,6 +1,8 @@
 package device
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 
@@ -81,4 +83,21 @@ func TestNestedMountpointPathBoundary(t *testing.T) {
 	}
 
 	assert.Equal(t, []string{"/scan/child"}, GetNestedMountpointsPaths("/scan", mounts))
+}
+
+func TestNestedMountpointsThroughSymlink(t *testing.T) {
+	// Mount points are real paths, and on macOS the temp dir is under a symlink (/var).
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	assert.Nil(t, err)
+	root := filepath.Join(dir, "root")
+	assert.Nil(t, os.Mkdir(root, 0o755))
+	link := filepath.Join(dir, "link")
+	assert.Nil(t, os.Symlink(root, link))
+
+	mounts := Devices{
+		{MountPoint: root},
+		{MountPoint: filepath.Join(root, "mnt")},
+	}
+
+	assert.Equal(t, []string{filepath.Join(link, "mnt")}, GetNestedMountpointsPaths(link, mounts))
 }
