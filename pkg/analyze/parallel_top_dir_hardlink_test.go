@@ -36,8 +36,10 @@ func TestTopDirAnalyzeHardLinks(t *testing.T) {
 			root := t.TempDir()
 			content := []byte("hello")
 			original := filepath.Join(root, tc.paths[0])
+			dirs := map[string]struct{}{root: {}}
 			for _, name := range tc.paths {
 				path := filepath.Join(root, name)
+				dirs[filepath.Dir(path)] = struct{}{}
 				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
 				if path == original || tc.independent {
 					require.NoError(t, os.WriteFile(path, content, 0o600))
@@ -53,6 +55,12 @@ func TestTopDirAnalyzeHardLinks(t *testing.T) {
 				t.Skip("hard-link accounting is not supported on this platform")
 			}
 
+			// Directories occupy blocks of their own on most filesystems.
+			expectedUsage := usage * tc.copies
+			for d := range dirs {
+				expectedUsage += dirOwnUsage(d)
+			}
+
 			analyzer := CreateTopDirAnalyzer()
 			for scan := range 2 {
 				if scan > 0 {
@@ -66,7 +74,7 @@ func TestTopDirAnalyzeHardLinks(t *testing.T) {
 				dir.UpdateStats(make(fs.HardLinkedItems))
 
 				assert.Equal(t, int64(len(content))*tc.copies, dir.GetSize(), "scan %d apparent size", scan)
-				assert.Equal(t, usage*tc.copies, dir.GetUsage(), "scan %d disk usage", scan)
+				assert.Equal(t, expectedUsage, dir.GetUsage(), "scan %d disk usage", scan)
 
 				// Every root-level file still shows its own size, even when its
 				// storage has already been counted in the directory total.
