@@ -58,7 +58,7 @@ func GetNestedMountpointsPaths(path string, mounts Devices) []string {
 		realPath = path
 	}
 	paths := make([]string, 0, len(mounts))
-	filesystemID, known := getFilesystemID(realPath)
+	filesystemID, known := GetFilesystemID(realPath)
 
 	for _, mount := range mounts {
 		relative, nested := nestedPath(realPath, mount.MountPoint)

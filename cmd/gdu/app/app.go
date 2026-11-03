@@ -46,6 +46,7 @@ type UI interface {
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error
 	SetIgnoreHidden(value bool)
+	SetIgnoreOtherFilesystems(value bool)
 	SetIncludeTypes(types []string)
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
@@ -352,6 +353,9 @@ func (a *App) Run() error {
 
 	if a.Flags.NoHidden {
 		ui.SetIgnoreHidden(true)
+	}
+	if a.Flags.NoCross {
+		ui.SetIgnoreOtherFilesystems(true)
 	}
 
 	a.setMaxProcs()

@@ -147,14 +147,6 @@ func unescapeString(str string) string {
 	return strings.ReplaceAll(str, "\\040", " ")
 }
 
-func getFilesystemID(path string) (uint64, bool) {
-	var stat unix.Stat_t
-	if err := unix.Stat(path, &stat); err != nil {
-		return 0, false
-	}
-	return uint64(stat.Dev), true
-}
-
 func parseFilesystemID(value string) *uint64 {
 	majorText, minorText, found := strings.Cut(value, ":")
 	if !found {
