@@ -38,6 +38,15 @@ func (d *TopDir) SetFlag(flag rune) {
 	d.m.Unlock()
 }
 
+// UpdateMtime keeps the newest mtime seen in the directory tree, like Dir does.
+func (d *TopDir) UpdateMtime(mtime time.Time) {
+	d.m.Lock()
+	if mtime.After(d.Mtime) {
+		d.Mtime = mtime
+	}
+	d.m.Unlock()
+}
+
 type SimpleFile struct {
 	Name      string
 	Mtime     time.Time

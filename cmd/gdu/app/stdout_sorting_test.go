@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,41 +68,60 @@ func TestNonInteractiveConfiguredSorting(t *testing.T) {
 
 func TestNonInteractiveConfiguredDirectorySorting(t *testing.T) {
 	dir := t.TempDir()
-	for index, entry := range []struct {
-		name  string
-		count int
-	}{{"alpha", 3}, {"bravo", 1}, {"charlie", 2}} {
-		path := filepath.Join(dir, entry.name)
-		require.NoError(t, os.Mkdir(path, 0o700))
-		for i := 0; i < entry.count; i++ {
-			require.NoError(t, os.WriteFile(filepath.Join(path, string(rune('a'+i))), []byte("x"), 0o600))
-		}
-		modified := time.Unix(int64(300-index*100), 0)
+	// A directory's mtime is the newest mtime in its tree, so the order of the
+	// directories' own mtimes (alpha, bravo, charlie) must not decide the result.
+	// bravo holds the newest file one level down to cover nested directories.
+	for _, entry := range []struct {
+		path  string
+		mtime int64
+	}{
+		{"alpha/a", 1000}, {"alpha/b", 1000}, {"alpha/c", 1000},
+		{"bravo/sub/a", 3000},
+		{"charlie/a", 2000}, {"charlie/b", 2000}, {"charlie/c", 2000}, {"charlie/d", 2000},
+	} {
+		path := filepath.Join(dir, filepath.FromSlash(entry.path))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+		require.NoError(t, os.WriteFile(path, []byte("x"), 0o600))
+		modified := time.Unix(entry.mtime, 0)
 		require.NoError(t, os.Chtimes(path, modified, modified))
 	}
-	for _, tc := range []struct {
-		by, order string
-		want      []string
-	}{
-		{"itemCount", "asc", []string{"bravo", "charlie", "alpha"}},
-		{"itemCount", "desc", []string{"alpha", "charlie", "bravo"}},
-		{"mtime", "asc", []string{"charlie", "bravo", "alpha"}},
-		{"mtime", "desc", []string{"alpha", "bravo", "charlie"}},
-	} {
-		t.Run(tc.by+"/"+tc.order, func(t *testing.T) {
-			output, err := runApp(&Flags{
-				LogFile: os.DevNull, NonInteractive: true,
-				Sorting: Sorting{By: tc.by, Order: tc.order},
-			}, []string{dir}, false, testdev.DevicesInfoGetterMock{})
-			require.NoError(t, err)
-			var names []string
-			for _, line := range strings.Split(output, "\n") {
-				fields := strings.Fields(line)
-				if len(fields) != 0 {
-					names = append(names, strings.TrimLeft(fields[len(fields)-1], "/"))
+	for _, entry := range []struct {
+		path  string
+		mtime int64
+	}{{"bravo/sub", 500}, {"alpha", 300}, {"bravo", 200}, {"charlie", 100}} {
+		modified := time.Unix(entry.mtime, 0)
+		require.NoError(t, os.Chtimes(filepath.Join(dir, filepath.FromSlash(entry.path)), modified, modified))
+	}
+
+	for _, depth := range []int{0, 1} {
+		for _, tc := range []struct {
+			by, order string
+			want      []string
+		}{
+			{"itemCount", "asc", []string{"bravo", "alpha", "charlie"}},
+			{"itemCount", "desc", []string{"charlie", "alpha", "bravo"}},
+			{"mtime", "asc", []string{"alpha", "charlie", "bravo"}},
+			{"mtime", "desc", []string{"bravo", "charlie", "alpha"}},
+		} {
+			t.Run(fmt.Sprintf("depth %d/%s/%s", depth, tc.by, tc.order), func(t *testing.T) {
+				output, err := runApp(&Flags{
+					LogFile: os.DevNull, NonInteractive: true, Depth: depth,
+					Sorting: Sorting{By: tc.by, Order: tc.order},
+				}, []string{dir}, false, testdev.DevicesInfoGetterMock{})
+				require.NoError(t, err)
+				var names []string
+				for _, line := range strings.Split(output, "\n") {
+					fields := strings.Fields(line)
+					if len(fields) == 0 {
+						continue
+					}
+					name := filepath.Base(fields[len(fields)-1])
+					if name == "alpha" || name == "bravo" || name == "charlie" {
+						names = append(names, name)
+					}
 				}
-			}
-			require.Equal(t, tc.want, names, "output:\n%s", output)
-		})
+				require.Equal(t, tc.want, names, "output:\n%s", output)
+			})
+		}
 	}
 }
