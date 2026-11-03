@@ -365,8 +365,13 @@ func (ui *UI) showDir(dir fs.Item) {
 	}
 }
 
+// printTopFiles ranks by the displayed size metric regardless of the
+// configured sorting, because --top selects the largest files.
 func (ui *UI) printTopFiles(file fs.Item) {
-	sortBy, _ := ui.sortSettings()
+	sortBy := fs.SortBySize
+	if ui.ShowApparentSize {
+		sortBy = fs.SortByApparentSize
+	}
 	collected := analyze.CollectTopFiles(file, ui.top, sortBy)
 	for _, file := range collected {
 		ui.printItemPath(file)
