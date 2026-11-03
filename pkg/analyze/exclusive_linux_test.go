@@ -131,7 +131,7 @@ func TestExclusiveUsageKeepsUsageWhenNotMeasurable(t *testing.T) {
 
 	dirInfo, err := os.Stat(dir)
 	require.NoError(t, err)
-	got, shared := measureExclusiveUsage(dir, dirInfo, 4096)
+	got, shared := new(extentMeter).measure(dir, dirInfo, 4096)
 	assert.Equal(t, int64(4096), got, "directories are not measured")
 	assert.Equal(t, int64(0), shared)
 
@@ -140,10 +140,10 @@ func TestExclusiveUsageKeepsUsageWhenNotMeasurable(t *testing.T) {
 	info, err := os.Stat(path)
 	require.NoError(t, err)
 
-	got, _ = measureExclusiveUsage(path, info, 0)
+	got, _ = new(extentMeter).measure(path, info, 0)
 	assert.Equal(t, int64(0), got, "nothing allocated, nothing to measure")
 
-	got, shared = measureExclusiveUsage(filepath.Join(dir, "gone"), info, 4096)
+	got, shared = new(extentMeter).measure(filepath.Join(dir, "gone"), info, 4096)
 	assert.Equal(t, int64(4096), got, "unreadable file falls back")
 	assert.Equal(t, int64(0), shared)
 
@@ -151,7 +151,7 @@ func TestExclusiveUsageKeepsUsageWhenNotMeasurable(t *testing.T) {
 	require.NoError(t, os.Symlink("file", link))
 	linkInfo, err := os.Lstat(link)
 	require.NoError(t, err)
-	got, _ = measureExclusiveUsage(link, linkInfo, 8)
+	got, _ = new(extentMeter).measure(link, linkInfo, 8)
 	assert.Equal(t, int64(8), got, "symlinks are not measured")
 }
 
@@ -534,9 +534,38 @@ func TestExclusiveUsageFallsBackOnIoctlError(t *testing.T) {
 	require.NoError(t, err)
 	fakeFiemap(t, func(*fiemapRequest) syscall.Errno { return syscall.EOPNOTSUPP })
 
-	excl, shared := measureExclusiveUsage(path, info, 8192)
+	excl, shared := new(extentMeter).measure(path, info, 8192)
 	assert.Equal(t, int64(8192), excl)
 	assert.Equal(t, int64(0), shared)
+}
+
+func TestExtentMeterRemembersFilesystemsWithoutFiemap(t *testing.T) {
+	dir := exclusiveTestDir(t)
+	var infos []os.FileInfo
+	for _, name := range []string{"a", "b"} {
+		path := filepath.Join(dir, name)
+		writeSynced(t, path, make([]byte, 8192))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		infos = append(infos, info)
+	}
+
+	for _, errno := range []syscall.Errno{syscall.EOPNOTSUPP, syscall.ENOTTY} {
+		calls := fakeFiemap(t, func(*fiemapRequest) syscall.Errno { return errno })
+		m := &extentMeter{}
+		usage, _ := m.measure(filepath.Join(dir, "a"), infos[0], 8192)
+		assert.Equal(t, int64(8192), usage)
+		usage, _ = m.measure(filepath.Join(dir, "b"), infos[1], 8192)
+		assert.Equal(t, int64(8192), usage)
+		assert.Equal(t, 1, *calls, "%v: the second file is not asked again", errno)
+	}
+
+	// any other error is about the file, not the filesystem
+	calls := fakeFiemap(t, func(*fiemapRequest) syscall.Errno { return syscall.EIO })
+	m := &extentMeter{}
+	m.measure(filepath.Join(dir, "a"), infos[0], 8192)
+	m.measure(filepath.Join(dir, "b"), infos[1], 8192)
+	assert.Equal(t, 2, *calls)
 }
 
 func TestAnalyzerMeasureUsageWithFakeKernel(t *testing.T) {

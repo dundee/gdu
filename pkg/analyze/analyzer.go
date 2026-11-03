@@ -24,7 +24,7 @@ type BaseAnalyzer struct {
 	ignoreFileType          common.ShouldFileBeIgnored
 	followSymlinks          bool
 	gitAnnexedSize          bool
-	exclusiveSize           bool
+	extents                 *extentMeter // nil unless exclusive size is on
 	matchesTimeFilterFn     common.TimeFilter
 	archiveBrowsing         bool
 	progressTicker          *time.Ticker
@@ -74,17 +74,22 @@ func (a *BaseAnalyzer) SetShowAnnexedSize(v bool) {
 // SetExclusiveSize sets whether disk usage of files is the number of bytes not
 // shared with other files (Linux only, measured with FIEMAP)
 func (a *BaseAnalyzer) SetExclusiveSize(v bool) {
-	a.exclusiveSize = v
+	switch {
+	case !v:
+		a.extents = nil
+	case a.extents == nil:
+		a.extents = &extentMeter{}
+	}
 }
 
 // measureUsage returns the disk usage to record for a file and the bytes in
 // its shared extents. With exclusive size off, or when the file cannot be
 // measured, that is the given st_blocks based usage with nothing shared.
 func (a *BaseAnalyzer) measureUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
-	if !a.exclusiveSize {
+	if a.extents == nil {
 		return usage, 0
 	}
-	return measureExclusiveUsage(path, info, usage)
+	return a.extents.measure(path, info, usage)
 }
 
 // SetTimeFilter sets the time filter function for file inclusion

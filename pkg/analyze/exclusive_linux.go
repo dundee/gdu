@@ -127,17 +127,35 @@ func extentBytes(path string, perRequest uint32) (exclusive, shared int64, err e
 	}
 }
 
-// measureExclusiveUsage returns the disk usage of a file as its exclusive
-// bytes, and the bytes in its shared extents. usage is the st_blocks figure;
-// it is returned unchanged, with nothing shared, for anything that is not a
-// regular file with allocated blocks or whose extent map cannot be read.
-func measureExclusiveUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
+// extentMeter measures exclusive usage. It remembers the devices whose
+// filesystem has no FIEMAP (tmpfs, NFS, ...), so that their files are not
+// opened just to be refused again.
+type extentMeter struct {
+	unsupportedDevs sync.Map // device ID -> struct{}
+}
+
+// measure returns the disk usage of a file as its exclusive bytes, and the
+// bytes in its shared extents. usage is the st_blocks figure; it is returned
+// unchanged, with nothing shared, for anything that is not a regular file with
+// allocated blocks or whose extent map cannot be read.
+func (m *extentMeter) measure(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
 	if !info.Mode().IsRegular() || usage == 0 {
 		// Nothing is allocated, so there is nothing that could be shared.
 		return usage, 0
 	}
+	stat, hasDev := info.Sys().(*syscall.Stat_t)
+	var dev uint64
+	if hasDev {
+		dev = uint64(stat.Dev) // Dev is not uint64 on every architecture
+		if _, unsupported := m.unsupportedDevs.Load(dev); unsupported {
+			return usage, 0
+		}
+	}
 	exclusive, shared, err := extentBytes(path, fiemapExtentsPerRequest)
 	if err != nil {
+		if hasDev && (errors.Is(err, syscall.EOPNOTSUPP) || errors.Is(err, syscall.ENOTTY)) {
+			m.unsupportedDevs.Store(dev, struct{}{})
+		}
 		return usage, 0
 	}
 	return exclusive, shared
