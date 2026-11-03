@@ -609,6 +609,26 @@ func TestExtentMeterRemembersFilesystemsWithoutFiemap(t *testing.T) {
 	assert.Equal(t, 2, *calls)
 }
 
+func TestAnalyzerCreateFileItemMeasuresWithFakeKernel(t *testing.T) {
+	path := filepath.Join(exclusiveTestDir(t), "f")
+	writeSynced(t, path, make([]byte, 8192))
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	fakeFiemap(t, mapExtents(
+		fiemapExtent{length: 4096},
+		fiemapExtent{logical: 4096, length: 12288, flags: fiemapExtentShared | fiemapExtentLast},
+	))
+
+	a := CreateTopDirAnalyzer()
+	assert.Equal(t, CreateFileItem(path, info).Usage, a.CreateFileItem(path, info).Usage, "disabled keeps st_blocks")
+
+	a.SetExclusiveSize(true)
+	file := a.CreateFileItem(path, info)
+	assert.Equal(t, int64(4096), file.Usage)
+	assert.Equal(t, int64(12288), file.SharedUsage)
+	assert.Equal(t, int64(8192), file.Size)
+}
+
 func TestAnalyzerMeasureUsageWithFakeKernel(t *testing.T) {
 	path := filepath.Join(exclusiveTestDir(t), "f")
 	writeSynced(t, path, make([]byte, 8192))

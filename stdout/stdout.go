@@ -204,7 +204,14 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	// default 4096-byte directory overhead instead of the real values.
 	info, err := os.Stat(path)
 	if err == nil && info.Mode().IsRegular() {
-		file := analyze.CreateFileItem(path, info)
+		var file *analyze.File
+		if a, ok := ui.Analyzer.(interface {
+			CreateFileItem(string, os.FileInfo) *analyze.File
+		}); ok {
+			file = a.CreateFileItem(path, info)
+		} else {
+			file = analyze.CreateFileItem(path, info)
+		}
 		ui.printTotalItem(file)
 		return nil
 	}

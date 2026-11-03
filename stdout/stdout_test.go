@@ -139,6 +139,31 @@ func TestShowSummaryApparentSizeForFilePath(t *testing.T) {
 	assert.Contains(t, out, "small.txt")
 }
 
+// fileMeasuringAnalyzer stands in for an analyzer whose settings change how a
+// file is measured, such as --exclusive-size.
+type fileMeasuringAnalyzer struct {
+	*analyze.TopDirAnalyzer
+}
+
+func (fileMeasuringAnalyzer) CreateFileItem(path string, info os.FileInfo) *analyze.File {
+	file := analyze.CreateFileItem(path, info)
+	file.Usage = 12345
+	return file
+}
+
+func TestFilePathIsMeasuredByTheAnalyzer(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "small.txt")
+	assert.Nil(t, os.WriteFile(filePath, []byte("hello"), 0o644))
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	// summarize=true, noPrefix=true
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, true, "", 0, false, 0)
+	ui.SetAnalyzer(fileMeasuringAnalyzer{analyze.CreateTopDirAnalyzer()})
+	assert.Nil(t, ui.AnalyzePath(filePath, nil))
+
+	assert.Contains(t, output.String(), "12345")
+}
+
 func TestShowSummaryDiskUsageForFilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "small.txt")

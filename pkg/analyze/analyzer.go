@@ -92,6 +92,14 @@ func (a *BaseAnalyzer) measureUsage(path string, info os.FileInfo, usage int64) 
 	return a.extents.measure(path, info, usage)
 }
 
+// CreateFileItem is CreateFileItem for a file scanned on its own, measured
+// with the settings of the analyzer.
+func (a *BaseAnalyzer) CreateFileItem(path string, info os.FileInfo) *File {
+	file := CreateFileItem(path, info)
+	file.Usage, file.SharedUsage = a.measureUsage(path, info, file.Usage)
+	return file
+}
+
 // copySettings makes a use the scan settings of from.
 func (a *BaseAnalyzer) copySettings(from *BaseAnalyzer) {
 	a.ignoreFileType = from.ignoreFileType
