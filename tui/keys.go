@@ -269,7 +269,7 @@ func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
 		text = "Do you really want to quit gdu?\n\n" +
 			"This scan took " + ui.scanDuration.Round(time.Second).String() +
 			" and the results are not saved.\n" +
-			"Choose \"no\" and press E to export them first."
+			"Choose \"no\" and press Shift+E to export them first."
 	}
 	modal := tview.NewModal().
 		SetText(text).
