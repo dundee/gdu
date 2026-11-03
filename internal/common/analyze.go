@@ -3,6 +3,7 @@
 package common
 
 import (
+	"os"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -24,6 +25,7 @@ type ShouldFileBeIgnored func(name string) bool
 // Analyzer is type for dir analyzing function
 type Analyzer interface {
 	AnalyzeDir(path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored) fs.Item
+	MeasureSharedUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64)
 	SetFollowSymlinks(bool)
 	SetShowAnnexedSize(bool)
 	SetExclusiveSize(bool)

@@ -82,22 +82,15 @@ func (a *BaseAnalyzer) SetExclusiveSize(v bool) {
 	}
 }
 
-// measureUsage returns the disk usage to record for a file and the bytes in
-// its shared extents. With exclusive size off, or when the file cannot be
+// MeasureSharedUsage returns the disk usage to record for a file and the bytes
+// in its shared extents. With exclusive size off, or when the file cannot be
 // measured, that is the given st_blocks based usage with nothing shared.
-func (a *BaseAnalyzer) measureUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
+func (a *BaseAnalyzer) MeasureSharedUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
 	if a.extents == nil {
 		return usage, 0
 	}
-	return a.extents.measure(path, info, usage)
-}
-
-// CreateFileItem is CreateFileItem for a file scanned on its own, measured
-// with the settings of the analyzer.
-func (a *BaseAnalyzer) CreateFileItem(path string, info os.FileInfo) *File {
-	file := CreateFileItem(path, info)
-	file.Usage, file.SharedUsage = a.measureUsage(path, info, file.Usage)
-	return file
+	exclusive, shared = a.extents.measure(path, info, usage)
+	return exclusive, shared
 }
 
 // copySettings makes a use the scan settings of from.

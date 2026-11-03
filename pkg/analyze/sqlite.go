@@ -1030,7 +1030,7 @@ func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (sta
 		fileUsage = 0
 		fileFlag = 'H'
 	} else {
-		fileUsage, _ = a.measureUsage(entryPath, info, fileUsage)
+		fileUsage, _ = a.MeasureSharedUsage(entryPath, info, fileUsage)
 	}
 
 	return fileStat{

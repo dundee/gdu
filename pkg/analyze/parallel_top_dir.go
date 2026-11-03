@@ -125,7 +125,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
-			usage, _ = a.measureUsage(entryPath, info, usage)
+			usage, _ = a.MeasureSharedUsage(entryPath, info, usage)
 			file.Usage = usage
 
 			if mli > 0 {
@@ -263,7 +263,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 					continue
 				}
 			}
-			usage, _ = a.measureUsage(entryPath, info, usage)
+			usage, _ = a.MeasureSharedUsage(entryPath, info, usage)
 
 			totalUsage += usage
 			totalSize += info.Size()

@@ -2,6 +2,7 @@ package testanalyze
 
 import (
 	"errors"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -101,6 +102,11 @@ func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {}
 
 // SetExclusiveSize does nothing
 func (a *MockedAnalyzer) SetExclusiveSize(v bool) {}
+
+// MeasureSharedUsage keeps the given usage, with nothing shared
+func (a *MockedAnalyzer) MeasureSharedUsage(_ string, _ os.FileInfo, usage int64) (exclusive, shared int64) {
+	return usage, 0
+}
 
 // SetShowAnnexedSize does nothing
 func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {}

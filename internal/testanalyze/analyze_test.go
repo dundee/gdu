@@ -119,6 +119,13 @@ func TestSetShowAnnexedSize(t *testing.T) {
 	})
 }
 
+func TestMeasureSharedUsage(t *testing.T) {
+	a := &MockedAnalyzer{}
+	exclusive, shared := a.MeasureSharedUsage("file", nil, 4096)
+	assert.Equal(t, int64(4096), exclusive)
+	assert.Equal(t, int64(0), shared)
+}
+
 func TestSetExclusiveSize(t *testing.T) {
 	a := &MockedAnalyzer{}
 	assert.NotPanics(t, func() {

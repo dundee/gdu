@@ -652,27 +652,7 @@ func TestExtentMeterRemembersFilesystemsWithoutFiemap(t *testing.T) {
 	assert.Equal(t, 2, *calls)
 }
 
-func TestAnalyzerCreateFileItemMeasuresWithFakeKernel(t *testing.T) {
-	path := filepath.Join(exclusiveTestDir(t), "f")
-	writeSynced(t, path, make([]byte, 8192))
-	info, err := os.Stat(path)
-	require.NoError(t, err)
-	fakeFiemap(t, mapExtents(
-		fiemapExtent{length: 4096},
-		fiemapExtent{logical: 4096, length: 12288, flags: fiemapExtentShared | fiemapExtentLast},
-	))
-
-	a := CreateTopDirAnalyzer()
-	assert.Equal(t, CreateFileItem(path, info).Usage, a.CreateFileItem(path, info).Usage, "disabled keeps st_blocks")
-
-	a.SetExclusiveSize(true)
-	file := a.CreateFileItem(path, info)
-	assert.Equal(t, int64(4096), file.Usage)
-	assert.Equal(t, int64(12288), file.SharedUsage)
-	assert.Equal(t, int64(8192), file.Size)
-}
-
-func TestAnalyzerMeasureUsageWithFakeKernel(t *testing.T) {
+func TestAnalyzerMeasureSharedUsageWithFakeKernel(t *testing.T) {
 	path := filepath.Join(exclusiveTestDir(t), "f")
 	writeSynced(t, path, make([]byte, 8192))
 	info, err := os.Stat(path)
@@ -683,13 +663,13 @@ func TestAnalyzerMeasureUsageWithFakeKernel(t *testing.T) {
 	))
 
 	off := &BaseAnalyzer{}
-	usage, shared := off.measureUsage(path, info, 8192)
+	usage, shared := off.MeasureSharedUsage(path, info, 8192)
 	assert.Equal(t, int64(8192), usage, "disabled keeps st_blocks")
 	assert.Equal(t, int64(0), shared)
 
 	on := &BaseAnalyzer{}
 	on.SetExclusiveSize(true)
-	usage, shared = on.measureUsage(path, info, 8192)
+	usage, shared = on.MeasureSharedUsage(path, info, 8192)
 	assert.Equal(t, int64(4096), usage)
 	assert.Equal(t, int64(12288), shared)
 }

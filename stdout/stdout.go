@@ -204,14 +204,8 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	// default 4096-byte directory overhead instead of the real values.
 	info, err := os.Stat(path)
 	if err == nil && info.Mode().IsRegular() {
-		var file *analyze.File
-		if a, ok := ui.Analyzer.(interface {
-			CreateFileItem(string, os.FileInfo) *analyze.File
-		}); ok {
-			file = a.CreateFileItem(path, info)
-		} else {
-			file = analyze.CreateFileItem(path, info)
-		}
+		file := analyze.CreateFileItem(path, info)
+		file.Usage, file.SharedUsage = ui.Analyzer.MeasureSharedUsage(path, info, file.Usage)
 		ui.printTotalItem(file)
 		return nil
 	}

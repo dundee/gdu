@@ -145,10 +145,8 @@ type fileMeasuringAnalyzer struct {
 	*analyze.TopDirAnalyzer
 }
 
-func (fileMeasuringAnalyzer) CreateFileItem(path string, info os.FileInfo) *analyze.File {
-	file := analyze.CreateFileItem(path, info)
-	file.Usage = 12345
-	return file
+func (fileMeasuringAnalyzer) MeasureSharedUsage(string, os.FileInfo, int64) (exclusive, shared int64) {
+	return 12345, 0
 }
 
 func TestFilePathIsMeasuredByTheAnalyzer(t *testing.T) {
