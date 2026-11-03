@@ -10,6 +10,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // createWideTree builds a tree large enough to keep the parallel analyzer busy
@@ -124,6 +125,18 @@ func TestCurrentDirSnapshotKeepsDirOwnUsage(t *testing.T) {
 	snapshot.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, int64(3*4096), snapshot.GetUsage())
+}
+
+func TestCurrentDirSnapshotKeepsSharedUsage(t *testing.T) {
+	live := &Dir{File: &File{Name: "root"}, Files: make(fs.Files, 0, 1)}
+	live.AddFile(&File{Name: "clone", Size: 8192, Usage: 4096, SharedUsage: 4096, Parent: live})
+
+	analyzer := CreateAnalyzer()
+	analyzer.setCurrentDir(live)
+	snapshot := analyzer.GetCurrentDir().(*Dir)
+
+	require.Len(t, snapshot.Files, 1)
+	assert.Equal(t, int64(4096), snapshot.Files[0].(*File).SharedUsage)
 }
 
 func TestCurrentDirSnapshotPreservesArchiveItems(t *testing.T) {

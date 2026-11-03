@@ -348,7 +348,7 @@ func reparentSnapshotChildren(dir *Dir, parent fs.Item) {
 }
 
 func snapshotFile(source, parent fs.Item) *File {
-	return &File{
+	snapshot := &File{
 		Mtime:  source.GetMtime(),
 		Parent: parent,
 		Name:   source.GetName(),
@@ -357,6 +357,10 @@ func snapshotFile(source, parent fs.Item) *File {
 		Mli:    source.GetMultiLinkedInode(),
 		Flag:   source.GetFlag(),
 	}
+	if file, ok := source.(*File); ok {
+		snapshot.SharedUsage = file.SharedUsage
+	}
+	return snapshot
 }
 
 // AddFile add item to files
