@@ -306,20 +306,30 @@ size bars, totals and `-o` exports (`dsize`) all use it; apparent size
 * Data shared with another file counts as zero in every file sharing it, so a
   directory holding only the clones of a file elsewhere shows nothing, and the
   last copy standing shows its full size only once the others are gone.
+* On btrfs, data shared with a snapshot is flagged as shared too, so files in a
+  snapshotted subvolume count as zero until they are changed. Deleting them
+  frees nothing while the snapshot still holds the data.
 * Holes in sparse files count as nothing. Preallocated, delayed-allocation and
   inline extents count as the file's own unless they are flagged as shared.
   Sizes are logical: compressed extents (btrfs, ...) are counted uncompressed.
 * Hard links are counted once, as without the flag.
 * Where FIEMAP cannot be used (unsupported filesystem such as tmpfs or NFS, the
   file cannot be opened, ...) the file keeps its allocated-blocks figure.
-  Files and filesystems that do not report shared extents (ext4) show the same
-  figure as without the flag. Symlinks, directories and archive contents are
-  not measured. Other platforms ignore the option.
+  Files and filesystems that do not report shared extents (ext4) show close to
+  the same figure as without the flag: the extent map leaves out the blocks the
+  filesystem keeps for its own bookkeeping, such as extent trees and extended
+  attributes. Symlinks and directories are not measured, and neither are
+  archives shown by their contents (`--archive-browsing`). Other platforms
+  ignore the option without a warning, so a configuration file can be shared
+  between machines.
 * It costs an `open` and at least one `ioctl` per file with allocated blocks.
+  Once a filesystem has refused FIEMAP, the rest of its files are not asked.
 * The exported `dsize` does not record which metric produced it. Each file
   whose extent map was read and has shared extents also carries `shsize`, the
   bytes in those extents, so an export holds both halves of the file's
-  allocated data. Readers that do not know the key ignore it.
+  allocated data. Readers that do not know the key ignore it. Directories do
+  not add `shsize` up, and the SQLite storage (`--db *.sqlite`) does not keep
+  it, so exports made with it have none.
 
 ## Configuration file
 
