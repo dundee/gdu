@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -26,14 +25,17 @@ type TopDirAnalyzer struct {
 
 // CreateTopDirAnalyzer returns Analyzer
 func CreateTopDirAnalyzer() *TopDirAnalyzer {
-	a := &TopDirAnalyzer{
-		BaseAnalyzer: BaseAnalyzer{
-			ignoreFileType:      func(string) bool { return false },
-			matchesTimeFilterFn: func(time.Time) bool { return true },
-		},
-	}
+	a := &TopDirAnalyzer{}
 	a.Init()
 	return a
+}
+
+// FullAnalyzer returns a parallel analyzer with the same settings, for when
+// the full tree is needed, which the top dir analyzer does not build.
+func (a *TopDirAnalyzer) FullAnalyzer() *ParallelAnalyzer {
+	full := CreateAnalyzer()
+	full.copySettings(&a.BaseAnalyzer)
+	return full
 }
 
 // AnalyzeDir analyzes given path
@@ -86,7 +88,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		} else {
 			var info os.FileInfo
 			// Apply file type filter if set
-			if a.ignoreFileType(name) {
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 
@@ -98,7 +100,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			// Apply time filter if set
-			if !a.matchesTimeFilterFn(info.ModTime()) {
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
@@ -123,6 +125,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
+			usage, _ = a.MeasureSharedUsage(entryPath, info, usage)
 			file.Usage = usage
 
 			if mli > 0 {
@@ -223,7 +226,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 			}
 		} else {
 			// Apply file type filter if set
-			if a.ignoreFileType(name) {
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 
@@ -235,7 +238,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 			}
 
 			// Apply time filter if set
-			if !a.matchesTimeFilterFn(info.ModTime()) {
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
@@ -260,6 +263,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 					continue
 				}
 			}
+			usage, _ = a.MeasureSharedUsage(entryPath, info, usage)
 
 			totalUsage += usage
 			totalSize += info.Size()

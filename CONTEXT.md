@@ -39,6 +39,13 @@ hard-linked files.
 Apparent size and disk usage are interchangeable *metrics*: exactly one of them
 is displayed at a time, and the user switches between them.
 
+## Exclusive size
+
+The part of a file's disk usage that it does not share with any other file
+(through reflinks, deduplication or snapshots), i.e. what deleting it would
+free. When asked for, it takes the place of disk usage everywhere disk usage
+is shown. The rest of the file's data is its **shared size**.
+
 ## Displayed item count
 
 The number of items a row reports.

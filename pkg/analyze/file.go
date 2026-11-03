@@ -26,8 +26,11 @@ type File struct {
 	Symlink string
 	Size    int64
 	Usage   int64
-	Mli     uint64
-	Flag    rune
+	// SharedUsage is the bytes in extents shared with other files, measured
+	// only with --exclusive-size; Usage then excludes them.
+	SharedUsage int64
+	Mli         uint64
+	Flag        rune
 }
 
 // GetName returns name of dir
@@ -345,7 +348,7 @@ func reparentSnapshotChildren(dir *Dir, parent fs.Item) {
 }
 
 func snapshotFile(source, parent fs.Item) *File {
-	return &File{
+	snapshot := &File{
 		Mtime:  source.GetMtime(),
 		Parent: parent,
 		Name:   source.GetName(),
@@ -354,6 +357,10 @@ func snapshotFile(source, parent fs.Item) *File {
 		Mli:    source.GetMultiLinkedInode(),
 		Flag:   source.GetFlag(),
 	}
+	if file, ok := source.(*File); ok {
+		snapshot.SharedUsage = file.SharedUsage
+	}
+	return snapshot
 }
 
 // AddFile add item to files
