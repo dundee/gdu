@@ -92,6 +92,16 @@ func (a *BaseAnalyzer) measureUsage(path string, info os.FileInfo, usage int64) 
 	return a.extents.measure(path, info, usage)
 }
 
+// copySettings makes a use the scan settings of from.
+func (a *BaseAnalyzer) copySettings(from *BaseAnalyzer) {
+	a.ignoreFileType = from.ignoreFileType
+	a.followSymlinks = from.followSymlinks
+	a.gitAnnexedSize = from.gitAnnexedSize
+	a.extents = from.extents
+	a.matchesTimeFilterFn = from.matchesTimeFilterFn
+	a.archiveBrowsing = from.archiveBrowsing
+}
+
 // SetTimeFilter sets the time filter function for file inclusion
 func (a *BaseAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
 	a.matchesTimeFilterFn = matchesTimeFilterFn

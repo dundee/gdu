@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
@@ -85,6 +86,22 @@ func TestAnalyzePathsSwapsTopDirAnalyzerForFullTree(t *testing.T) {
 
 	_, stillTopDirAnalyzer := ui.Analyzer.(*analyze.TopDirAnalyzer)
 	assert.False(t, stillTopDirAnalyzer)
+}
+
+func TestAnalyzePathsKeepsAnalyzerSettings(t *testing.T) {
+	first, second := createMultiTestDirs(t)
+	scan := func(filtered bool) string {
+		output := &bytes.Buffer{}
+		ui := CreateStdoutUI(output, false, false, true, false, true, false, true, "", 0, false, 0)
+		if filtered {
+			ui.SetTimeFilter(func(time.Time) bool { return false })
+		}
+		require.NoError(t, ui.AnalyzePaths([]string{first, second}))
+		return output.String()
+	}
+
+	// the time filter set on the top dir analyzer still drops every file
+	assert.NotEqual(t, scan(false), scan(true))
 }
 
 func TestAnalyzePathsWithSinglePathBehavesLikeAnalyzePath(t *testing.T) {

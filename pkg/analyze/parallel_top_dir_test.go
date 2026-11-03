@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -362,4 +363,25 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 
 	assert.Equal(t, int64(12+512), dir.Size)
 	assert.Equal(t, int64(7), dir.ItemCount)
+}
+
+func TestTopDirFullAnalyzerKeepsSettings(t *testing.T) {
+	a := CreateTopDirAnalyzer()
+	a.SetFollowSymlinks(true)
+	a.SetShowAnnexedSize(true)
+	a.SetExclusiveSize(true)
+	a.SetArchiveBrowsing(true)
+	a.SetFileTypeFilter(func(string) bool { return true })
+	a.SetTimeFilter(func(time.Time) bool { return false })
+
+	full := a.FullAnalyzer()
+
+	assert.True(t, full.followSymlinks)
+	assert.True(t, full.gitAnnexedSize)
+	assert.Same(t, a.extents, full.extents)
+	assert.True(t, full.archiveBrowsing)
+	assert.True(t, full.ignoreFileType("x"))
+	assert.False(t, full.matchesTimeFilterFn(time.Time{}))
+
+	assert.False(t, CreateTopDirAnalyzer().FullAnalyzer().isFilteringFiles(), "no filter stays no filter")
 }

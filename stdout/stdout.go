@@ -253,8 +253,8 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 	// The top dir analyzer returns SimpleDir, a reduced item that cannot be
 	// re-parented, so it cannot live under a virtual root. Trade its lower
 	// memory use for the full tree, as --top and --depth already do.
-	if _, ok := ui.Analyzer.(*analyze.TopDirAnalyzer); ok {
-		ui.Analyzer = analyze.CreateAnalyzer()
+	if topDir, ok := ui.Analyzer.(*analyze.TopDirAnalyzer); ok {
+		ui.Analyzer = topDir.FullAnalyzer()
 	}
 
 	roots := make([]fs.Item, 0, len(paths))
