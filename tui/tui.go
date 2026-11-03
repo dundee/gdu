@@ -357,17 +357,7 @@ func (ui *UI) SetTrashCommand(command string) {
 // StartUILoop starts tview application
 func (ui *UI) StartUILoop() error {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(
-		signals,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGQUIT,
-		syscall.SIGILL,
-		syscall.SIGTRAP,
-		syscall.SIGABRT,
-		syscall.SIGPIPE,
-		syscall.SIGTERM,
-	)
+	signal.Notify(signals, handledSignals...)
 	defer signal.Stop(signals)
 
 	return ui.runUILoop(signals)

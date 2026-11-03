@@ -121,13 +121,13 @@ func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
 }
 
 // CreateFileItem creates a File from an os.FileInfo with correct platform-specific attributes
-func CreateFileItem(name string, info os.FileInfo) *File {
+func CreateFileItem(path string, info os.FileInfo) *File {
 	file := &File{
-		Name: name,
+		Name: filepath.Base(path),
 		Size: info.Size(),
 		Flag: getFlag(info),
 	}
-	setPlatformSpecificAttrs(file, info)
+	setPlatformSpecificAttrs(file, info, path)
 	return file
 }
 
