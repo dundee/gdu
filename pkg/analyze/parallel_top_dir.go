@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -118,6 +119,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 
 			file := SimpleFile{
 				Name:      name,
+				Mtime:     info.ModTime(),
 				Flag:      getFlag(info),
 				Size:      info.Size(),
 				Symlink:   readSymlinkTarget(f.Type(), entryPath),
@@ -156,6 +158,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		size, usage, itemCount := topDir.GetUsage()
 		dir.Files = append(dir.Files, SimpleFile{
 			Name:      topDir.Name,
+			Mtime:     topDir.Mtime,
 			Flag:      topDir.Flag,
 			Size:      size,
 			Usage:     usage,
@@ -181,6 +184,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 		totalUsage int64
 		totalCount int64
 		info       os.FileInfo
+		mtime      time.Time
 	)
 
 	if a.IsCancelled() {
@@ -198,7 +202,10 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 		topDir.SetFlag('.')
 	}
 
-	totalUsage += dirOwnUsage(path)
+	if dirInfo, statErr := os.Stat(path); statErr == nil {
+		totalUsage += dirInfoOwnUsage(dirInfo)
+		mtime = dirInfo.ModTime()
+	}
 
 	for _, f := range files {
 		if a.IsCancelled() {
@@ -256,6 +263,10 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 				}
 			}
 
+			if info.ModTime().After(mtime) {
+				mtime = info.ModTime()
+			}
+
 			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
 
 			if mli > 0 {
@@ -278,4 +289,5 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 	a.progressTotalUsage.Add(totalUsage)
 
 	topDir.AddUsage(totalSize, totalUsage, totalCount)
+	topDir.UpdateMtime(mtime)
 }

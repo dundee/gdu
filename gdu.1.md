@@ -101,7 +101,7 @@ non-interactive mode
 
 **-t**, **\--top**\[=0\] Show only top X largest files in non-interactive mode
 
-**\--reverse-sort**\[=false\] Reverse sorting order (smallest to largest) in non-interactive mode
+**\--reverse-sort**\[=false\] Reverse the sorting order in non-interactive mode (smallest to largest by default)
 
 **-d**, **\--show-disks**\[=false\] Show all mounted disks
 

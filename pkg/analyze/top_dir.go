@@ -14,6 +14,7 @@ var _ fs.Item = (*SimpleDir)(nil)
 
 type TopDir struct {
 	Name      string
+	Mtime     time.Time
 	Size      atomic.Int64
 	Usage     atomic.Int64
 	ItemCount atomic.Int64
@@ -37,8 +38,18 @@ func (d *TopDir) SetFlag(flag rune) {
 	d.m.Unlock()
 }
 
+// UpdateMtime keeps the newest mtime seen in the directory tree, like Dir does.
+func (d *TopDir) UpdateMtime(mtime time.Time) {
+	d.m.Lock()
+	if mtime.After(d.Mtime) {
+		d.Mtime = mtime
+	}
+	d.m.Unlock()
+}
+
 type SimpleFile struct {
 	Name      string
+	Mtime     time.Time
 	Symlink   string
 	Flag      rune
 	Size      int64
@@ -137,6 +148,7 @@ func (d *SimpleDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 		for _, file := range d.Files {
 			f := &File{
 				Name:    file.Name,
+				Mtime:   file.Mtime,
 				Flag:    file.Flag,
 				Size:    file.Size,
 				Usage:   file.Usage,

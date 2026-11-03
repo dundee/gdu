@@ -280,6 +280,27 @@ func TestShowTopWithApparentSize(t *testing.T) {
 		"largest apparent size should be printed first, got:\n"+out)
 }
 
+func TestShowTopIgnoresConfiguredSorting(t *testing.T) {
+	root := &analyze.Dir{
+		File:      &analyze.File{Name: "root"},
+		BasePath:  "/",
+		ItemCount: 4,
+	}
+	root.AddFile(&analyze.File{Name: "a", Parent: root, Usage: 1 << 20})
+	root.AddFile(&analyze.File{Name: "b", Parent: root, Usage: 3 << 20})
+	root.AddFile(&analyze.File{Name: "c", Parent: root, Usage: 2 << 20})
+
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	ui.SetDefaultSorting("name", "asc")
+	ui.printTopFiles(root)
+
+	out := output.String()
+	assert.NotContains(t, out, "/root/a")
+	assert.Less(t, strings.Index(out, "/root/b"), strings.Index(out, "/root/c"),
+		"largest files should be printed first, got:\n"+out)
+}
+
 func TestShowDepth(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
