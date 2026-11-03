@@ -255,13 +255,13 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 			}
 
 			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
-			usage, _ = a.measureUsage(entryPath, info, usage)
 
 			if mli > 0 {
 				if _, loaded := a.linkedItems.LoadOrStore(mli, struct{}{}); loaded {
 					continue
 				}
 			}
+			usage, _ = a.measureUsage(entryPath, info, usage)
 
 			totalUsage += usage
 			totalSize += info.Size()

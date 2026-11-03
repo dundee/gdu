@@ -1023,13 +1023,14 @@ func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (sta
 
 	fileSize := info.Size()
 	fileUsage, fileMli := getSyscallStats(info, entryPath)
-	fileUsage, _ = a.measureUsage(entryPath, info, fileUsage)
 	fileFlag := getFlag(info)
 
 	if fileMli != 0 && a.hasInodeLocked(fileMli) {
 		fileSize = 0
 		fileUsage = 0
 		fileFlag = 'H'
+	} else {
+		fileUsage, _ = a.measureUsage(entryPath, info, fileUsage)
 	}
 
 	return fileStat{

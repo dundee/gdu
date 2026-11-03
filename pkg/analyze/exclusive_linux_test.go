@@ -359,6 +359,47 @@ func TestHardLinksCountedOnce(t *testing.T) {
 	assert.Equal(t, allocated(t, a), root.GetUsage())
 }
 
+func TestAnalyzersMeasureHardLinkedFileOnce(t *testing.T) {
+	ignoreDir := func(_, _ string) bool { return false }
+	ignoreFile := func(_ string) bool { return false }
+
+	scanners := map[string]func(dir string) fs.Item{
+		"top-dir": func(dir string) fs.Item {
+			a := CreateTopDirAnalyzer()
+			a.SetExclusiveSize(true)
+			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
+			a.GetDone().Wait()
+			return r
+		},
+		"sqlite": func(dir string) fs.Item {
+			a, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = a.storage.Close() })
+			a.SetExclusiveSize(true)
+			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
+			a.GetDone().Wait()
+			return r
+		},
+	}
+	for name, scan := range scanners {
+		t.Run(name, func(t *testing.T) {
+			dir := exclusiveTestDir(t)
+			// below the top level, where the top-dir analyzer skips links
+			sub := filepath.Join(dir, "sub")
+			require.NoError(t, os.Mkdir(sub, 0o755))
+			writeSynced(t, filepath.Join(sub, "a"), make([]byte, 8192))
+			require.NoError(t, os.Link(filepath.Join(sub, "a"), filepath.Join(sub, "b")))
+			calls := fakeFiemap(t, mapExtents(fiemapExtent{length: 4096, flags: fiemapExtentLast}))
+
+			root := scan(dir)
+			root.UpdateStats(make(fs.HardLinkedItems))
+
+			assert.Equal(t, 1, *calls, "the second link is not measured")
+			assert.Equal(t, int64(4096), root.GetUsage()-dirOwnUsage(dir)-dirOwnUsage(sub))
+		})
+	}
+}
+
 func TestAnalyzersReportExclusiveSize(t *testing.T) {
 	dir := exclusiveTestDir(t)
 	const size = 1 << 20
