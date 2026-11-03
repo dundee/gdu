@@ -1,4 +1,4 @@
-//go:build windows || plan9
+//go:build windows
 
 package analyze
 
@@ -80,7 +80,7 @@ func setDirPlatformSpecificAttrs(dir *Dir, path string) {
 	dir.Mtime = stat.ModTime()
 }
 
-// dirOwnUsage returns 0: these platforms expose no block allocation for a
+// dirOwnUsage returns 0: Windows exposes no block allocation for a
 // directory, so gdu charges it nothing rather than guessing a block.
 func dirOwnUsage(string) int64 {
 	return 0
