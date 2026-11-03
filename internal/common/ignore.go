@@ -11,8 +11,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/dundee/gdu/v5/pkg/device"
 )
 
 // CreateIgnorePattern creates one pattern from all path patterns.
@@ -254,33 +252,10 @@ func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
 	return false
 }
 
-// getFilesystemID is a variable so that tests can replace it
-var getFilesystemID = device.GetFilesystemID
-
 // SetIgnoreOtherFilesystems sets whether dirs on other filesystems than their parent should be ignored
 func (ui *UI) SetIgnoreOtherFilesystems(value bool) {
 	log.Printf("Not crossing filesystem boundaries")
 	ui.IgnoreOtherFilesystems = value
-}
-
-// IsOnOtherFilesystem returns true if the dir lives on another filesystem
-// (device) than its parent dir. This also catches boundaries which are not
-// listed as mount points, e.g. btrfs subvolumes and snapshots.
-// If either device cannot be determined, the dir is not ignored.
-func (ui *UI) IsOnOtherFilesystem(name, path string) bool {
-	dev, ok := getFilesystemID(path)
-	if !ok {
-		return false
-	}
-	parentDev, ok := getFilesystemID(filepath.Dir(path))
-	if !ok {
-		return false
-	}
-	shouldIgnore := dev != parentDev
-	if shouldIgnore {
-		log.Printf("Directory %s ignored (other filesystem)", path)
-	}
-	return shouldIgnore
 }
 
 // CreateIgnoreFunc returns function for detecting if dir should be ignored
@@ -289,8 +264,9 @@ func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
 	if !ui.IgnoreOtherFilesystems {
 		return ignore
 	}
+	filesystems := newFilesystemIDCache()
 	return func(name, path string) bool {
-		return ignore(name, path) || ui.IsOnOtherFilesystem(name, path)
+		return ignore(name, path) || filesystems.isOnOtherFilesystem(path)
 	}
 }
 
