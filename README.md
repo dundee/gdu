@@ -173,7 +173,7 @@ When `--top` or `--depth` flags are used, the full directory tree is built in me
 
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag. In interactive mode, press `Esc` or `Ctrl+C` during a scan to stop scheduling new work and keep the results found so far; pressing `Ctrl+C` again while the scan is stopping quits gdu. If you would rather have the first `Ctrl+C` quit gdu outright, use `--ctrl-c-quits`; `Esc` keeps working either way.
 
-By default the export includes every attribute, and directories always carry their `asize`, `dsize`, and `items` summary stats so they can be preserved on import. Use `--output-attrs=asize,dsize` to emit only selected optional attributes; `name` is always included. Available attributes are `asize`, `dsize`, `items`, `mtime`, `notreg`, and `ino`.
+By default the export includes every attribute, and directories always carry their `asize`, `dsize`, and `items` summary stats so they can be preserved on import. Use `--output-attrs=asize,dsize` to emit only selected optional attributes; `name` is always included. Available attributes are `asize`, `dsize`, `items`, `mtime`, `notreg`, and `ino`. A directory that could not be read in full carries `"read_error":true`.
 
 Gdu honors `BLOCK_SIZE` and `BLOCKSIZE` in terminal output. `BLOCK_SIZE` takes precedence; both accept GNU coreutils block-size values such as `1K`, `kB`, `human-readable`, and `si`. Explicit size-format flags override these environment variables. Exported JSON always retains raw byte values.
 

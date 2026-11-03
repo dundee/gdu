@@ -43,6 +43,11 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttr
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)
 	}
+	// ncdu's name for a directory that could not be read in full; without
+	// it an export cannot be told apart from a complete scan.
+	if f.Flag == '!' {
+		buff = append(buff, []byte(`,"read_error":true`)...)
+	}
 
 	buff = append(buff, '}')
 	if f.Files.Len() > 0 {
