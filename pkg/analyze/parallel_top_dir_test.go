@@ -2,6 +2,8 @@ package analyze
 
 import (
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -228,6 +230,58 @@ func TestTopDirAnalyzeDirIgnoreSubDir(t *testing.T) {
 	simpleDir := dir.(*SimpleDir)
 	assert.Equal(t, 1, len(simpleDir.Files))
 	assert.Equal(t, "top", simpleDir.Files[0].Name)
+}
+
+func topDirFlags(t *testing.T, path string) map[string]rune {
+	t.Helper()
+
+	analyzer := CreateTopDirAnalyzer()
+	dir := analyzer.AnalyzeDir(
+		path, func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	)
+	analyzer.GetDone().Wait()
+
+	flags := make(map[string]rune)
+	for file := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
+		flags[file.GetName()] = file.GetFlag()
+	}
+	return flags
+}
+
+func TestTopDirAnalyzeDirEmptyDirFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	assert.Nil(t, os.Mkdir(filepath.Join(tmpDir, "empty"), 0o755))
+	assert.Nil(t, os.MkdirAll(filepath.Join(tmpDir, "withempty", "sub"), 0o755))
+
+	flags := topDirFlags(t, tmpDir)
+
+	assert.Equal(t, 'e', flags["empty"])
+	assert.Equal(t, ' ', flags["withempty"])
+}
+
+func TestTopDirAnalyzeDirErrorFlags(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod does not make directories unreadable on Windows")
+	}
+
+	tmpDir := t.TempDir()
+	locked := filepath.Join(tmpDir, "locked")
+	nestedLocked := filepath.Join(tmpDir, "outer", "locked")
+	for _, path := range []string{locked, nestedLocked} {
+		assert.Nil(t, os.MkdirAll(path, 0o755))
+		assert.Nil(t, os.WriteFile(filepath.Join(path, "file"), []byte("x"), 0o600))
+		assert.Nil(t, os.Chmod(path, 0))
+		defer os.Chmod(path, 0o755)
+	}
+
+	if _, err := os.ReadDir(locked); err == nil {
+		t.Skip("test user can still read chmod 000 directory")
+	}
+
+	flags := topDirFlags(t, tmpDir)
+
+	assert.Equal(t, '!', flags["locked"])
+	assert.Equal(t, '.', flags["outer"])
 }
 
 func TestTopDirGetFiles(t *testing.T) {

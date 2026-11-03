@@ -138,7 +138,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	// storage is counted at the root, while every file keeps its displayed size.
 	for _, topDir := range topDirs {
 		go func() {
-			a.processSubDir(filepath.Join(path, topDir.Name), topDir)
+			a.processSubDir(filepath.Join(path, topDir.Name), topDir, true)
 			subDirChan <- struct{}{}
 		}()
 	}
@@ -169,7 +169,9 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	return &dir
 }
 
-func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
+// processSubDir adds the stats of path to topDir. isTopDir is true when path
+// is topDir itself rather than one of its subdirectories.
+func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir bool) {
 	var (
 		err        error
 		totalSize  int64
@@ -185,6 +187,11 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
+	}
+	switch {
+	case isTopDir:
+		topDir.SetFlag(getDirFlag(err, len(files)))
+	case err != nil:
 		topDir.SetFlag('.')
 	}
 
@@ -207,12 +214,12 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			case concurrencyLimit <- struct{}{}:
 				a.wait.Add(1)
 				go func(entryPath string) {
-					a.processSubDir(entryPath, topDir)
+					a.processSubDir(entryPath, topDir, false)
 					<-concurrencyLimit
 					a.wait.Done()
 				}(entryPath)
 			default:
-				a.processSubDir(entryPath, topDir)
+				a.processSubDir(entryPath, topDir, false)
 			}
 		} else {
 			// Apply file type filter if set
