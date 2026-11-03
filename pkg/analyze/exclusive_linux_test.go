@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,11 +18,14 @@ import (
 
 // exclusiveTestDir creates a scratch directory next to the sources, so that
 // the tests run on the filesystem of the checkout rather than on a tmpfs
-// /tmp, which has neither FIEMAP nor reflinks.
+// /tmp, which has neither FIEMAP nor reflinks. A read-only checkout falls back
+// to the temporary directory.
 func exclusiveTestDir(t *testing.T) string {
 	t.Helper()
 	dir, err := os.MkdirTemp(".", "exclusive_test_")
-	require.NoError(t, err)
+	if err != nil {
+		return t.TempDir()
+	}
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return dir
 }
@@ -356,7 +360,7 @@ func TestHardLinksCountedOnce(t *testing.T) {
 	plainRoot.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, plainRoot.GetUsage(), root.GetUsage())
-	assert.Equal(t, allocated(t, a), root.GetUsage())
+	assert.Equal(t, allocated(t, a)+dirOwnUsage(dir), root.GetUsage())
 }
 
 func TestAnalyzersMeasureHardLinkedFileOnce(t *testing.T) {
@@ -566,6 +570,45 @@ func TestExtentBytesPagesAndSplitsSharedWithFakeKernel(t *testing.T) {
 	excl, shared, err = extentBytes(path, fiemapExtentsPerRequest)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), excl+shared, "no extents is an empty map")
+}
+
+// TestEveryAnalyzerUsesExclusiveSizeWithFakeKernel runs on any filesystem, so
+// that the wiring of every analyzer is exercised where FIEMAP or reflinks are
+// not available.
+func TestEveryAnalyzerUsesExclusiveSizeWithFakeKernel(t *testing.T) {
+	analyzers := append(parityAnalyzers(),
+		parityAnalyzer{name: "parallel", analyzer: func(*testing.T) common.Analyzer { return CreateAnalyzer() }},
+		parityAnalyzer{name: "top-dir", analyzer: func(*testing.T) common.Analyzer { return CreateTopDirAnalyzer() }},
+	)
+	for _, tc := range analyzers {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := exclusiveTestDir(t)
+			sub := filepath.Join(dir, "sub")
+			require.NoError(t, os.Mkdir(sub, 0o755))
+			writeSynced(t, filepath.Join(dir, "a"), make([]byte, 8192))
+			writeSynced(t, filepath.Join(sub, "b"), make([]byte, 8192))
+			fakeFiemap(t, mapExtents(
+				fiemapExtent{length: 4096},
+				fiemapExtent{logical: 4096, length: 12288, flags: fiemapExtentShared | fiemapExtentLast},
+			))
+
+			a := tc.analyzer(t)
+			a.SetExclusiveSize(true)
+			root := a.AnalyzeDir(dir, func(_, _ string) bool { return false }, nil)
+			a.GetDone().Wait()
+			root.UpdateStats(make(fs.HardLinkedItems))
+
+			assert.Equal(t, 2*4096+dirOwnUsage(dir)+dirOwnUsage(sub), root.GetUsage())
+			if tc.name == "top-dir" {
+				return // keeps no shared bytes, it is never exported
+			}
+			for child := range root.GetFiles(fs.SortByName, fs.SortAsc) {
+				if file, ok := child.(*File); ok {
+					assert.Equal(t, int64(12288), file.SharedUsage, "shared bytes of %s", child.GetName())
+				}
+			}
+		})
+	}
 }
 
 func TestExclusiveUsageFallsBackOnIoctlError(t *testing.T) {
