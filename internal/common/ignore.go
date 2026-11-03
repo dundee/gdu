@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dundee/gdu/v5/pkg/device"
 )
 
 // CreateIgnorePattern creates one pattern from all path patterns.
@@ -251,6 +253,9 @@ func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
 	log.Printf("File %s excluded by type filter", name)
 	return false
 }
+
+// getFilesystemID is a variable so that tests can replace it
+var getFilesystemID = device.GetFilesystemID
 
 // SetIgnoreOtherFilesystems sets whether dirs on other filesystems than their parent should be ignored
 func (ui *UI) SetIgnoreOtherFilesystems(value bool) {

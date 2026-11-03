@@ -1,7 +1,8 @@
-//go:build !linux
+//go:build windows || plan9
 
 package device
 
-func getFilesystemID(_ string) (uint64, bool) {
+// GetFilesystemID is not supported on this platform
+func GetFilesystemID(_ string) (uint64, bool) {
 	return 0, false
 }
