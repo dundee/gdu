@@ -26,20 +26,24 @@ type TopDirAnalyzer struct {
 
 // CreateTopDirAnalyzer returns Analyzer
 func CreateTopDirAnalyzer() *TopDirAnalyzer {
-	a := &TopDirAnalyzer{
-		BaseAnalyzer: BaseAnalyzer{
-			ignoreFileType:      func(string) bool { return false },
-			matchesTimeFilterFn: func(time.Time) bool { return true },
-		},
-	}
+	a := &TopDirAnalyzer{}
 	a.Init()
 	return a
+}
+
+// FullAnalyzer returns a parallel analyzer with the same settings, for when
+// the full tree is needed, which the top dir analyzer does not build.
+func (a *TopDirAnalyzer) FullAnalyzer() *ParallelAnalyzer {
+	full := CreateAnalyzer()
+	full.copySettings(&a.BaseAnalyzer)
+	return full
 }
 
 // AnalyzeDir analyzes given path
 func (a *TopDirAnalyzer) AnalyzeDir(
 	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
+	a.linkedItems.Clear()
 	a.ignoreDir = ignore
 	if fileTypeFilter != nil {
 		a.ignoreFileType = fileTypeFilter
@@ -63,6 +67,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		},
 		Files: make([]SimpleFile, 0, len(files)),
 	}
+	dir.OwnUsage = dirOwnUsage(path)
 
 	var topDirs []*TopDir
 
@@ -81,14 +86,10 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 				Flag: ' ',
 			}
 			topDirs = append(topDirs, topDir)
-			go func(entryPath string) {
-				a.processSubDir(entryPath, topDir)
-				subDirChan <- struct{}{}
-			}(entryPath)
 		} else {
 			var info os.FileInfo
 			// Apply file type filter if set
-			if a.ignoreFileType(name) {
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 
@@ -100,7 +101,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			// Apply time filter if set
-			if !a.matchesTimeFilterFn(info.ModTime()) {
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
@@ -117,21 +118,34 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			}
 
 			file := SimpleFile{
-				Name:    name,
-				Flag:    getFlag(info),
-				Size:    info.Size(),
-				Symlink: readSymlinkTarget(f.Type(), entryPath),
+				Name:      name,
+				Mtime:     info.ModTime(),
+				Flag:      getFlag(info),
+				Size:      info.Size(),
+				Symlink:   readSymlinkTarget(f.Type(), entryPath),
+				ItemCount: 1,
 			}
 
-			usage, mli := getPlatformSpecificUsageAndMli(info)
+			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
+			usage, _ = a.MeasureSharedUsage(entryPath, info, usage)
 			file.Usage = usage
 
 			if mli > 0 {
 				file.Flag = 'H'
+				_, file.alreadyCounted = a.linkedItems.LoadOrStore(mli, struct{}{})
 			}
 
 			dir.Files = append(dir.Files, file)
 		}
+	}
+
+	// Register root-level hard links before scanning subdirectories so their
+	// storage is counted at the root, while every file keeps its displayed size.
+	for _, topDir := range topDirs {
+		go func() {
+			a.processSubDir(filepath.Join(path, topDir.Name), topDir, true)
+			subDirChan <- struct{}{}
+		}()
 	}
 
 	for i := 0; i < len(topDirs); i++ {
@@ -144,10 +158,11 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 		size, usage, itemCount := topDir.GetUsage()
 		dir.Files = append(dir.Files, SimpleFile{
 			Name:      topDir.Name,
+			Mtime:     topDir.Mtime,
 			Flag:      topDir.Flag,
 			Size:      size,
 			Usage:     usage,
-			ItemCount: itemCount,
+			ItemCount: itemCount + 1, // include the directory itself, like Dir does
 			IsDir:     true,
 		})
 	}
@@ -160,19 +175,36 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	return &dir
 }
 
-func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
+// processSubDir adds the stats of path to topDir. isTopDir is true when path
+// is topDir itself rather than one of its subdirectories.
+func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir bool) {
 	var (
 		err        error
 		totalSize  int64
 		totalUsage int64
 		totalCount int64
 		info       os.FileInfo
+		mtime      time.Time
 	)
+
+	if a.IsCancelled() {
+		return
+	}
 
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
+	}
+	switch {
+	case isTopDir:
+		topDir.SetFlag(getDirFlag(err, len(files)))
+	case err != nil:
 		topDir.SetFlag('.')
+	}
+
+	if dirInfo, statErr := os.Stat(path); statErr == nil {
+		totalUsage += dirInfoOwnUsage(dirInfo)
+		mtime = dirInfo.ModTime()
 	}
 
 	for _, f := range files {
@@ -192,16 +224,16 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			case concurrencyLimit <- struct{}{}:
 				a.wait.Add(1)
 				go func(entryPath string) {
-					a.processSubDir(entryPath, topDir)
+					a.processSubDir(entryPath, topDir, false)
 					<-concurrencyLimit
 					a.wait.Done()
 				}(entryPath)
 			default:
-				a.processSubDir(entryPath, topDir)
+				a.processSubDir(entryPath, topDir, false)
 			}
 		} else {
 			// Apply file type filter if set
-			if a.ignoreFileType(name) {
+			if a.ignoreFileType != nil && a.ignoreFileType(name) {
 				continue // Skip this file
 			}
 
@@ -213,7 +245,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 			}
 
 			// Apply time filter if set
-			if !a.matchesTimeFilterFn(info.ModTime()) {
+			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
 				continue // Skip this file
 			}
 
@@ -231,13 +263,18 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 				}
 			}
 
-			usage, mli := getPlatformSpecificUsageAndMli(info)
+			if info.ModTime().After(mtime) {
+				mtime = info.ModTime()
+			}
+
+			usage, mli := getPlatformSpecificUsageAndMli(info, entryPath)
 
 			if mli > 0 {
 				if _, loaded := a.linkedItems.LoadOrStore(mli, struct{}{}); loaded {
 					continue
 				}
 			}
+			usage, _ = a.MeasureSharedUsage(entryPath, info, usage)
 
 			totalUsage += usage
 			totalSize += info.Size()
@@ -246,11 +283,11 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir) {
 
 	if len(files) == 0 {
 		totalSize = EmptyDirSize
-		totalUsage = 0
 	}
 
 	a.progressItemCount.Add(totalCount)
 	a.progressTotalUsage.Add(totalUsage)
 
 	topDir.AddUsage(totalSize, totalUsage, totalCount)
+	topDir.UpdateMtime(mtime)
 }

@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -23,6 +24,7 @@ type BaseAnalyzer struct {
 	ignoreFileType          common.ShouldFileBeIgnored
 	followSymlinks          bool
 	gitAnnexedSize          bool
+	extents                 *extentMeter // nil unless exclusive size is on
 	matchesTimeFilterFn     common.TimeFilter
 	archiveBrowsing         bool
 	progressTicker          *time.Ticker
@@ -67,6 +69,38 @@ func (a *BaseAnalyzer) SetFollowSymlinks(v bool) {
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (a *BaseAnalyzer) SetShowAnnexedSize(v bool) {
 	a.gitAnnexedSize = v
+}
+
+// SetExclusiveSize sets whether disk usage of files is the number of bytes not
+// shared with other files (Linux only, measured with FIEMAP)
+func (a *BaseAnalyzer) SetExclusiveSize(v bool) {
+	switch {
+	case !v:
+		a.extents = nil
+	case a.extents == nil:
+		a.extents = &extentMeter{}
+	}
+}
+
+// MeasureSharedUsage returns the disk usage to record for a file and the bytes
+// in its shared extents. With exclusive size off, or when the file cannot be
+// measured, that is the given st_blocks based usage with nothing shared.
+func (a *BaseAnalyzer) MeasureSharedUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
+	if a.extents == nil {
+		return usage, 0
+	}
+	exclusive, shared = a.extents.measure(path, info, usage)
+	return exclusive, shared
+}
+
+// copySettings makes a use the scan settings of from.
+func (a *BaseAnalyzer) copySettings(from *BaseAnalyzer) {
+	a.ignoreFileType = from.ignoreFileType
+	a.followSymlinks = from.followSymlinks
+	a.gitAnnexedSize = from.gitAnnexedSize
+	a.extents = from.extents
+	a.matchesTimeFilterFn = from.matchesTimeFilterFn
+	a.archiveBrowsing = from.archiveBrowsing
 }
 
 // SetTimeFilter sets the time filter function for file inclusion

@@ -5,7 +5,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -35,6 +34,8 @@ type UI struct {
 	fixedBase         float64
 	fixedSuffix       string
 	reverseSort       bool
+	configuredSortBy  string
+	configuredOrder   string
 }
 
 var (
@@ -205,7 +206,8 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	// default 4096-byte directory overhead instead of the real values.
 	info, err := os.Stat(path)
 	if err == nil && info.Mode().IsRegular() {
-		file := analyze.CreateFileItem(filepath.Base(path), info)
+		file := analyze.CreateFileItem(path, info)
+		file.Usage, file.SharedUsage = ui.Analyzer.MeasureSharedUsage(path, info, file.Usage)
 		ui.printTotalItem(file)
 		return nil
 	}
@@ -254,8 +256,8 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 	// The top dir analyzer returns SimpleDir, a reduced item that cannot be
 	// re-parented, so it cannot live under a virtual root. Trade its lower
 	// memory use for the full tree, as --top and --depth already do.
-	if _, ok := ui.Analyzer.(*analyze.TopDirAnalyzer); ok {
-		ui.Analyzer = analyze.CreateAnalyzer()
+	if topDir, ok := ui.Analyzer.(*analyze.TopDirAnalyzer); ok {
+		ui.Analyzer = topDir.FullAnalyzer()
 	}
 
 	roots := make([]fs.Item, 0, len(paths))
@@ -330,16 +332,25 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	return nil
 }
 
-// sortSettings returns the field and the direction the file list is sorted by,
-// honoring --show-apparent-size and --reverse-sort.
+// SetDefaultSorting applies the configured directory-listing order.
+func (ui *UI) SetDefaultSorting(by, order string) {
+	ui.configuredSortBy = by
+	ui.configuredOrder = order
+}
+
+// sortSettings honors the config, the displayed size metric and --reverse-sort.
 func (ui *UI) sortSettings() (fs.SortBy, fs.SortOrder) {
-	sortOrder := fs.SortDesc
+	sortOrder := fs.ParseSortOrder(ui.configuredOrder)
 	if ui.reverseSort {
-		sortOrder = fs.SortAsc
+		if sortOrder == fs.SortAsc {
+			sortOrder = fs.SortDesc
+		} else {
+			sortOrder = fs.SortAsc
+		}
 	}
 
-	sortBy := fs.SortBySize
-	if ui.ShowApparentSize {
+	sortBy := fs.ParseSortBy(ui.configuredSortBy)
+	if sortBy == fs.SortBySize && ui.ShowApparentSize {
 		sortBy = fs.SortByApparentSize
 	}
 
@@ -354,8 +365,13 @@ func (ui *UI) showDir(dir fs.Item) {
 	}
 }
 
+// printTopFiles ranks by the displayed size metric regardless of the
+// configured sorting, because --top selects the largest files.
 func (ui *UI) printTopFiles(file fs.Item) {
-	sortBy, _ := ui.sortSettings()
+	sortBy := fs.SortBySize
+	if ui.ShowApparentSize {
+		sortBy = fs.SortByApparentSize
+	}
 	collected := analyze.CollectTopFiles(file, ui.top, sortBy)
 	for _, file := range collected {
 		ui.printItemPath(file)
@@ -435,7 +451,7 @@ func (ui *UI) printItem(parent, file fs.Item) {
 			lineFormat,
 			string(file.GetFlag()),
 			ui.formatSize(size),
-			ui.formatCount(file.GetItemCount()),
+			ui.formatCount(fs.DisplayedItemCount(file)),
 			name,
 		)
 		return

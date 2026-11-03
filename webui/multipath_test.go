@@ -42,7 +42,7 @@ func TestAnalyzePathsGroupsRootsUnderVirtualDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("findNode(virtual root): %v", err)
 	}
-	resp := buildNodeResponse(node, fs.SortBySize, fs.SortDesc)
+	resp := buildNodeResponse(node, fs.SortBySize, fs.SortDesc, nil)
 	if len(resp.Children) != 2 {
 		t.Fatalf("virtual root has %d children, want 2", len(resp.Children))
 	}

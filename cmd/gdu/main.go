@@ -51,7 +51,7 @@ func init() {
 	flags.StringVar(&af.CfgFile, "config-file", "", "Read config from file (default is $HOME/.gdu.yaml)")
 	flags.StringVarP(&af.LogFile, "log-file", "l", "/dev/null", "Path to a logfile")
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
-	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg)")
+	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino)")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
 	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
@@ -75,6 +75,10 @@ func init() {
 	flags.BoolVarP(
 		&af.ShowAnnexedSize, "show-annexed-size", "A", false,
 		"Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)",
+	)
+	flags.BoolVar(
+		&af.ExclusiveSize, "exclusive-size", false,
+		"Linux only: report file usage as the bytes not shared with other files (reflinks), i.e. what deleting them frees",
 	)
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
@@ -103,7 +107,7 @@ func init() {
 	flags.BoolVar(&af.UseSIPrefix, "si", false, "Show sizes with decimal SI prefixes (kB, MB, GB) instead of binary prefixes (KiB, MiB, GiB)")
 	flags.BoolVar(&af.NoPrefix, "no-prefix", false, "Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive mode")
 	flags.BoolVarP(&af.ShowInKiB, "show-in-kib", "k", false, "Show sizes in KiB (or kB with --si) in non-interactive mode")
-	flags.BoolVar(&af.ReverseSort, "reverse-sort", false, "Reverse sorting order (smallest to largest) in non-interactive mode")
+	flags.BoolVar(&af.ReverseSort, "reverse-sort", false, "Reverse the sorting order in non-interactive mode (smallest to largest by default)")
 	flags.BoolVar(&af.Mouse, "mouse", false, "Use mouse")
 	flags.BoolVar(&af.NoDelete, "no-delete", false, "Do not allow deletions")
 	flags.BoolVar(&af.NoViewFile, "no-view-file", false, "Do not allow viewing file contents")
@@ -265,7 +269,8 @@ func runE(command *cobra.Command, args []string) error {
 
 	istty := isatty.IsTerminal(os.Stdout.Fd())
 
-	// we are not able to analyze disk usage on Windows and Plan9
+	// disk usage is only partially available on Windows (compressed, sparse
+	// and OneDrive files) and not at all on Plan9, so show apparent size
 	if runtime.GOOS == osWindows || runtime.GOOS == osPlan9 {
 		af.ShowApparentSize = true
 	}

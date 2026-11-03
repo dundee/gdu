@@ -24,6 +24,17 @@ func TestSequentialAnalyzerSetShowAnnexedSize(t *testing.T) {
 	assert.False(t, analyzer.gitAnnexedSize)
 }
 
+func TestSequentialAnalyzerSetExclusiveSize(t *testing.T) {
+	analyzer := CreateSeqAnalyzer()
+	analyzer.SetExclusiveSize(true)
+	meter := analyzer.extents
+	assert.NotNil(t, meter)
+	analyzer.SetExclusiveSize(true)
+	assert.Same(t, meter, analyzer.extents, "setting it again keeps what was learned")
+	analyzer.SetExclusiveSize(false)
+	assert.Nil(t, analyzer.extents)
+}
+
 func TestSequentialAnalyzerUpdateProgress(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 

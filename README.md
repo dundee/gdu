@@ -48,6 +48,7 @@ Flags:
       --depth int                      Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
       --enable-profiling               Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -E, --exclude-type strings           File types to exclude (e.g., --exclude-type yaml,json)
+      --exclusive-size                 Linux only: report file usage as the bytes not shared with other files (reflinks), i.e. what deleting them frees
   -L, --follow-symlinks                Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
   -h, --help                           help for gdu
   -i, --ignore-dirs strings            Paths to ignore (separated by comma). Can be absolute or relative to current directory (default [/proc,/dev,/sys,/run])
@@ -72,10 +73,10 @@ Flags:
   -u, --no-unicode                     Do not use Unicode symbols (for size bar)
       --no-view-file                   Do not allow viewing file contents
   -n, --non-interactive                Do not run in interactive mode
-      --output-attrs string            Export only selected JSON attributes (name,asize,dsize,items,mtime,notreg)
+      --output-attrs string            Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino)
   -o, --output-file string             Export all info into file as JSON
   -r, --read-from-storage              Use existing database instead of re-scanning
-      --reverse-sort                   Reverse sorting order (smallest to largest) in non-interactive mode
+      --reverse-sort                   Reverse the sorting order in non-interactive mode (smallest to largest by default)
       --sequential                     Use sequential scanning (intended for rotating HDDs)
   -A, --show-annexed-size              Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size             Show apparent size
@@ -116,6 +117,7 @@ Basic list of actions in interactive mode (show help modal for more):
 
     gdu                                   # analyze current dir
     gdu -a                                # show apparent size instead of disk usage
+    gdu --exclusive-size                  # on XFS/btrfs: count only bytes not shared by reflinks
     gdu --no-delete                       # prevent write operations
     gdu --no-view-file                    # prevent viewing file contents
     gdu --trash-command 'trash-put --trash-dir ~/mytrash'   # use own trash command for the D key
@@ -173,7 +175,7 @@ When `--top` or `--depth` flags are used, the full directory tree is built in me
 
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag. In interactive mode, press `Esc` or `Ctrl+C` during a scan to stop scheduling new work and keep the results found so far; pressing `Ctrl+C` again while the scan is stopping quits gdu. If you would rather have the first `Ctrl+C` quit gdu outright, use `--ctrl-c-quits`; `Esc` keeps working either way.
 
-By default the export includes every attribute, and directories always carry their `asize`, `dsize`, and `items` summary stats so they can be preserved on import. Use `--output-attrs=asize,dsize` to emit only selected optional attributes; `name` is always included. Available attributes are `asize`, `dsize`, `items`, `mtime`, and `notreg`.
+By default the export includes every attribute, and directories always carry their `asize`, `dsize`, and `items` summary stats so they can be preserved on import. Use `--output-attrs=asize,dsize` to emit only selected optional attributes; `name` is always included. Available attributes are `asize`, `dsize`, `shsize`, `items`, `mtime`, `notreg`, and `ino`. A directory that could not be read in full carries `"read_error":true`.
 
 Gdu honors `BLOCK_SIZE` and `BLOCKSIZE` in terminal output. `BLOCK_SIZE` takes precedence; both accept GNU coreutils block-size values such as `1K`, `kB`, `human-readable`, and `si`. Explicit size-format flags override these environment variables. Exported JSON always retains raw byte values.
 
@@ -198,13 +200,59 @@ live while the analysis runs.
 
 In the treemap, press `O` to reveal the selected item in the system file
 manager, `D` (or `Delete`) to permanently delete it after confirmation, or `?`
-to show the keyboard shortcuts. The deletion dialog can suppress further
-confirmations for the current browser session. The `--no-delete` flag and
+to show the keyboard shortcuts. In the donut view, each row of the table has
+its own reveal and delete buttons that act on that item; deletion asks for
+confirmation with the same dialog. The deletion dialog can suppress further
+confirmations for the current browser session, for both the treemap and the
+table, so with "permanent" chosen a single click on a row's delete button
+deletes immediately. Deletion runs in the background: the item is drawn
+hatched right away, more items can be deleted meanwhile, and a failed deletion
+puts the item back with the reason. A deleted item stays in place,
+cross-hatched, so the layout does not jump; the directory is reloaded when you
+open another one. You can keep browsing while deletions run; an item that is
+being deleted cannot be opened. The `--no-delete` flag and
 filtered-scan deletion restrictions apply to the web UI as well as the
 terminal UI. Reveal remains available with `--no-delete` because it does not
 modify scanned data. To deliberately allow deletion while filters are active,
 set `GDU_ALLOW_DELETE_WITH_FILTER=1`; the displayed tree may then omit files
 that are still present on disk.
+
+### Cleanup projections
+
+The treemap's projection selector (or `P`) recolors it to help free space
+without touching anything important. Area always stays size.
+
+- **Location** - the default coloring by top-level directory.
+- **Cleanup** - everything grey except cleanup candidates: strong orange for
+  *safe* ones (regenerated by their tool, e.g. `node_modules` next to
+  `package.json`, `target` next to `Cargo.toml`, `__pycache__`, the Go, Gradle,
+  Cargo, npm, uv and Homebrew caches, app caches)
+  and muted gold for ones to *review first* (downloaded ML models, installed
+  toolchains such as `~/.rustup` or `~/.nvm`, installers,
+  virtualenvs, `dist`/`build`, git-ignored files). A directory is tinted by the
+  share of candidates inside it, including files too small to draw.
+- **Age** - colored by the latest change inside an item.
+- **By category** - candidates within the current directory regrouped by
+  category, so cache space scattered over many small directories shows up as
+  one block.
+
+The legend shows how much each category takes within the current directory;
+click a category to single it out: its items are drawn in the category's color
+and outlined, everything else fades (`Esc` shows all again). Hovering a candidate
+shows what it is and how to remove it cleanly (e.g. `ollama rm` for Ollama
+models). Build-like directories only count next to a project marker, and
+anything ignored by a repository's `.gitignore` is flagged for review (ignored
+`dist`/`build` output counts as safe). Candidates are found in the background
+after a scan, while the header shows "classifying…". They are only
+highlighted: deleting stays a deliberate action.
+
+Paths can be excluded and rules added in the `cleanup` section of the config
+file, see [configuration.md](configuration.md#cleanupexclude):
+
+```yaml
+cleanup:
+  exclude: [~/work/current-project]
+```
 
 By default the server binds to `localhost` on a random free port. Use
 `--web-listen` (or the `web.listen` config option) to pin a fixed address.
@@ -240,6 +288,48 @@ flag with following meaning:
 * `H` Same file was already counted (hard link).
 
 * `e` Directory is empty.
+
+## Reflinks and shared extents
+
+On filesystems with reflink support (XFS, btrfs, bcachefs, ...) many files can
+share the same data. Disk usage as reported by `stat` counts shared data once
+per file, so the sum can exceed what the filesystem uses and deleting a file
+frees less than its size.
+
+With `--exclusive-size` (Linux only) Gdu asks the kernel for each regular file's
+extent map (`FS_IOC_FIEMAP`) and reports the total length of the extents that
+are not flagged as shared. That is what deleting the file would free, ignoring
+what other files still reference. It replaces the disk usage figure, so sorting,
+size bars, totals and `-o` exports (`dsize`) all use it; apparent size
+(`-a`) is unchanged. Details:
+
+* Data shared with another file counts as zero in every file sharing it, so a
+  directory holding only the clones of a file elsewhere shows nothing, and the
+  last copy standing shows its full size only once the others are gone.
+* On btrfs, data shared with a snapshot is flagged as shared too, so files in a
+  snapshotted subvolume count as zero until they are changed. Deleting them
+  frees nothing while the snapshot still holds the data.
+* Holes in sparse files count as nothing. Preallocated, delayed-allocation and
+  inline extents count as the file's own unless they are flagged as shared.
+  Sizes are logical: compressed extents (btrfs, ...) are counted uncompressed.
+* Hard links are counted once, as without the flag.
+* Where FIEMAP cannot be used (unsupported filesystem such as tmpfs or NFS, the
+  file cannot be opened, ...) the file keeps its allocated-blocks figure.
+  Files and filesystems that do not report shared extents (ext4) show close to
+  the same figure as without the flag: the extent map leaves out the blocks the
+  filesystem keeps for its own bookkeeping, such as extent trees and extended
+  attributes. Symlinks and directories are not measured, and neither are
+  archives shown by their contents (`--archive-browsing`). Other platforms
+  ignore the option without a warning, so a configuration file can be shared
+  between machines.
+* It costs an `open` and at least one `ioctl` per file with allocated blocks.
+  Once a filesystem has refused FIEMAP, the rest of its files are not asked.
+* The exported `dsize` does not record which metric produced it. Each file
+  whose extent map was read and has shared extents also carries `shsize`, the
+  bytes in those extents, so an export holds both halves of the file's
+  allocated data. Readers that do not know the key ignore it. Directories do
+  not add `shsize` up, and the SQLite storage (`--db *.sqlite`) does not keep
+  it, so exports made with it have none.
 
 ## Configuration file
 

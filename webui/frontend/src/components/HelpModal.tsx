@@ -25,12 +25,23 @@ export function HelpModal() {
             <dd>Select a treemap item</dd>
             <dt>Double-click</dt>
             <dd>Open a directory</dd>
+            <dt>P</dt>
+            <dd>
+              Switch projection: location, cleanup candidates (safe / review first), age of the
+              last change, or candidates grouped by category
+            </dd>
+          </>
+        )}
+        {view === 'donut' && (
+          <>
+            <dt>Row buttons</dt>
+            <dd>Reveal or delete an item in the table</dd>
           </>
         )}
         <dt>?</dt>
         <dd>Show this help</dd>
         <dt>Esc</dt>
-        <dd>Close a dialog</dd>
+        <dd>Close a dialog, or show all categories again</dd>
       </dl>
       <div className="modal-actions">
         <button type="button" autoFocus onClick={() => setShowHelp(false)}>

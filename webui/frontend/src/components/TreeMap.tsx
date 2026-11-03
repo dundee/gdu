@@ -2,8 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Node, TreeNode } from '../types';
 import { metricValue } from '../slices';
 import { formatCount, formatSize, percent } from '../format';
-import { layoutTree } from './treemap/treeLayout';
+import { layoutTree, type TreeLayoutRect } from './treemap/treeLayout';
 import { OTHER_COLOR } from '../colors';
+import { deletionStateOf, type Deletion } from '../model';
+
+export type TileFocus = 'match' | 'contains' | 'none';
+
+const FOCUS_OUTLINE = '#ffe066';
 
 interface TreeMapProps {
   root: TreeNode;
@@ -18,6 +23,22 @@ interface TreeMapProps {
   // a directory, or its immediate parent when it is a file (there is nothing
   // to "open" for a file, so this reveals the directory that contains it).
   onOpen: (path: string) => void;
+  // colorFor overrides the location coloring (colorMap) for a projection.
+  colorFor?: (rect: TreeLayoutRect) => string;
+  // focus, when set, singles out some tiles (e.g. a legend filter): matches
+  // are drawn in focusColor and the topmost ones outlined, tiles merely
+  // containing matches stay as they are, and everything else fades.
+  focus?: (node: Node) => TileFocus;
+  focusColor?: string;
+  // tooltipDetail adds a line to the hover tooltip.
+  tooltipDetail?: (node: Node) => string | null;
+  // Items being deleted in the background (hatched) or already deleted
+  // (cross-hatched), with everything inside them. They keep their place, so
+  // the layout never jumps under the cursor.
+  deletions?: ReadonlyMap<string, Deletion>;
+  // dimOnHover fades every tile outside the hovered one's ancestry. Off for
+  // projections, whose colors carry meaning.
+  dimOnHover?: boolean;
 }
 
 const DEFAULT_WIDTH = 300;
@@ -36,6 +57,12 @@ export function TreeMap({
   onHover,
   onSelect,
   onOpen,
+  colorFor,
+  focus,
+  focusColor,
+  tooltipDetail,
+  deletions,
+  dimOnHover = true,
 }: TreeMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
@@ -84,6 +111,12 @@ export function TreeMap({
     return { hoveredNode: node, outlinedPaths: paths };
   }, [rects, hoveredPath, root]);
   const rootHovered = hoveredNode?.path === root.path;
+  const focusByPath = useMemo(() => {
+    if (!focus) {
+      return null;
+    }
+    return new Map(rects.map((rect) => [rect.node.path, focus(rect.node)]));
+  }, [focus, rects]);
 
   return (
     <div
@@ -99,6 +132,27 @@ export function TreeMap({
         height="100%"
       >
         <defs>
+          <pattern
+            id="treemap-pending"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <rect width="6" height="6" fill="#14171c" />
+            <rect width="2" height="6" fill="#3a4150" />
+          </pattern>
+          <pattern
+            id="treemap-deleted"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <rect width="6" height="6" fill="#14171c" />
+            <rect width="1.5" height="6" fill="#4a5262" />
+            <rect width="6" height="1.5" fill="#4a5262" />
+          </pattern>
           <linearGradient id="treemap-shine" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
             <stop offset="0.48" stopColor="#fff" stopOpacity="0.04" />
@@ -120,7 +174,14 @@ export function TreeMap({
           const isHovered = node.path === hoveredPath;
           const isAncestor = !isHovered && outlinedPaths.has(node.path);
           const isSelected = node.path === selectedPath;
-          const dimmed = hoveredNode !== null && !outlinedPaths.has(node.path);
+          const deletion = deletions ? deletionStateOf(deletions, node.path) : null;
+          const tileFocus = focusByPath?.get(node.path) ?? null;
+          const parentPath = rect.ancestorPaths[rect.ancestorPaths.length - 1];
+          // only the outermost match is outlined, not everything inside it
+          const focusEdge =
+            tileFocus === 'match' && focusByPath?.get(parentPath) !== 'match';
+          const dimmed = dimOnHover && hoveredNode !== null && !outlinedPaths.has(node.path);
+          const opacity = tileFocus === 'none' ? 0.14 : dimmed ? 0.42 : 1;
           const showLabel = !node.isDir && rect.w > 34 && rect.h > 16;
           const showSize = showLabel && rect.w > 60 && rect.h > 30;
           const width = Math.max(rect.w - 0.5, 0);
@@ -129,12 +190,15 @@ export function TreeMap({
           return (
             <g
               key={node.path}
-              className={`treemap-tile ${isHovered ? 'hovered' : ''} ${isAncestor ? 'ancestor' : ''} ${isSelected ? 'selected' : ''}`}
+              className={`treemap-tile ${isHovered ? 'hovered' : ''} ${isAncestor ? 'ancestor' : ''} ${isSelected ? 'selected' : ''} ${deletion ?? ''}`}
+              aria-busy={deletion === 'pending' || undefined}
+              data-deletion={deletion ?? undefined}
+              data-focus={tileFocus ?? undefined}
               role="button"
               aria-label={`${node.name}, ${formatSize(metricValue(node, apparent), useSIPrefix)}`}
               tabIndex={0}
               style={{ cursor: 'pointer' }}
-              opacity={dimmed ? 0.42 : 1}
+              opacity={opacity}
               onMouseEnter={() => onHover(node.path)}
               onMouseLeave={() => onHover(null)}
               onClick={(event) => {
@@ -156,24 +220,38 @@ export function TreeMap({
                 y={rect.y}
                 width={width}
                 height={height}
-                fill={colorMap.get(rect.colorPath) ?? OTHER_COLOR}
+                fill={
+                  deletion
+                    ? `url(#treemap-${deletion})`
+                    : tileFocus === 'match' && focusColor
+                      ? focusColor
+                      : colorFor
+                        ? colorFor(rect)
+                        : (colorMap.get(rect.colorPath) ?? OTHER_COLOR)
+                }
                 stroke={
                   isHovered || isAncestor
                     ? '#fff'
                     : isSelected
                       ? '#55b6ff'
-                      : 'rgba(0,0,0,0.35)'
+                      : focusEdge
+                        ? FOCUS_OUTLINE
+                        : 'rgba(0,0,0,0.35)'
                 }
-                strokeWidth={isHovered ? 1.5 : isAncestor || isSelected ? 1.1 : 0.4}
+                strokeWidth={
+                  isHovered ? 1.5 : focusEdge ? 2 : isAncestor || isSelected ? 1.1 : 0.4
+                }
               />
-              <rect
-                className="treemap-shine"
-                x={rect.x}
-                y={rect.y}
-                width={width}
-                height={height}
-                fill="url(#treemap-shine)"
-              />
+              {!deletion && (
+                <rect
+                  className="treemap-shine"
+                  x={rect.x}
+                  y={rect.y}
+                  width={width}
+                  height={height}
+                  fill="url(#treemap-shine)"
+                />
+              )}
               {showLabel && (
                 <foreignObject
                   x={rect.x + 1.5}
@@ -206,6 +284,16 @@ export function TreeMap({
               ? ` · ${formatCount(hoveredNode.itemCount)} item${hoveredNode.itemCount === 1 ? '' : 's'}`
               : ''}
           </span>
+          {deletions && deletionStateOf(deletions, hoveredNode.path) && (
+            <span className="treemap-tooltip-detail">
+              {deletionStateOf(deletions, hoveredNode.path) === 'pending'
+                ? 'Deleting…'
+                : 'Deleted; the view updates when you open another directory'}
+            </span>
+          )}
+          {tooltipDetail?.(hoveredNode) && (
+            <span className="treemap-tooltip-detail">{tooltipDetail(hoveredNode)}</span>
+          )}
         </div>
       )}
     </div>

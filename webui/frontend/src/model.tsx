@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -11,6 +12,7 @@ import type { Node, NodeResponse, SortKey, SortOrder, Status, TreeNode } from '.
 import { fetchNode, fetchStatus, subscribeStatus, type DeleteMode } from './api';
 import { colorMapFor, computeSlices } from './slices';
 import { useLatest } from './useLatest';
+import { amountValue, type Projection } from './cleanup';
 
 export type ChartView = 'donut' | 'treemap';
 
@@ -63,6 +65,10 @@ export interface GduModel {
   onSortChange: (key: SortKey) => void;
   view: ChartView;
   toggleView: () => void;
+  // projection is how the treemap is colored (and, for "categories", shaped).
+  // Kept here so it survives toggling the view.
+  projection: Projection;
+  setProjection: (projection: Projection) => void;
   toggleApparent: () => void;
   hoveredPath: string | null;
   setHoveredPath: (path: string | null) => void;
@@ -79,17 +85,74 @@ export interface GduModel {
   treeRoot: TreeNode | null;
   treePath: string | null;
   setTree: (path: string, root: TreeNode | null) => void;
-  // Invalidates the cached tree (clears both treeRoot and treePath) so a
-  // failed refresh does not leave a stale tree displayed as current, and the
-  // loader effect above treats the path as not-yet-loaded, eligible for a
-  // retry.
-  clearTree: () => void;
   // "Do not ask again this session" for delete confirmation, remembering
   // which of the two delete modes to repeat without asking. Lives here
   // (rather than in TreeMapView) so it survives the view toggling
   // donut/treemap, which unmounts TreeMapView and would otherwise reset it.
   skipDeleteConfirm: DeleteMode | null;
   setSkipDeleteConfirm: (mode: DeleteMode | null) => void;
+  // Optimistic deletion: items whose deletion is running ("pending") or was
+  // done in the current directory ("deleted"). Deleted items keep their place
+  // and are only marked, so the layout does not jump under the cursor; the
+  // directory is reloaded once the user navigates. Lives here so every view
+  // sees the same state.
+  deletions: ReadonlyMap<string, Deletion>;
+  // Requests still running. Navigating meanwhile keeps their items marked
+  // wherever they show up; an item being deleted cannot be opened.
+  deletionsInFlight: number;
+  beginDeletion: (node: Node) => void;
+  // settleDeletion records a finished request; a failed one (error set) is
+  // dropped from deletions so its item is drawn normally again. Once no
+  // request is running it returns the errors of the whole batch, otherwise
+  // null.
+  settleDeletion: (path: string, error: string | null) => string[] | null;
+}
+
+export type DeletionState = 'pending' | 'deleted';
+
+export interface Deletion {
+  state: DeletionState;
+  node: Node;
+}
+
+// deletionStateOf tells whether path, or a directory containing it, is being
+// or has been deleted.
+export function deletionStateOf(
+  deletions: ReadonlyMap<string, Deletion>,
+  path: string,
+): DeletionState | null {
+  if (deletions.size === 0) {
+    return null;
+  }
+  const own = deletions.get(path);
+  if (own) {
+    return own.state;
+  }
+  for (const [deleted, { state }] of deletions) {
+    const separator = path[deleted.length];
+    if (path.startsWith(deleted) && (separator === '/' || separator === '\\')) {
+      return state;
+    }
+  }
+  return null;
+}
+
+// freedBytes is the space freed by the confirmed deletions. An item deleted
+// after something inside it was is counted once, with the size it had when
+// the user deleted it.
+export function freedBytes(deletions: ReadonlyMap<string, Deletion>, apparent: boolean): number {
+  let total = 0;
+  for (const [path, { state, node }] of deletions) {
+    if (state !== 'deleted') {
+      continue;
+    }
+    const parent = path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
+    if (parent && deletionStateOf(deletions, parent) === 'deleted') {
+      continue;
+    }
+    total += amountValue(node, apparent);
+  }
+  return total;
 }
 
 const GduModelContext = createContext<GduModel | null>(null);
@@ -121,11 +184,21 @@ export function useGduModelState() {
   const [order, setOrder] = useState<SortOrder>('desc');
   const [apparent, setApparent] = useState<boolean | null>(null);
   const [view, setView] = useState<ChartView>('donut');
+  const [projection, setProjection] = useState<Projection>('location');
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
   const [treePath, setTreePath] = useState<string | null>(null);
+  const [deletions, setDeletions] = useState<ReadonlyMap<string, Deletion>>(() => new Map());
+  const [deletionsInFlight, setDeletionsInFlight] = useState(0);
+  const inFlightRef = useRef(0);
+  // Set once anything was deleted: the shown data is stale from then on and
+  // is reloaded on the next navigation.
+  const staleRef = useRef(false);
+  const deletionsRef = useLatest(deletions);
+  const [reloadKey, setReloadKey] = useState(0);
+  const deletionErrorsRef = useRef<string[]>([]);
   const [skipDeleteConfirm, setSkipDeleteConfirmState] = useState<DeleteMode | null>(() => {
     const mode = readSessionStorage(deleteModeStorageKey);
     return mode === 'trash' || mode === 'permanent' ? mode : null;
@@ -178,7 +251,19 @@ export function useGduModelState() {
     return () => {
       cancelled = true;
     };
-  }, [currentPath, sort, order, status?.state]);
+  }, [currentPath, sort, order, status?.state, reloadKey]);
+
+  // Data loaded while the classification ran lacks cleanup candidates:
+  // reload it once the classification is done.
+  const classifying = status?.classifying ?? false;
+  const wasClassifyingRef = useRef(classifying);
+  useEffect(() => {
+    if (wasClassifyingRef.current && !classifying) {
+      setTreePath(null);
+      setReloadKey((k) => k + 1);
+    }
+    wasClassifyingRef.current = classifying;
+  }, [classifying]);
 
   // Global "?" shortcut to open the help overlay; works from any view.
   useEffect(() => {
@@ -222,9 +307,58 @@ export function useGduModelState() {
   );
 
   const navigateToPath = useCallback((path: string) => {
+    // the contents of an item being deleted are going away
+    if (deletionsRef.current && deletionStateOf(deletionsRef.current, path)) {
+      return;
+    }
+    if (staleRef.current) {
+      // running deletions stay marked in the reloaded data, which is stale
+      // again once they finish
+      staleRef.current = inFlightRef.current > 0;
+      setDeletions((prev) => new Map([...prev].filter(([, d]) => d.state === 'pending')));
+      setTreePath(null);
+      setTreeRoot(null);
+      // reload even when navigating to the directory already shown
+      setReloadKey((k) => k + 1);
+    }
     setCurrentPath(path);
     setHoveredPath(null);
+  }, [deletionsRef]);
+
+  const beginDeletion = useCallback((node: Node) => {
+    inFlightRef.current += 1;
+    staleRef.current = true;
+    setDeletionsInFlight(inFlightRef.current);
+    setDeletions((prev) => new Map(prev).set(node.path, { state: 'pending', node }));
   }, []);
+
+  const settleDeletion = useCallback((path: string, error: string | null) => {
+    inFlightRef.current = Math.max(inFlightRef.current - 1, 0);
+    setDeletionsInFlight(inFlightRef.current);
+    setDeletions((prev) => {
+      const next = new Map(prev);
+      const entry = next.get(path);
+      if (error !== null) {
+        next.delete(path);
+      } else if (entry) {
+        next.set(path, { ...entry, state: 'deleted' });
+      }
+      return next;
+    });
+    if (error === null) {
+      staleRef.current = true;
+    }
+    if (error !== null) {
+      deletionErrorsRef.current.push(error);
+    }
+    if (inFlightRef.current > 0) {
+      return null;
+    }
+    const errors = deletionErrorsRef.current;
+    deletionErrorsRef.current = [];
+    return errors;
+  }, []);
+
 
   const handleSelect = useCallback(
     (node: Node) => {
@@ -262,11 +396,6 @@ export function useGduModelState() {
     setTreeRoot(root);
   }, []);
 
-  const clearTree = useCallback(() => {
-    setTreePath(null);
-    setTreeRoot(null);
-  }, []);
-
   const setSkipDeleteConfirm = useCallback((mode: DeleteMode | null) => {
     setSkipDeleteConfirmState(mode);
     writeSessionStorage(deleteModeStorageKey, mode);
@@ -287,6 +416,8 @@ export function useGduModelState() {
     onSortChange,
     view,
     toggleView,
+    projection,
+    setProjection,
     toggleApparent,
     hoveredPath,
     setHoveredPath,
@@ -300,8 +431,11 @@ export function useGduModelState() {
     treeRoot,
     treePath,
     setTree,
-    clearTree,
     skipDeleteConfirm,
     setSkipDeleteConfirm,
+    deletions,
+    deletionsInFlight,
+    beginDeletion,
+    settleDeletion,
   };
 }

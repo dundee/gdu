@@ -20,6 +20,7 @@ import (
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/cleanup"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/timefilter"
@@ -45,9 +46,11 @@ type UI interface {
 	SetIgnoreFromFile(ignoreFile string) error
 	SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error
 	SetIgnoreHidden(value bool)
+	SetIgnoreOtherFilesystems(value bool)
 	SetIncludeTypes(types []string)
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
+	SetExclusiveSize(value bool)
 	SetAnalyzer(analyzer common.Analyzer)
 	SetTimeFilter(timeFilter common.TimeFilter)
 	SetArchiveBrowsing(value bool)
@@ -79,6 +82,7 @@ type Flags struct {
 	ShowApparentSize    bool      `yaml:"show-apparent-size"`
 	ShowRelativeSize    bool      `yaml:"show-relative-size"`
 	ShowAnnexedSize     bool      `yaml:"show-annexed-size"`
+	ExclusiveSize       bool      `yaml:"exclusive-size"`
 	ShowVersion         bool      `yaml:"-"`
 	ShowItemCount       bool      `yaml:"show-item-count"`
 	ShowMTime           bool      `yaml:"show-mtime"`
@@ -119,6 +123,9 @@ type Flags struct {
 	BrowseParentDirs    bool      `yaml:"browse-parent-dirs"`
 	Web                 bool      `yaml:"-"`
 	WebConfig           WebConfig `yaml:"web"`
+	// Cleanup holds user rules and exclusions for the web UI's cleanup
+	// projections.
+	Cleanup cleanup.Config `yaml:"cleanup"`
 }
 
 // WebConfig defines the web UI options that can be set from the config file.
@@ -297,6 +304,9 @@ func (a *App) Run() error {
 	if a.Flags.ShowAnnexedSize {
 		ui.SetShowAnnexedSize(true)
 	}
+	if a.Flags.ExclusiveSize {
+		ui.SetExclusiveSize(true)
+	}
 	if a.Flags.ArchiveBrowsing {
 		ui.SetArchiveBrowsing(true)
 	}
@@ -348,6 +358,9 @@ func (a *App) Run() error {
 
 	if a.Flags.NoHidden {
 		ui.SetIgnoreHidden(true)
+	}
+	if a.Flags.NoCross {
+		ui.SetIgnoreOtherFilesystems(true)
 	}
 
 	a.setMaxProcs()
@@ -496,6 +509,9 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 		if a.Flags.TrashCommand != "" {
 			webUI.SetTrashCommand(a.Flags.TrashCommand)
 		}
+		if err := webUI.SetCleanupConfig(a.Flags.Cleanup); err != nil {
+			return nil, fmt.Errorf("cleanup config: %w", err)
+		}
 		ui = webUI
 	case a.Flags.OutputFile != "":
 		var output io.Writer
@@ -537,6 +553,8 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 			a.Flags.ReverseSort,
 			a.Flags.Depth,
 		)
+		stdoutUI.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
+
 		if a.Flags.NoUnicode {
 			stdoutUI.UseOldProgressRunes()
 		}

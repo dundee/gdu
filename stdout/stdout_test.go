@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -73,6 +74,35 @@ func TestShowItemCountInNonInteractiveMode(t *testing.T) {
 	assert.Regexp(t, regexp.MustCompile(`(?m)\s+15\s+/c$`), out)
 }
 
+func TestShowItemCountIsTheSameForEveryAnalyzer(t *testing.T) {
+	tmpDir := t.TempDir()
+	assert.Nil(t, os.MkdirAll(filepath.Join(tmpDir, "a", "sub"), 0o755))
+	assert.Nil(t, os.WriteFile(filepath.Join(tmpDir, "a", "f"), []byte("x"), 0o644))
+	assert.Nil(t, os.WriteFile(filepath.Join(tmpDir, "a", "sub", "f"), []byte("x"), 0o644))
+	assert.Nil(t, os.Mkdir(filepath.Join(tmpDir, "empty"), 0o755))
+
+	analyzers := map[string]func() common.Analyzer{
+		"top dir":    func() common.Analyzer { return analyze.CreateTopDirAnalyzer() },
+		"parallel":   func() common.Analyzer { return analyze.CreateAnalyzer() },
+		"sequential": func() common.Analyzer { return analyze.CreateSeqAnalyzer() },
+	}
+	for name, createAnalyzer := range analyzers {
+		t.Run(name, func(t *testing.T) {
+			output := bytes.NewBuffer(make([]byte, 10))
+			ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+			ui.SetAnalyzer(createAnalyzer())
+			ui.SetShowItemCount()
+
+			err := ui.AnalyzePath(tmpDir, nil)
+			assert.Nil(t, err)
+
+			out := output.String()
+			assert.Regexp(t, regexp.MustCompile(`(?m)\s+3\s+/a$`), out)
+			assert.Regexp(t, regexp.MustCompile(`(?m)\s+0\s+/empty$`), out)
+		})
+	}
+}
+
 func TestShowItemCountInNonInteractiveModeWithColorsAndFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "single")
@@ -107,6 +137,29 @@ func TestShowSummaryApparentSizeForFilePath(t *testing.T) {
 	// With apparent size, a 5-byte file should show "5 B", not "4.0 KiB"
 	assert.Contains(t, out, "5 B")
 	assert.Contains(t, out, "small.txt")
+}
+
+// fileMeasuringAnalyzer stands in for an analyzer whose settings change how a
+// file is measured, such as --exclusive-size.
+type fileMeasuringAnalyzer struct {
+	*analyze.TopDirAnalyzer
+}
+
+func (fileMeasuringAnalyzer) MeasureSharedUsage(string, os.FileInfo, int64) (exclusive, shared int64) {
+	return 12345, 0
+}
+
+func TestFilePathIsMeasuredByTheAnalyzer(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "small.txt")
+	assert.Nil(t, os.WriteFile(filePath, []byte("hello"), 0o644))
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	// summarize=true, noPrefix=true
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, true, "", 0, false, 0)
+	ui.SetAnalyzer(fileMeasuringAnalyzer{analyze.CreateTopDirAnalyzer()})
+	assert.Nil(t, ui.AnalyzePath(filePath, nil))
+
+	assert.Contains(t, output.String(), "12345")
 }
 
 func TestShowSummaryDiskUsageForFilePath(t *testing.T) {
@@ -225,6 +278,27 @@ func TestShowTopWithApparentSize(t *testing.T) {
 	out = output.String()
 	assert.Less(t, strings.Index(out, "/root/sparse"), strings.Index(out, "/root/dense"),
 		"largest apparent size should be printed first, got:\n"+out)
+}
+
+func TestShowTopIgnoresConfiguredSorting(t *testing.T) {
+	root := &analyze.Dir{
+		File:      &analyze.File{Name: "root"},
+		BasePath:  "/",
+		ItemCount: 4,
+	}
+	root.AddFile(&analyze.File{Name: "a", Parent: root, Usage: 1 << 20})
+	root.AddFile(&analyze.File{Name: "b", Parent: root, Usage: 3 << 20})
+	root.AddFile(&analyze.File{Name: "c", Parent: root, Usage: 2 << 20})
+
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	ui.SetDefaultSorting("name", "asc")
+	ui.printTopFiles(root)
+
+	out := output.String()
+	assert.NotContains(t, out, "/root/a")
+	assert.Less(t, strings.Index(out, "/root/b"), strings.Index(out, "/root/c"),
+		"largest files should be printed first, got:\n"+out)
 }
 
 func TestShowDepth(t *testing.T) {

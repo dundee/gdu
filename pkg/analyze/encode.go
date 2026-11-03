@@ -43,6 +43,11 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttr
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)
 	}
+	// ncdu's name for a directory that could not be read in full; without
+	// it an export cannot be told apart from a complete scan.
+	if f.Flag == '!' {
+		buff = append(buff, []byte(`,"read_error":true`)...)
+	}
 
 	buff = append(buff, '}')
 	if f.Files.Len() > 0 {
@@ -88,6 +93,10 @@ func (f *File) EncodeJSON(writer io.Writer, _ bool, attributes fs.JSONAttributes
 		buff = append(buff, []byte(`,"dsize":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetUsage(), 10))...)
 	}
+	if attributes.Includes("shsize") && f.SharedUsage > 0 {
+		buff = append(buff, []byte(`,"shsize":`)...)
+		buff = append(buff, []byte(strconv.FormatInt(f.SharedUsage, 10))...)
+	}
 	if attributes.Includes("mtime") && !f.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)
@@ -96,7 +105,7 @@ func (f *File) EncodeJSON(writer io.Writer, _ bool, attributes fs.JSONAttributes
 	if attributes.Includes("notreg") && f.Flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
 	}
-	if attributes == nil && f.Flag == 'H' {
+	if attributes.Includes("ino") && f.Flag == 'H' {
 		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(f.Mli, 10)+`,"hlnkc":true`)...)
 	}
 

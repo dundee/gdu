@@ -14,6 +14,7 @@ var _ fs.Item = (*SimpleDir)(nil)
 
 type TopDir struct {
 	Name      string
+	Mtime     time.Time
 	Size      atomic.Int64
 	Usage     atomic.Int64
 	ItemCount atomic.Int64
@@ -37,20 +38,37 @@ func (d *TopDir) SetFlag(flag rune) {
 	d.m.Unlock()
 }
 
+// UpdateMtime keeps the newest mtime seen in the directory tree, like Dir does.
+func (d *TopDir) UpdateMtime(mtime time.Time) {
+	d.m.Lock()
+	if mtime.After(d.Mtime) {
+		d.Mtime = mtime
+	}
+	d.m.Unlock()
+}
+
 type SimpleFile struct {
 	Name      string
+	Mtime     time.Time
 	Symlink   string
 	Flag      rune
 	Size      int64
 	Usage     int64
 	ItemCount int64
 	IsDir     bool
+
+	// alreadyCounted excludes duplicate hard links from totals without changing
+	// the size displayed for each individual file.
+	alreadyCounted bool
 }
 
 type SimpleDir struct {
 	SimpleFile
 	Files    []SimpleFile
 	BasePath string
+	// OwnUsage is the disk usage of the blocks allocated to the directory
+	// itself, excluding its entries.
+	OwnUsage int64
 }
 
 func (d *SimpleDir) GetName() string {
@@ -98,8 +116,10 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 	var totalUsage int64
 	var itemCount int64
 	for _, entry := range d.Files {
-		totalSize += entry.Size
-		totalUsage += entry.Usage
+		if !entry.alreadyCounted {
+			totalSize += entry.Size
+			totalUsage += entry.Usage
+		}
 		itemCount += entry.ItemCount
 
 		switch entry.Flag {
@@ -112,11 +132,11 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 	if len(d.Files) == 0 {
 		d.ItemCount = 0
 		d.Size = EmptyDirSize
-		d.Usage = 0
+		d.Usage = d.OwnUsage
 	} else {
 		d.ItemCount = itemCount + 1
 		d.Size = totalSize
-		d.Usage = totalUsage
+		d.Usage = totalUsage + d.OwnUsage
 	}
 }
 func (d *SimpleDir) AddFile(fs.Item) { panic("not implemented") }
@@ -128,6 +148,7 @@ func (d *SimpleDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 		for _, file := range d.Files {
 			f := &File{
 				Name:    file.Name,
+				Mtime:   file.Mtime,
 				Flag:    file.Flag,
 				Size:    file.Size,
 				Usage:   file.Usage,

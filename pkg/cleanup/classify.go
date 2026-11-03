@@ -1,0 +1,479 @@
+package cleanup
+
+import (
+	"fmt"
+	"path/filepath"
+	"slices"
+	"strings"
+	"sync"
+
+	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
+)
+
+// Config is the user-provided part of the classification, read from the
+// "cleanup" section of the gdu config file.
+type Config struct {
+	// Exclude lists paths that are never candidates, nor anything below them.
+	Exclude []string `yaml:"exclude"`
+	// Rules are evaluated before DefaultRules.
+	Rules []Rule `yaml:"rules"`
+}
+
+// Classifier assigns categories to items. It is immutable and safe for
+// concurrent use.
+type Classifier struct {
+	rules    []Rule
+	excludes []string
+	// pathRules are the segments of every path rule's pattern, see pinnedBelow.
+	pathRules [][]string
+}
+
+// NewClassifier validates the user's config and combines it with
+// DefaultRules. home expands "~/" in paths.
+func NewClassifier(cfg Config, home string) (*Classifier, error) {
+	c := &Classifier{}
+	for i := range cfg.Rules {
+		r := cfg.Rules[i]
+		if r.Confidence == "" {
+			r.Confidence = Review
+		}
+		if err := r.validate(); err != nil {
+			return nil, fmt.Errorf("cleanup rule %d: %w", i+1, err)
+		}
+		c.rules = append(c.rules, r)
+	}
+	c.rules = append(c.rules, DefaultRules...)
+	for i := range c.rules {
+		c.rules[i].compile(home)
+		if c.rules[i].Path != "" {
+			c.pathRules = append(c.pathRules, splitPath(c.rules[i].Path))
+		}
+	}
+	for _, path := range cfg.Exclude {
+		c.excludes = append(c.excludes, filepath.Clean(expandHome(path, home)))
+	}
+	return c, nil
+}
+
+// NewDefaultClassifier applies DefaultRules only.
+func NewDefaultClassifier(home string) *Classifier {
+	c, err := NewClassifier(Config{}, home)
+	if err != nil {
+		// only user rules are validated, so this cannot happen
+		panic(err)
+	}
+	return c
+}
+
+func (r *Rule) compile(home string) {
+	if r.Path != "" {
+		r.Path = filepath.Clean(expandHome(r.Path, home))
+	}
+	if r.Under != "" {
+		r.Under = filepath.Clean(expandHome(r.Under, home))
+	}
+}
+
+// Match is the classification of one item.
+type Match struct {
+	Category   Category
+	Confidence Confidence
+	Hint       string
+	// Inherited is set for items inside a matched directory: they are
+	// candidates as part of it, not on their own.
+	Inherited bool
+}
+
+// Amount is an amount of space in both metrics.
+type Amount struct {
+	Usage int64 `json:"usage"`
+	Size  int64 `json:"size"`
+}
+
+// Totals is the space taken by each category.
+type Totals map[Category]Amount
+
+func (t Totals) add(other Totals) Totals {
+	if len(other) == 0 {
+		return t
+	}
+	if t == nil {
+		t = make(Totals, len(other))
+	}
+	for c, a := range other {
+		sum := t[c]
+		sum.Usage += a.Usage
+		sum.Size += a.Size
+		t[c] = sum
+	}
+	return t
+}
+
+// Result holds the classification of one tree. Items are keyed by identity, so
+// a Result goes stale once the tree changes, except for removals reported via
+// Forget. It is safe for concurrent use.
+type Result struct {
+	mu      sync.RWMutex
+	c       *Classifier
+	matches map[fs.Item]Match
+	totals  map[fs.Item]Totals
+	// splits holds the match of each split directory, which its children got
+	// unless a rule matched them on their own.
+	splits map[fs.Item]Match
+}
+
+// Match returns the classification of an item. Items inside a matched
+// directory inherit its classification, with Inherited set, so they still
+// show as candidates once the user opens the directory.
+func (r *Result) Match(it fs.Item) (Match, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.matchLocked(it)
+}
+
+func (r *Result) matchLocked(it fs.Item) (Match, bool) {
+	if m, ok := r.matches[it]; ok {
+		return m, true
+	}
+	for p := it.GetParent(); p != nil; p = p.GetParent() {
+		if m, ok := r.matches[p]; ok {
+			m.Inherited = true
+			return m, true
+		}
+	}
+	return Match{}, false
+}
+
+// Totals returns the space taken by each category within the item, including
+// the item itself when it is a match. It is empty for items with no
+// candidates. The returned map must not be modified.
+func (r *Result) Totals(it fs.Item) Totals {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.totalsLocked(it)
+}
+
+// Forget updates the result for it having been removed from the tree: its
+// space is subtracted from every ancestor, which is far cheaper than
+// classifying the whole tree again. When it was a project marker, a .gitignore
+// or a .git directory, the classification of its siblings may depend on it, so
+// they are classified again. Ancestors are found through GetParent, so the
+// removed item must keep its parent link.
+func (r *Result) Forget(it fs.Item) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	removed := r.totalsLocked(it)
+	// entries of its descendants are unreachable from now on and left in place
+	delete(r.matches, it)
+	delete(r.totals, it)
+	delete(r.splits, it)
+	parent := it.GetParent()
+	r.addToAncestors(parent, removed, -1)
+	if parent != nil && r.c.affectsSiblings(it.GetName()) {
+		r.reclassifyChildren(parent)
+	}
+}
+
+// addToAncestors adds sign times delta to the totals of from and everything
+// above it.
+func (r *Result) addToAncestors(from fs.Item, delta Totals, sign int64) {
+	if len(delta) == 0 {
+		return
+	}
+	for p := from; p != nil; p = p.GetParent() {
+		// copy, since earlier callers of Totals may still hold the old map
+		next := make(Totals, len(r.totals[p])+len(delta))
+		for c, a := range r.totals[p] {
+			next[c] = a
+		}
+		for c, d := range delta {
+			a := next[c]
+			a.Usage += sign * d.Usage
+			a.Size += sign * d.Size
+			if a.Usage > 0 || a.Size > 0 {
+				next[c] = a
+			} else {
+				delete(next, c)
+			}
+		}
+		if len(next) == 0 {
+			delete(r.totals, p)
+		} else {
+			r.totals[p] = next
+		}
+	}
+}
+
+// reclassifyChildren classifies everything below dir again and passes the
+// change of its totals on to its ancestors.
+func (r *Result) reclassifyChildren(dir fs.Item) {
+	if _, ok := r.matchLocked(dir); ok {
+		// nothing inside a unit is classified on its own
+		return
+	}
+	old := r.totals[dir]
+	for child := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		r.clear(child)
+	}
+	delete(r.totals, dir)
+
+	w := &walker{c: r.c, result: r}
+	// rebuild the .gitignore context the walk had when it reached dir
+	var ancestors []fs.Item
+	for p := dir.GetParent(); p != nil && !analyze.IsVirtualRootDir(p); p = p.GetParent() {
+		ancestors = append(ancestors, p)
+	}
+	for _, a := range slices.Backward(ancestors) {
+		w.enterDir(a.GetPath(), childNames(a))
+	}
+	var carried *Match
+	if m, ok := r.splits[dir]; ok {
+		carried = &m
+	}
+	totals := w.walkChildren(dir, dir.GetPath(), carried)
+
+	r.addToAncestors(dir.GetParent(), old, -1)
+	r.addToAncestors(dir.GetParent(), totals, 1)
+}
+
+// clear drops the entries of it and everything below it.
+func (r *Result) clear(it fs.Item) {
+	_, hasTotals := r.totals[it]
+	_, split := r.splits[it]
+	delete(r.matches, it)
+	delete(r.totals, it)
+	delete(r.splits, it)
+	// only directories the walk went into have entries below them
+	if !hasTotals && !split {
+		return
+	}
+	for child := range it.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		r.clear(child)
+	}
+}
+
+func (r *Result) totalsLocked(it fs.Item) Totals {
+	if t, ok := r.totals[it]; ok {
+		return t
+	}
+	// a directory holding candidates has an entry, so only matched items
+	// (and their descendants) get here with a match
+	if m, ok := r.matchLocked(it); ok {
+		return Totals{m.Category: {Usage: it.GetUsage(), Size: it.GetSize()}}
+	}
+	return nil
+}
+
+// Analyze classifies the whole tree under root and aggregates the space of
+// every category per directory, including items too small for a frontend to
+// show.
+func (c *Classifier) Analyze(root fs.Item) *Result {
+	w := &walker{
+		c: c,
+		result: &Result{
+			c:       c,
+			matches: make(map[fs.Item]Match),
+			totals:  make(map[fs.Item]Totals),
+			splits:  make(map[fs.Item]Match),
+		},
+	}
+	w.walk(root, root.GetPath(), nil, nil)
+	return w.result
+}
+
+type walker struct {
+	c      *Classifier
+	result *Result
+	repos  []*repo
+}
+
+// walk classifies it and everything below it. carried is the match of a
+// split directory above it, which it gets unless a rule matches it on its own.
+func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}, carried *Match) Totals {
+	if w.c.excluded(path) {
+		return nil
+	}
+	m, ok := w.classify(it, path, siblings)
+	if !ok && carried != nil {
+		m, ok = *carried, true
+	}
+	if ok {
+		if !it.IsDir() || !w.c.pinnedBelow(path) {
+			w.result.matches[it] = m
+			return w.result.totalsLocked(it)
+		}
+		// Deleting it as a unit would take an excluded path or one a more
+		// specific rule has a say about with it, so it is split: its
+		// children become units of their own.
+		w.result.splits[it] = m
+		carried = &m
+	}
+	if !it.IsDir() {
+		return nil
+	}
+	return w.walkChildren(it, path, carried)
+}
+
+// walkChildren walks the children of the directory it and records their
+// totals as its own.
+func (w *walker) walkChildren(it fs.Item, path string, carried *Match) Totals {
+	var children []fs.Item
+	names := make(map[string]struct{})
+	for child := range it.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		children = append(children, child)
+		names[child.GetName()] = struct{}{}
+	}
+
+	popRepo := w.enterDir(path, names)
+	defer popRepo()
+
+	// children of the virtual top level dir are scanned roots: they carry
+	// their own absolute path, and the virtual dir has none
+	virtual := analyze.IsVirtualRootDir(it)
+	var totals Totals
+	for _, child := range children {
+		childPath := filepath.Join(path, child.GetName())
+		if virtual {
+			childPath = child.GetPath()
+		}
+		totals = totals.add(w.walk(child, childPath, names, carried))
+	}
+	if len(totals) > 0 {
+		w.result.totals[it] = totals
+	}
+	return totals
+}
+
+func (w *walker) classify(it fs.Item, path string, siblings map[string]struct{}) (Match, bool) {
+	ignored := w.gitIgnored(path, it.IsDir())
+	for i := range w.c.rules {
+		r := &w.c.rules[i]
+		if !r.matches(it, path, siblings) {
+			continue
+		}
+		m := Match{Category: r.Category, Confidence: r.Confidence, Hint: r.Hint}
+		if ignored && r.safeWhenIgnored {
+			// git-ignored build output is not committed, so it is regenerable
+			m.Confidence = Safe
+		}
+		return m, true
+	}
+	if ignored {
+		return Match{Category: GitIgnored, Confidence: Review, Hint: "Ignored by .gitignore; may still be local data"}, true
+	}
+	return Match{}, false
+}
+
+func (r *Rule) matches(it fs.Item, path string, siblings map[string]struct{}) bool {
+	name := it.GetName()
+	switch {
+	case r.Dir != "":
+		if !it.IsDir() || !globMatch(r.Dir, name) {
+			return false
+		}
+	case r.File != "":
+		if it.IsDir() || !globMatch(r.File, name) {
+			return false
+		}
+	default:
+		if !globMatch(r.Path, path) {
+			return false
+		}
+	}
+	if r.Under != "" && !isBelow(path, r.Under) {
+		return false
+	}
+	if len(r.Markers) == 0 {
+		return true
+	}
+	for _, marker := range r.Markers {
+		if _, ok := siblings[marker]; ok {
+			return true
+		}
+		if !strings.ContainsAny(marker, "*?[") {
+			continue
+		}
+		for sibling := range siblings {
+			if globMatch(marker, sibling) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// affectsSiblings reports whether an item of this name decides how its
+// siblings are classified: a project marker, a .gitignore or a repository.
+func (c *Classifier) affectsSiblings(name string) bool {
+	if name == ".gitignore" || name == ".git" {
+		return true
+	}
+	for i := range c.rules {
+		for _, marker := range c.rules[i].Markers {
+			if globMatch(marker, name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func childNames(dir fs.Item) map[string]struct{} {
+	names := make(map[string]struct{})
+	for child := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		names[child.GetName()] = struct{}{}
+	}
+	return names
+}
+
+func globMatch(pattern, name string) bool {
+	ok, err := filepath.Match(pattern, name)
+	return err == nil && ok
+}
+
+func (c *Classifier) excluded(path string) bool {
+	for _, ex := range c.excludes {
+		if path == ex || isBelow(path, ex) {
+			return true
+		}
+	}
+	return false
+}
+
+// pinnedBelow reports whether something strictly below the directory at path
+// is excluded or may be matched by a path rule, so the directory must not be a
+// unit. Path rules are compared segment by segment, so globs pin too.
+func (c *Classifier) pinnedBelow(path string) bool {
+	for _, ex := range c.excludes {
+		if isBelow(ex, path) {
+			return true
+		}
+	}
+	segments := splitPath(path)
+	for _, pattern := range c.pathRules {
+		if len(pattern) > len(segments) && segmentsMatch(pattern[:len(segments)], segments) {
+			return true
+		}
+	}
+	return false
+}
+
+func segmentsMatch(patterns, segments []string) bool {
+	for i, pattern := range patterns {
+		if !globMatch(pattern, segments[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func splitPath(path string) []string {
+	return strings.Split(filepath.Clean(path), string(filepath.Separator))
+}
+
+// isBelow reports whether path is strictly inside dir.
+func isBelow(path, dir string) bool {
+	return strings.HasPrefix(path, dir+string(filepath.Separator))
+}

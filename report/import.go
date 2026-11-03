@@ -66,6 +66,9 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 			if dsize, ok := item["dsize"].(float64); ok {
 				file.Usage = int64(dsize)
 			}
+			if shsize, ok := item["shsize"].(float64); ok {
+				file.SharedUsage = int64(shsize)
+			}
 			if mtime, ok := item["mtime"].(float64); ok {
 				file.Mtime = time.Unix(int64(mtime), 0)
 			}
@@ -93,9 +96,24 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 			dir.AddFile(subdir)
 		}
 	}
+	if hasUsage {
+		dir.OwnUsage = exportedOwnUsage(dir)
+	}
 	preserveTruncatedStats(dir, hasSize, hasUsage, hasItemCount)
 
 	return dir, nil
+}
+
+// exportedOwnUsage recovers the disk usage of the directory itself, which the
+// export folds into the directory's total. A hard-linked file counted elsewhere
+// in the tree can make the entries add up to more than the total, so the
+// result is clamped at zero rather than going negative.
+func exportedOwnUsage(dir *analyze.Dir) int64 {
+	own := dir.Usage
+	for _, item := range dir.Files {
+		own -= item.GetUsage()
+	}
+	return max(own, 0)
 }
 
 func parseDirectoryMetadata(item any) (
@@ -117,6 +135,9 @@ func parseDirectoryMetadata(item any) (
 	dir = &analyze.Dir{File: &analyze.File{Flag: ' '}}
 	if mtime, ok := dirMap["mtime"].(float64); ok {
 		dir.Mtime = time.Unix(int64(mtime), 0)
+	}
+	if readError, ok := dirMap["read_error"].(bool); ok && readError {
+		dir.Flag = '!'
 	}
 	if asize, ok := dirMap["asize"].(float64); ok {
 		dir.Size = int64(asize)

@@ -182,7 +182,8 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			if file != nil {
 				// Only set platform-specific attributes for regular files
 				if regularFile, ok := file.(*File); ok {
-					setPlatformSpecificAttrs(regularFile, info)
+					setPlatformSpecificAttrs(regularFile, info, entryPath)
+					regularFile.Usage, regularFile.SharedUsage = a.MeasureSharedUsage(entryPath, info, regularFile.Usage)
 				}
 				totalUsage += file.GetUsage()
 				dir.AddFile(file)
@@ -419,6 +420,7 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 
 	f.Mtime = mtime
 	f.Flag = flag
+	totals.ownUsage = f.OwnUsage
 	f.ItemCount, f.Size, f.Usage = resolveDirStats(totals, filteringFiles)
 
 	if err := DefaultStorage.StoreDir(f); err != nil {

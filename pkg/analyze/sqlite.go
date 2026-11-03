@@ -727,7 +727,7 @@ func (i *SqliteItem) encodeFileJSON(writer io.Writer, attributes fs.JSONAttribut
 	if attributes.Includes("notreg") && i.flag == '@' {
 		buff = append(buff, []byte(`,"notreg":true`)...)
 	}
-	if attributes == nil && i.flag == 'H' {
+	if attributes.Includes("ino") && i.flag == 'H' {
 		buff = append(buff, []byte(`,"ino":`+strconv.FormatUint(i.mli, 10)+`,"hlnkc":true`)...)
 	}
 
@@ -1022,13 +1022,15 @@ func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (sta
 	}
 
 	fileSize := info.Size()
-	fileUsage, fileMli := getSyscallStats(info)
+	fileUsage, fileMli := getSyscallStats(info, entryPath)
 	fileFlag := getFlag(info)
 
 	if fileMli != 0 && a.hasInodeLocked(fileMli) {
 		fileSize = 0
 		fileUsage = 0
 		fileFlag = 'H'
+	} else {
+		fileUsage, _ = a.MeasureSharedUsage(entryPath, info, fileUsage)
 	}
 
 	return fileStat{
@@ -1045,7 +1047,6 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	// pass, but it must land on the same numbers: totals cover the children
 	// only, and resolveDirStats applies the empty-directory rule at the end.
 	var (
-		totals     = dirTotals{itemCount: 1}
 		filesSize  int64 // only files in this directory, for progress reporting
 		subDirChan = make(chan *SqliteItem)
 		dirCount   int
@@ -1078,11 +1079,13 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		log.Print(err.Error())
 	}
 
-	// Get directory info for mtime
+	// Get directory info for mtime and the directory's own usage
 	dirInfo, statErr := os.Stat(path)
 	var dirMtime time.Time
+	totals := dirTotals{itemCount: 1}
 	if statErr == nil {
 		dirMtime = dirInfo.ModTime()
+		totals.ownUsage = dirInfoOwnUsage(dirInfo)
 	}
 
 	dirFlag := getDirFlag(err, len(files))

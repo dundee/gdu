@@ -62,6 +62,15 @@ func collectStats(root fs.Item) map[string]itemStats {
 	return stats
 }
 
+// usageOf returns the disk usage stat reports for a path itself.
+func usageOf(t *testing.T, path string) int64 {
+	t.Helper()
+	info, err := os.Lstat(path)
+	assert.NoError(t, err)
+	usage, _ := getPlatformSpecificUsageAndMli(info, path)
+	return usage
+}
+
 // scanWith runs an unfiltered scan. The nil file type filter is significant:
 // per common.UI.CreateFileTypeFilter, nil is how "no filtering" is expressed,
 // and analyzers that finalize stats during the scan read it to pick between
@@ -94,24 +103,32 @@ func scanFilteringAllFiles(
 }
 
 // TestEmptyDirStatsAcrossAnalyzers pins the empty-directory rule: a directory
-// with no counted children reports EmptyDirSize apparent size and zero disk
-// usage, and a tree of nothing but empty directories therefore uses no disk at
-// all. Every analyzer must agree, so the numbers gdu prints cannot depend on
-// whether --db was passed.
+// with no counted children reports EmptyDirSize apparent size, and every
+// directory is charged the disk usage of its own blocks. Every analyzer must
+// agree, so the numbers gdu prints cannot depend on whether --db was passed.
 func TestEmptyDirStatsAcrossAnalyzers(t *testing.T) {
 	root := createEmptyDirTree(t)
 
+	// disk usage depends on the filesystem, so take every expected value from stat
+	own := func(rel string) int64 { return usageOf(t, filepath.Join(root, rel)) }
+	fileUsage := own("withfile/f")
+	leafUsage := own("deep/a/b/c")
+	deepBUsage := leafUsage + own("deep/a/b")
+	deepAUsage := deepBUsage + own("deep/a")
+	deepUsage := deepAUsage + own("deep")
+	subUsage := own("onlyempty/sub")
+	onlyemptyUsage := subUsage + own("onlyempty")
+	dirsUsage := deepUsage + onlyemptyUsage + own("empty") + own("withfile") + own(".")
+
 	want := map[string]itemStats{
-		".":         {size: 1541, usage: 4096, itemCount: 10, flag: ' '},
-		"empty":     {size: EmptyDirSize, usage: 0, itemCount: 1, flag: 'e'},
-		"onlyempty": {size: EmptyDirSize, usage: 0, itemCount: 2, flag: ' '},
-		"onlyempty/sub": {
-			size: EmptyDirSize, usage: 0, itemCount: 1, flag: 'e',
-		},
-		"deep":       {size: EmptyDirSize, usage: 0, itemCount: 4, flag: ' '},
-		"deep/a":     {size: EmptyDirSize, usage: 0, itemCount: 3, flag: ' '},
-		"deep/a/b":   {size: EmptyDirSize, usage: 0, itemCount: 2, flag: ' '},
-		"deep/a/b/c": {size: EmptyDirSize, usage: 0, itemCount: 1, flag: 'e'},
+		".":             {size: 1541, usage: dirsUsage + fileUsage, itemCount: 10, flag: ' '},
+		"empty":         {size: EmptyDirSize, usage: own("empty"), itemCount: 1, flag: 'e'},
+		"onlyempty":     {size: EmptyDirSize, usage: onlyemptyUsage, itemCount: 2, flag: ' '},
+		"onlyempty/sub": {size: EmptyDirSize, usage: subUsage, itemCount: 1, flag: 'e'},
+		"deep":          {size: EmptyDirSize, usage: deepUsage, itemCount: 4, flag: ' '},
+		"deep/a":        {size: EmptyDirSize, usage: deepAUsage, itemCount: 3, flag: ' '},
+		"deep/a/b":      {size: EmptyDirSize, usage: deepBUsage, itemCount: 2, flag: ' '},
+		"deep/a/b/c":    {size: EmptyDirSize, usage: leafUsage, itemCount: 1, flag: 'e'},
 	}
 
 	parallel := scanWith(t, CreateAnalyzer(), root)
@@ -122,14 +139,13 @@ func TestEmptyDirStatsAcrossAnalyzers(t *testing.T) {
 	for path, expected := range want {
 		assert.Equal(t, expected, parallel[path], "parallel analyzer at %q", path)
 	}
-	assert.Equal(t, int64(0), parallel["empty"].usage, "an empty dir must use no disk")
-	assert.Equal(t, int64(0), parallel["deep"].usage, "a tree of empty dirs must use no disk")
 
-	// Under file filtering the whole tree collapses, because every directory
-	// ends up holding nothing but empty directories.
+	// Under file filtering the whole tree collapses to a single item, because
+	// every directory ends up holding nothing but empty directories. The
+	// directories still occupy their blocks.
 	wantFiltered := scanFilteringAllFiles(t, CreateAnalyzer(), root)
 	assert.Equal(t, int64(1), wantFiltered["."].itemCount)
-	assert.Equal(t, int64(0), wantFiltered["."].usage)
+	assert.Equal(t, dirsUsage, wantFiltered["."].usage)
 
 	for _, tc := range parityAnalyzers() {
 		t.Run(tc.name, func(t *testing.T) {
@@ -143,6 +159,42 @@ func TestEmptyDirStatsAcrossAnalyzers(t *testing.T) {
 			got := scanFilteringAllFiles(t, tc.analyzer(t), root)
 			for path, expected := range wantFiltered {
 				assert.Equal(t, expected, got[path], "%s analyzer at %q", tc.name, path)
+			}
+		})
+	}
+}
+
+// TestTopDirAnalyzerUsageParity checks the disk usage reported by the top-dir
+// analyzer against the in-memory one. It reports only the scan root and its
+// immediate entries, so only those are compared.
+func TestTopDirAnalyzerUsageParity(t *testing.T) {
+	root := createEmptyDirTree(t)
+	ignoreAllFiles := func(string) bool { return true }
+
+	for _, tc := range []struct {
+		name       string
+		fileFilter common.ShouldFileBeIgnored
+		want       map[string]itemStats
+	}{
+		{name: "unfiltered", want: scanWith(t, CreateAnalyzer(), root)},
+		{
+			name:       "filtering files",
+			fileFilter: ignoreAllFiles,
+			want:       scanFilteringAllFiles(t, CreateAnalyzer(), root),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			analyzer := CreateTopDirAnalyzer()
+			dir := analyzer.AnalyzeDir(root, func(_, _ string) bool { return false }, tc.fileFilter)
+			analyzer.GetDone().Wait()
+			dir.UpdateStats(make(fs.HardLinkedItems))
+
+			assert.Equal(t, tc.want["."].usage, dir.GetUsage(), "top-dir analyzer at root")
+			for child := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
+				if child.IsDir() {
+					assert.Equal(t, tc.want[child.GetName()].usage, child.GetUsage(),
+						"top-dir analyzer at %q", child.GetName())
+				}
 			}
 		})
 	}

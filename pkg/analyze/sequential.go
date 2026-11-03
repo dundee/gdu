@@ -158,7 +158,8 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 			if file != nil {
 				// Only set platform-specific attributes for regular files
 				if regularFile, ok := file.(*File); ok {
-					setPlatformSpecificAttrs(regularFile, info)
+					setPlatformSpecificAttrs(regularFile, info, entryPath)
+					regularFile.Usage, regularFile.SharedUsage = a.MeasureSharedUsage(entryPath, info, regularFile.Usage)
 				}
 				totalSize += file.GetUsage()
 				dir.AddFile(file)

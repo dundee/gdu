@@ -115,7 +115,7 @@ func TestDefaultMountTableHasFilesystemIDs(t *testing.T) {
 	require.NoError(t, err)
 	for _, mount := range mounts {
 		if mount.MountPoint == "/" {
-			id, known := getFilesystemID("/")
+			id, known := GetFilesystemID("/")
 			require.True(t, known)
 			require.NotNil(t, mount.FilesystemID)
 			assert.Equal(t, id, *mount.FilesystemID)

@@ -721,6 +721,13 @@ func TestSqliteItemEncodeJSONWithSpecialAttributes(t *testing.T) {
 	assert.Contains(t, buf.String(), `"notreg":true`)
 	assert.NotContains(t, buf.String(), `"ino"`)
 	assert.NotContains(t, buf.String(), `"mtime"`)
+
+	buf.Reset()
+	err = root.EncodeJSON(&buf, false, fs.JSONAttributes{"ino": {}})
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `"ino":123,"hlnkc":true`)
+	assert.NotContains(t, buf.String(), `"notreg"`)
+	assert.NotContains(t, buf.String(), `"mtime"`)
 }
 
 func TestCreateSqliteAnalyzer(t *testing.T) {
@@ -991,10 +998,19 @@ func TestSqliteAnalyzerIgnoreFileType(t *testing.T) {
 
 	// Every file was filtered out, so the whole tree is nothing but empty
 	// directories and collapses to a single item, exactly as
-	// Dir.UpdateStatsWithFileFiltering does (see resolveDirStats).
+	// Dir.UpdateStatsWithFileFiltering does (see resolveDirStats). The
+	// directories still cost the blocks they occupy.
 	assert.Equal(t, "test_dir", dir.GetName())
 	assert.Equal(t, int64(1), dir.GetItemCount())
-	assert.Equal(t, int64(0), dir.GetUsage())
+	assert.Equal(t, testDirDirsUsage(t), dir.GetUsage())
+}
+
+// testDirDirsUsage returns the disk usage of the directories created by
+// testdir.CreateTestDir, excluding the files in them.
+func testDirDirsUsage(t *testing.T) int64 {
+	t.Helper()
+	return usageOf(t, "test_dir") + usageOf(t, "test_dir/nested") +
+		usageOf(t, "test_dir/nested/subnested")
 }
 
 func TestSqliteAnalyzerHardlinks(t *testing.T) {
@@ -1126,7 +1142,7 @@ func TestSqliteAnalyzerTimeFilter(t *testing.T) {
 
 	// As above: nothing survives the filter, so the tree collapses to one item.
 	assert.Equal(t, int64(1), dir.GetItemCount())
-	assert.Equal(t, int64(0), dir.GetUsage())
+	assert.Equal(t, testDirDirsUsage(t), dir.GetUsage())
 }
 
 func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {

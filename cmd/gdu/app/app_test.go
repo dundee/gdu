@@ -14,11 +14,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/cleanup"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -136,6 +138,21 @@ func TestShowAnnexedSize(t *testing.T) {
 
 	out, err := runApp(
 		&Flags{LogFile: "/dev/null", ShowAnnexedSize: true},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Contains(t, out, "nested")
+	assert.Nil(t, err)
+}
+
+func TestExclusiveSize(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", ExclusiveSize: true},
 		[]string{"test_dir"},
 		false,
 		testdev.DevicesInfoGetterMock{},
@@ -872,6 +889,45 @@ func TestWebFlagCreatesWebUIAndHonorsNoDelete(t *testing.T) {
 	assert.ErrorContains(t, err, "binding")
 }
 
+func TestWebFlagRejectsInvalidCleanupRule(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	_, err := runApp(
+		&Flags{
+			LogFile: "/dev/null",
+			Web:     true,
+			Cleanup: cleanup.Config{Rules: []cleanup.Rule{{Category: "junk", Dir: "x"}}},
+		},
+		[]string{"test_dir"},
+		false,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.ErrorContains(t, err, `cleanup config: cleanup rule 1: unknown category "junk"`)
+}
+
+func TestCleanupConfigFromYAML(t *testing.T) {
+	var f Flags
+	err := yaml.Unmarshal([]byte(`
+cleanup:
+  exclude: [~/work]
+  rules:
+    - category: build-artifact
+      confidence: safe
+      dir: .gradle
+      markers: [build.gradle]
+`), &f)
+	assert.NoError(t, err)
+	assert.Equal(t, cleanup.Config{
+		Exclude: []string{"~/work"},
+		Rules: []cleanup.Rule{{
+			Category: cleanup.BuildArtifact, Confidence: cleanup.Safe,
+			Dir: ".gradle", Markers: []string{"build.gradle"},
+		}},
+	}, f.Cleanup)
+}
+
 func TestListDevices(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -978,9 +1034,11 @@ func (m *uiTimeFilterMock) SetIgnoreDirPaths(paths []string)                  {}
 func (m *uiTimeFilterMock) SetIgnoreDirPatterns(paths []string) error         { return nil }
 func (m *uiTimeFilterMock) SetIgnoreFromFile(ignoreFile string) error         { return nil }
 func (m *uiTimeFilterMock) SetIgnoreHidden(value bool)                        {}
+func (m *uiTimeFilterMock) SetIgnoreOtherFilesystems(value bool)              {}
 func (m *uiTimeFilterMock) SetIncludeTypes(types []string)                    {}
 func (m *uiTimeFilterMock) SetFollowSymlinks(value bool)                      {}
 func (m *uiTimeFilterMock) SetShowAnnexedSize(value bool)                     {}
+func (m *uiTimeFilterMock) SetExclusiveSize(value bool)                       {}
 func (m *uiTimeFilterMock) SetAnalyzer(analyzer common.Analyzer)              {}
 func (m *uiTimeFilterMock) SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error {
 	return nil

@@ -2,7 +2,10 @@ package analyze
 
 import (
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -128,8 +131,8 @@ func TestTopDirAnalyzeDirIgnoreFileTypeInSubDir(t *testing.T) {
 	// sub directory should exist but only count keep.txt
 	assert.Equal(t, 1, len(simpleDir.Files))
 	assert.Equal(t, "sub", simpleDir.Files[0].Name)
-	// ItemCount should reflect only the kept file
-	assert.Equal(t, int64(1), simpleDir.Files[0].ItemCount)
+	// ItemCount should reflect only the kept file (plus the dir itself)
+	assert.Equal(t, int64(2), simpleDir.Files[0].ItemCount)
 }
 
 func TestTopDirAnalyzeDirProgress(t *testing.T) {
@@ -230,6 +233,58 @@ func TestTopDirAnalyzeDirIgnoreSubDir(t *testing.T) {
 	assert.Equal(t, "top", simpleDir.Files[0].Name)
 }
 
+func topDirFlags(t *testing.T, path string) map[string]rune {
+	t.Helper()
+
+	analyzer := CreateTopDirAnalyzer()
+	dir := analyzer.AnalyzeDir(
+		path, func(_, _ string) bool { return false }, func(_ string) bool { return false },
+	)
+	analyzer.GetDone().Wait()
+
+	flags := make(map[string]rune)
+	for file := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
+		flags[file.GetName()] = file.GetFlag()
+	}
+	return flags
+}
+
+func TestTopDirAnalyzeDirEmptyDirFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	assert.Nil(t, os.Mkdir(filepath.Join(tmpDir, "empty"), 0o755))
+	assert.Nil(t, os.MkdirAll(filepath.Join(tmpDir, "withempty", "sub"), 0o755))
+
+	flags := topDirFlags(t, tmpDir)
+
+	assert.Equal(t, 'e', flags["empty"])
+	assert.Equal(t, ' ', flags["withempty"])
+}
+
+func TestTopDirAnalyzeDirErrorFlags(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod does not make directories unreadable on Windows")
+	}
+
+	tmpDir := t.TempDir()
+	locked := filepath.Join(tmpDir, "locked")
+	nestedLocked := filepath.Join(tmpDir, "outer", "locked")
+	for _, path := range []string{locked, nestedLocked} {
+		assert.Nil(t, os.MkdirAll(path, 0o755))
+		assert.Nil(t, os.WriteFile(filepath.Join(path, "file"), []byte("x"), 0o600))
+		assert.Nil(t, os.Chmod(path, 0))
+		defer os.Chmod(path, 0o755)
+	}
+
+	if _, err := os.ReadDir(locked); err == nil {
+		t.Skip("test user can still read chmod 000 directory")
+	}
+
+	flags := topDirFlags(t, tmpDir)
+
+	assert.Equal(t, '!', flags["locked"])
+	assert.Equal(t, '.', flags["outer"])
+}
+
 func TestTopDirGetFiles(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -275,7 +330,7 @@ func TestTopDirFollowSymlink(t *testing.T) {
 	}
 
 	assert.Equal(t, int64(12+512), dir.Size)
-	assert.Equal(t, int64(4), dir.ItemCount)
+	assert.Equal(t, int64(7), dir.ItemCount)
 
 	// test file3
 	assert.Equal(t, "file2", files[1].GetName())
@@ -307,5 +362,26 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 	}
 
 	assert.Equal(t, int64(12+512), dir.Size)
-	assert.Equal(t, int64(5), dir.ItemCount)
+	assert.Equal(t, int64(7), dir.ItemCount)
+}
+
+func TestTopDirFullAnalyzerKeepsSettings(t *testing.T) {
+	a := CreateTopDirAnalyzer()
+	a.SetFollowSymlinks(true)
+	a.SetShowAnnexedSize(true)
+	a.SetExclusiveSize(true)
+	a.SetArchiveBrowsing(true)
+	a.SetFileTypeFilter(func(string) bool { return true })
+	a.SetTimeFilter(func(time.Time) bool { return false })
+
+	full := a.FullAnalyzer()
+
+	assert.True(t, full.followSymlinks)
+	assert.True(t, full.gitAnnexedSize)
+	assert.Same(t, a.extents, full.extents)
+	assert.True(t, full.archiveBrowsing)
+	assert.True(t, full.ignoreFileType("x"))
+	assert.False(t, full.matchesTimeFilterFn(time.Time{}))
+
+	assert.False(t, CreateTopDirAnalyzer().FullAnalyzer().isFilteringFiles(), "no filter stays no filter")
 }

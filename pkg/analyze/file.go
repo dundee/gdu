@@ -26,8 +26,11 @@ type File struct {
 	Symlink string
 	Size    int64
 	Usage   int64
-	Mli     uint64
-	Flag    rune
+	// SharedUsage is the bytes in extents shared with other files, measured
+	// only with --exclusive-size; Usage then excludes them.
+	SharedUsage int64
+	Mli         uint64
+	Flag        rune
 }
 
 // GetName returns name of dir
@@ -121,13 +124,13 @@ func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
 }
 
 // CreateFileItem creates a File from an os.FileInfo with correct platform-specific attributes
-func CreateFileItem(name string, info os.FileInfo) *File {
+func CreateFileItem(path string, info os.FileInfo) *File {
 	file := &File{
-		Name: name,
+		Name: filepath.Base(path),
 		Size: info.Size(),
 		Flag: getFlag(info),
 	}
-	setPlatformSpecificAttrs(file, info)
+	setPlatformSpecificAttrs(file, info, path)
 	return file
 }
 
@@ -177,7 +180,8 @@ func (f *File) RemoveFileByName(name string) {
 // counted children. It is a fixed sentinel (not the real filesystem block
 // size) written by updateStats, SimpleDir.UpdateStats and the parallel top-dir
 // analyzer, and recognised again on import. Keep every producer and consumer
-// of this value referencing this constant so they can never drift apart.
+// of this value referencing this constant so they can never drift apart. It is
+// an apparent size only; it never affects disk usage.
 const EmptyDirSize int64 = 512
 
 // dirTotals is the aggregate of a directory's counted children, before gdu's
@@ -185,11 +189,14 @@ const EmptyDirSize int64 = 512
 //
 // itemCount includes the directory itself, so it starts at 1. entries is the
 // number of children that were counted, and hasFiles records whether any of
-// them was not itself a directory.
+// them was not itself a directory. ownUsage is the disk usage of the directory
+// itself (see Dir.OwnUsage), which is read from the filesystem, never assumed:
+// a small directory on XFS, for example, occupies no block of its own.
 type dirTotals struct {
 	size      int64
 	usage     int64
 	itemCount int64
+	ownUsage  int64
 	entries   int
 	hasFiles  bool
 }
@@ -199,9 +206,9 @@ type dirTotals struct {
 //
 // A directory that counted no children — or, when file filtering is active,
 // one whose entries are all themselves empty directories — reports EmptyDirSize
-// as its apparent size and zero real usage. gdu deliberately does not charge a
-// directory for the block the filesystem allocates to it, so a tree containing
-// nothing but empty directories reports no disk usage at all.
+// as its apparent size and collapses to a single item. Its disk usage is never
+// collapsed: every directory is charged the blocks it really occupies, as du
+// does, so a tree of empty directories costs what those directories allocate.
 //
 // This is the single definition of that rule. Every analyzer must route through
 // it, otherwise the numbers gdu reports depend on which analyzer produced them.
@@ -209,10 +216,11 @@ func resolveDirStats(totals dirTotals, filteringFiles bool) (itemCount, size, us
 	onlyEmptyDirs := !totals.hasFiles && filteringFiles &&
 		totals.itemCount == int64(totals.entries+1)
 
+	usage = totals.usage + totals.ownUsage
 	if totals.entries == 0 || onlyEmptyDirs {
-		return 1, totals.size + EmptyDirSize, 0
+		return 1, totals.size + EmptyDirSize, usage
 	}
-	return totals.itemCount, totals.size, totals.usage
+	return totals.itemCount, totals.size, usage
 }
 
 // aggregateDirEntries folds the stats of entries into the totals their parent
@@ -255,9 +263,12 @@ func aggregateDirEntries(
 // Dir struct
 type Dir struct {
 	*File
-	BasePath      string
-	Files         fs.Files
-	ItemCount     int64
+	BasePath  string
+	Files     fs.Files
+	ItemCount int64
+	// OwnUsage is the disk usage of the blocks allocated to the directory
+	// itself, excluding its entries.
+	OwnUsage      int64
 	statsFromJSON bool
 	m             sync.RWMutex
 }
@@ -277,6 +288,7 @@ func snapshotDir(source *Dir, parent fs.Item) *Dir {
 		BasePath:  source.BasePath,
 		Files:     make(fs.Files, 0, len(source.Files)),
 		ItemCount: source.ItemCount,
+		OwnUsage:  source.OwnUsage,
 	}
 	children := append(fs.Files(nil), source.Files...)
 	source.m.RUnlock()
@@ -336,7 +348,7 @@ func reparentSnapshotChildren(dir *Dir, parent fs.Item) {
 }
 
 func snapshotFile(source, parent fs.Item) *File {
-	return &File{
+	snapshot := &File{
 		Mtime:  source.GetMtime(),
 		Parent: parent,
 		Name:   source.GetName(),
@@ -345,6 +357,10 @@ func snapshotFile(source, parent fs.Item) *File {
 		Mli:    source.GetMultiLinkedInode(),
 		Flag:   source.GetFlag(),
 	}
+	if file, ok := source.(*File); ok {
+		snapshot.SharedUsage = file.SharedUsage
+	}
+	return snapshot
 }
 
 // AddFile add item to files
@@ -376,7 +392,7 @@ func (f *Dir) SetStatsFromJSON() {
 // real content always exports with ItemCount >= 2, so it can never be mistaken
 // for a placeholder and its stats are always preserved.
 func (f *Dir) HasEmptyDirPlaceholderStats() bool {
-	return f.Size == EmptyDirSize && f.Usage == 0 && f.ItemCount == 1
+	return f.Size == EmptyDirSize && f.Usage == f.OwnUsage && f.ItemCount == 1
 }
 
 // GetFiles returns all files in directory as a sorted iterator
@@ -507,6 +523,7 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	defer f.m.Unlock()
 	f.Mtime = mtime
 	f.Flag = flag
+	totals.ownUsage = f.OwnUsage
 	f.ItemCount, f.Size, f.Usage = resolveDirStats(totals, filteringFiles)
 }
 

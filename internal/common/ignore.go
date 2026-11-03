@@ -252,9 +252,28 @@ func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
 	return false
 }
 
+// SetIgnoreOtherFilesystems sets whether dirs on other filesystems than their parent should be ignored
+func (ui *UI) SetIgnoreOtherFilesystems(value bool) {
+	log.Printf("Not crossing filesystem boundaries")
+	ui.IgnoreOtherFilesystems = value
+}
+
 // CreateIgnoreFunc returns function for detecting if dir should be ignored
-// nolint: gocyclo // Why: This function is a switch statement that is not too complex
 func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
+	ignore := ui.createPathIgnoreFunc()
+	if !ui.IgnoreOtherFilesystems {
+		return ignore
+	}
+	filesystems := newFilesystemIDCache()
+	return func(name, path string) bool {
+		return ignore(name, path) || filesystems.isOnOtherFilesystem(path)
+	}
+}
+
+// createPathIgnoreFunc returns function for detecting if dir should be ignored
+// based on its name or path only
+// nolint: gocyclo // Why: This function is a switch statement that is not too complex
+func (ui *UI) createPathIgnoreFunc() ShouldDirBeIgnored {
 	switch {
 	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns == nil && !ui.IgnoreHidden:
 		return ui.ShouldDirBeIgnored
