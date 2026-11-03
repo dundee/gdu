@@ -77,23 +77,14 @@ func (a *BaseAnalyzer) SetExclusiveSize(v bool) {
 	a.exclusiveSize = v
 }
 
-// usageOf returns the disk usage to record for a file. It is the given
-// st_blocks based usage unless exclusive size is enabled and could be measured.
-func (a *BaseAnalyzer) usageOf(path string, info os.FileInfo, usage int64) int64 {
+// measureUsage returns the disk usage to record for a file and the bytes in
+// its shared extents. With exclusive size off, or when the file cannot be
+// measured, that is the given st_blocks based usage with nothing shared.
+func (a *BaseAnalyzer) measureUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
 	if !a.exclusiveSize {
-		return usage
+		return usage, 0
 	}
-	usage, _ = exclusiveUsage(path, info, usage)
-	return usage
-}
-
-// setFileUsage refines file.Usage like usageOf and, when exclusive size is
-// enabled and could be measured, records the bytes in shared extents too.
-func (a *BaseAnalyzer) setFileUsage(file *File, path string, info os.FileInfo) {
-	if !a.exclusiveSize {
-		return
-	}
-	file.Usage, file.SharedUsage, _ = exclusiveAndSharedUsage(path, info, file.Usage)
+	return measureExclusiveUsage(path, info, usage)
 }
 
 // SetTimeFilter sets the time filter function for file inclusion

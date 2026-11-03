@@ -15,7 +15,7 @@ import (
 // FIEMAP ioctl, see Documentation/filesystems/fiemap.rst in the Linux kernel.
 // golang.org/x/sys/unix has no binding for it. Extent flags that need no
 // special handling (UNKNOWN, DELALLOC, ENCODED, DATA_INLINE, UNWRITTEN) are
-// counted like any other extent, see exclusiveBytes.
+// counted like any other extent, see extentBytes.
 const (
 	fiemapExtentLast        = 0x00000001
 	fiemapExtentShared      = 0x00002000
@@ -61,47 +61,28 @@ var fiemapPool = sync.Pool{New: func() any { return new(fiemapRequest) }}
 // and the caller should fall back to st_blocks.
 var errFiemapNotSupported = errors.New("fiemap not supported")
 
-// exclusiveBytes returns the number of bytes of the regular file at path that
-// are not shared with any other file, i.e. what deleting it would free.
+// extentBytes walks the extent map of the regular file at path with
+// FS_IOC_FIEMAP, asking the kernel for at most perRequest extents per call (at
+// most fiemapExtentsPerRequest). It returns the bytes not shared with any other
+// file, i.e. what deleting it would free, and the bytes in extents flagged
+// FIEMAP_EXTENT_SHARED, which deleting the file alone does not free.
 //
-// It walks the extent map with FS_IOC_FIEMAP, adding up the length of every
-// extent that is not marked FIEMAP_EXTENT_SHARED. Holes are not reported by
-// the kernel and therefore count as nothing. Preallocated (unwritten),
-// delayed-allocation, not-yet-located and inline extents are real space owned
-// by the file, so they are counted unless flagged as shared. Lengths are
-// logical: a compressed extent is counted at its uncompressed length.
-func exclusiveBytes(path string) (int64, error) {
-	excl, _, err := extentBytesPaged(path, fiemapExtentsPerRequest)
-	return excl, err
-}
-
-// exclusiveBytesPaged is exclusiveBytes asking the kernel for at most
-// perRequest extents per ioctl call, at most fiemapExtentsPerRequest.
-func exclusiveBytesPaged(path string, perRequest uint32) (int64, error) {
-	excl, _, err := extentBytesPaged(path, perRequest)
-	return excl, err
-}
-
-// extentBytes returns both halves of the extent map of the regular file at
-// path: the bytes not shared with any other file, and the bytes in extents
-// flagged FIEMAP_EXTENT_SHARED, which deleting the file alone does not free.
-func extentBytes(path string) (exclusive, shared int64, err error) {
-	return extentBytesPaged(path, fiemapExtentsPerRequest)
-}
-
-// extentBytesPaged is extentBytes asking the kernel for at most perRequest
-// extents per ioctl call, at most fiemapExtentsPerRequest.
-func extentBytesPaged(path string, perRequest uint32) (exclusive, shared int64, err error) {
+// Holes are not reported by the kernel and therefore count as nothing.
+// Preallocated (unwritten), delayed-allocation, not-yet-located and inline
+// extents are real space owned by the file, so they are counted unless flagged
+// as shared. Lengths are logical: a compressed extent is counted at its
+// uncompressed length.
+func extentBytes(path string, perRequest uint32) (exclusive, shared int64, err error) {
 	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return 0, 0, err
 	}
-	defer unix.Close(fd) //nolint:errcheck
+	defer unix.Close(fd) //nolint:errcheck // Read-only descriptor, nothing to flush.
 
 	req := fiemapPool.Get().(*fiemapRequest)
 	defer fiemapPool.Put(req)
 
-	var total, sharedTotal uint64
+	var exclusiveTotal, sharedTotal uint64
 	var start uint64
 	for {
 		*req = fiemapRequest{} // the kernel only fills in what it maps
@@ -122,17 +103,17 @@ func extentBytesPaged(path string, perRequest uint32) (exclusive, shared int64, 
 			return 0, 0, errFiemapNotSupported
 		}
 		if n == 0 {
-			return int64(total), int64(sharedTotal), nil
+			return int64(exclusiveTotal), int64(sharedTotal), nil
 		}
 		for i := range n {
 			e := &req.extents[i]
 			if e.flags&fiemapExtentShared == 0 {
-				total += e.length
+				exclusiveTotal += e.length
 			} else {
 				sharedTotal += e.length
 			}
 			if e.flags&fiemapExtentLast != 0 {
-				return int64(total), int64(sharedTotal), nil
+				return int64(exclusiveTotal), int64(sharedTotal), nil
 			}
 		}
 
@@ -146,24 +127,18 @@ func extentBytesPaged(path string, perRequest uint32) (exclusive, shared int64, 
 	}
 }
 
-// exclusiveUsage refines usage (st_blocks * 512) of a regular file to its
-// exclusive bytes. ok is false when the value could not be measured, in which
-// case the caller keeps the st_blocks figure.
-func exclusiveUsage(path string, info os.FileInfo, usage int64) (int64, bool) {
-	excl, _, ok := exclusiveAndSharedUsage(path, info, usage)
-	return excl, ok
-}
-
-// exclusiveAndSharedUsage is exclusiveUsage that also returns the bytes in
-// shared extents. shared is 0 whenever ok is false.
-func exclusiveAndSharedUsage(path string, info os.FileInfo, usage int64) (excl, shared int64, ok bool) {
+// measureExclusiveUsage returns the disk usage of a file as its exclusive
+// bytes, and the bytes in its shared extents. usage is the st_blocks figure;
+// it is returned unchanged, with nothing shared, for anything that is not a
+// regular file with allocated blocks or whose extent map cannot be read.
+func measureExclusiveUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
 	if !info.Mode().IsRegular() || usage == 0 {
 		// Nothing is allocated, so there is nothing that could be shared.
-		return usage, 0, false
+		return usage, 0
 	}
-	excl, shared, err := extentBytes(path)
+	exclusive, shared, err := extentBytes(path, fiemapExtentsPerRequest)
 	if err != nil {
-		return usage, 0, false
+		return usage, 0
 	}
-	return excl, shared, true
+	return exclusive, shared
 }

@@ -46,7 +46,7 @@ func allocated(t *testing.T, path string) int64 {
 // measure skips the test when the filesystem cannot report extents.
 func measure(t *testing.T, path string) int64 {
 	t.Helper()
-	n, err := exclusiveBytes(path)
+	n, _, err := extentBytes(path, fiemapExtentsPerRequest)
 	if errors.Is(err, syscall.EOPNOTSUPP) || errors.Is(err, syscall.ENOTTY) {
 		t.Skipf("FIEMAP is not supported on this filesystem: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestExclusiveBytesPaging(t *testing.T) {
 	assert.Less(t, allocated(t, path)-whole, int64(1<<20))
 
 	for _, perRequest := range []uint32{1, 2, 7, fiemapExtentsPerRequest - 1} {
-		got, err := exclusiveBytesPaged(path, perRequest)
+		got, _, err := extentBytes(path, perRequest)
 		require.NoError(t, err)
 		assert.Equal(t, whole, got, "extents per request: %d", perRequest)
 	}
@@ -122,7 +122,7 @@ func TestExclusiveBytesPaging(t *testing.T) {
 func TestExclusiveBytesErrors(t *testing.T) {
 	dir := exclusiveTestDir(t)
 
-	_, err := exclusiveBytes(filepath.Join(dir, "missing"))
+	_, _, err := extentBytes(filepath.Join(dir, "missing"), fiemapExtentsPerRequest)
 	assert.ErrorIs(t, err, syscall.ENOENT)
 }
 
@@ -131,30 +131,28 @@ func TestExclusiveUsageKeepsUsageWhenNotMeasurable(t *testing.T) {
 
 	dirInfo, err := os.Stat(dir)
 	require.NoError(t, err)
-	got, ok := exclusiveUsage(dir, dirInfo, 4096)
-	assert.False(t, ok, "directories are not measured")
-	assert.Equal(t, int64(4096), got)
+	got, shared := measureExclusiveUsage(dir, dirInfo, 4096)
+	assert.Equal(t, int64(4096), got, "directories are not measured")
+	assert.Equal(t, int64(0), shared)
 
 	path := filepath.Join(dir, "file")
 	writeSynced(t, path, []byte("x"))
 	info, err := os.Stat(path)
 	require.NoError(t, err)
 
-	got, ok = exclusiveUsage(path, info, 0)
-	assert.False(t, ok, "nothing allocated, nothing to measure")
-	assert.Equal(t, int64(0), got)
+	got, _ = measureExclusiveUsage(path, info, 0)
+	assert.Equal(t, int64(0), got, "nothing allocated, nothing to measure")
 
-	got, ok = exclusiveUsage(filepath.Join(dir, "gone"), info, 4096)
-	assert.False(t, ok, "unreadable file falls back")
-	assert.Equal(t, int64(4096), got)
+	got, shared = measureExclusiveUsage(filepath.Join(dir, "gone"), info, 4096)
+	assert.Equal(t, int64(4096), got, "unreadable file falls back")
+	assert.Equal(t, int64(0), shared)
 
 	link := filepath.Join(dir, "link")
 	require.NoError(t, os.Symlink("file", link))
 	linkInfo, err := os.Lstat(link)
 	require.NoError(t, err)
-	got, ok = exclusiveUsage(link, linkInfo, 8)
-	assert.False(t, ok, "symlinks are not measured")
-	assert.Equal(t, int64(8), got)
+	got, _ = measureExclusiveUsage(link, linkInfo, 8)
+	assert.Equal(t, int64(8), got, "symlinks are not measured")
 }
 
 // makeClone creates src with data and dst as a reflink of it. It skips the
@@ -191,7 +189,7 @@ const fiemapFlagSync = 0x00000001
 // accepts FICLONE.
 func requireSharedExtents(t *testing.T, path string) {
 	t.Helper()
-	_, shared, err := extentBytes(path)
+	_, shared, err := extentBytes(path, fiemapExtentsPerRequest)
 	if errors.Is(err, syscall.EOPNOTSUPP) || errors.Is(err, syscall.ENOTTY) {
 		t.Skipf("FIEMAP is not supported on this filesystem: %v", err)
 	}
@@ -255,7 +253,7 @@ func TestExtentBytesSplitsSharedFromExclusive(t *testing.T) {
 	syncFiemap(t)
 	requireSharedExtents(t, src)
 
-	excl, shared, err := extentBytes(dst)
+	excl, shared, err := extentBytes(dst, fiemapExtentsPerRequest)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), excl)
 	assert.Equal(t, int64(size), shared)
@@ -267,13 +265,13 @@ func TestExtentBytesSplitsSharedFromExclusive(t *testing.T) {
 	require.NoError(t, f.Sync())
 	require.NoError(t, f.Close())
 
-	excl, shared, err = extentBytes(dst)
+	excl, shared, err = extentBytes(dst, fiemapExtentsPerRequest)
 	require.NoError(t, err)
 	assert.Greater(t, excl, int64(0))
 	assert.Equal(t, int64(size), excl+shared, "every mapped byte is one or the other")
 
 	for _, perRequest := range []uint32{1, 2} {
-		e, s, err := extentBytesPaged(dst, perRequest)
+		e, s, err := extentBytes(dst, perRequest)
 		require.NoError(t, err)
 		assert.Equal(t, excl, e)
 		assert.Equal(t, shared, s)
@@ -282,7 +280,7 @@ func TestExtentBytesSplitsSharedFromExclusive(t *testing.T) {
 	// A plain file shares nothing.
 	plain := filepath.Join(dir, "plain")
 	writeSynced(t, plain, make([]byte, 1<<16))
-	_, shared, err = extentBytes(plain)
+	_, shared, err = extentBytes(plain, fiemapExtentsPerRequest)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), shared)
 }
@@ -463,7 +461,7 @@ func TestExtentBytesRetriesInterruptedIoctl(t *testing.T) {
 		mapExtents(fiemapExtent{length: 4096, flags: fiemapExtentLast}),
 	)
 
-	excl, shared, err := extentBytes(path)
+	excl, shared, err := extentBytes(path, fiemapExtentsPerRequest)
 	require.NoError(t, err)
 	assert.Equal(t, int64(4096), excl)
 	assert.Equal(t, int64(0), shared)
@@ -475,7 +473,7 @@ func TestExtentBytesReturnsIoctlError(t *testing.T) {
 	writeSynced(t, path, []byte("x"))
 	fakeFiemap(t, func(*fiemapRequest) syscall.Errno { return syscall.EIO })
 
-	_, _, err := extentBytes(path)
+	_, _, err := extentBytes(path, fiemapExtentsPerRequest)
 	assert.ErrorIs(t, err, syscall.EIO)
 }
 
@@ -487,7 +485,7 @@ func TestExtentBytesRejectsOverfullReply(t *testing.T) {
 		return 0
 	})
 
-	_, _, err := extentBytes(path)
+	_, _, err := extentBytes(path, fiemapExtentsPerRequest)
 	assert.ErrorIs(t, err, errFiemapNotSupported)
 }
 
@@ -497,12 +495,12 @@ func TestExtentBytesStopsWithoutForwardProgress(t *testing.T) {
 
 	// the extent ends where the request started, and the kernel never says LAST
 	fakeFiemap(t, mapExtents(fiemapExtent{logical: 0, length: 0}))
-	_, _, err := extentBytes(path)
+	_, _, err := extentBytes(path, fiemapExtentsPerRequest)
 	assert.ErrorIs(t, err, errFiemapNotSupported)
 
 	// logical + length wraps around
 	fakeFiemap(t, mapExtents(fiemapExtent{logical: ^uint64(0) - 1, length: 8}))
-	_, _, err = extentBytes(path)
+	_, _, err = extentBytes(path, fiemapExtentsPerRequest)
 	assert.ErrorIs(t, err, errFiemapNotSupported)
 }
 
@@ -517,14 +515,14 @@ func TestExtentBytesPagesAndSplitsSharedWithFakeKernel(t *testing.T) {
 		),
 	)
 
-	excl, shared, err := extentBytes(path)
+	excl, shared, err := extentBytes(path, fiemapExtentsPerRequest)
 	require.NoError(t, err)
 	assert.Equal(t, int64(8192), excl)
 	assert.Equal(t, int64(8192), shared)
 	assert.Equal(t, 2, *calls)
 
 	fakeFiemap(t, mapExtents())
-	excl, shared, err = extentBytes(path)
+	excl, shared, err = extentBytes(path, fiemapExtentsPerRequest)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), excl+shared, "no extents is an empty map")
 }
@@ -536,13 +534,12 @@ func TestExclusiveUsageFallsBackOnIoctlError(t *testing.T) {
 	require.NoError(t, err)
 	fakeFiemap(t, func(*fiemapRequest) syscall.Errno { return syscall.EOPNOTSUPP })
 
-	excl, shared, ok := exclusiveAndSharedUsage(path, info, 8192)
-	assert.False(t, ok)
+	excl, shared := measureExclusiveUsage(path, info, 8192)
 	assert.Equal(t, int64(8192), excl)
 	assert.Equal(t, int64(0), shared)
 }
 
-func TestAnalyzerUsageHelpersWithFakeKernel(t *testing.T) {
+func TestAnalyzerMeasureUsageWithFakeKernel(t *testing.T) {
 	path := filepath.Join(exclusiveTestDir(t), "f")
 	writeSynced(t, path, make([]byte, 8192))
 	info, err := os.Stat(path)
@@ -553,17 +550,13 @@ func TestAnalyzerUsageHelpersWithFakeKernel(t *testing.T) {
 	))
 
 	off := &BaseAnalyzer{}
-	assert.Equal(t, int64(8192), off.usageOf(path, info, 8192), "disabled keeps st_blocks")
-	file := &File{Usage: 8192}
-	off.setFileUsage(file, path, info)
-	assert.Equal(t, int64(8192), file.Usage)
-	assert.Equal(t, int64(0), file.SharedUsage)
+	usage, shared := off.measureUsage(path, info, 8192)
+	assert.Equal(t, int64(8192), usage, "disabled keeps st_blocks")
+	assert.Equal(t, int64(0), shared)
 
 	on := &BaseAnalyzer{}
 	on.SetExclusiveSize(true)
-	assert.Equal(t, int64(4096), on.usageOf(path, info, 8192))
-	file = &File{Usage: 8192}
-	on.setFileUsage(file, path, info)
-	assert.Equal(t, int64(4096), file.Usage)
-	assert.Equal(t, int64(12288), file.SharedUsage)
+	usage, shared = on.measureUsage(path, info, 8192)
+	assert.Equal(t, int64(4096), usage)
+	assert.Equal(t, int64(12288), shared)
 }
