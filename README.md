@@ -76,7 +76,7 @@ Flags:
       --output-attrs string            Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino)
   -o, --output-file string             Export all info into file as JSON
   -r, --read-from-storage              Use existing database instead of re-scanning
-      --reverse-sort                   Reverse sorting order (smallest to largest) in non-interactive mode
+      --reverse-sort                   Reverse the sorting order in non-interactive mode (smallest to largest by default)
       --sequential                     Use sequential scanning (intended for rotating HDDs)
   -A, --show-annexed-size              Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size             Show apparent size

@@ -171,7 +171,7 @@ Show sizes as raw numbers without any prefixes (SI or binary) in non-interactive
 
 #### `reverse-sort`
 
-Reverse sorting order (smallest to largest) in non-interactive mode
+Reverse the sorting order in non-interactive mode (smallest to largest by default)
 
 #### `change-cwd`
 
