@@ -132,6 +132,8 @@ sibling instead of the parent directory
 
 **\--no-spawn-shell**\[=false\] Do not allow spawning shell
 
+**\--shell**=\"\" Set the shell spawned with the b key
+
 **\--no-confirm-quit**\[=false\] Do not ask for confirmation before quitting after a long scan
 
 **\--ctrl-c-quits**\[=false\] Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results. Esc always stops the scan and keeps the results found so far, regardless of this flag.

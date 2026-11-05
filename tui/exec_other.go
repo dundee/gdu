@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func getShellBin() string {
+func defaultShellBin() string {
 	shellbin, ok := os.LookupEnv("SHELL")
 	if !ok {
 		shellbin = "/bin/bash"
@@ -29,7 +29,7 @@ func (ui *UI) spawnShell() {
 			return
 		}
 
-		if err := ui.exec(getShellBin(), nil, os.Environ()); err != nil {
+		if err := ui.exec(ui.getShellBin(), nil, os.Environ()); err != nil {
 			ui.showErr("Error executing shell", err)
 		}
 	})

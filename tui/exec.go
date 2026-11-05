@@ -16,3 +16,10 @@ func Execute(argv0 string, argv, envv []string) error {
 
 	return cmd.Run()
 }
+
+func (ui *UI) getShellBin() string {
+	if ui.shellBin != "" {
+		return ui.shellBin
+	}
+	return defaultShellBin()
+}

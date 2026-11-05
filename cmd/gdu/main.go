@@ -117,6 +117,7 @@ func init() {
 		"Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results (Esc always stops the scan)")
 	flags.StringVar(&af.TrashCommand, "trash-command", "",
 		"Command used to move items to trash instead of the built-in trash (e.g. 'trash-put --trash-dir ~/mytrash')")
+	flags.StringVar(&af.Shell, "shell", "", "Set the shell spawned with the b key")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 	flags.StringVar(
 		&af.Since, "since", "",

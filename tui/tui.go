@@ -96,6 +96,7 @@ type UI struct {
 	noDelete                bool
 	noViewFile              bool
 	noSpawnShell            bool
+	shellBin                string
 	deleteInBackground      bool
 	timeFilter              *timefilter.TimeFilter
 	timeFilterLoc           *time.Location
@@ -486,6 +487,11 @@ func (ui *UI) SetNoDelete() {
 // SetNoSpawnShell disables shell spawning
 func (ui *UI) SetNoSpawnShell() {
 	ui.noSpawnShell = true
+}
+
+// SetShellBin sets the shell binary spawned by the b key.
+func (ui *UI) SetShellBin(path string) {
+	ui.shellBin = path
 }
 
 func (ui *UI) SetNoViewFile() {

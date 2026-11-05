@@ -78,6 +78,7 @@ Flags:
   -r, --read-from-storage              Use existing database instead of re-scanning
       --reverse-sort                   Reverse the sorting order in non-interactive mode (smallest to largest by default)
       --sequential                     Use sequential scanning (intended for rotating HDDs)
+      --shell string                   Set the shell spawned with the b key
   -A, --show-annexed-size              Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size             Show apparent size
   -d, --show-disks                     Show all mounted disks
@@ -122,6 +123,7 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu --no-view-file                    # prevent viewing file contents
     gdu --trash-command 'trash-put --trash-dir ~/mytrash'   # use own trash command for the D key
     gdu --trash-command 'mv -f "$1" ~/mytrash/'             # trash by moving items with mv
+    gdu --shell /usr/bin/fish             # set the shell spawned with the b key
     gdu <some_dir_to_analyze>             # analyze given dir
     gdu dir_a dir_b dir_c                 # analyze several dirs at once
     gdu -d                                # show all mounted disks
@@ -359,6 +361,12 @@ sorting:
 
 ```
 echo "change-cwd: true" >> ~/.gdu.yaml
+```
+
+* To set the shell spawned with the `b` key:
+
+```
+echo "shell: /usr/bin/fish" >> ~/.gdu.yaml
 ```
 
 * To configure the web UI (bind address and browser behavior):

@@ -219,6 +219,16 @@ Further details:
 * Also used by the web UI's "Move to Trash" action, under the same contract. The web UI reports an item the command left in place as an error.
 * Not supported on Windows, which has no POSIX shell to evaluate the command in.
 
+#### `shell`
+
+Set the shell spawned with the `b` key in the interactive UI. It takes precedence over the platform default.
+
+The value is the path to the shell executable; arguments are not supported. An empty value keeps the platform default. `no-spawn-shell` disables the `b` key regardless of this option.
+
+```yaml
+shell: /usr/bin/fish
+```
+
 #### `browse-parent-dirs`
 
 Allow navigating above the launch directory by pressing the left arrow key. When enabled, pressing left at the top-level directory will rescan and open its parent directory. Disabled by default.
