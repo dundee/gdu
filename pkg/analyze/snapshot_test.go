@@ -14,10 +14,10 @@ import (
 // TestSnapshotDirsAreListedButNotScanned pins that every analyzer shows a nested
 // btrfs subvolume as an empty zero sized entry flagged 'S' and never counts its content.
 func TestSnapshotDirsAreListedButNotScanned(t *testing.T) {
-	isNestedBtrfsSubvolume = func(path string, _ map[string]struct{}) bool {
+	isNestedBtrfsSubvolume = func(path string, _ os.FileInfo, _ map[string]struct{}) bool {
 		return filepath.Base(path) == "snaps"
 	}
-	t.Cleanup(func() { isNestedBtrfsSubvolume = nilSubvolume })
+	t.Cleanup(func() { isNestedBtrfsSubvolume = nestedBtrfsSubvolume })
 
 	root := t.TempDir()
 	assert.NoError(t, os.MkdirAll(filepath.Join(root, "snaps", "1"), os.ModePerm))
@@ -41,14 +41,12 @@ func TestSnapshotDirsAreListedButNotScanned(t *testing.T) {
 	}
 }
 
-func nilSubvolume(_ string, _ map[string]struct{}) bool { return false }
-
 // TestSnapshotDirsTopDirAnalyzer covers the summary analyzer, whose result cannot be walked like a full tree.
 func TestSnapshotDirsTopDirAnalyzer(t *testing.T) {
-	isNestedBtrfsSubvolume = func(path string, _ map[string]struct{}) bool {
+	isNestedBtrfsSubvolume = func(path string, _ os.FileInfo, _ map[string]struct{}) bool {
 		return filepath.Base(path) == "snaps"
 	}
-	t.Cleanup(func() { isNestedBtrfsSubvolume = nilSubvolume })
+	t.Cleanup(func() { isNestedBtrfsSubvolume = nestedBtrfsSubvolume })
 
 	root := t.TempDir()
 	assert.NoError(t, os.MkdirAll(filepath.Join(root, "snaps"), os.ModePerm))

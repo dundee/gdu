@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 )
@@ -15,7 +14,7 @@ import (
 const snapshotFlag = 'S'
 
 // isNestedBtrfsSubvolume is a variable so tests can fake a subvolume without btrfs
-var isNestedBtrfsSubvolume = device.IsNestedBtrfsSubvolume
+var isNestedBtrfsSubvolume = nestedBtrfsSubvolume
 
 // BaseAnalyzer provides common logic for all analyzers
 type BaseAnalyzer struct {
@@ -134,13 +133,35 @@ func (a *BaseAnalyzer) SetSkipBtrfsSubvolumes(mountPoints []string) {
 	}
 }
 
-// isSnapshotDir reports whether path is a nested btrfs subvolume that should not be scanned
-func (a *BaseAnalyzer) isSnapshotDir(path string) bool {
-	if a.skipSubvolumeMountPoints == nil || !isNestedBtrfsSubvolume(path, a.skipSubvolumeMountPoints) {
+// isSnapshotDir reports whether the directory at path, already stat'ed as info, is a nested
+// btrfs subvolume that should not be scanned
+func (a *BaseAnalyzer) isSnapshotDir(path string, info os.FileInfo) bool {
+	if a.skipSubvolumeMountPoints == nil || info == nil || !isNestedBtrfsSubvolume(path, info, a.skipSubvolumeMountPoints) {
 		return false
 	}
 	log.Printf("Directory %s not scanned, it is a nested btrfs subvolume (snapshot)", path)
 	return true
+}
+
+// statDir stats the root directory of a scan, the result is handed to processDir
+func statDir(path string) os.FileInfo {
+	info, err := os.Stat(path)
+	if err != nil {
+		log.Printf("Cannot stat %s: %s", path, err)
+		return nil
+	}
+	return info
+}
+
+// subDirInfo stats a subdirectory once, the result is shared by the snapshot check
+// and by the scan of the directory, so no second syscall is needed
+func subDirInfo(entry os.DirEntry, path string) os.FileInfo {
+	info, err := entry.Info()
+	if err != nil {
+		log.Printf("Cannot stat %s: %s", path, err)
+		return nil
+	}
+	return info
 }
 
 // snapshotPlaceholder is the empty zero sized entry shown in place of a skipped subvolume

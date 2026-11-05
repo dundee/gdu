@@ -49,7 +49,7 @@ func (a *StoredAnalyzer) AnalyzeDir(
 	a.ignoreDir = ignore
 
 	go a.UpdateProgress()
-	dir := a.processDir(path)
+	dir := a.processDir(path, statDir(path))
 
 	a.wait.Wait()
 
@@ -59,7 +59,7 @@ func (a *StoredAnalyzer) AnalyzeDir(
 	return dir
 }
 
-func (a *StoredAnalyzer) processDir(path string) *StoredDir {
+func (a *StoredAnalyzer) processDir(path string, dirInfo os.FileInfo) *StoredDir {
 	var (
 		file       fs.Item
 		err        error
@@ -88,7 +88,9 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 	}
 	parent := &ParentDir{Path: path}
 
-	setDirPlatformSpecificAttrs(dir.Dir, path)
+	if dirInfo != nil {
+		setDirPlatformSpecificAttrs(dir.Dir, dirInfo)
+	}
 
 	for _, f := range files {
 		if a.IsCancelled() {
@@ -100,7 +102,8 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
-			if a.isSnapshotDir(entryPath) {
+			subInfo := subDirInfo(f, entryPath)
+			if a.isSnapshotDir(entryPath, subInfo) {
 				placeholder := &StoredDir{Dir: snapshotPlaceholder(name, path, nil)}
 				dir.AddFile(placeholder)
 				if err := a.storage.StoreDir(placeholder); err != nil {
@@ -120,11 +123,11 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			}
 			dir.AddFile(subdir)
 
-			go func(entryPath string) {
+			go func(entryPath string, subInfo os.FileInfo) {
 				concurrencyLimit <- struct{}{}
-				a.processDir(entryPath)
+				a.processDir(entryPath, subInfo)
 				<-concurrencyLimit
-			}(entryPath)
+			}(entryPath, subInfo)
 		} else {
 			// Apply file type filter if set
 			if a.ignoreFileType != nil && a.ignoreFileType(name) {

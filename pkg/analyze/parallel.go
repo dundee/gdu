@@ -34,7 +34,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	a.ignoreFileType = fileTypeFilter
 
 	go a.UpdateProgress()
-	dir := a.processDir(path)
+	dir := a.processDir(path, statDir(path))
 
 	dir.BasePath = filepath.Dir(path)
 	a.setCurrentDir(dir)
@@ -46,7 +46,7 @@ func (a *ParallelAnalyzer) AnalyzeDir(
 	return dir
 }
 
-func (a *ParallelAnalyzer) processQueuedDir(path string, parent *Dir, result chan<- *Dir) {
+func (a *ParallelAnalyzer) processQueuedDir(path string, info os.FileInfo, parent *Dir, result chan<- *Dir) {
 	concurrencyLimit <- struct{}{}
 	if a.IsCancelled() {
 		<-concurrencyLimit
@@ -54,7 +54,7 @@ func (a *ParallelAnalyzer) processQueuedDir(path string, parent *Dir, result cha
 		return
 	}
 
-	subdir := a.processDir(path)
+	subdir := a.processDir(path, info)
 	subdir.Parent = parent
 	<-concurrencyLimit
 	result <- subdir
@@ -68,19 +68,24 @@ func addSubDir(parent, child *Dir) {
 
 // queueSubDir reports whether a child directory should be scanned. ignored and
 // snapshot subvolumes return false; a snapshot subvolume is recorded as an
-// empty placeholder that the ui expands on demand.
-func (a *ParallelAnalyzer) queueSubDir(name, parentPath, entryPath string, dir *Dir) bool {
+// empty placeholder that the ui expands on demand. The info of the directory
+// is returned so the scan of it does not stat it again.
+func (a *ParallelAnalyzer) queueSubDir(
+	entry os.DirEntry, parentPath, entryPath string, dir *Dir,
+) (os.FileInfo, bool) {
+	name := entry.Name()
 	if a.shouldSkipDir(name, entryPath) {
-		return false
+		return nil, false
 	}
-	if a.isSnapshotDir(entryPath) {
+	info := subDirInfo(entry, entryPath)
+	if a.isSnapshotDir(entryPath, info) {
 		dir.AddFile(snapshotPlaceholder(name, parentPath, dir))
-		return false
+		return nil, false
 	}
-	return true
+	return info, true
 }
 
-func (a *ParallelAnalyzer) processDir(path string) *Dir {
+func (a *ParallelAnalyzer) processDir(path string, dirInfo os.FileInfo) *Dir {
 	var (
 		file       fs.Item
 		err        error
@@ -105,7 +110,9 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		ItemCount: 1,
 		Files:     make(fs.Files, 0, len(files)),
 	}
-	setDirPlatformSpecificAttrs(dir, path)
+	if dirInfo != nil {
+		setDirPlatformSpecificAttrs(dir, dirInfo)
+	}
 
 	for _, f := range files {
 		if a.IsCancelled() {
@@ -114,9 +121,9 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		name := f.Name()
 		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
-			if a.queueSubDir(name, path, entryPath, dir) {
+			if subInfo, ok := a.queueSubDir(f, path, entryPath, dir); ok {
 				dirCount++
-				go a.processQueuedDir(entryPath, dir, subDirChan)
+				go a.processQueuedDir(entryPath, subInfo, dir, subDirChan)
 			}
 		} else {
 			// Apply file type filter if set

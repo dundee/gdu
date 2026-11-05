@@ -930,7 +930,7 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 	go a.UpdateProgress()
 
 	// Process directory and get the root item
-	rootItem := a.processDir(path, nil)
+	rootItem := a.processDir(path, statDir(path), nil)
 
 	a.wait.Wait()
 
@@ -1042,7 +1042,7 @@ func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (sta
 }
 
 // nolint:funlen
-func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
+func (a *SqliteAnalyzer) processDir(path string, dirInfo os.FileInfo, parentID *int64) *SqliteItem {
 	// This analyzer aggregates as it scans rather than via a later updateStats
 	// pass, but it must land on the same numbers: totals cover the children
 	// only, and resolveDirStats applies the empty-directory rule at the end.
@@ -1080,10 +1080,9 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 
 	// Get directory info for mtime and the directory's own usage
-	dirInfo, statErr := os.Stat(path)
 	var dirMtime time.Time
 	totals := dirTotals{itemCount: 1}
-	if statErr == nil {
+	if dirInfo != nil {
 		dirMtime = dirInfo.ModTime()
 		totals.ownUsage = dirInfoOwnUsage(dirInfo)
 	}
@@ -1120,13 +1119,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
-			if a.isSnapshotDir(entryPath) {
-				var placeholderMtime time.Time
-				if info, err := f.Info(); err != nil {
-					log.Print(err.Error())
-				} else {
-					placeholderMtime = info.ModTime()
-				}
+			subInfo := subDirInfo(f, entryPath)
+			if a.isSnapshotDir(entryPath, subInfo) {
+				// isSnapshotDir is only true for a stat'ed directory
+				placeholderMtime := subInfo.ModTime()
 				if _, err := a.insertItemLocked(&dirID, name, true, 0, 0, placeholderMtime, 1, 0, snapshotFlag); err != nil {
 					log.Print(err.Error())
 					continue
@@ -1137,10 +1133,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			}
 			dirCount++
 
-			go func(entryPath string) {
-				sub := a.processDir(entryPath, &dirID)
+			go func(entryPath string, subInfo os.FileInfo) {
+				sub := a.processDir(entryPath, subInfo, &dirID)
 				subDirChan <- sub
-			}(entryPath)
+			}(entryPath, subInfo)
 			continue
 		}
 

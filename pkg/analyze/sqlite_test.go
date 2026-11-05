@@ -504,7 +504,7 @@ func TestSqliteAnalyzerPreemptiveCancellationSkipsChildDirectory(t *testing.T) {
 	require.NoError(t, os.Mkdir(childPath, 0o700))
 
 	analyzer.Cancel()
-	assert.Nil(t, analyzer.processDir(childPath, &parentID))
+	assert.Nil(t, analyzer.processDir(childPath, nil, &parentID))
 
 	children, err := analyzer.storage.GetChildren(parentID)
 	require.NoError(t, err)

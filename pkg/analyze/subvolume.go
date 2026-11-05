@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"syscall"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -40,7 +39,7 @@ func (a *SubvolumeAnalyzer) AnalyzeDir(
 	a.ignoreFileType = fileTypeFilter
 
 	go a.UpdateProgress()
-	dir := a.processDir(path)
+	dir := a.processDir(path, statDir(path))
 
 	dir.BasePath = filepath.Dir(path)
 	a.setCurrentDir(dir)
@@ -51,7 +50,7 @@ func (a *SubvolumeAnalyzer) AnalyzeDir(
 	return dir
 }
 
-func (a *SubvolumeAnalyzer) processDir(path string) *Dir {
+func (a *SubvolumeAnalyzer) processDir(path string, dirInfo os.FileInfo) *Dir {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
@@ -74,7 +73,9 @@ func (a *SubvolumeAnalyzer) processDir(path string) *Dir {
 		ItemCount: 1,
 		Files:     make(fs.Files, 0, len(files)),
 	}
-	setDirPlatformSpecificAttrs(dir, path)
+	if dirInfo != nil {
+		setDirPlatformSpecificAttrs(dir, dirInfo)
+	}
 
 	var totalUsage int64
 	for _, entry := range files {
@@ -88,7 +89,7 @@ func (a *SubvolumeAnalyzer) processDir(path string) *Dir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
-			subdir := a.processDir(entryPath)
+			subdir := a.processDir(entryPath, subDirInfo(entry, entryPath))
 			subdir.Parent = dir
 			dir.AddFile(subdir)
 			continue
@@ -140,9 +141,7 @@ func (a *SubvolumeAnalyzer) attributeUsage(file *File, path string, info os.File
 	}
 
 	key := device.InlineKey{MtimeNs: info.ModTime().UnixNano(), Size: info.Size()}
-	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		key.Inode = stat.Ino
-	}
+	key.Inode = getInode(info)
 	fresh, total := a.extents.Add(extents, key)
 	if total == 0 {
 		return
