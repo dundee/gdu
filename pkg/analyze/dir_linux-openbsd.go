@@ -32,14 +32,20 @@ func setPlatformSpecificAttrs(file *File, f os.FileInfo, _ string) {
 	}
 }
 
-func setDirPlatformSpecificAttrs(dir *Dir, path string) {
-	var stat syscall.Stat_t
-	if err := syscall.Stat(path, &stat); err != nil {
-		return
+// setDirPlatformSpecificAttrs fills the attributes of a directory from the info the caller already has
+func setDirPlatformSpecificAttrs(dir *Dir, info os.FileInfo) {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		dir.Mtime = time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec))
+		dir.OwnUsage = stat.Blocks * devBSize
 	}
+}
 
-	dir.Mtime = time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec))
-	dir.OwnUsage = stat.Blocks * devBSize
+// getInode returns the inode number of an already stat'ed item
+func getInode(info os.FileInfo) uint64 {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		return stat.Ino
+	}
+	return 0
 }
 
 // dirOwnUsage returns the disk usage of the blocks allocated to the directory

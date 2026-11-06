@@ -46,6 +46,12 @@ func (ui *UI) SetExclusiveSize(v bool) {
 	ui.Analyzer.SetExclusiveSize(v)
 }
 
+// SetSkipBtrfsSubvolumes makes the analyzer show unmounted nested btrfs subvolumes
+// (snapshots) as flagged empty entries instead of scanning them
+func (ui *UI) SetSkipBtrfsSubvolumes(mountPoints []string) {
+	ui.Analyzer.SetSkipBtrfsSubvolumes(mountPoints)
+}
+
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (ui *UI) SetShowAnnexedSize(v bool) {
 	ui.Analyzer.SetShowAnnexedSize(v)

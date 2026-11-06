@@ -70,6 +70,7 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	dir.OwnUsage = dirOwnUsage(path)
 
 	var topDirs []*TopDir
+	var topDirInfos []os.FileInfo
 
 	for _, f := range files {
 		if a.IsCancelled() {
@@ -81,11 +82,17 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			subInfo := subDirInfo(f, entryPath)
+			if a.isSnapshotDir(entryPath, subInfo) {
+				dir.Files = append(dir.Files, SimpleFile{Name: name, Flag: snapshotFlag, ItemCount: 1, IsDir: true})
+				continue
+			}
 			topDir := &TopDir{
 				Name: name,
 				Flag: ' ',
 			}
 			topDirs = append(topDirs, topDir)
+			topDirInfos = append(topDirInfos, subInfo)
 		} else {
 			var info os.FileInfo
 			// Apply file type filter if set
@@ -141,9 +148,9 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 
 	// Register root-level hard links before scanning subdirectories so their
 	// storage is counted at the root, while every file keeps its displayed size.
-	for _, topDir := range topDirs {
+	for index, topDir := range topDirs {
 		go func() {
-			a.processSubDir(filepath.Join(path, topDir.Name), topDir, true)
+			a.processSubDir(filepath.Join(path, topDir.Name), topDirInfos[index], topDir, true)
 			subDirChan <- struct{}{}
 		}()
 	}
@@ -175,9 +182,9 @@ func (a *TopDirAnalyzer) AnalyzeDir(
 	return &dir
 }
 
-// processSubDir adds the stats of path to topDir. isTopDir is true when path
-// is topDir itself rather than one of its subdirectories.
-func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir bool) {
+// processSubDir adds the stats of path to topDir. dirInfo is the stat of path made by the caller.
+// isTopDir is true when path is topDir itself rather than one of its subdirectories.
+func (a *TopDirAnalyzer) processSubDir(path string, dirInfo os.FileInfo, topDir *TopDir, isTopDir bool) {
 	var (
 		err        error
 		totalSize  int64
@@ -202,7 +209,7 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 		topDir.SetFlag('.')
 	}
 
-	if dirInfo, statErr := os.Stat(path); statErr == nil {
+	if dirInfo != nil {
 		totalUsage += dirInfoOwnUsage(dirInfo)
 		mtime = dirInfo.ModTime()
 	}
@@ -217,19 +224,23 @@ func (a *TopDirAnalyzer) processSubDir(path string, topDir *TopDir, isTopDir boo
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			subInfo := subDirInfo(f, entryPath)
+			if a.isSnapshotDir(entryPath, subInfo) {
+				continue
+			}
 
 			totalCount++
 
 			select {
 			case concurrencyLimit <- struct{}{}:
 				a.wait.Add(1)
-				go func(entryPath string) {
-					a.processSubDir(entryPath, topDir, false)
+				go func(entryPath string, subInfo os.FileInfo) {
+					a.processSubDir(entryPath, subInfo, topDir, false)
 					<-concurrencyLimit
 					a.wait.Done()
-				}(entryPath)
+				}(entryPath, subInfo)
 			default:
-				a.processSubDir(entryPath, topDir, false)
+				a.processSubDir(entryPath, subInfo, topDir, false)
 			}
 		} else {
 			// Apply file type filter if set
