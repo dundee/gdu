@@ -759,6 +759,37 @@ func TestSpawnShell(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestSpawnShellWithConfiguredShell(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	buff := &bytes.Buffer{}
+	ui := CreateUI(app, simScreen, buff, true, true, false, false)
+	executed := ""
+	ui.exec = func(argv0 string, argv, envv []string) error {
+		executed = argv0
+		return nil
+	}
+	ui.SetShellBin("/custom/shell")
+
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+
+	<-ui.done // wait for analyzer
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'b', 0))
+	assert.Nil(t, key)
+	assert.Equal(t, "/custom/shell", executed)
+}
+
 func TestSpawnShellWithoutDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

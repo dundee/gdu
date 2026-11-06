@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-func getShellBin() string {
+func defaultShellBin() string {
 	shellbin, ok := os.LookupEnv("COMSPEC")
 	if !ok {
 		shellbin = "C:\\WINDOWS\\System32\\cmd.exe"

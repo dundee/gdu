@@ -17,6 +17,13 @@ func Execute(argv0 string, argv, envv []string) error {
 	return cmd.Run()
 }
 
+func (ui *UI) getShellBin() string {
+	if ui.shellBin != "" {
+		return ui.shellBin
+	}
+	return defaultShellBin()
+}
+
 func (ui *UI) spawnShell() {
 	if ui.currentDir == nil {
 		return
@@ -32,7 +39,7 @@ func (ui *UI) spawnShell() {
 			return
 		}
 
-		if err := ui.exec(getShellBin(), nil, os.Environ()); err != nil {
+		if err := ui.exec(ui.getShellBin(), nil, os.Environ()); err != nil {
 			ui.showErr("Error executing shell", err)
 		}
 	})

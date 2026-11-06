@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func getShellBin() string {
+func defaultShellBin() string {
 	shellbin, ok := os.LookupEnv("SHELL")
 	if !ok {
 		shellbin = "/bin/bash"
