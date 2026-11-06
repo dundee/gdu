@@ -454,6 +454,21 @@ func TestGuiNoSpawnShell(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGuiShell(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", Shell: "/custom/shell"},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.Nil(t, err)
+}
+
 func TestGuiCtrlCQuits(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -905,6 +920,15 @@ func TestWebFlagRejectsInvalidCleanupRule(t *testing.T) {
 	)
 
 	assert.ErrorContains(t, err, `cleanup config: cleanup rule 1: unknown category "junk"`)
+}
+
+func TestShellConfigFromYAML(t *testing.T) {
+	var f Flags
+	err := yaml.Unmarshal([]byte(`
+shell: /usr/bin/fish
+`), &f)
+	assert.NoError(t, err)
+	assert.Equal(t, "/usr/bin/fish", f.Shell)
 }
 
 func TestCleanupConfigFromYAML(t *testing.T) {
