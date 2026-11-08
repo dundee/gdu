@@ -48,7 +48,7 @@ Flags:
       --depth int                      Show directory structure up to specified depth in non-interactive mode (0 means the flag is ignored); also limits entries inside browsed archives
       --enable-profiling               Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/
   -E, --exclude-type strings           File types to exclude (e.g., --exclude-type yaml,json)
-      --exclusive-size                 Linux only: report file usage as the bytes not shared with other files (reflinks), i.e. what deleting them frees
+      --exclusive-size                 Linux and macOS only: report file usage as the bytes not shared with other files (reflinks, APFS clones), i.e. what deleting them frees
   -L, --follow-symlinks                Follow symlinks for files, i.e. show the size of the file to which symlink points to (symlinks to directories are not followed)
   -h, --help                           help for gdu
   -i, --ignore-dirs strings            Paths to ignore (separated by comma). Can be absolute or relative to current directory (default [/proc,/dev,/sys,/run])
@@ -118,7 +118,7 @@ Basic list of actions in interactive mode (show help modal for more):
 
     gdu                                   # analyze current dir
     gdu -a                                # show apparent size instead of disk usage
-    gdu --exclusive-size                  # on XFS/btrfs: count only bytes not shared by reflinks
+    gdu --exclusive-size                  # on XFS/btrfs/APFS: count only bytes not shared by reflinks or clones
     gdu --no-delete                       # prevent write operations
     gdu --no-view-file                    # prevent viewing file contents
     gdu --trash-command 'trash-put --trash-dir ~/mytrash'   # use own trash command for the D key
@@ -293,12 +293,12 @@ flag with following meaning:
 
 ## Reflinks and shared extents
 
-On filesystems with reflink support (XFS, btrfs, bcachefs, ...) many files can
-share the same data. Disk usage as reported by `stat` counts shared data once
+On filesystems with reflink support (XFS, btrfs, bcachefs, APFS, ...) many files
+can share the same data. Disk usage as reported by `stat` counts shared data once
 per file, so the sum can exceed what the filesystem uses and deleting a file
 frees less than its size.
 
-With `--exclusive-size` (Linux only) Gdu asks the kernel for each regular file's
+With `--exclusive-size` (Linux and macOS) Gdu asks the kernel for each regular file's
 extent map (`FS_IOC_FIEMAP`) and reports the total length of the extents that
 are not flagged as shared. That is what deleting the file would free, ignoring
 what other files still reference. It replaces the disk usage figure, so sorting,
@@ -324,8 +324,19 @@ size bars, totals and `-o` exports (`dsize`) all use it; apparent size
   archives shown by their contents (`--archive-browsing`). Other platforms
   ignore the option without a warning, so a configuration file can be shared
   between machines.
-* It costs an `open` and at least one `ioctl` per file with allocated blocks.
-  Once a filesystem has refused FIEMAP, the rest of its files are not asked.
+* On macOS the figure comes from `getattrlist(2)` instead of FIEMAP: its
+  `ATTR_CMNEXT_PRIVATESIZE` is "the number of bytes that are not trapped inside
+  a clone or snapshot, and which would be freed immediately if the file were
+  deleted", and the rest of the file's allocated blocks is reported as shared.
+  As on btrfs, data a snapshot (Time Machine's local snapshots, ...) still holds
+  counts as shared. A file compressed by the filesystem (`UF_COMPRESSED`, as
+  many application bundles are) keeps its allocated-blocks figure: APFS reports
+  its private size as 0 although no other file shares it, so clones of such a
+  file each count in full. Filesystems that do not report the attribute (HFS+,
+  exFAT, network shares) keep the figure too.
+* On Linux it costs an `open` and at least one `ioctl` per file with allocated
+  blocks; once a filesystem has refused FIEMAP, the rest of its files are not
+  asked. On macOS it costs one `getattrlist` per such file.
 * The exported `dsize` does not record which metric produced it. Each file
   whose extent map was read and has shared extents also carries `shsize`, the
   bytes in those extents, so an export holds both halves of the file's

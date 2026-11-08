@@ -78,7 +78,7 @@ func init() {
 	)
 	flags.BoolVar(
 		&af.ExclusiveSize, "exclusive-size", false,
-		"Linux only: report file usage as the bytes not shared with other files (reflinks), i.e. what deleting them frees",
+		"Linux and macOS only: report file usage as the bytes not shared with other files (reflinks, APFS clones), i.e. what deleting them frees",
 	)
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
