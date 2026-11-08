@@ -49,6 +49,7 @@ func (a *StoredAnalyzer) AnalyzeDir(
 	a.ignoreDir = ignore
 
 	go a.UpdateProgress()
+	a.wait.Add(1)
 	dir := a.processDir(path)
 
 	a.wait.Wait()
@@ -67,8 +68,6 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 		info       os.FileInfo
 		dirCount   int
 	)
-
-	a.wait.Add(1)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -112,6 +111,9 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			}
 			dir.AddFile(subdir)
 
+			// Counted before the goroutine starts: this directory's Done may
+			// come first, and Wait must not see zero in between.
+			a.wait.Add(1)
 			go func(entryPath string) {
 				concurrencyLimit <- struct{}{}
 				a.processDir(entryPath)
