@@ -134,6 +134,14 @@ sibling instead of the parent directory
 
 **\--shell**=\"\" Set the shell spawned with the b key
 
+**\--file-viewer**=\"\" Executable used by the v key instead of the built-in file
+viewer, and when double-clicking a file with **\--mouse** enabled.
+Gdu suspends the terminal UI until it exits. The selected file's absolute
+path is passed as a single literal argument, without a shell. The setting is an
+executable name or path, not a command line; use a wrapper script for fixed
+options. An empty setting retains the built-in viewer. Both **\--no-view-file**
+and **\--no-spawn-shell** disable the external viewer. The o key is unchanged.
+
 **\--no-confirm-quit**\[=false\] Do not ask for confirmation before quitting after a long scan
 
 **\--ctrl-c-quits**\[=false\] Quit gdu when Ctrl+C is pressed during a scan instead of stopping the scan and keeping results. Esc always stops the scan and keeps the results found so far, regardless of this flag.

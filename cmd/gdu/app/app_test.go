@@ -469,6 +469,21 @@ func TestGuiShell(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGuiFileViewer(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	out, err := runApp(
+		&Flags{LogFile: "/dev/null", FileViewer: "/custom/viewer with spaces"},
+		[]string{"test_dir"},
+		true,
+		testdev.DevicesInfoGetterMock{},
+	)
+
+	assert.Empty(t, out)
+	assert.NoError(t, err)
+}
+
 func TestGuiCtrlCQuits(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
@@ -929,6 +944,13 @@ shell: /usr/bin/fish
 `), &f)
 	assert.NoError(t, err)
 	assert.Equal(t, "/usr/bin/fish", f.Shell)
+}
+
+func TestFileViewerConfigFromYAML(t *testing.T) {
+	var f Flags
+	err := yaml.Unmarshal([]byte("file-viewer: '/opt/viewer with spaces'\n"), &f)
+	assert.NoError(t, err)
+	assert.Equal(t, "/opt/viewer with spaces", f.FileViewer)
 }
 
 func TestCleanupConfigFromYAML(t *testing.T) {
