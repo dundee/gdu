@@ -54,7 +54,7 @@ func (ui *UI) deleteItem(item fs.Item, action DeleteAction) {
 			deleteItems = append(deleteItems, file)
 		}
 	} else {
-		parentDir = ui.currentDir
+		parentDir = item.GetParent()
 		deleteItems = append(deleteItems, item)
 	}
 
