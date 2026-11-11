@@ -21,6 +21,7 @@ func (ui *UI) rebuildFooter() {
 
 func (ui *UI) hideFilterInput() {
 	ui.filterValue = ""
+	ui.markedRows = make(map[int]struct{})
 	ui.filteringInput = nil
 	ui.filtering = false
 	ui.rebuildFooter()
@@ -49,6 +50,7 @@ func (ui *UI) showFilterInput() {
 
 		ui.filteringInput.SetChangedFunc(func(text string) {
 			ui.filterValue = text
+			ui.markedRows = make(map[int]struct{})
 			ui.showDir()
 		})
 		ui.filteringInput.SetDoneFunc(func(key tcell.Key) {
@@ -69,6 +71,7 @@ func (ui *UI) showFilterInput() {
 
 func (ui *UI) hideTypeFilterInput() {
 	ui.typeFilterValue = ""
+	ui.markedRows = make(map[int]struct{})
 	ui.typeFilteringInput = nil
 	ui.typeFiltering = false
 	ui.rebuildFooter()
@@ -97,6 +100,7 @@ func (ui *UI) showTypeFilterInput() {
 
 		ui.typeFilteringInput.SetChangedFunc(func(text string) {
 			ui.typeFilterValue = text
+			ui.markedRows = make(map[int]struct{})
 			ui.showDir()
 		})
 		ui.typeFilteringInput.SetDoneFunc(func(key tcell.Key) {
