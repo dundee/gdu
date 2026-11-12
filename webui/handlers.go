@@ -65,7 +65,7 @@ func (ui *UI) buildStatus() statusResponse {
 		state = scanStateError
 	case ui.scanning:
 		state = scanStateScanning
-	case ui.topDir == nil:
+	case ui.session.Root() == nil:
 		state = scanStateScanning
 	}
 

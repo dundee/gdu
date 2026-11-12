@@ -55,7 +55,7 @@ func (ui *UI) SetCleanupConfig(cfg cleanup.Config) error {
 // while there is none or a scan runs.
 func (ui *UI) currentTree() (root fs.Item, gen uint64, ok bool) {
 	ui.mu.RLock()
-	root, scanning := ui.topDir, ui.scanning
+	root, scanning := ui.session.Root(), ui.scanning
 	ui.mu.RUnlock()
 	return root, ui.treeGen.Load(), root != nil && !scanning
 }

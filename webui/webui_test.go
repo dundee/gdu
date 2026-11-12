@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -605,8 +606,9 @@ func TestDeleteEndpointHonorsNoDelete(t *testing.T) {
 func TestDeleteEndpointHonorsActiveFilters(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)
-	scan(t, ui, root)
+	// set before scanning: the background goroutines a scan starts read it
 	ui.FilteringFiles = true
+	scan(t, ui, root)
 	t.Setenv("GDU_ALLOW_DELETE_WITH_FILTER", "")
 
 	srv := httptest.NewServer(ui.routes())
@@ -940,6 +942,7 @@ func TestReadFromStorage(t *testing.T) {
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	ui := newTestUI()
+	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
 	require.NoError(t, ui.ReadFromStorage(storagePath, "test_dir"))
 
 	status := ui.buildStatus()
@@ -953,9 +956,17 @@ func TestReadFromStorage(t *testing.T) {
 
 func TestReadFromStorageError(t *testing.T) {
 	ui := newTestUI()
+	storagePath := t.TempDir() + "/badger"
+	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
 	// A non-existent path yields a badger read error.
-	err := ui.ReadFromStorage(t.TempDir()+"/badger", "missing_dir")
-	assert.Error(t, err, "expected error reading a missing dir from storage")
+	err := ui.ReadFromStorage(storagePath, "missing_dir")
+	assert.ErrorContains(t, err, "holds no analysis of missing_dir")
+}
+
+func TestReadFromStorageNeedsDatabase(t *testing.T) {
+	err := newTestUI().ReadFromStorage("", "test_dir")
+
+	assert.ErrorIs(t, err, session.ErrNoDatabase)
 }
 
 func TestBuildStatusStates(t *testing.T) {
@@ -1427,7 +1438,7 @@ func TestRevealEndpointNoDirectoryToReveal(t *testing.T) {
 	// A root that is itself a file (not a directory) has no parent, so
 	// revealing it hits the "no directory to reveal" guard.
 	ui.mu.Lock()
-	ui.topDir = &analyze.File{Name: "onlyfile"}
+	ui.session.SetRoot(&analyze.File{Name: "onlyfile"})
 	ui.topDirPath = "onlyfile"
 	ui.mu.Unlock()
 
@@ -1634,4 +1645,17 @@ func TestDeleteEndpointAllowsSymlinkPointingOutside(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "the symlink itself should be gone")
 	_, err = os.Stat(target)
 	assert.NoError(t, err, "its target outside the tree must be untouched")
+}
+
+func TestScanProgressIsReportedInStatus(t *testing.T) {
+	ui := newTestUI()
+
+	ui.observeProgress(session.Progress{CurrentProgress: common.CurrentProgress{
+		CurrentItemName: "/scanned/dir", ItemCount: 42, TotalUsage: 4096,
+	}})
+
+	progress := ui.buildStatus().Progress
+	assert.Equal(t, "/scanned/dir", progress.CurrentItem)
+	assert.EqualValues(t, 42, progress.ItemCount)
+	assert.EqualValues(t, 4096, progress.TotalUsage)
 }

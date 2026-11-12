@@ -18,8 +18,8 @@ func TestAnalyzePathsGroupsRootsUnderVirtualDir(t *testing.T) {
 	}
 	waitDone(t, ui)
 
-	if !analyze.IsVirtualRootDir(ui.topDir) {
-		t.Fatalf("expected virtual root, got %T named %q", ui.topDir, ui.topDir.GetName())
+	if !analyze.IsVirtualRootDir(ui.session.Root()) {
+		t.Fatalf("expected virtual root, got %T named %q", ui.session.Root(), ui.session.Root().GetName())
 	}
 	if ui.topDirPath != analyze.VirtualRootName {
 		t.Errorf("topDirPath = %q, want %q", ui.topDirPath, analyze.VirtualRootName)
@@ -77,7 +77,7 @@ func TestAnalyzePathsWithSinglePathHasNoVirtualDir(t *testing.T) {
 	}
 	waitDone(t, ui)
 
-	if analyze.IsVirtualRootDir(ui.topDir) {
+	if analyze.IsVirtualRootDir(ui.session.Root()) {
 		t.Error("single path must not be wrapped in a virtual root")
 	}
 	if ui.topDirPath != root {
