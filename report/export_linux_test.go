@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestReadFromStorage(t *testing.T) {
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
-	err = ui.ReadFromStorage(storagePath, "test_dir")
+	err = ui.ReadFromStorage("test_dir")
 
 	assert.Nil(t, err)
 	assert.Contains(t, reportOutput.String(), `"name":"nested"`)
@@ -49,7 +50,16 @@ func TestReadFromStorageWithErr(t *testing.T) {
 
 	ui := CreateExportUI(output, reportOutput, false, false, false, 0, 0, false, nil)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	err := ui.ReadFromStorage(storagePath, "test_dir")
+	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
+	err := ui.ReadFromStorage("test_dir")
 
-	assert.ErrorContains(t, err, "Key not found")
+	assert.ErrorContains(t, err, "holds no analysis of test_dir")
+}
+
+func TestReadFromStorageNeedsDatabase(t *testing.T) {
+	ui := CreateExportUI(&bytes.Buffer{}, &bytes.Buffer{}, false, false, false, 0, 0, false, nil)
+
+	err := ui.ReadFromStorage("test_dir")
+
+	assert.ErrorIs(t, err, session.ErrNoDatabase)
 }

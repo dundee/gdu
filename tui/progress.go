@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 )
 
 // stopScanHint returns the progress modal line telling the user how to stop
@@ -18,61 +19,57 @@ func (ui *UI) stopScanHint() string {
 	return "Press Esc or Ctrl+C to stop scanning and keep results"
 }
 
-func (ui *UI) updateProgress(analyzer common.Analyzer, doneChan common.SignalGroup) {
+// progressObserver returns the observer showing the progress of a scan in the
+// progress modal, and on the disk progress bar when showDiskProgress is set.
+func (ui *UI) progressObserver(deviceSize int64, showDiskProgress bool) session.Observer {
 	color := "[white:black:b]"
 	if ui.UseColors {
 		color = "[red:black:b]"
 	}
 
-	deviceSize := ui.currentDeviceSize
-	showBar := ui.showDiskProgressBar
-
 	start := time.Now()
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
+	lastRoot := 1
 
-	for {
-		select {
-		case <-doneChan:
-			if deviceSize > 0 && showBar {
-				clearTerminalProgress()
-				ui.currentDeviceSize = 0
-			}
+	return func(p session.Progress) {
+		if p.Phase == session.Finalizing {
 			ui.app.QueueUpdateDraw(func() {
 				ui.progress.SetTitle(" Finalizing... ")
 				ui.progress.SetText("Calculating disk usage...")
 			})
 			return
-		case <-ticker.C:
 		}
 
-		progress := analyzer.GetProgress()
-
-		func(itemCount int64, totalUsage int64) {
-			delta := time.Since(start).Round(time.Second)
-
-			if deviceSize > 0 && showBar {
-				percent := int(totalUsage * 100 / deviceSize)
-				writeTerminalProgress(percent)
-				if ui.progressBar != nil {
-					ui.progressBar.SetProgress(percent)
-				}
+		if showDiskProgress {
+			percent := int(p.TotalUsage * 100 / deviceSize)
+			writeTerminalProgress(percent)
+			if ui.progressBar != nil {
+				ui.progressBar.SetProgress(percent)
 			}
+		}
 
-			ui.app.QueueUpdateDraw(func() {
-				ui.progress.SetText("Total items: " +
-					color +
-					common.FormatNumber(int64(itemCount)) +
-					"[white:black:-], size: " +
-					color +
-					ui.formatSize(totalUsage, false, false) +
-					"[white:black:-], elapsed time: " +
-					color +
-					delta.String() +
-					"[white:black:-]\n\nPress Tab to preview results found so far\n" +
-					ui.stopScanHint())
-			})
-		}(progress.ItemCount, progress.TotalUsage)
+		var title string
+		if p.Roots > 1 && p.Root != lastRoot {
+			lastRoot = p.Root
+			title = scanProgressTitle(p.Root, p.Roots)
+		}
+
+		delta := time.Since(start).Round(time.Second)
+		ui.app.QueueUpdateDraw(func() {
+			if title != "" && !ui.scanCancelled {
+				ui.progress.SetTitle(title)
+			}
+			ui.progress.SetText("Total items: " +
+				color +
+				common.FormatNumber(p.ItemCount) +
+				"[white:black:-], size: " +
+				color +
+				ui.formatSize(p.TotalUsage, false, false) +
+				"[white:black:-], elapsed time: " +
+				color +
+				delta.String() +
+				"[white:black:-]\n\nPress Tab to preview results found so far\n" +
+				ui.stopScanHint())
+		})
 	}
 }
 

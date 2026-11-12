@@ -1,11 +1,10 @@
-package report
+package analyze
 
 import (
 	"bytes"
 	"errors"
 	"testing"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 
@@ -41,7 +40,7 @@ func TestReadAnalysis(t *testing.T) {
 	assert.Equal(t, int64(10022), dir.Files[2].GetSize())
 	assert.Equal(t, int64(20480), dir.Files[2].GetUsage())
 	assert.Equal(t, int64(4), dir.Files[2].GetItemCount())
-	alt2 := dir.Files[2].(*analyze.Dir).Files[2].(*analyze.File)
+	alt2 := dir.Files[2].(*Dir).Files[2].(*File)
 	assert.Equal(t, "app_linux_test2.go", alt2.Name)
 	assert.Equal(t, uint64(1234), alt2.Mli)
 	assert.Equal(t, 'H', alt2.Flag)
@@ -61,7 +60,7 @@ func TestReadAnalysisPreservesTruncatedDirectoryStats(t *testing.T) {
 	assert.Equal(t, int64(4096), dir.GetSize())
 	assert.Equal(t, int64(4096), dir.GetUsage())
 	assert.Equal(t, int64(3), dir.GetItemCount())
-	summary := dir.Files[0].(*analyze.Dir)
+	summary := dir.Files[0].(*Dir)
 	assert.Equal(t, int64(4096), summary.GetSize())
 	assert.Equal(t, int64(4096), summary.GetUsage())
 	assert.Equal(t, int64(2), summary.GetItemCount())
@@ -104,9 +103,9 @@ func TestReadAnalysisKeepsDirOwnUsage(t *testing.T) {
 
 	assert.Equal(t, int64(20480), dir.GetUsage())
 	assert.Equal(t, int64(5), dir.GetItemCount())
-	sub := dir.Files[1].(*analyze.Dir)
+	sub := dir.Files[1].(*Dir)
 	assert.Equal(t, int64(8192), sub.GetUsage())
-	empty := dir.Files[2].(*analyze.Dir)
+	empty := dir.Files[2].(*Dir)
 	assert.Equal(t, int64(4096), empty.GetUsage())
 	assert.Equal(t, int64(512), empty.GetSize())
 	assert.Equal(t, int64(1), empty.GetItemCount())
@@ -127,7 +126,7 @@ func TestReadAnalysisPreservesTruncatedDirWithPlaceholderSize(t *testing.T) {
 	assert.NoError(t, err)
 	dir.UpdateStats(make(fs.HardLinkedItems, 10))
 
-	truncated := dir.Files[0].(*analyze.Dir)
+	truncated := dir.Files[0].(*Dir)
 	assert.Equal(t, int64(512), truncated.GetSize())
 	assert.Equal(t, int64(0), truncated.GetUsage())
 	assert.Equal(t, int64(2), truncated.GetItemCount())
@@ -242,7 +241,7 @@ func TestReadAnalysisSharedUsage(t *testing.T) {
 	dir, err := ReadAnalysis(buff)
 
 	assert.Nil(t, err)
-	clone := dir.Files[0].(*analyze.File)
+	clone := dir.Files[0].(*File)
 	assert.Equal(t, int64(4096), clone.Usage)
 	assert.Equal(t, int64(4096), clone.SharedUsage)
 }

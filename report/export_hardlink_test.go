@@ -48,7 +48,7 @@ func TestAnalyzePathWithSelectedAttributesIncludingIno(t *testing.T) {
 	assert.Contains(t, reportOutput.String(), `"hlnkc":true`)
 	assert.Contains(t, reportOutput.String(), `"ino":`)
 
-	imported, err := ReadAnalysis(&reportOutput)
+	imported, err := analyze.ReadAnalysis(&reportOutput)
 	assert.NoError(t, err)
 	assert.NotNil(t, imported)
 

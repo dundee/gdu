@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -484,14 +485,14 @@ func TestCtrlCDuringScanCancelsAnalyzer(t *testing.T) {
 
 	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 	ui.pages.AddPage("progress", ui.progress, true, true)
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
 
 	assert.Nil(t, key)
 	assert.True(t, ui.scanCancelled)
-	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.Error(t, scan.Err(), "the scan was not cancelled")
 	assert.Equal(t, " Stopping scan... ", ui.progress.GetTitle())
 }
 
@@ -582,14 +583,14 @@ func TestEscDuringScanCancelsAnalyzer(t *testing.T) {
 
 	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 	ui.pages.AddPage("progress", ui.progress, true, true)
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
 
 	assert.Nil(t, key)
 	assert.True(t, ui.scanCancelled)
-	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.Error(t, scan.Err(), "the scan was not cancelled")
 	assert.Equal(t, " Stopping scan... ", ui.progress.GetTitle())
 }
 
@@ -600,14 +601,14 @@ func TestEscStopsScanEvenWhenCtrlCQuits(t *testing.T) {
 	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.SetCtrlCQuits()
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 	ui.pages.AddPage("progress", ui.progress, true, true)
 
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
 
 	assert.Nil(t, key)
 	assert.True(t, ui.scanCancelled)
-	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.Error(t, scan.Err(), "the scan was not cancelled")
 }
 
 func TestCtrlCQuitsDuringScanWhenConfigured(t *testing.T) {
@@ -618,7 +619,7 @@ func TestCtrlCQuitsDuringScanWhenConfigured(t *testing.T) {
 	ui := analyzedUI(t, buff)
 	ui.SetCtrlCQuits()
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 	ui.scanStart = time.Now().Add(-10 * time.Second)
 	ui.pages.AddPage("progress", ui.progress, true, true)
 	ui.markedPaths = []string{"test_dir/nested"}
@@ -628,7 +629,7 @@ func TestCtrlCQuitsDuringScanWhenConfigured(t *testing.T) {
 	assert.Nil(t, key)
 	// the scan must not be stopped-and-kept, gdu just quits
 	assert.False(t, ui.scanCancelled)
-	assert.False(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.NoError(t, scan.Err(), "the scan was cancelled")
 	// quitting is immediate and unconditional, even after a long scan
 	assert.False(t, ui.pages.HasPage("confirm"))
 	// the regular quit teardown still runs, so marked paths are printed
@@ -642,13 +643,13 @@ func TestSignalCtrlCQuitsDuringScanWhenConfigured(t *testing.T) {
 	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.SetCtrlCQuits()
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 	ui.pages.AddPage("progress", ui.progress, true, true)
 
 	ui.handleSignalEvent(signalEvent(syscall.SIGINT))
 
 	assert.False(t, ui.scanCancelled)
-	assert.False(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.NoError(t, scan.Err(), "the scan was cancelled")
 }
 
 func TestCtrlCDuringScanPreviewCancelsAnalyzer(t *testing.T) {
@@ -657,7 +658,7 @@ func TestCtrlCDuringScanPreviewCancelsAnalyzer(t *testing.T) {
 
 	ui := analyzedUI(t, &bytes.Buffer{})
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 	ui.pages.AddPage("progress", ui.progress, true, true)
 	ui.enterPreview()
 
@@ -665,7 +666,7 @@ func TestCtrlCDuringScanPreviewCancelsAnalyzer(t *testing.T) {
 
 	assert.Nil(t, key)
 	assert.True(t, ui.scanCancelled)
-	assert.True(t, ui.Analyzer.(*analyze.ParallelAnalyzer).IsCancelled())
+	assert.Error(t, scan.Err(), "the scan was not cancelled")
 }
 
 func TestPreviewIgnoresDestructiveKeys(t *testing.T) {
@@ -1661,7 +1662,7 @@ func TestRescan(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
-	ui.topDir = parentDir
+	ui.session.SetRoot(parentDir)
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'r', 0))
 
@@ -1911,4 +1912,13 @@ func TestPrintMarked(t *testing.T) {
 	// quitting with 'q' flushes the saved paths to output
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0))
 	assert.NotEmpty(t, buff.String())
+}
+
+// fakeRunningScan makes ui behave as if a scan were running, and returns the
+// context cancelled when the scan is stopped.
+func fakeRunningScan(ui *UI) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	ui.scanning = true
+	ui.stopScan = cancel
+	return ctx
 }

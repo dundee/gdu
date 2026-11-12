@@ -94,7 +94,7 @@ func toNodeJSON(it fs.Item, res *cleanup.Result) nodeJSON {
 // It guards against path traversal outside the root.
 func (ui *UI) findNode(path string) (fs.Item, error) {
 	ui.mu.RLock()
-	root := ui.topDir
+	root := ui.session.Root()
 	rootPath := ui.topDirPath
 	ui.mu.RUnlock()
 

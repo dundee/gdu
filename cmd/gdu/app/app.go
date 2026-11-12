@@ -39,7 +39,9 @@ type UI interface {
 	// return an error.
 	AnalyzePaths(paths []string) error
 	ReadAnalysis(input io.Reader) error
-	ReadFromStorage(storagePath, path string) error
+	// ReadFromStorage presents the analysis of path stored by an earlier scan
+	// in the database of the analyzer (--db).
+	ReadFromStorage(path string) error
 	SetIgnoreTypes(types []string)
 	SetIgnoreDirPaths(paths []string)
 	SetIgnoreDirPatterns(paths []string) error
@@ -262,6 +264,9 @@ func (a *App) Run() error {
 	if a.Flags.OutputAttrs != "" && a.Flags.OutputFile == "" {
 		return errors.New("--output-attrs requires --output-file")
 	}
+	if err := a.checkReadFromStorage(); err != nil {
+		return err
+	}
 
 	paths, err := a.resolvePaths()
 	if err != nil {
@@ -429,6 +434,21 @@ func (a *App) checkMultiPathSupport() error {
 		return errors.New("--output-file accepts only one directory to scan")
 	case a.Flags.DbPath != "":
 		return errors.New("--db accepts only one directory to scan")
+	}
+	return nil
+}
+
+// checkReadFromStorage rejects --read-from-storage without a database to read
+// from, rather than letting the analyzer create an empty one.
+func (a *App) checkReadFromStorage() error {
+	if !a.Flags.ReadFromStorage {
+		return nil
+	}
+	if a.Flags.DbPath == "" {
+		return errors.New("--read-from-storage requires --db")
+	}
+	if _, err := os.Stat(a.Flags.DbPath); err != nil {
+		return fmt.Errorf("reading the database: %w", err)
 	}
 	return nil
 }
@@ -801,6 +821,15 @@ func (a *App) runAction(ui UI, paths []string) error {
 
 		if err := ui.ReadAnalysis(input); err != nil {
 			return fmt.Errorf("reading analysis: %w", err)
+		}
+	case a.Flags.ReadFromStorage:
+		// a database holds a single scanned root, see checkMultiPathSupport;
+		// the path is not checked, the analysis is readable even when the
+		// directory is gone
+		path := build.RootPathPrefix + paths[0]
+		log.Printf("Reading stored analysis of: %s", path)
+		if err := ui.ReadFromStorage(path); err != nil {
+			return fmt.Errorf("reading stored analysis: %w", err)
 		}
 	default:
 		// Do not materialize dataless files on macOS. Without this, scanning

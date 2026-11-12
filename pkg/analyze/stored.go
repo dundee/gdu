@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"fmt"
 	"io"
 	"iter"
 	"os"
@@ -27,6 +28,20 @@ func CreateStoredAnalyzer(storagePath string) *StoredAnalyzer {
 	}
 	a.Init()
 	return a
+}
+
+// LoadAnalysis returns the analysis of path stored in the database by an
+// earlier scan. It fails when the database holds no analysis of path.
+func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
+	a.storage = NewStorage(a.storagePath, path)
+	closeFn := a.storage.Open()
+	defer closeFn()
+
+	dir, err := a.storage.GetDirForPath(path)
+	if err != nil {
+		return nil, fmt.Errorf("the database holds no analysis of %s: %w", path, err)
+	}
+	return dir, nil
 }
 
 // AnalyzeDir analyzes given path

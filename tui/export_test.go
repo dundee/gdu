@@ -67,7 +67,7 @@ func TestExportAnalysis(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
-	ui.topDir = parentDir
+	ui.session.SetRoot(parentDir)
 
 	ui.exportAnalysis()
 
@@ -91,7 +91,7 @@ func TestExportAnalysisHandlesEncodeError(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	ui.exportName = filepath.Join(t.TempDir(), "export.json")
-	ui.topDir = errorExportItem{err: errors.New("encode failed")}
+	ui.session.SetRoot(errorExportItem{err: errors.New("encode failed")})
 
 	ui.exportAnalysis()
 	<-ui.done
@@ -124,7 +124,7 @@ func TestExportAnalysisEsc(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
-	ui.topDir = parentDir
+	ui.session.SetRoot(parentDir)
 
 	form := ui.confirmExport()
 	formInputFn := form.GetInputCapture()
@@ -158,7 +158,7 @@ func TestExportAnalysisWithName(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
-	ui.topDir = parentDir
+	ui.session.SetRoot(parentDir)
 
 	form := ui.confirmExport()
 	// formInputFn := form.GetInputCapture()
@@ -219,7 +219,7 @@ func TestExportAnalysisWithoutRights(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
-	ui.topDir = parentDir
+	ui.session.SetRoot(parentDir)
 
 	ui.exportAnalysis()
 

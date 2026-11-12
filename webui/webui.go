@@ -4,25 +4,22 @@
 package webui
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/cleanup"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/remove"
-	"github.com/dundee/gdu/v5/report"
 )
-
-// progressPollInterval is how often the scan progress is sampled and broadcast.
-const progressPollInterval = 100 * time.Millisecond
 
 // UI is the web frontend. It embeds the shared *common.UI so that all the
 // generic Set* configuration methods are provided for free; only the
@@ -40,11 +37,11 @@ type UI struct {
 	getter  device.DevicesInfoGetter
 	devices device.Devices
 
+	session *session.Session
+
 	mu           sync.RWMutex
 	actionMu     sync.Mutex
-	topDir       fs.Item
 	topDirPath   string
-	linkedItems  fs.HardLinkedItems
 	collapsePath bool
 	scanning     bool
 	scanErr      error
@@ -76,10 +73,7 @@ func (ui *UI) SetNoDelete() {
 // scannedRoots returns the paths of the scanned roots, the only places
 // deletion may change anything.
 func (ui *UI) scannedRoots() []string {
-	ui.mu.RLock()
-	top := ui.topDir
-	ui.mu.RUnlock()
-	return analyze.ScannedRootPaths(top)
+	return ui.session.RootPaths()
 }
 
 // SetTrashCommand replaces the built-in trash with an external command, as
@@ -114,9 +108,9 @@ func CreateUI(
 		revealPath:  revealInFileManager,
 		trasher:     remove.MoveItemToTrash,
 		actionToken: generateActionToken(),
-		linkedItems: make(fs.HardLinkedItems),
 		hub:         newHub(),
 	}
+	ui.session = session.New(ui.UI)
 	ui.classifier = cleanup.NewDefaultClassifier(userHomeDir())
 	if listenAddr == "" {
 		ui.listenAddr = "localhost:0"
@@ -151,96 +145,49 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 
 // AnalyzePath analyzes disk usage in the given path in the background while the
 // HTTP server serves progress and partial results.
-func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
-	ui.mu.Lock()
-	ui.scanning = true
-	ui.scanErr = nil
-	ui.topDirPath = path
-	ui.mu.Unlock()
-
-	ui.Analyzer.ResetProgress()
-
-	scanDone := make(chan struct{})
-	go ui.pollProgress(scanDone)
-
-	go func() {
-		dir := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
-
-		if parentDir != nil {
-			dir.SetParent(parentDir)
-			parentDir.RemoveFileByName(dir.GetName())
-			parentDir.AddFile(dir)
-		}
-
-		if ui.IsFilteringFiles() {
-			dir.UpdateStatsWithFileFiltering(ui.linkedItems)
-		} else {
-			dir.UpdateStats(ui.linkedItems)
-		}
-
-		ui.mu.Lock()
-		if parentDir == nil {
-			ui.topDir = dir
-			ui.topDirPath = dir.GetPath()
-		}
-		ui.scanning = false
-		ui.mu.Unlock()
-		ui.treeChanged()
-
-		close(scanDone)
-		ui.hub.publish(ui.statusJSON())
-	}()
-
+func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
+	ui.scan([]string{path}, path)
 	return nil
 }
 
-// AnalyzePaths scans several roots one after another and serves them under a
-// virtual top level dir. The roots are scanned sequentially because the
-// analyzer owns a single set of progress channels.
+// AnalyzePaths scans several roots and serves them under a virtual top level
+// dir.
 func (ui *UI) AnalyzePaths(paths []string) error {
 	if len(paths) == 1 {
 		return ui.AnalyzePath(paths[0], nil)
 	}
+	ui.scan(paths, analyze.VirtualRootName)
+	return nil
+}
 
+// scan scans paths in the background, showing shownPath as the root path
+// until the scan is done.
+func (ui *UI) scan(paths []string, shownPath string) {
 	ui.mu.Lock()
 	ui.scanning = true
 	ui.scanErr = nil
-	ui.topDirPath = analyze.VirtualRootName
+	ui.topDirPath = shownPath
 	ui.mu.Unlock()
 
 	go func() {
-		roots := make([]fs.Item, 0, len(paths))
-		for _, path := range paths {
-			ui.Analyzer.ResetProgress()
-
-			scanDone := make(chan struct{})
-			go ui.pollProgress(scanDone)
-
-			roots = append(
-				roots,
-				ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter()),
-			)
-			close(scanDone)
-		}
-
-		dir := analyze.CreateVirtualRootDir(roots...)
-		if ui.IsFilteringFiles() {
-			dir.UpdateStatsWithFileFiltering(ui.linkedItems)
-		} else {
-			dir.UpdateStats(ui.linkedItems)
-		}
+		root := ui.session.Scan(context.Background(), paths, ui.observeProgress)
 
 		ui.mu.Lock()
-		ui.topDir = dir
-		ui.topDirPath = dir.GetPath()
+		ui.topDirPath = root.GetPath()
 		ui.scanning = false
 		ui.mu.Unlock()
 		ui.treeChanged()
 
 		ui.hub.publish(ui.statusJSON())
 	}()
+}
 
-	return nil
+// observeProgress keeps and broadcasts the progress of a running scan.
+func (ui *UI) observeProgress(p session.Progress) {
+	ui.mu.Lock()
+	ui.progress = p.CurrentProgress
+	ui.mu.Unlock()
+	ui.hub.publish(ui.statusJSON())
 }
 
 // ReadAnalysis reads an analysis report from a JSON reader and serves it.
@@ -249,7 +196,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	ui.scanning = true
 	ui.mu.Unlock()
 
-	dir, err := report.ReadAnalysis(input)
+	dir, err := ui.session.Load(input)
 	if err != nil {
 		ui.mu.Lock()
 		ui.scanning = false
@@ -257,56 +204,28 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 		ui.mu.Unlock()
 		return err
 	}
-	dir.UpdateStats(ui.linkedItems)
-
-	ui.mu.Lock()
-	ui.topDir = dir
-	ui.topDirPath = dir.GetPath()
-	ui.scanning = false
-	ui.mu.Unlock()
-	ui.treeChanged()
+	ui.treeLoaded(dir)
 	return nil
 }
 
-// ReadFromStorage reads a previously stored analysis and serves it.
-func (ui *UI) ReadFromStorage(storagePath, path string) error {
-	storage := analyze.NewStorage(storagePath, path)
-	closeFn := storage.Open()
-	defer closeFn()
-
-	dir, err := storage.GetDirForPath(path)
+// ReadFromStorage serves the analysis of path stored by an earlier scan with
+// --db.
+func (ui *UI) ReadFromStorage(path string) error {
+	dir, err := ui.session.Open(path)
 	if err != nil {
 		return err
 	}
-	dir.UpdateStats(ui.linkedItems)
+	ui.treeLoaded(dir)
+	return nil
+}
 
+// treeLoaded serves dir, the tree just loaded into the session.
+func (ui *UI) treeLoaded(dir fs.Item) {
 	ui.mu.Lock()
-	ui.topDir = dir
 	ui.topDirPath = dir.GetPath()
 	ui.scanning = false
 	ui.mu.Unlock()
 	ui.treeChanged()
-	return nil
-}
-
-// pollProgress samples the analyzer progress and broadcasts it until the scan
-// goroutine signals completion by closing scanDone.
-func (ui *UI) pollProgress(scanDone <-chan struct{}) {
-	ticker := time.NewTicker(progressPollInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-scanDone:
-			return
-		case <-ticker.C:
-			p := ui.Analyzer.GetProgress()
-			ui.mu.Lock()
-			ui.progress = p
-			ui.mu.Unlock()
-			ui.hub.publish(ui.statusJSON())
-		}
-	}
 }
 
 // statusJSON renders the current scan status as a JSON string for SSE.

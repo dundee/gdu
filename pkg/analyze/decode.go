@@ -1,4 +1,4 @@
-package report
+package analyze
 
 import (
 	"bytes"
@@ -7,12 +7,11 @@ import (
 	"io"
 	"strings"
 	"time"
-
-	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
-// ReadAnalysis reads analysis report from JSON file and returns directory item
-func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
+// ReadAnalysis reads an analysis exported as JSON (the ncdu format EncodeJSON
+// writes) and returns its top directory.
+func ReadAnalysis(input io.Reader) (dir *Dir, err error) {
 	var data any
 
 	var buff bytes.Buffer
@@ -36,10 +35,10 @@ func ReadAnalysis(input io.Reader) (dir *analyze.Dir, err error) {
 		return nil, errors.New("array of maps not found in the top level array on 4th position")
 	}
 
-	return processDir(items)
+	return decodeDir(items)
 }
 
-func processDir(items []any) (dir *analyze.Dir, err error) {
+func decodeDir(items []any) (dir *Dir, err error) {
 	if len(items) == 0 {
 		return nil, errors.New("directory array is empty")
 	}
@@ -53,7 +52,7 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 	for _, v := range items[1:] {
 		switch item := v.(type) {
 		case map[string]any:
-			file := &analyze.File{}
+			file := &File{}
 			name, ok := item["name"].(string)
 			if !ok {
 				return nil, errors.New("file name is not a string")
@@ -88,7 +87,7 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 
 			dir.AddFile(file)
 		case []any:
-			subdir, err := processDir(item)
+			subdir, err := decodeDir(item)
 			if err != nil {
 				return nil, err
 			}
@@ -108,7 +107,7 @@ func processDir(items []any) (dir *analyze.Dir, err error) {
 // export folds into the directory's total. A hard-linked file counted elsewhere
 // in the tree can make the entries add up to more than the total, so the
 // result is clamped at zero rather than going negative.
-func exportedOwnUsage(dir *analyze.Dir) int64 {
+func exportedOwnUsage(dir *Dir) int64 {
 	own := dir.Usage
 	for _, item := range dir.Files {
 		own -= item.GetUsage()
@@ -117,7 +116,7 @@ func exportedOwnUsage(dir *analyze.Dir) int64 {
 }
 
 func parseDirectoryMetadata(item any) (
-	dir *analyze.Dir,
+	dir *Dir,
 	hasSize bool,
 	hasUsage bool,
 	hasItemCount bool,
@@ -132,7 +131,7 @@ func parseDirectoryMetadata(item any) (
 		return nil, false, false, false, errors.New("directory name is not a string")
 	}
 
-	dir = &analyze.Dir{File: &analyze.File{Flag: ' '}}
+	dir = &Dir{File: &File{Flag: ' '}}
 	if mtime, ok := dirMap["mtime"].(float64); ok {
 		dir.Mtime = time.Unix(int64(mtime), 0)
 	}
@@ -163,7 +162,7 @@ func parseDirectoryMetadata(item any) (
 	return dir, hasSize, hasUsage, hasItemCount, nil
 }
 
-func preserveTruncatedStats(dir *analyze.Dir, hasSize, hasUsage, hasItemCount bool) {
+func preserveTruncatedStats(dir *Dir, hasSize, hasUsage, hasItemCount bool) {
 	if !hasSize || !hasUsage || !hasItemCount || len(dir.Files) != 0 {
 		return
 	}

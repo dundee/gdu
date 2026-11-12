@@ -8,11 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -60,7 +61,7 @@ func TestExportDirReturnsEncodeError(t *testing.T) {
 	sentinel := errors.New("encode failed")
 	ui := CreateExportUI(&bytes.Buffer{}, &bytes.Buffer{}, false, false, false, 0, 0, false, nil)
 
-	err := ui.exportDir(errorExportItem{err: sentinel}, &sync.WaitGroup{})
+	err := ui.exportDir(errorExportItem{err: sentinel})
 
 	assert.ErrorIs(t, err, sentinel)
 }
@@ -212,7 +213,7 @@ func TestAnalyzePathWithDepthOne(t *testing.T) {
 	assert.NotContains(t, reportOutput.String(), `"name":"subnested"`)
 	assert.NotContains(t, reportOutput.String(), `"name":"file"`)
 
-	readDir, err := ReadAnalysis(bytes.NewReader(reportOutput.Bytes()))
+	readDir, err := analyze.ReadAnalysis(bytes.NewReader(reportOutput.Bytes()))
 	assert.Nil(t, err)
 	assert.Equal(t, "test_dir", readDir.GetName())
 
@@ -263,7 +264,7 @@ func TestAnalyzePathWithTopRoundTrip(t *testing.T) {
 	assert.Contains(t, string(result), `"name":"file"`)
 	assert.Contains(t, string(result), `"name":"file2"`)
 
-	readDir, err := ReadAnalysis(bytes.NewReader(result))
+	readDir, err := analyze.ReadAnalysis(bytes.NewReader(result))
 	assert.Nil(t, err)
 	assert.Equal(t, "test_dir", readDir.GetName())
 
@@ -400,17 +401,28 @@ func TestExportProgressClearsLineWithoutPadding(t *testing.T) {
 	var output bytes.Buffer
 	ui := CreateExportUI(&output, io.Discard, false, true, false, 0, 0, false, nil)
 
-	written := make(chan struct{})
-	go func() {
-		ui.writtenChan <- struct{}{}
-		close(written)
-	}()
+	ui.scanObserver()(session.Progress{CurrentProgress: common.CurrentProgress{ItemCount: 1234}})
+	assert.Contains(t, output.String(), "Scanning... Total items: 1,234")
+	ui.scanObserver()(session.Progress{Phase: session.Finalizing})
+	assert.Contains(t, output.String(), "Calculating disk usage...")
 
-	ui.updateProgress()
-	<-written
+	stop := ui.showWritingProgress()
+	stop()
 
-	assert.Contains(t, output.String(), "\x1b[2K")
+	assert.Contains(t, output.String(), "Writing output file...")
+	assert.True(t, strings.HasSuffix(output.String(), "\x1b[2K"), "the line is cleared at the end")
 	assert.NotContains(t, output.String(), strings.Repeat(" ", 100))
+}
+
+// A failed export stops the spinner too.
+func TestExportProgressStopsWhenWritingFails(t *testing.T) {
+	var output bytes.Buffer
+	ui := CreateExportUI(&output, io.Discard, false, true, false, 0, 0, false, nil)
+
+	err := ui.exportDir(errorExportItem{err: errors.New("encode failed")})
+
+	assert.Error(t, err)
+	assert.True(t, strings.HasSuffix(output.String(), "\x1b[2K"), "the line is cleared at the end")
 }
 
 func TestShowDevices(t *testing.T) {
@@ -523,7 +535,7 @@ func TestExportToFileWithDepth(t *testing.T) {
 
 	_, err = reportOutput.Seek(0, 0)
 	assert.Nil(t, err)
-	readDir, err := ReadAnalysis(reportOutput)
+	readDir, err := analyze.ReadAnalysis(reportOutput)
 	assert.Nil(t, err)
 	assert.Equal(t, "test_dir", readDir.GetName())
 }

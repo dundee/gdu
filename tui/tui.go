@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -8,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode"
@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -31,7 +32,7 @@ type UI struct {
 	screen     tcell.Screen
 	output     io.Writer
 	currentDir fs.Item
-	topDir     fs.Item
+	session    *session.Session
 	getter     device.DevicesInfoGetter
 	*common.UI
 	grid                    *tview.Grid
@@ -52,7 +53,6 @@ type UI struct {
 	newDeleter              func(roots []string) itemDeleter
 	exec                    func(argv0 string, argv []string, envv []string) error
 	changeCwdFn             func(string) error
-	linkedItems             fs.HardLinkedItems
 	ignoredRows             map[int]struct{}
 	markedItems             map[fs.Item]struct{}
 	markedPaths             []string
@@ -110,16 +110,13 @@ type UI struct {
 	ctrlCQuits              bool
 	scanning                bool
 	scanCancelled           bool
-	// scanCancelRequested mirrors scanCancelled for readers outside the UI
-	// goroutine. A multi-root scan resets the analyzer between roots, which
-	// clears the analyzer's own cancelled flag, so the request has to survive
-	// somewhere the scanning goroutine can safely read it.
-	scanCancelRequested atomic.Bool
-	scanStart           time.Time
-	scanDuration        time.Duration
-	previewing          bool
-	previewSavedDir     fs.Item
-	progressFlex        *tview.Flex
+	// stopScan cancels the running scan
+	stopScan        context.CancelFunc
+	scanStart       time.Time
+	scanDuration    time.Duration
+	previewing      bool
+	previewSavedDir fs.Item
+	progressFlex    *tview.Flex
 }
 
 type deleteQueueItem struct {
@@ -164,7 +161,6 @@ func CreateUI(
 		showItemCount:           false,
 		trasher:                 remove.MoveItemToTrash,
 		exec:                    Execute,
-		linkedItems:             make(fs.HardLinkedItems, 10),
 		selectedTextColor:       tview.Styles.TitleColor,
 		selectedBackgroundColor: tview.Styles.MoreContrastBackgroundColor,
 		markedTextColor:         tview.Styles.PrimaryTextColor,
@@ -182,6 +178,7 @@ func CreateUI(
 		deleteWorkersCount:      3 * runtime.GOMAXPROCS(0),
 	}
 	ui.newDeleter = ui.defaultDeleter
+	ui.session = session.New(ui.UI)
 	if !useSIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
@@ -440,9 +437,10 @@ func (ui *UI) cancelScan() bool {
 		return false
 	}
 
-	ui.Analyzer.Cancel()
+	if ui.stopScan != nil {
+		ui.stopScan()
+	}
 	ui.scanCancelled = true
-	ui.scanCancelRequested.Store(true)
 	ui.progress.SetTitle(" Stopping scan... ")
 	stopping := "Stopping scan and keeping results..."
 	if !ui.ctrlCQuits {
@@ -542,29 +540,7 @@ func (ui *UI) atVirtualRoot() bool {
 }
 
 func (ui *UI) rescanDir() {
-	ui.linkedItems = make(fs.HardLinkedItems)
-
-	// at the virtual root there is nothing to rescan but the roots below it
-	if ui.atVirtualRoot() {
-		if err := ui.AnalyzePaths(ui.scannedRootPaths()); err != nil {
-			ui.showErr("Error rescanning paths", err)
-		}
-		return
-	}
-
-	err := ui.AnalyzePath(ui.currentDirPath, ui.currentDir.GetParent())
-	if err != nil {
-		ui.showErr("Error rescanning path", err)
-	}
-}
-
-// scannedRootPaths returns the paths of the roots grouped under the virtual root.
-func (ui *UI) scannedRootPaths() []string {
-	paths := make([]string, 0)
-	for item := range ui.currentDir.GetFiles(fs.SortByName, fs.SortAsc) {
-		paths = append(paths, item.GetPath())
-	}
-	return paths
+	ui.rescan(ui.currentDir)
 }
 
 func (ui *UI) fileItemSelected(row, column int) {
@@ -598,7 +574,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 		return
 	}
 
-	if row != 0 || origDir.GetPath() == ui.topDir.GetPath() {
+	if row != 0 || origDir.GetPath() == ui.topDirPath {
 		return
 	}
 
@@ -618,7 +594,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 					i++
 				}
 				if index >= 0 {
-					if ui.currentDir.GetPath() != ui.topDir.GetPath() {
+					if ui.currentDir.GetPath() != ui.topDirPath {
 						index++
 					}
 					ui.table.Select(index, 0)
@@ -646,8 +622,6 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	ui.resetSorting()
 
 	ui.currentDeviceSize = selectedDevice.Size
-	ui.Analyzer.ResetProgress()
-	ui.linkedItems = make(fs.HardLinkedItems)
 	err = ui.AnalyzePath(selectedDevice.MountPoint, nil)
 	if err != nil {
 		ui.showErr("Error analyzing device", err)

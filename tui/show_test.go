@@ -90,7 +90,7 @@ func TestCollapsePathFlag(t *testing.T) {
 	middleDir.SetParent(topDir)
 
 	ui.currentDir = topDir
-	ui.topDir = topDir
+	ui.session.SetRoot(topDir)
 	ui.topDirPath = "top"
 
 	// Default (flag false) -> Should NOT collapse
@@ -190,7 +190,7 @@ func TestParentRowIsPaddedToColumnsWidth(t *testing.T) {
 	}
 
 	ui.currentDir = root
-	ui.topDir = root
+	ui.session.SetRoot(root)
 	// differs from the current dir, so the "/.." row is rendered
 	ui.topDirPath = "/somewhere/else"
 

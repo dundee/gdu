@@ -3,6 +3,7 @@ package analyze
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"iter"
 	"os"
@@ -891,24 +892,28 @@ func CreateSqliteAnalyzer(dbPath string) (*SqliteAnalyzer, error) {
 	return a, nil
 }
 
-// AnalyzeDir analyzes the given path and stores results in SQLite.
-// If the database already contains data, it loads from the database instead of re-scanning.
+// LoadAnalysis returns the analysis of path stored in the database by an
+// earlier scan. It fails when the database holds no analysis, or the analysis
+// of another path.
+func (a *SqliteAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
+	if !a.storage.HasData() {
+		return nil, fmt.Errorf("the database holds no analysis of %s", path)
+	}
+	stored, err := a.storage.GetMetadata("top_dir_path")
+	if err != nil {
+		return nil, fmt.Errorf("reading the path of the stored analysis: %w", err)
+	}
+	if filepath.Clean(stored) != filepath.Clean(path) {
+		return nil, fmt.Errorf("the database holds the analysis of %s, not of %s", stored, path)
+	}
+	return a.storage.GetRootItem()
+}
+
+// AnalyzeDir analyzes the given path and stores results in SQLite, replacing
+// whatever the database held before. LoadAnalysis reads a stored analysis.
 func (a *SqliteAnalyzer) AnalyzeDir(
 	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
 ) fs.Item {
-	// Check if database already has data
-	if a.storage.HasData() {
-		log.Printf("Loading analysis from existing SQLite database")
-		rootItem, err := a.storage.GetRootItem()
-		if err != nil {
-			log.Printf("Error loading from database, will re-scan: %v", err)
-		} else {
-			// Signal that we're done immediately
-			a.doneChan.Broadcast()
-			return rootItem
-		}
-	}
-
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 

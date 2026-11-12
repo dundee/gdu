@@ -1,19 +1,19 @@
 package stdout
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math"
 	"os"
-	"runtime"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
-	"github.com/dundee/gdu/v5/report"
 	"github.com/fatih/color"
 )
 
@@ -21,6 +21,7 @@ import (
 type UI struct {
 	output io.Writer
 	*common.UI
+	session           *session.Session
 	red               *color.Color
 	orange            *color.Color
 	blue              *color.Color
@@ -88,6 +89,7 @@ func CreateStdoutUI(
 	if ui.top > 0 || ui.depth > 0 {
 		ui.Analyzer = analyze.CreateAnalyzer()
 	}
+	ui.session = session.New(ui.UI)
 
 	if !useColors {
 		color.NoColor = true
@@ -212,35 +214,8 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 		return nil
 	}
 
-	var (
-		dir             fs.Item
-		wait            sync.WaitGroup
-		updateStatsDone chan struct{}
-	)
-	updateStatsDone = make(chan struct{}, 1)
-
-	if ui.ShowProgress {
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
-			ui.updateProgress(updateStatsDone)
-		}()
-	}
-
-	wait.Add(1)
-	go func() {
-		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
-		if ui.IsFilteringFiles() {
-			dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
-		} else {
-			dir.UpdateStats(make(fs.HardLinkedItems, 10))
-		}
-		updateStatsDone <- struct{}{}
-	}()
-
-	wait.Wait()
-
+	dir := ui.session.Scan(context.Background(), []string{path}, ui.scanObserver())
+	ui.clearProgress()
 	ui.printAnalyzedDir(dir)
 
 	return nil
@@ -260,38 +235,8 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 		ui.Analyzer = topDir.FullAnalyzer()
 	}
 
-	roots := make([]fs.Item, 0, len(paths))
-	for _, path := range paths {
-		// the analyzer owns one set of progress channels per scan, so it has to
-		// be reset before each root - and before updateProgress reads its done
-		// channel
-		ui.Analyzer.ResetProgress()
-
-		var wait sync.WaitGroup
-		updateStatsDone := make(chan struct{}, 1)
-
-		if ui.ShowProgress {
-			wait.Add(1)
-			go func() {
-				defer wait.Done()
-				ui.updateProgress(updateStatsDone)
-			}()
-		}
-
-		root := ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
-		updateStatsDone <- struct{}{}
-		wait.Wait()
-
-		roots = append(roots, root)
-	}
-
-	dir := analyze.CreateVirtualRootDir(roots...)
-	if ui.IsFilteringFiles() {
-		dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
-	} else {
-		dir.UpdateStats(make(fs.HardLinkedItems, 10))
-	}
-
+	dir := ui.session.Scan(context.Background(), paths, ui.scanObserver())
+	ui.clearProgress()
 	ui.printAnalyzedDir(dir)
 
 	return nil
@@ -310,25 +255,14 @@ func (ui *UI) printAnalyzedDir(dir fs.Item) {
 	}
 }
 
-// ReadFromStorage reads analysis data from persistent key-value storage
-func (ui *UI) ReadFromStorage(storagePath, path string) error {
-	storage := analyze.NewStorage(storagePath, path)
-	closeFn := storage.Open()
-	defer closeFn()
-
-	dir, err := storage.GetDirForPath(path)
+// ReadFromStorage prints the analysis of path stored by an earlier scan with
+// --db.
+func (ui *UI) ReadFromStorage(path string) error {
+	dir, err := ui.session.Open(path)
 	if err != nil {
 		return err
 	}
-
-	switch {
-	case ui.top > 0:
-		ui.printTopFiles(dir)
-	case ui.summarize:
-		ui.printTotalItem(dir)
-	default:
-		ui.showDir(dir)
-	}
+	ui.printAnalyzedDir(dir)
 	return nil
 }
 
@@ -517,47 +451,9 @@ func (ui *UI) printDirWithDepth(dir fs.Item, currentDepth int) {
 
 // ReadAnalysis reads analysis report from JSON file
 func (ui *UI) ReadAnalysis(input io.Reader) error {
-	var (
-		dir      fs.Item
-		wait     sync.WaitGroup
-		err      error
-		doneChan chan struct{}
-	)
-
-	if ui.ShowProgress {
-		wait.Add(1)
-		doneChan = make(chan struct{})
-		go func() {
-			defer wait.Done()
-			ui.showReadingProgress(doneChan)
-		}()
-	}
-
-	wait.Add(1)
-	go func() {
-		defer wait.Done()
-		dir, err = report.ReadAnalysis(input)
-		if err != nil {
-			if ui.ShowProgress {
-				doneChan <- struct{}{}
-			}
-			return
-		}
-		runtime.GC()
-
-		if ui.IsFilteringFiles() {
-			dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
-		} else {
-			dir.UpdateStats(make(fs.HardLinkedItems, 10))
-		}
-
-		if ui.ShowProgress {
-			doneChan <- struct{}{}
-		}
-	}()
-
-	wait.Wait()
-
+	stop := ui.showReadingProgress()
+	dir, err := ui.session.Load(input)
+	stop()
 	if err != nil {
 		return err
 	}
@@ -567,76 +463,67 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return nil
 }
 
-func (ui *UI) showReadingProgress(doneChan chan struct{}) {
-	emptyRow := "\r"
-	for j := 0; j < 40; j++ {
-		emptyRow += " "
+// showReadingProgress spins until the returned function is called.
+func (ui *UI) showReadingProgress() (stop func()) {
+	if !ui.ShowProgress {
+		return func() {}
 	}
-
-	i := 0
-	for {
-		fmt.Fprint(ui.output, emptyRow)
-
-		select {
-		case <-doneChan:
-			fmt.Fprint(ui.output, "\r")
-			return
-		default:
+	quit := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		for i := 0; ; i = (i + 1) % progressRunesCount {
+			fmt.Fprint(ui.output, emptyRow(40))
+			fmt.Fprintf(ui.output, "\r %s Reading analysis from file...", string(progressRunes[i]))
+			select {
+			case <-quit:
+				fmt.Fprint(ui.output, emptyRow(40), "\r")
+				return
+			case <-ticker.C:
+			}
 		}
-
-		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
-		fmt.Fprint(ui.output, "Reading analysis from file...")
-
-		time.Sleep(100 * time.Millisecond)
-		i++
-		i %= progressRunesCount
+	}()
+	return func() {
+		close(quit)
+		<-stopped
 	}
 }
 
-func (ui *UI) updateProgress(updateStatsDone <-chan struct{}) {
-	emptyRow := "\r"
-	for j := 0; j < 100; j++ {
-		emptyRow += " "
+// scanObserver returns the observer printing the progress of a scan, or nil
+// when no progress is shown.
+func (ui *UI) scanObserver() session.Observer {
+	if !ui.ShowProgress {
+		return nil
 	}
-
-	analysisDoneChan := ui.Analyzer.GetDone()
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
 	i := 0
-	for {
-		select {
-		case <-ticker.C:
-			progress := ui.Analyzer.GetProgress()
-			fmt.Fprint(ui.output, emptyRow)
-			fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+	return func(p session.Progress) {
+		fmt.Fprint(ui.output, emptyRow(100))
+		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+		if p.Phase == session.Finalizing {
+			fmt.Fprint(ui.output, "Calculating disk usage...")
+		} else {
 			fmt.Fprint(ui.output, "Scanning... Total items: "+
-				ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
+				ui.red.Sprint(common.FormatNumber(p.ItemCount))+
 				" size: "+
-				ui.formatSize(progress.TotalUsage))
-			i++
-			i %= progressRunesCount
-		case <-analysisDoneChan:
-			ticker.Stop()
-			fmt.Fprint(ui.output, emptyRow)
-			for {
-				fmt.Fprint(ui.output, emptyRow)
-				fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
-				fmt.Fprint(ui.output, "Calculating disk usage...")
-				time.Sleep(100 * time.Millisecond)
-				i++
-				i %= progressRunesCount
-
-				select {
-				case <-updateStatsDone:
-					fmt.Fprint(ui.output, emptyRow)
-					fmt.Fprint(ui.output, "\r")
-					return
-				default:
-				}
-			}
+				ui.formatSize(p.TotalUsage))
 		}
+		i = (i + 1) % progressRunesCount
 	}
+}
+
+// clearProgress removes the progress line printed by scanObserver.
+func (ui *UI) clearProgress() {
+	if ui.ShowProgress {
+		fmt.Fprint(ui.output, emptyRow(100), "\r")
+	}
+}
+
+// emptyRow returns a carriage return followed by width spaces, which blanks
+// a progress line.
+func emptyRow(width int) string {
+	return "\r" + strings.Repeat(" ", width)
 }
 
 func (ui *UI) formatCount(count int64) string {

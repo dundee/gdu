@@ -2,6 +2,7 @@ package report
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -29,7 +30,7 @@ type UI struct {
 	exportOutput     io.Writer
 	red              *color.Color
 	orange           *color.Color
-	writtenChan      chan struct{}
+	session          *session.Session
 	outputAttributes fs.JSONAttributes
 	top              int
 	depth            int
@@ -56,7 +57,6 @@ func CreateExportUI(
 		},
 		output:           output,
 		exportOutput:     exportOutput,
-		writtenChan:      make(chan struct{}),
 		outputAttributes: outputAttributes,
 		top:              top,
 		depth:            depth,
@@ -67,6 +67,7 @@ func CreateExportUI(
 	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
+	ui.session = session.New(ui.UI)
 
 	if !useColors {
 		color.NoColor = true
@@ -98,59 +99,20 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return errors.New("reading analysis is not possible while exporting")
 }
 
-// ReadFromStorage reads analysis data from persistent key-value storage
-func (ui *UI) ReadFromStorage(storagePath, path string) error {
-	storage := analyze.NewStorage(storagePath, path)
-	closeFn := storage.Open()
-	defer closeFn()
-
-	dir, err := storage.GetDirForPath(path)
+// ReadFromStorage exports the analysis of path stored by an earlier scan with
+// --db.
+func (ui *UI) ReadFromStorage(path string) error {
+	dir, err := ui.session.Open(path)
 	if err != nil {
 		return err
 	}
-
-	var waitWritten sync.WaitGroup
-	if ui.ShowProgress {
-		waitWritten.Add(1)
-		go func() {
-			defer waitWritten.Done()
-			ui.updateProgress()
-		}()
-	}
-
-	return ui.exportDir(dir, &waitWritten)
+	return ui.exportDir(dir)
 }
 
 // AnalyzePath analyzes recursively disk usage in given path
 func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
-	var (
-		dir         fs.Item
-		wait        sync.WaitGroup
-		waitWritten sync.WaitGroup
-	)
-
-	if ui.ShowProgress {
-		waitWritten.Add(1)
-		go func() {
-			defer waitWritten.Done()
-			ui.updateProgress()
-		}()
-	}
-
-	wait.Add(1)
-	go func() {
-		defer wait.Done()
-		dir = ui.Analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
-		if ui.IsFilteringFiles() {
-			dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
-		} else {
-			dir.UpdateStats(make(fs.HardLinkedItems, 10))
-		}
-	}()
-
-	wait.Wait()
-
-	return ui.exportDir(dir, &waitWritten)
+	dir := ui.session.Scan(context.Background(), []string{path}, ui.scanObserver())
+	return ui.exportDir(dir)
 }
 
 // AnalyzePaths is not supported by the export UI: the ncdu-compatible export
@@ -239,8 +201,9 @@ func (ui *UI) summarizeDir(dir fs.Item) fs.Item {
 	return exportedDir(dir)
 }
 
-func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
-	// Sorting is now handled by GetFiles with sort parameters
+func (ui *UI) exportDir(dir fs.Item) error {
+	stop := ui.showWritingProgress()
+	defer stop()
 
 	var (
 		buff bytes.Buffer
@@ -273,57 +236,61 @@ func (ui *UI) exportDir(dir fs.Item, waitWritten *sync.WaitGroup) error {
 	}
 
 	if f, ok := ui.exportOutput.(*os.File); ok {
-		err = f.Close()
-		if err != nil {
-			return err
-		}
+		return f.Close()
 	}
-
-	if ui.ShowProgress {
-		ui.writtenChan <- struct{}{}
-		waitWritten.Wait()
-	}
-
 	return nil
 }
 
-func (ui *UI) updateProgress() {
-	waitingForWrite := false
+var progressRunes = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
 
-	progressRunes := []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
-
-	doneChan := ui.Analyzer.GetDone()
-
+// scanObserver returns the observer showing the progress of a scan, or nil
+// when no progress is shown.
+func (ui *UI) scanObserver() session.Observer {
+	if !ui.ShowProgress {
+		return nil
+	}
 	i := 0
-	for {
+	return func(p session.Progress) {
 		fmt.Fprint(ui.output, clearTerminalLine)
-
-		progress := ui.Analyzer.GetProgress()
-
-		select {
-		case <-doneChan:
-			fmt.Fprint(ui.output, clearTerminalLine)
-			waitingForWrite = true
-		case <-ui.writtenChan:
-			fmt.Fprint(ui.output, clearTerminalLine)
-			return
-		default:
-		}
-
 		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
-
-		if waitingForWrite {
-			fmt.Fprint(ui.output, "Writing output file...")
+		if p.Phase == session.Finalizing {
+			fmt.Fprint(ui.output, "Calculating disk usage...")
 		} else {
 			fmt.Fprint(ui.output, "Scanning... Total items: "+
-				ui.red.Sprint(common.FormatNumber(int64(progress.ItemCount)))+
+				ui.red.Sprint(common.FormatNumber(p.ItemCount))+
 				" size: "+
-				ui.formatSize(progress.TotalUsage))
+				ui.formatSize(p.TotalUsage))
 		}
+		i = (i + 1) % len(progressRunes)
+	}
+}
 
-		time.Sleep(100 * time.Millisecond)
-		i++
-		i %= 10
+// showWritingProgress spins until the returned function is called, which
+// clears the line again.
+func (ui *UI) showWritingProgress() (stop func()) {
+	if !ui.ShowProgress {
+		return func() {}
+	}
+	quit := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		for i := 0; ; i = (i + 1) % len(progressRunes) {
+			fmt.Fprint(ui.output, clearTerminalLine)
+			fmt.Fprintf(ui.output, "\r %s Writing output file...", string(progressRunes[i]))
+			select {
+			case <-quit:
+				fmt.Fprint(ui.output, clearTerminalLine)
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+	return func() {
+		close(quit)
+		<-stopped
 	}
 }
 
