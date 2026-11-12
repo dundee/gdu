@@ -2,10 +2,14 @@ package tui
 
 import (
 	"testing"
-	"time"
 
-	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
+	"github.com/dundee/gdu/v5/internal/testapp"
+	"github.com/dundee/gdu/v5/internal/testdir"
 )
 
 func TestProgressBarSetGetProgress(t *testing.T) {
@@ -59,57 +63,81 @@ func TestProgressBarDrawWithColor(t *testing.T) {
 	assert.Equal(t, 75, pb.GetProgress())
 }
 
-func TestUpdateProgressWithDeviceSize(t *testing.T) {
+// scanWithDeviceSize scans test_dir as if it were a device of the given size.
+func scanWithDeviceSize(t *testing.T, showBar bool) *UI {
+	t.Helper()
 	simScreen := testapp.CreateSimScreen()
-	defer simScreen.Fini()
+	t.Cleanup(simScreen.Fini)
 
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, nil, false, false, false, false)
 	ui.currentDeviceSize = 1000
-	ui.showDiskProgressBar = true
+	ui.showDiskProgressBar = showBar
+	ui.done = make(chan struct{})
 
-	done := ui.Analyzer.GetDone()
-	done.Broadcast()
-	ui.updateProgress(ui.Analyzer, done)
+	require.NoError(t, ui.AnalyzePath("test_dir", nil))
+	<-ui.done
+	for _, draw := range app.(*testapp.MockedApp).GetUpdateDraws() {
+		draw()
+	}
+	return ui
+}
 
-	// After updateProgress returns, currentDeviceSize must be cleared.
+func TestScanWithDiskProgressClearsDeviceSize(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := scanWithDeviceSize(t, true)
+
 	assert.Equal(t, int64(0), ui.currentDeviceSize)
 }
 
-func TestUpdateProgressBarDisabled(t *testing.T) {
-	simScreen := testapp.CreateSimScreen()
-	defer simScreen.Fini()
+func TestScanWithoutDiskProgressKeepsDeviceSize(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
 
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, nil, false, false, false, false)
-	ui.currentDeviceSize = 1000
-	ui.showDiskProgressBar = false
+	ui := scanWithDeviceSize(t, false)
 
-	done := ui.Analyzer.GetDone()
-	done.Broadcast()
-	ui.updateProgress(ui.Analyzer, done)
-
-	// showDiskProgressBar is false, so currentDeviceSize must NOT be cleared.
 	assert.Equal(t, int64(1000), ui.currentDeviceSize)
 }
 
-func TestUpdateProgressUpdatesBar(t *testing.T) {
+func TestProgressObserverUpdatesBar(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, nil, false, false, false, false)
-	ui.currentDeviceSize = 1000
-	ui.showDiskProgressBar = true
 	ui.progressBar = NewProgressBar()
+	ui.showScanProgressModal(" Scanning... ")
 
-	doneChan := ui.Analyzer.GetDone()
+	observe := ui.progressObserver(1000, true)
+	observe(session.Progress{CurrentProgress: common.CurrentProgress{ItemCount: 7, TotalUsage: 420}, Root: 1, Roots: 1})
+	for _, draw := range app.(*testapp.MockedApp).GetUpdateDraws() {
+		draw()
+	}
 
-	go func() {
-		// Wait for updateProgress to start polling
-		time.Sleep(150 * time.Millisecond)
-		doneChan.Broadcast()
-	}()
+	assert.Equal(t, 42, ui.progressBar.GetProgress())
+	assert.Contains(t, ui.progress.GetText(false), "Total items: ")
+}
 
-	ui.updateProgress(ui.Analyzer, doneChan)
+func TestProgressObserverShowsTheScannedRoot(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, nil, false, false, false, false)
+	ui.showScanProgressModal(scanProgressTitle(1, 2))
+
+	observe := ui.progressObserver(0, false)
+	observe(session.Progress{Root: 2, Roots: 2})
+	for _, draw := range app.(*testapp.MockedApp).GetUpdateDraws() {
+		draw()
+	}
+	assert.Equal(t, scanProgressTitle(2, 2), ui.progress.GetTitle())
+
+	observe(session.Progress{Phase: session.Finalizing, Root: 2, Roots: 2})
+	for _, draw := range app.(*testapp.MockedApp).GetUpdateDraws() {
+		draw()
+	}
+	assert.Equal(t, " Finalizing... ", ui.progress.GetTitle())
 }

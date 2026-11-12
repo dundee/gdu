@@ -217,7 +217,7 @@ func TestTypeFiltering(t *testing.T) {
 
 	dir := createDirWithExtensions()
 	ui.currentDir = dir
-	ui.topDir = dir
+	ui.session.SetRoot(dir)
 	ui.topDirPath = dir.GetPath()
 	ui.showDir()
 
@@ -373,7 +373,7 @@ func TestBothFiltersCoexist(t *testing.T) {
 
 	dir := createDirWithExtensions()
 	ui.currentDir = dir
-	ui.topDir = dir
+	ui.session.SetRoot(dir)
 	ui.topDirPath = dir.GetPath()
 
 	// activate both filters
@@ -423,7 +423,7 @@ func TestTypeFilterInputNoColorAndChangedCallback(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	dir := createDirWithExtensions()
 	ui.currentDir = dir
-	ui.topDir = dir
+	ui.session.SetRoot(dir)
 	ui.topDirPath = dir.GetPath()
 	ui.showDir()
 
@@ -446,7 +446,7 @@ func TestTypeFilterShowAgainKeepsExistingInput(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	dir := createDirWithExtensions()
 	ui.currentDir = dir
-	ui.topDir = dir
+	ui.session.SetRoot(dir)
 	ui.topDirPath = dir.GetPath()
 	ui.showDir()
 

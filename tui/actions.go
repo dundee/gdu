@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/rivo/tview"
 
 	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -71,120 +73,67 @@ func (ui *UI) showScanProgressModal(title string) {
 }
 
 // AnalyzePath analyzes recursively disk usage for given path
-func (ui *UI) AnalyzePath(path string, parentDir fs.Item) error {
-	ui.showScanProgressModal(" Scanning... ")
-
-	ui.scanCancelRequested.Store(false)
-	ui.Analyzer.ResetProgress()
-
-	analyzer := ui.Analyzer
-	doneChan := analyzer.GetDone()
-	go ui.updateProgress(analyzer, doneChan)
-
-	ui.scanStart = time.Now()
-	ui.scanning = true
-	ui.scanCancelled = false
-	go func() {
-		defer debug.FreeOSMemory()
-		currentDir := analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter())
-
-		if parentDir != nil {
-			currentDir.SetParent(parentDir)
-			// Remove old entry with the same name and add new one
-			parentDir.RemoveFileByName(currentDir.GetName())
-			parentDir.AddFile(currentDir)
-		} else {
-			ui.topDirPath = path
-			ui.topDir = currentDir
-		}
-
-		if ui.IsFilteringFiles() {
-			ui.topDir.UpdateStatsWithFileFiltering(ui.linkedItems)
-		} else {
-			ui.topDir.UpdateStats(ui.linkedItems)
-		}
-
-		ui.app.QueueUpdateDraw(func() {
-			ui.scanning = false
-			ui.scanCancelled = false
-			// remember the longest scan so we can guard against accidental quits
-			if d := time.Since(ui.scanStart); d > ui.scanDuration {
-				ui.scanDuration = d
-			}
-			// the finished scan replaces any mid-scan preview
-			ui.previewing = false
-			ui.previewSavedDir = nil
-			ui.currentDir = currentDir
-			ui.showDir()
-			ui.pages.RemovePage("progress")
-		})
-
-		if ui.done != nil {
-			ui.done <- struct{}{}
-		}
-	}()
-
+func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
+	ui.startScan(" Scanning... ", func(ctx context.Context, observe session.Observer) fs.Item {
+		return ui.session.Scan(ctx, []string{path}, observe)
+	})
 	return nil
 }
 
 // AnalyzePaths scans several roots one after another and presents them under a
 // virtual top level dir, so that the rest of the UI keeps working on the single
 // rooted tree it expects.
-//
-// The roots are scanned sequentially rather than concurrently because the
-// analyzer owns a single set of progress channels; each root needs the analyzer
-// reset before it starts, which is also why cancellation has to be tracked
-// separately (ResetProgress clears the analyzer's own cancelled flag).
 func (ui *UI) AnalyzePaths(paths []string) error {
 	if len(paths) == 1 {
 		return ui.AnalyzePath(paths[0], nil)
 	}
+	ui.startScan(scanProgressTitle(1, len(paths)), func(ctx context.Context, observe session.Observer) fs.Item {
+		return ui.session.Scan(ctx, paths, observe)
+	})
+	return nil
+}
 
-	ui.showScanProgressModal(scanProgressTitle(1, len(paths)))
+// rescan scans dir again and shows what the tree then holds in its place.
+func (ui *UI) rescan(dir fs.Item) {
+	title := " Scanning... "
+	if roots := len(analyze.ScannedRootPaths(dir)); analyze.IsVirtualRootDir(dir) && roots > 1 {
+		title = scanProgressTitle(1, roots)
+	}
+	ui.startScan(title, func(ctx context.Context, observe session.Observer) fs.Item {
+		return ui.session.Rescan(ctx, dir, observe)
+	})
+}
 
-	ui.scanCancelRequested.Store(false)
+// startScan shows the scan progress and runs scan in the background, then
+// shows the directory scan returns. The scan can be stopped with cancelScan
+// from the moment startScan returns.
+func (ui *UI) startScan(title string, scan func(context.Context, session.Observer) fs.Item) {
+	ui.showScanProgressModal(title)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	ui.stopScan = cancel
 	ui.scanStart = time.Now()
 	ui.scanning = true
 	ui.scanCancelled = false
 
+	showDiskProgress := ui.currentDeviceSize > 0 && ui.showDiskProgressBar
+	observe := ui.progressObserver(ui.currentDeviceSize, showDiskProgress)
+
 	go func() {
 		defer debug.FreeOSMemory()
+		defer cancel()
 
-		roots := make([]fs.Item, 0, len(paths))
-		for i, path := range paths {
-			if i > 0 {
-				title := scanProgressTitle(i+1, len(paths))
-				ui.app.QueueUpdateDraw(func() {
-					ui.progress.SetTitle(title)
-				})
-			}
-
-			ui.Analyzer.ResetProgress()
-			analyzer := ui.Analyzer
-			go ui.updateProgress(analyzer, analyzer.GetDone())
-
-			roots = append(
-				roots,
-				analyzer.AnalyzeDir(path, ui.CreateIgnoreFunc(), ui.CreateFileTypeFilter()),
-			)
-
-			// keep whatever was scanned so far, as a cancelled single scan does
-			if ui.scanCancelRequested.Load() {
-				break
-			}
-		}
-
-		currentDir := analyze.CreateVirtualRootDir(roots...)
-		ui.topDir = currentDir
-		ui.topDirPath = currentDir.GetPath()
-
-		if ui.IsFilteringFiles() {
-			ui.topDir.UpdateStatsWithFileFiltering(ui.linkedItems)
-		} else {
-			ui.topDir.UpdateStats(ui.linkedItems)
+		shown := scan(ctx, observe)
+		topDirPath := ui.session.RootPath()
+		if showDiskProgress {
+			clearTerminalProgress()
 		}
 
 		ui.app.QueueUpdateDraw(func() {
+			ui.topDirPath = topDirPath
+			if showDiskProgress {
+				ui.currentDeviceSize = 0
+			}
 			ui.scanning = false
 			ui.scanCancelled = false
 			// remember the longest scan so we can guard against accidental quits
@@ -194,7 +143,7 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 			// the finished scan replaces any mid-scan preview
 			ui.previewing = false
 			ui.previewSavedDir = nil
-			ui.currentDir = currentDir
+			ui.currentDir = shown
 			ui.showDir()
 			ui.pages.RemovePage("progress")
 		})
@@ -203,8 +152,6 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 			ui.done <- struct{}{}
 		}
 	}()
-
-	return nil
 }
 
 func scanProgressTitle(current, total int) string {
@@ -229,8 +176,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	ui.pages.AddPage("progress", flex, true, true)
 
 	go func() {
-		var err error
-		ui.currentDir, err = analyze.ReadAnalysis(input)
+		dir, err := ui.session.Load(input)
 		if err != nil {
 			ui.app.QueueUpdateDraw(func() {
 				ui.pages.RemovePage("progress")
@@ -241,15 +187,11 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 			}
 			return
 		}
-		runtime.GC()
 
-		ui.topDirPath = ui.currentDir.GetPath()
-		ui.topDir = ui.currentDir
-
-		links := make(fs.HardLinkedItems, 10)
-		ui.topDir.UpdateStats(links)
-
+		topDirPath := dir.GetPath()
 		ui.app.QueueUpdateDraw(func() {
+			ui.topDirPath = topDirPath
+			ui.currentDir = dir
 			ui.showDir()
 			ui.pages.RemovePage("progress")
 		})
@@ -262,21 +204,16 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	return nil
 }
 
-// ReadFromStorage reads analysis data from persistent key-value storage
-func (ui *UI) ReadFromStorage(storagePath, path string) error {
-	storage := analyze.NewStorage(storagePath, path)
-	closeFn := storage.Open()
-	defer closeFn()
-
-	dir, err := storage.GetDirForPath(path)
+// ReadFromStorage shows the analysis of path stored by an earlier scan with
+// --db.
+func (ui *UI) ReadFromStorage(_, path string) error {
+	dir, err := ui.session.Open(path)
 	if err != nil {
 		return err
 	}
 
 	ui.currentDir = dir
-	ui.topDirPath = ui.currentDir.GetPath()
-	ui.topDir = ui.currentDir
-
+	ui.topDirPath = dir.GetPath()
 	ui.showDir()
 	return nil
 }
@@ -330,7 +267,7 @@ func (ui *UI) showInfo() {
 	content += fmt.Sprintf(" (%s%d[-::] B)", numberColor, selectedFile.GetSize()) + "\n"
 
 	if selectedFile.GetMultiLinkedInode() > 0 {
-		linkedItems := ui.linkedItems[selectedFile.GetMultiLinkedInode()]
+		linkedItems := ui.session.HardLinks(selectedFile.GetMultiLinkedInode())
 		linesCount += 2 + len(linkedItems)
 		content += "\nHard-linked files:\n"
 		for _, linkedItem := range linkedItems {
@@ -419,7 +356,7 @@ func (ui *UI) exportAnalysis() {
 
 	// the export format holds exactly one root, so there is nowhere to put the
 	// virtual dir grouping several of them
-	if analyze.IsVirtualRootDir(ui.topDir) {
+	if analyze.IsVirtualRootDir(ui.session.Root()) {
 		ui.showMessage("Export is not supported when multiple directories are scanned")
 		return
 	}
@@ -458,7 +395,7 @@ func (ui *UI) exportAnalysis() {
 		}
 		defer file.Close()
 
-		if err = ui.topDir.EncodeJSON(&buff, true, nil); err != nil {
+		if err = ui.session.Root().EncodeJSON(&buff, true, nil); err != nil {
 			ui.showErrFromGo("Error encoding JSON", err)
 			return
 		}

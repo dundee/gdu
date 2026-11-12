@@ -7,7 +7,6 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/remove"
 )
@@ -49,7 +48,7 @@ func (ui *UI) defaultDeleter(roots []string) itemDeleter {
 
 // deleter returns a deleter confined to the scanned roots of the tree shown.
 func (ui *UI) deleter() itemDeleter {
-	return ui.newDeleter(analyze.ScannedRootPaths(ui.topDir))
+	return ui.newDeleter(ui.session.RootPaths())
 }
 
 // rowItem returns the item listed on row. ok is false for the "/.." row,

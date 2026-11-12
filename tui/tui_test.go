@@ -11,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdev"
@@ -22,6 +22,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -72,42 +73,18 @@ func TestFooter(t *testing.T) {
 	}
 }
 
-func TestUpdateProgress(t *testing.T) {
-	simScreen := testapp.CreateSimScreen()
-	defer simScreen.Fini()
-
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
-	done := ui.Analyzer.GetDone()
-	done.Broadcast()
-	ui.updateProgress(ui.Analyzer, done)
-}
-
-func TestUpdateProgressShowsCancellationHint(t *testing.T) {
+func TestProgressObserverShowsCancellationHint(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false).(*testapp.MockedApp)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
 	ui.progress = ui.header
-	done := make(common.SignalGroup)
-	finished := make(chan struct{})
-	go func() {
-		defer close(finished)
-		ui.updateProgress(ui.Analyzer, done)
-	}()
 
-	if !assert.Eventually(t, func() bool {
-		return len(app.GetUpdateDraws()) > 0
-	}, time.Second, 10*time.Millisecond) {
-		done.Broadcast()
-		<-finished
-		return
-	}
-	done.Broadcast()
-	<-finished
+	ui.progressObserver(0, false)(session.Progress{Root: 1, Roots: 1})
 
 	draws := app.GetUpdateDraws()
+	require.Len(t, draws, 1)
 	draws[0]()
 	assert.Contains(t, ui.progress.GetText(false), "Press Esc or Ctrl+C to stop scanning and keep results")
 }
@@ -276,7 +253,7 @@ func TestRescanDir(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
-	ui.topDir = parentDir
+	ui.session.SetRoot(parentDir)
 	ui.rescanDir()
 
 	<-ui.done // wait for analyzer

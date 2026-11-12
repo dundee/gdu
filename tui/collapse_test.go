@@ -284,7 +284,7 @@ func TestCollapsedPathIntegration(t *testing.T) {
 	middleDir.SetParent(topDir)
 
 	ui.currentDir = topDir
-	ui.topDir = topDir
+	ui.session.SetRoot(topDir)
 	ui.topDirPath = "/test"
 	ui.currentDirPath = "/test"
 	ui.SetCollapsePath(true)

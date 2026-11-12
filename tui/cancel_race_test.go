@@ -26,7 +26,7 @@ type cancelRaceApp struct {
 func newCancelRaceApp() *cancelRaceApp {
 	return &cancelRaceApp{
 		MockedApp: &testapp.MockedApp{},
-		updates:   make(chan func(), 8),
+		updates:   make(chan func(), 1024),
 	}
 }
 
@@ -144,14 +144,20 @@ func newCancelRaceUI(app *cancelRaceApp, analyzer *cancelRaceAnalyzer) *UI {
 
 func drainScanUpdates(t *testing.T, app *cancelRaceApp, ui *UI) {
 	t.Helper()
-	// One update finalizes progress and one applies the completed scan. The
-	// progress channel is already closed, so the first update is deterministic.
-	first := app.nextUpdate(t)
-	second := app.nextUpdate(t)
-	first()
-	second()
-	require.False(t, ui.scanning)
+	// Progress updates may come before the one applying the completed scan,
+	// as many as the scan took ticks of the progress observer.
+	for ui.scanning {
+		app.nextUpdate(t)()
+	}
 	require.False(t, ui.pages.HasPage("progress"))
+}
+
+// requireCancelledOnce waits until the analyzer has been cancelled, which the
+// scan does from a goroutine of its own, and checks it was cancelled once.
+func requireCancelledOnce(t *testing.T, analyzer *cancelRaceAnalyzer) {
+	t.Helper()
+	require.Eventually(t, func() bool { return analyzer.cancelCount() > 0 }, 2*time.Second, time.Millisecond)
+	require.Equal(t, 1, analyzer.cancelCount())
 }
 
 func TestAnalyzePathImmediateCtrlCIsNotLost(t *testing.T) {
@@ -202,7 +208,8 @@ func TestCtrlCBeforeQueuedCompletionKeepsResults(t *testing.T) {
 	require.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0)))
 	drainScanUpdates(t, app, ui)
 
-	require.Equal(t, 1, analyzer.cancelCount())
+	// the scan was over, so there was nothing left to cancel
+	require.Equal(t, 0, analyzer.cancelCount())
 	require.Equal(t, "test_dir", ui.currentDir.GetName())
 	require.Equal(t, 4, ui.table.GetRowCount())
 }
@@ -214,7 +221,7 @@ func TestRepeatedSignalCtrlCCancelsOnceThenQuits(t *testing.T) {
 
 	require.NoError(t, ui.AnalyzePath("test_dir", nil))
 	ui.keyPressed(signalEvent(os.Interrupt))
-	require.Equal(t, 1, analyzer.cancelCount())
+	requireCancelledOnce(t, analyzer)
 	require.Equal(t, 0, app.stopCount())
 
 	// The second SIGINT arrives while the scan is still stopping. Cancellation
@@ -246,7 +253,7 @@ func TestSignalLoopQueuesScanCancellation(t *testing.T) {
 	ui := CreateUI(app, screen, &bytes.Buffer{}, true, true, false, false)
 	ui.Analyzer = analyzer
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 
 	signals := make(chan os.Signal, 1)
 	signals <- os.Interrupt
@@ -257,7 +264,7 @@ func TestSignalLoopQueuesScanCancellation(t *testing.T) {
 	require.True(t, ok)
 	ui.keyPressed(event)
 
-	require.True(t, analyzer.IsCancelled())
+	require.Error(t, scan.Err(), "the scan was not cancelled")
 	require.True(t, ui.scanCancelled)
 	require.Equal(t, 0, app.stopCount())
 }
@@ -276,7 +283,7 @@ func TestSignalLoopRetriesFullEventQueue(t *testing.T) {
 	ui := CreateUI(app, screen, &bytes.Buffer{}, true, true, false, false)
 	ui.Analyzer = analyzer
 	ui.progress = tview.NewTextView()
-	ui.scanning = true
+	scan := fakeRunningScan(ui)
 
 	signals := make(chan os.Signal, 1)
 	signals <- os.Interrupt
@@ -302,7 +309,7 @@ func TestSignalLoopRetriesFullEventQueue(t *testing.T) {
 	require.True(t, ok)
 	ui.keyPressed(event)
 
-	require.True(t, analyzer.IsCancelled())
+	require.Error(t, scan.Err(), "the scan was not cancelled")
 	require.True(t, ui.scanCancelled)
 	require.Equal(t, 0, app.stopCount())
 }

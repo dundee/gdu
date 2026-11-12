@@ -16,6 +16,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestShowDevices(t *testing.T) {
@@ -207,37 +208,30 @@ func (a *blockingAnalyzer) GetDone() common.SignalGroup {
 	return a.done
 }
 
-func TestAnalyzePathWithParentDir(t *testing.T) {
-	parentDir := &analyze.Dir{
-		File: &analyze.File{
-			Name: "parent",
-		},
-		Files: make([]fs.Item, 0, 1),
-	}
+// Rescanning a subdirectory puts the new scan in its place, keeping the rest of
+// the tree, and shows it.
+func TestRescanSubdirectory(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
 
-	simScreen := testapp.CreateSimScreen()
-	defer simScreen.Fini()
+	ui := enterNested(t)
+	top := ui.session.Root()
+	old := ui.currentDir
+	rows, items := ui.table.GetRowCount(), fs.DisplayedItemCount(top)
+	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("added"), 0o600))
 
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, true, true)
-	ui.Analyzer = &testanalyze.MockedAnalyzer{}
-	ui.topDir = parentDir
-	ui.done = make(chan struct{})
-	err := ui.AnalyzePath("test_dir", parentDir)
-	assert.Nil(t, err)
+	n := drawsQueued(ui)
+	ui.rescanDir()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
 
-	<-ui.done // wait for analyzer
-
-	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
-		f()
-	}
-
-	assert.Equal(t, "test_dir", ui.currentDir.GetName())
-	assert.Equal(t, parentDir, ui.currentDir.GetParent())
-
-	assert.Equal(t, 5, ui.table.GetRowCount())
-	assert.Contains(t, ui.table.GetCell(0, 0).Text, "/..")
-	assert.Contains(t, ui.table.GetCell(1, 0).Text, "ddd")
+	assert.Same(t, top, ui.session.Root())
+	assert.NotSame(t, old, ui.currentDir)
+	assert.Equal(t, "nested", ui.currentDir.GetName())
+	assert.Same(t, top, ui.currentDir.GetParent())
+	assert.Equal(t, "test_dir", ui.topDirPath)
+	assert.Equal(t, rows+1, ui.table.GetRowCount())
+	assert.Equal(t, items+1, fs.DisplayedItemCount(top))
 }
 
 func TestReadAnalysis(t *testing.T) {
@@ -537,7 +531,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 	file.Mli = 1
 	file2.Mli = 1
 
-	ui.currentDir.UpdateStats(ui.linkedItems)
+	ui.currentDir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 

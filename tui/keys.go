@@ -301,11 +301,7 @@ func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
 // auto-refresh: pressing Tab again returns to the progress modal, and entering
 // the preview once more takes a fresh snapshot.
 func (ui *UI) enterPreview() {
-	analyzer, ok := ui.Analyzer.(interface{ GetCurrentDir() fs.Item })
-	if !ok {
-		return
-	}
-	root := analyzer.GetCurrentDir()
+	root := ui.session.Snapshot()
 	if root == nil {
 		return // nothing scanned yet
 	}
@@ -578,9 +574,6 @@ func (ui *UI) analyzeParentOfTopDir() {
 	if parentPath == currentPath {
 		return
 	}
-
-	ui.Analyzer.ResetProgress()
-	ui.linkedItems = make(fs.HardLinkedItems)
 
 	if err := analyzeParentPath(ui, parentPath, nil); err != nil {
 		ui.showErr("Error analyzing parent directory", err)

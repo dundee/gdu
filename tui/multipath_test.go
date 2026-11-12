@@ -129,7 +129,7 @@ func TestAnalyzePathsKeepsRealPathsOfRoots(t *testing.T) {
 
 	ui := analyzeMultiplePaths(t, []string{first, second})
 
-	paths := ui.scannedRootPaths()
+	paths := ui.session.RootPaths()
 	assert.ElementsMatch(t, []string{first, second}, paths)
 }
 
@@ -194,7 +194,7 @@ func TestRescanAtVirtualRootRescansAllRoots(t *testing.T) {
 	}
 
 	assert.True(t, analyze.IsVirtualRootDir(ui.currentDir))
-	assert.ElementsMatch(t, []string{first, second}, ui.scannedRootPaths())
+	assert.ElementsMatch(t, []string{first, second}, ui.session.RootPaths())
 }
 
 func TestExportAtVirtualRootIsRejected(t *testing.T) {
