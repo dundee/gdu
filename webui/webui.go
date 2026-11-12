@@ -73,6 +73,15 @@ func (ui *UI) SetNoDelete() {
 	ui.mu.Unlock()
 }
 
+// scannedRoots returns the paths of the scanned roots, the only places
+// deletion may change anything.
+func (ui *UI) scannedRoots() []string {
+	ui.mu.RLock()
+	top := ui.topDir
+	ui.mu.RUnlock()
+	return analyze.ScannedRootPaths(top)
+}
+
 // SetTrashCommand replaces the built-in trash with an external command, as
 // used by --trash-command. See remove.TrashCommand for the command contract.
 func (ui *UI) SetTrashCommand(command string) {
