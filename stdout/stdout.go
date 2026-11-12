@@ -13,7 +13,6 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
-	"github.com/dundee/gdu/v5/report"
 	"github.com/fatih/color"
 )
 
@@ -536,7 +535,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		dir, err = report.ReadAnalysis(input)
+		dir, err = analyze.ReadAnalysis(input)
 		if err != nil {
 			if ui.ShowProgress {
 				doneChan <- struct{}{}

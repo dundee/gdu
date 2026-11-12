@@ -18,7 +18,6 @@ import (
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/remove"
-	"github.com/dundee/gdu/v5/report"
 )
 
 // progressPollInterval is how often the scan progress is sampled and broadcast.
@@ -249,7 +248,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 	ui.scanning = true
 	ui.mu.Unlock()
 
-	dir, err := report.ReadAnalysis(input)
+	dir, err := analyze.ReadAnalysis(input)
 	if err != nil {
 		ui.mu.Lock()
 		ui.scanning = false

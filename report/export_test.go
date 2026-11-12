@@ -212,7 +212,7 @@ func TestAnalyzePathWithDepthOne(t *testing.T) {
 	assert.NotContains(t, reportOutput.String(), `"name":"subnested"`)
 	assert.NotContains(t, reportOutput.String(), `"name":"file"`)
 
-	readDir, err := ReadAnalysis(bytes.NewReader(reportOutput.Bytes()))
+	readDir, err := analyze.ReadAnalysis(bytes.NewReader(reportOutput.Bytes()))
 	assert.Nil(t, err)
 	assert.Equal(t, "test_dir", readDir.GetName())
 
@@ -263,7 +263,7 @@ func TestAnalyzePathWithTopRoundTrip(t *testing.T) {
 	assert.Contains(t, string(result), `"name":"file"`)
 	assert.Contains(t, string(result), `"name":"file2"`)
 
-	readDir, err := ReadAnalysis(bytes.NewReader(result))
+	readDir, err := analyze.ReadAnalysis(bytes.NewReader(result))
 	assert.Nil(t, err)
 	assert.Equal(t, "test_dir", readDir.GetName())
 
@@ -523,7 +523,7 @@ func TestExportToFileWithDepth(t *testing.T) {
 
 	_, err = reportOutput.Seek(0, 0)
 	assert.Nil(t, err)
-	readDir, err := ReadAnalysis(reportOutput)
+	readDir, err := analyze.ReadAnalysis(reportOutput)
 	assert.Nil(t, err)
 	assert.Equal(t, "test_dir", readDir.GetName())
 }

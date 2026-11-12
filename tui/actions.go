@@ -19,7 +19,6 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
-	"github.com/dundee/gdu/v5/report"
 )
 
 const (
@@ -231,7 +230,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 
 	go func() {
 		var err error
-		ui.currentDir, err = report.ReadAnalysis(input)
+		ui.currentDir, err = analyze.ReadAnalysis(input)
 		if err != nil {
 			ui.app.QueueUpdateDraw(func() {
 				ui.pages.RemovePage("progress")
