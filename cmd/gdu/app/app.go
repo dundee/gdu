@@ -84,6 +84,7 @@ type Flags struct {
 	ShowAnnexedSize     bool      `yaml:"show-annexed-size"`
 	ExclusiveSize       bool      `yaml:"exclusive-size"`
 	ShowVersion         bool      `yaml:"-"`
+	SelfUpdate          bool      `yaml:"-"`
 	ShowItemCount       bool      `yaml:"show-item-count"`
 	ShowMTime           bool      `yaml:"show-mtime"`
 	NoColor             bool      `yaml:"no-color"`

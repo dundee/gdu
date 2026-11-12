@@ -1,5 +1,9 @@
 # Installation
 
+Gdu installed in one of the ways below is updated by the respective package manager.
+Only binaries downloaded from the [releases page](https://github.com/dundee/gdu/releases)
+can update themselves with `gdu --self-update`.
+
 [Arch Linux](https://archlinux.org/packages/extra/x86_64/gdu/):
 
     pacman -S gdu

@@ -6,6 +6,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.9.6
 	github.com/ebitengine/purego v0.11.3
 	github.com/fatih/color v1.19.0
+	github.com/fynelabs/selfupdate v0.2.1
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/h2non/filetype v1.1.3
