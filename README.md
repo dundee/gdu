@@ -298,12 +298,13 @@ can share the same data. Disk usage as reported by `stat` counts shared data onc
 per file, so the sum can exceed what the filesystem uses and deleting a file
 frees less than its size.
 
-With `--exclusive-size` (Linux and macOS) Gdu asks the kernel for each regular file's
-extent map (`FS_IOC_FIEMAP`) and reports the total length of the extents that
-are not flagged as shared. That is what deleting the file would free, ignoring
-what other files still reference. It replaces the disk usage figure, so sorting,
-size bars, totals and `-o` exports (`dsize`) all use it; apparent size
-(`-a`) is unchanged. Details:
+With `--exclusive-size` (Linux and macOS) Gdu reports for each regular file only
+the bytes it does not share with other files, i.e. what deleting the file would
+free, ignoring what other files still reference. On Linux it asks the kernel
+for the file's extent map (`FS_IOC_FIEMAP`) and reports the total length of the
+extents that are not flagged as shared; macOS is covered below. The figure
+replaces the disk usage figure, so sorting, size bars, totals and `-o` exports
+(`dsize`) all use it; apparent size (`-a`) is unchanged. Details:
 
 * Data shared with another file counts as zero in every file sharing it, so a
   directory holding only the clones of a file elsewhere shows nothing, and the
@@ -338,9 +339,9 @@ size bars, totals and `-o` exports (`dsize`) all use it; apparent size
   blocks; once a filesystem has refused FIEMAP, the rest of its files are not
   asked. On macOS it costs one `getattrlist` per such file.
 * The exported `dsize` does not record which metric produced it. Each file
-  whose extent map was read and has shared extents also carries `shsize`, the
-  bytes in those extents, so an export holds both halves of the file's
-  allocated data. Readers that do not know the key ignore it. Directories do
+  that was measured and shares data also carries `shsize`, the shared bytes
+  (the shared extents on Linux, the allocated blocks beyond the private size on
+  macOS), so an export holds both halves of the file's allocated data. Readers that do not know the key ignore it. Directories do
   not add `shsize` up, and the SQLite storage (`--db *.sqlite`) does not keep
   it, so exports made with it have none.
 
