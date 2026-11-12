@@ -147,7 +147,7 @@ Follow symlinks for files, i.e. show the size of the file to which symlink point
 
 #### `exclusive-size`
 
-Linux only: report disk usage of files as the bytes not shared with other files through reflinks, i.e. what deleting them would free. Falls back to allocated blocks where the filesystem cannot report extents. Ignored on other platforms. See [Reflinks and shared extents](README.md#reflinks-and-shared-extents).
+Linux and macOS only: report disk usage of files as the bytes not shared with other files through reflinks or APFS clones, i.e. what deleting them would free. Falls back to allocated blocks where the filesystem cannot report them. Ignored on other platforms. See [Reflinks and shared extents](README.md#reflinks-and-shared-extents).
 
 #### `profiling`
 

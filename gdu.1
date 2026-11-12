@@ -92,10 +92,10 @@ for files, i.e.\ show the size of the file to which symlink points to
 size of git\-annex\(cqed files in case files are not present locally
 (real usage is zero)
 .PP
-\f[B]\-\-exclusive\-size\f[R][=false] Linux only: report disk usage of
-files as the bytes not shared with other files through reflinks
-(FS_IOC_FIEMAP extents without the shared flag), i.e.\ what deleting
-them would free.
+\f[B]\-\-exclusive\-size\f[R][=false] Linux and macOS only: report disk
+usage of files as the bytes not shared with other files through reflinks
+or APFS clones (FS_IOC_FIEMAP extents without the shared flag on Linux,
+ATTR_CMNEXT_PRIVATESIZE on macOS), i.e.\ what deleting them would free.
 Falls back to the allocated blocks where this cannot be measured;
 ignored on other platforms
 .PP
