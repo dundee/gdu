@@ -183,6 +183,12 @@ carry their *asize*, *dsize* and *items* summary stats so they can be preserved 
 
 **-v**, **\--version**\[=false\] Print version
 
+**\--self-update**\[=false\] Update gdu to the latest release published on GitHub.
+The downloaded archive is verified against the published SHA-256 checksums before the
+binary is replaced. When other arguments are given, the new binary is then run with them;
+otherwise gdu exits. Only binaries downloaded from GitHub releases can update themselves,
+gdu installed by a package manager has to be updated with that package manager.
+
 # FILE FLAGS
 
 Files and directories may be prefixed by a one-character

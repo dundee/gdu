@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
@@ -16,11 +18,14 @@ import (
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
 	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v5/pkg/selfupdate"
 )
 
 const (
 	osWindows = "windows"
 	osPlan9   = "plan9"
+
+	selfUpdateTimeout = 5 * time.Minute
 )
 
 var (
@@ -56,6 +61,8 @@ func init() {
 	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
+	flags.BoolVar(&af.SelfUpdate, "self-update", false,
+		"Update gdu to the latest release, then run the rest of the command with it (only binaries from GitHub releases)")
 
 	flags.StringSliceVarP(&af.TypeFilter, "type", "T", []string{}, "File types to include (e.g., --type yaml,json)")
 	flags.StringSliceVarP(&af.ExcludeTypeFilter, "exclude-type", "E", []string{}, "File types to exclude (e.g., --exclude-type yaml,json)")
@@ -229,6 +236,13 @@ func runE(command *cobra.Command, args []string) error {
 		err     error
 	)
 
+	if af.SelfUpdate {
+		done, err := selfUpdate()
+		if done || err != nil {
+			return err
+		}
+	}
+
 	if af.WriteConfig {
 		data, err := yaml.Marshal(af)
 		if err != nil {
@@ -303,6 +317,26 @@ func runE(command *cobra.Command, args []string) error {
 		PathChecker: os.Stat,
 	}
 	return a.Run()
+}
+
+// selfUpdate runs --self-update. It returns done when gdu should not continue
+// with the normal run.
+func selfUpdate() (done bool, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), selfUpdateTimeout)
+	defer cancel()
+
+	updater := selfupdate.New()
+	args := app.StripSelfUpdateFlag(os.Args[1:])
+
+	outcome, err := app.RunSelfUpdate(ctx, os.Stderr, updater, args)
+	switch outcome {
+	case app.SelfUpdateExit:
+		return true, err
+	case app.SelfUpdateRestart:
+		return true, selfupdate.Restart(updater.ExecPath, args)
+	case app.SelfUpdateContinue:
+	}
+	return false, nil
 }
 
 func main() {

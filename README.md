@@ -28,6 +28,10 @@ Using curl:
     chmod +x gdu_linux_amd64
     mv gdu_linux_amd64 /usr/bin/gdu
 
+Binaries downloaded from the releases page can update themselves with `gdu --self-update`
+(prefix it with `sudo` if the binary is not writable by you).
+Gdu installed by a package manager has to be updated with that package manager.
+
 See the [installation page](./INSTALL.md) for other ways how to install Gdu to your system.
 
 Or you can use Gdu directly via Docker:
@@ -77,6 +81,7 @@ Flags:
   -o, --output-file string             Export all info into file as JSON
   -r, --read-from-storage              Use existing database instead of re-scanning
       --reverse-sort                   Reverse the sorting order in non-interactive mode (smallest to largest by default)
+      --self-update                    Update gdu to the latest release, then run the rest of the command with it (only binaries from GitHub releases)
       --sequential                     Use sequential scanning (intended for rotating HDDs)
       --shell string                   Set the shell spawned with the b key
   -A, --show-annexed-size              Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
@@ -152,6 +157,9 @@ Basic list of actions in interactive mode (show help modal for more):
     gdu --web /                           # analyze and browse the results in a web browser
     gdu --web --web-listen localhost:8080 /   # serve the web UI on a fixed address
     gdu --web --web-open=false /          # print the URL but do not open a browser
+
+    gdu --self-update                     # update gdu downloaded from GitHub releases to the latest version
+    gdu --self-update /                   # update, then analyze / with the new version
 
 ## Scanning multiple directories
 
