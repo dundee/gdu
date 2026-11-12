@@ -9,7 +9,6 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
-	"github.com/dundee/gdu/v5/pkg/remove"
 )
 
 // MockedAnalyzer returns dir with files with different size exponents
@@ -128,7 +127,11 @@ func ItemFromDirWithErr(dir, file fs.Item) error {
 // ItemFromDirWithSleep returns error
 func ItemFromDirWithSleep(dir, file fs.Item) error {
 	time.Sleep(time.Millisecond * 600)
-	return remove.ItemFromDir(dir, file)
+	if err := os.RemoveAll(file.GetPath()); err != nil {
+		return err
+	}
+	dir.RemoveFile(file)
+	return nil
 }
 
 // ItemFromDirWithSleepAndErr returns error

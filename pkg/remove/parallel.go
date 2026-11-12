@@ -11,6 +11,9 @@ import (
 var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
 // ItemFromDirParallel removes item from dir
+//
+// Deprecated: Use Deleter with WithParallel, which refuses items outside the
+// scanned roots before touching the disk.
 func ItemFromDirParallel(dir, item fs.Item) error {
 	if !item.IsDir() {
 		return ItemFromDir(dir, item)

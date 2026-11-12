@@ -166,7 +166,7 @@ func TestItemFromDirWithErr(t *testing.T) {
 }
 
 func TestItemFromDirWithSleep(t *testing.T) {
-	// Create a minimal dir + file structure for remove.ItemFromDir
+	// Create a minimal dir + file structure for ItemFromDirWithSleep
 	dir := &analyze.Dir{
 		File: &analyze.File{
 			Name:  "parent",
