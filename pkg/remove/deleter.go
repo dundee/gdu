@@ -69,6 +69,7 @@ func WithParallel() Option {
 // WithTrash sets how ModeTrash moves an item to the trash. The function must
 // remove the item from dir once it is gone from disk, as MoveItemToTrash and
 // the functions returned by TrashCommand do. MoveItemToTrash is the default.
+// Delete checks the item before calling it.
 func WithTrash(trash func(dir, item fs.Item) error) Option {
 	return func(d *Deleter) {
 		if trash != nil {
@@ -270,6 +271,9 @@ func (d *Deleter) remove(dir, item fs.Item) error {
 	return nil
 }
 
+// concurrencyLimit bounds the subdirectories removed at once by WithParallel.
+var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
+
 // removeSubdirsParallel removes the subdirectories of dir, which lies at rel
 // inside root, concurrently.
 func removeSubdirsParallel(root *os.Root, rel string, dir fs.Item) error {
@@ -363,6 +367,16 @@ func (d *Deleter) emptyFile(dir, item fs.Item) error {
 
 	replaceWithEmptyFile(dir, item)
 	return nil
+}
+
+// replaceWithEmptyFile updates the tree after file was truncated to 0 bytes.
+func replaceWithEmptyFile(dir, file fs.Item) {
+	dir.RemoveFile(file)
+	dir.AddFile(&analyze.File{
+		Name:   file.GetName(),
+		Flag:   file.GetFlag(),
+		Parent: dir,
+	})
 }
 
 // sameFile reports whether a and b describe the same file. Windows can only

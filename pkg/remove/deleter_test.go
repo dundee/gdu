@@ -104,6 +104,35 @@ func TestDeleterEmptiesFileAndDir(t *testing.T) {
 	assert.False(t, hasChild(dir, "a"))
 }
 
+// Removing or emptying an item updates the totals of its directory and of
+// every directory above it.
+func TestDeleterUpdatesTotalsUpTheTree(t *testing.T) {
+	root := makeScanRoot(t)
+	tree := scanTree(t, root, false)
+	dir := child(t, tree, "dir")
+	a := child(t, dir, "a")
+	deleter := NewDeleter([]string{root})
+
+	dirSize, dirUsage, dirCount := dir.GetSize(), dir.GetUsage(), dir.GetItemCount()
+	treeSize, treeUsage, treeCount := tree.GetSize(), tree.GetUsage(), tree.GetItemCount()
+	require.NoError(t, deleter.Delete(dir, a, ModeRemove))
+
+	assert.Equal(t, dirSize-a.GetSize(), dir.GetSize())
+	assert.Equal(t, dirUsage-a.GetUsage(), dir.GetUsage())
+	assert.Equal(t, dirCount-1, dir.GetItemCount())
+	assert.Equal(t, treeSize-a.GetSize(), tree.GetSize())
+	assert.Equal(t, treeUsage-a.GetUsage(), tree.GetUsage())
+	assert.Equal(t, treeCount-1, tree.GetItemCount())
+
+	file := child(t, tree, "file")
+	treeSize, treeUsage = tree.GetSize(), tree.GetUsage()
+	require.NoError(t, deleter.Delete(tree, file, ModeEmpty))
+
+	assert.Equal(t, treeSize-file.GetSize(), tree.GetSize())
+	assert.Equal(t, treeUsage-file.GetUsage(), tree.GetUsage())
+	assert.Equal(t, int64(0), child(t, tree, "file").GetSize())
+}
+
 func TestDeleterTrashUsesTrashFunc(t *testing.T) {
 	root := makeScanRoot(t)
 	tree := scanTree(t, root, false)
@@ -357,6 +386,29 @@ func TestDeleterReportsRemovalErrors(t *testing.T) {
 	assert.Error(t, err)
 	assert.False(t, errors.Is(err, ErrRefused))
 	assert.True(t, hasChild(tree, "file"))
+}
+
+func TestDeleterCheckChangesNothing(t *testing.T) {
+	rootA := makeScanRoot(t)
+	rootB := makeScanRoot(t)
+	treeA := scanTree(t, rootA, false)
+	top := analyze.CreateVirtualRootDir(treeA, scanTree(t, rootB, false))
+	dir := child(t, treeA, "dir")
+	deleter := NewDeleter(analyze.ScannedRootPaths(top))
+
+	for _, mode := range []Mode{ModeRemove, ModeEmpty, ModeTrash} {
+		assert.NoError(t, deleter.Check(treeA, dir, mode))
+		assert.NoError(t, deleter.Check(treeA, child(t, treeA, "file"), mode))
+		assert.ErrorIs(t, deleter.Check(child(t, dir, "b"), dir, mode), ErrNotInDir)
+		assert.ErrorIs(t, deleter.Check(nil, dir, mode), ErrNotInDir)
+	}
+	assert.ErrorIs(t, deleter.Check(top, treeA, ModeRemove), ErrScannedRoot)
+	assert.NoError(t, deleter.Check(top, treeA, ModeEmpty))
+	assert.ErrorIs(t, NewDeleter(nil).Check(treeA, dir, ModeRemove), ErrOutsideRoots)
+
+	assert.FileExists(t, filepath.Join(rootA, "dir", "a"))
+	assert.FileExists(t, filepath.Join(rootA, "file"))
+	assert.True(t, hasChild(dir, "a"))
 }
 
 func TestDeleterRejectsUnknownMode(t *testing.T) {
