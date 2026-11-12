@@ -38,9 +38,7 @@ func (a *StoredAnalyzer) AnalyzeDir(
 
 	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
-	defer func() {
-		closeFn()
-	}()
+	defer closeFn()
 
 	a.ignoreDir = ignore
 
