@@ -38,17 +38,12 @@ func (a *StoredAnalyzer) AnalyzeDir(
 
 	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
-	defer func() {
-		// nasty hack to close storage after all goroutines are done
-		// Wait returns immediately if value is 0
-		// few last goroutines might still start after that
-		time.Sleep(1 * time.Second)
-		closeFn()
-	}()
+	defer closeFn()
 
 	a.ignoreDir = ignore
 
 	go a.UpdateProgress()
+	a.wait.Add(1)
 	dir := a.processDir(path)
 
 	a.wait.Wait()
@@ -67,8 +62,6 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 		info       os.FileInfo
 		dirCount   int
 	)
-
-	a.wait.Add(1)
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -112,6 +105,9 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			}
 			dir.AddFile(subdir)
 
+			// Counted before the goroutine starts: this directory's Done may
+			// come first, and Wait must not see zero in between.
+			a.wait.Add(1)
 			go func(entryPath string) {
 				concurrencyLimit <- struct{}{}
 				a.processDir(entryPath)
