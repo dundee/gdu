@@ -104,7 +104,8 @@ func (ui *UI) showDir() {
 	ui.table.Clear()
 
 	rowIndex := 0
-	if ui.currentDirPath != ui.topDirPath {
+	ui.parentRowShown = ui.currentDirPath != ui.topDirPath
+	if ui.parentRowShown {
 		prefix := strings.Repeat(" ", ui.columnsWidth())
 
 		cell := tview.NewTableCell(prefix + "[::b]/..")
@@ -177,32 +178,25 @@ func (ui *UI) showDir() {
 			itemCount += item.GetItemCount()
 		}
 
-		_, marked := ui.markedRows[rowIndex]
+		// Check if this directory can be collapsed
+		var collapsedPath *CollapsedPath
+		if item.IsDir() && ui.collapsePath {
+			collapsedPath = findCollapsiblePath(item)
+		}
+
+		// A collapsed row stands for the deepest directory of the chain: it is
+		// what the row navigates to, and what marking the row marks.
+		reference := item
+		if collapsedPath != nil {
+			reference = collapsedPath.DeepestDir
+		}
+		_, marked := ui.markedItems[reference]
 
 		var cell *tview.TableCell
-		var reference fs.Item
-
-		// Check if this directory can be collapsed
-		if item.IsDir() {
-			var collapsedPath *CollapsedPath
-			if ui.collapsePath {
-				collapsedPath = findCollapsiblePath(item)
-			}
-
-			if collapsedPath != nil {
-				// Format as collapsed path
-				cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxima, marked, ignored))
-				// Reference should point to the deepest directory for navigation
-				reference = collapsedPath.DeepestDir
-			} else {
-				// Regular directory formatting
-				cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
-				reference = item
-			}
+		if collapsedPath != nil {
+			cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxima, marked, ignored))
 		} else {
-			// Regular file formatting
 			cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
-			reference = item
 		}
 
 		cell.SetReference(reference)
@@ -239,9 +233,9 @@ func (ui *UI) showDir() {
 	}
 
 	selected := ""
-	if len(ui.markedRows) > 0 {
+	if len(ui.markedItems) > 0 {
 		selected = " Selected items: " + footerNumberColor +
-			strconv.Itoa(len(ui.markedRows)) + footerTextColor
+			strconv.Itoa(len(ui.markedItems)) + footerTextColor
 	}
 
 	timeFilterText := ui.formatTimeFilterInfo()
@@ -274,6 +268,7 @@ func (ui *UI) showDevices() {
 	var totalUsage int64
 
 	ui.table.Clear()
+	ui.parentRowShown = false
 	ui.table.SetCell(0, 0, tview.NewTableCell("Device name").SetSelectable(false))
 	ui.table.SetCell(0, 1, tview.NewTableCell("Size").SetSelectable(false))
 	ui.table.SetCell(0, 2, tview.NewTableCell("Used").SetSelectable(false))

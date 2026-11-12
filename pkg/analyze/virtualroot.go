@@ -56,6 +56,22 @@ func ItemDisplayName(parent, item fs.Item) string {
 	return item.GetName()
 }
 
+// ScannedRootPaths returns the paths of the scanned roots of the tree topped by
+// top: the roots grouped under the virtual top level dir, or top itself.
+func ScannedRootPaths(top fs.Item) []string {
+	if top == nil {
+		return nil
+	}
+	if !IsVirtualRootDir(top) {
+		return []string{top.GetPath()}
+	}
+	var paths []string
+	for root := range top.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		paths = append(paths, root.GetPath())
+	}
+	return paths
+}
+
 // IsVirtualRootDir reports whether item is the synthetic dir created by
 // CreateVirtualRootDir, i.e. a node with no counterpart on the filesystem.
 func IsVirtualRootDir(item fs.Item) bool {

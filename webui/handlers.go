@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/remove"
 )
 
@@ -163,27 +163,22 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 		writeNodeError(w, err)
 		return
 	}
+	mode := remove.ModeRemove
+	if r.URL.Query().Get("mode") == deleteModeTrash {
+		mode = remove.ModeTrash
+	}
+	deleter := remove.NewDeleter(ui.scannedRoots(), remove.WithTrash(ui.trasher))
 	parent := node.GetParent()
-	if parent == nil || analyze.IsVirtualRootDir(parent) {
-		writeError(w, http.StatusBadRequest, "cannot delete a scanned root")
-		return
-	}
-	if isArchiveDescendant(node) {
-		writeError(w, http.StatusBadRequest, "cannot delete an entry nested inside a browsed archive")
-		return
-	}
-	if err := checkNotRelocated(node); err != nil {
-		writeError(w, http.StatusConflict, err.Error())
+	if err := deleter.Check(parent, node, mode); err != nil {
+		writeRemoveError(w, err)
 		return
 	}
 
-	removeFunc := remove.ItemFromDir
-	if r.URL.Query().Get("mode") == deleteModeTrash {
-		removeFunc = ui.trasher
-	}
-	removed, err := ui.removeNode(removeFunc, parent, node)
+	removed, err := ui.removeNode(func(dir, item fs.Item) error {
+		return deleter.Delete(dir, item, mode)
+	}, parent, node)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeRemoveError(w, err)
 		return
 	}
 	if !removed {
@@ -228,6 +223,18 @@ func (ui *UI) handleReveal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// writeRemoveError reports a failed or refused deletion.
+func writeRemoveError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, remove.ErrRelocated):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, remove.ErrRefused):
+		writeError(w, http.StatusBadRequest, err.Error())
+	default:
+		writeError(w, http.StatusInternalServerError, err.Error())
+	}
 }
 
 func writeNodeError(w http.ResponseWriter, err error) {

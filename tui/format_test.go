@@ -101,7 +101,7 @@ func TestMarked(t *testing.T) {
 
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
-	ui.markedRows[0] = struct{}{}
+	ui.markedItems[&analyze.File{Name: "marked"}] = struct{}{}
 	ui.useOldSizeBar = true
 
 	dir := &analyze.Dir{
@@ -173,7 +173,7 @@ func TestOldSizeBar(t *testing.T) {
 
 	app := testapp.CreateMockedApp(true)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
-	ui.markedRows[0] = struct{}{}
+	ui.markedItems[&analyze.File{Name: "marked"}] = struct{}{}
 	ui.useOldSizeBar = true
 
 	dir := &analyze.Dir{
@@ -327,6 +327,6 @@ func TestColumnsWidth(t *testing.T) {
 	ui.showMtime = true
 	assert.Equal(t, 66, ui.columnsWidth())
 
-	ui.markedRows[0] = struct{}{}
+	ui.markedItems[&analyze.File{Name: "marked"}] = struct{}{}
 	assert.Equal(t, 68, ui.columnsWidth())
 }

@@ -5,14 +5,14 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) queueForDeletion(items []fs.Item, action DeleteAction) {
+func (ui *UI) queueForDeletion(targets []deleteTarget, action DeleteAction, deleter itemDeleter) {
 	go func() {
-		for _, item := range items {
-			ui.deleteQueue <- deleteQueueItem{item: item, action: action}
+		for _, target := range targets {
+			ui.deleteQueue <- deleteQueueItem{target: target, action: action, deleter: deleter}
 		}
 	}()
 
-	ui.markedRows = make(map[int]struct{})
+	ui.markedItems = make(map[fs.Item]struct{})
 }
 
 func (ui *UI) deleteWorker() {
@@ -23,64 +23,39 @@ func (ui *UI) deleteWorker() {
 		}
 	}()
 
-	for item := range ui.deleteQueue {
-		ui.deleteItem(item.item, item.action)
+	for job := range ui.deleteQueue {
+		ui.deleteItem(job)
 	}
 }
 
-func (ui *UI) deleteItem(item fs.Item, action DeleteAction) {
+func (ui *UI) deleteItem(job deleteQueueItem) {
 	ui.increaseActiveWorkers()
 	defer ui.decreaseActiveWorkers()
 
-	var deleteFun func(fs.Item, fs.Item) error
-	switch action {
-	case ActionEmpty:
-		if !item.IsDir() {
-			deleteFun = ui.emptier
-		} else {
-			deleteFun = ui.remover
+	target, action := job.target, job.action
+	if err := job.deleter.Delete(target.dir, target.item, action.mode()); err != nil {
+		msg := "Can't " + action.Verb() + " " + tview.Escape(target.item.GetName())
+		ui.app.QueueUpdateDraw(func() {
+			ui.pages.RemovePage(action.Acting())
+			ui.showErr(msg, err)
+		})
+		if ui.done != nil {
+			ui.done <- struct{}{}
 		}
-	case ActionMoveToTrash:
-		deleteFun = ui.trasher
-	case ActionDelete:
-		deleteFun = ui.remover
+		return
 	}
 
-	var parentDir fs.Item
-	var deleteItems []fs.Item
-	if action == ActionEmpty && item.IsDir() {
-		parentDir = item
-		for file := range item.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
-			deleteItems = append(deleteItems, file)
-		}
-	} else {
-		parentDir = item.GetParent()
-		deleteItems = append(deleteItems, item)
-	}
-
-	for _, toDelete := range deleteItems {
-		if err := deleteFun(parentDir, toDelete); err != nil {
-			msg := "Can't " + action.Verb() + " " + tview.Escape(toDelete.GetName())
-			ui.app.QueueUpdateDraw(func() {
-				ui.pages.RemovePage(action.Acting())
-				ui.showErr(msg, err)
-			})
-			if ui.done != nil {
-				ui.done <- struct{}{}
-			}
+	dirPath := target.dir.GetPath()
+	ui.app.QueueUpdateDraw(func() {
+		if ui.currentDir == nil || ui.currentDir.GetPath() != dirPath {
 			return
 		}
-	}
-
-	if item.GetParent().GetPath() == ui.currentDir.GetPath() {
-		ui.app.QueueUpdateDraw(func() {
-			row, _ := ui.table.GetSelection()
-			x, y := ui.table.GetOffset()
-			ui.showDir()
-			ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
-			ui.table.SetOffset(min(x, ui.table.GetRowCount()-1), y)
-		})
-	}
+		row, _ := ui.table.GetSelection()
+		x, y := ui.table.GetOffset()
+		ui.showDir()
+		ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
+		ui.table.SetOffset(min(x, ui.table.GetRowCount()-1), y)
+	})
 	if ui.done != nil {
 		ui.done <- struct{}{}
 	}

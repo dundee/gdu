@@ -210,7 +210,7 @@ func TestFormatCollapsedRow(t *testing.T) {
 	assert.Contains(t, result, "/") // Should have directory indicator
 
 	// Test with marked flag
-	ui.markedRows = map[int]struct{}{0: {}}
+	ui.markedItems = map[fs.Item]struct{}{&analyze.File{Name: "marked"}: {}}
 	result = ui.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, true, false)
 	assert.Contains(t, result, "✓") // Should have marked indicator
 

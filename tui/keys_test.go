@@ -1262,7 +1262,7 @@ func TestMarkParent(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
 
-	assert.Equal(t, len(ui.markedRows), 0)
+	assert.Equal(t, len(ui.markedItems), 0)
 }
 
 func TestIgnoreParent(t *testing.T) {
@@ -1701,7 +1701,7 @@ func TestSorting(t *testing.T) {
 	ui.table.Select(1, 0)
 	// mark the item for deletion
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
-	assert.Equal(t, 1, len(ui.markedRows))
+	assert.Equal(t, 1, len(ui.markedItems))
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 's', 0))
 	assert.Equal(t, "size", ui.sortBy)
@@ -1713,7 +1713,7 @@ func TestSorting(t *testing.T) {
 	assert.Equal(t, "mtime", ui.sortBy)
 
 	// marking should be dropped after sorting
-	assert.Equal(t, 0, len(ui.markedRows))
+	assert.Equal(t, 0, len(ui.markedItems))
 }
 
 func TestShowFile(t *testing.T) {
@@ -1900,7 +1900,7 @@ func TestPrintMarked(t *testing.T) {
 	ui.table.Select(1, 0)
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0)) // mark item
 
-	assert.Equal(t, 1, len(ui.markedRows))
+	assert.Equal(t, 1, len(ui.markedItems))
 
 	// pressing 'p' saves paths but does not quit
 	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'p', 0))

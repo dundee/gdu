@@ -278,7 +278,7 @@ func TestDeleteNodeEndpointTrashModeUsesTrasher(t *testing.T) {
 	assert.Equal(t, path, trashedPath)
 	// The trasher stub above does not touch the filesystem, unlike a
 	// permanent delete: the file being untouched on disk confirms the
-	// permanent-delete codepath (remove.ItemFromDir) was not used instead.
+	// permanent-delete codepath was not used instead.
 	_, err = os.Stat(path)
 	assert.NoError(t, err, "trash mode must not permanently delete the file")
 

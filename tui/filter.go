@@ -6,6 +6,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 func (ui *UI) rebuildFooter() {
@@ -21,7 +23,7 @@ func (ui *UI) rebuildFooter() {
 
 func (ui *UI) hideFilterInput() {
 	ui.filterValue = ""
-	ui.markedRows = make(map[int]struct{})
+	ui.markedItems = make(map[fs.Item]struct{})
 	ui.filteringInput = nil
 	ui.filtering = false
 	ui.rebuildFooter()
@@ -34,7 +36,7 @@ func (ui *UI) showFilterInput() {
 	}
 
 	if ui.filteringInput == nil {
-		ui.markedRows = make(map[int]struct{})
+		ui.markedItems = make(map[fs.Item]struct{})
 
 		ui.filteringInput = tview.NewInputField()
 		ui.filteringInput.SetLabel("Name: ")
@@ -50,7 +52,7 @@ func (ui *UI) showFilterInput() {
 
 		ui.filteringInput.SetChangedFunc(func(text string) {
 			ui.filterValue = text
-			ui.markedRows = make(map[int]struct{})
+			ui.markedItems = make(map[fs.Item]struct{})
 			ui.showDir()
 		})
 		ui.filteringInput.SetDoneFunc(func(key tcell.Key) {
@@ -71,7 +73,7 @@ func (ui *UI) showFilterInput() {
 
 func (ui *UI) hideTypeFilterInput() {
 	ui.typeFilterValue = ""
-	ui.markedRows = make(map[int]struct{})
+	ui.markedItems = make(map[fs.Item]struct{})
 	ui.typeFilteringInput = nil
 	ui.typeFiltering = false
 	ui.rebuildFooter()
@@ -84,7 +86,7 @@ func (ui *UI) showTypeFilterInput() {
 	}
 
 	if ui.typeFilteringInput == nil {
-		ui.markedRows = make(map[int]struct{})
+		ui.markedItems = make(map[fs.Item]struct{})
 
 		ui.typeFilteringInput = tview.NewInputField()
 		ui.typeFilteringInput.SetLabel("Type: ")
@@ -100,7 +102,7 @@ func (ui *UI) showTypeFilterInput() {
 
 		ui.typeFilteringInput.SetChangedFunc(func(text string) {
 			ui.typeFilterValue = text
-			ui.markedRows = make(map[int]struct{})
+			ui.markedItems = make(map[fs.Item]struct{})
 			ui.showDir()
 		})
 		ui.typeFilteringInput.SetDoneFunc(func(key tcell.Key) {
