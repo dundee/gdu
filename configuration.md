@@ -107,6 +107,26 @@ On Linux, same-filesystem bind mounts (including read-only mounts) remain
 included. Mounts on other filesystems remain excluded. Explicit ignore rules
 still apply.
 
+#### `include-snapshots`
+
+Count nested btrfs subvolumes in the scan like regular directories.
+
+By default they are listed as empty 0 B entries with the flag `S` and not
+scanned: snapshots are separate subvolumes that share data with the original,
+so counting them inflates usage far beyond the real disk size. Subvolumes you
+mount yourself (like a separate `/home`) are always counted.
+
+Entering such an entry scans it as its own scope. Data shared between the
+snapshots inside is counted once, attributed to the first snapshot that
+references it (entries are scanned in natural name order, which is
+chronological for snapper and timeshift). The oldest snapshot therefore shows
+the full size and each later one only what changed since. For compressed
+files the share of new data is applied to the size the filesystem reports, so
+the numbers follow real disk usage. The scope never counts toward the totals of
+the rest of the disk, and deleting inside it is refused because snapshots are
+read-only. The scope scan needs the tree in memory, so it is not available
+with `--db`.
+
 #### `no-hidden`
 
 Ignore hidden directories (beginning with dot)

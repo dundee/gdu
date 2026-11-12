@@ -128,7 +128,7 @@ func TestTopDirAnalyzerCancellationStopsActiveSubdirectory(t *testing.T) {
 	analyzer.Cancel()
 	result := &TopDir{}
 
-	analyzer.processSubDir(root, result, true)
+	analyzer.processSubDir(root, nil, result, true)
 
 	size, usage, itemCount := result.GetUsage()
 	assert.Zero(t, size)

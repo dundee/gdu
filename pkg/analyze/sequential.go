@@ -29,7 +29,7 @@ func (a *SequentialAnalyzer) AnalyzeDir(
 	a.ignoreFileType = fileTypeFilter
 
 	go a.UpdateProgress()
-	dir := a.processDir(path)
+	dir := a.processDir(path, statDir(path))
 
 	dir.BasePath = filepath.Dir(path)
 	a.setCurrentDir(dir)
@@ -40,7 +40,7 @@ func (a *SequentialAnalyzer) AnalyzeDir(
 	return dir
 }
 
-func (a *SequentialAnalyzer) processDir(path string) *Dir {
+func (a *SequentialAnalyzer) processDir(path string, dirInfo os.FileInfo) *Dir {
 	var (
 		file      fs.Item
 		err       error
@@ -62,7 +62,9 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 		ItemCount: 1,
 		Files:     make(fs.Files, 0, len(files)),
 	}
-	setDirPlatformSpecificAttrs(dir, path)
+	if dirInfo != nil {
+		setDirPlatformSpecificAttrs(dir, dirInfo)
+	}
 
 	for _, f := range files {
 		if a.IsCancelled() {
@@ -74,9 +76,14 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			subInfo := subDirInfo(f, entryPath)
+			if a.isSnapshotDir(entryPath, subInfo) {
+				dir.AddFile(snapshotPlaceholder(name, path, dir))
+				continue
+			}
 			dirCount++
 
-			subdir := a.processDir(entryPath)
+			subdir := a.processDir(entryPath, subInfo)
 			subdir.Parent = dir
 			dir.AddFile(subdir)
 		} else {

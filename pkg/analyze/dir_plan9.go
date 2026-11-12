@@ -13,12 +13,14 @@ func setPlatformSpecificAttrs(file *File, f os.FileInfo, path string) {
 	file.Usage, _ = getPlatformSpecificUsageAndMli(f, path)
 }
 
-func setDirPlatformSpecificAttrs(dir *Dir, path string) {
-	stat, err := os.Stat(path)
-	if err != nil {
-		return
-	}
-	dir.Mtime = stat.ModTime()
+// setDirPlatformSpecificAttrs fills the attributes of a directory from the info the caller already has
+func setDirPlatformSpecificAttrs(dir *Dir, info os.FileInfo) {
+	dir.Mtime = info.ModTime()
+}
+
+// getInode returns 0, inode numbers are not used on this platform
+func getInode(os.FileInfo) uint64 {
+	return 0
 }
 
 // dirOwnUsage returns 0: Plan9 exposes no block allocation for a

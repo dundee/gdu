@@ -81,6 +81,7 @@ func init() {
 		"Linux only: report file usage as the bytes not shared with other files (reflinks), i.e. what deleting them frees",
 	)
 	flags.BoolVarP(&af.NoCross, "no-cross", "x", false, "Do not cross filesystem boundaries")
+	flags.BoolVar(&af.IncludeSnapshots, "include-snapshots", false, "Count nested btrfs subvolumes (snapshots), shown as empty 0 B entries by default")
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
 
 	flags.StringVarP(&af.DbPath, "db", "D", "", "Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)")

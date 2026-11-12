@@ -117,6 +117,9 @@ func (a *MockedAnalyzer) SetTimeFilter(timeFilter common.TimeFilter) {}
 // SetArchiveBrowsing does nothing
 func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {}
 
+// SetSkipBtrfsSubvolumes does nothing
+func (a *MockedAnalyzer) SetSkipBtrfsSubvolumes(mountPoints []string) {}
+
 // SetFileTypeFilter does nothing
 func (a *MockedAnalyzer) SetFileTypeFilter(fileTypeFilter common.ShouldFileBeIgnored) {}
 

@@ -29,7 +29,7 @@ func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
 	a.ignoreFileType = fileTypeFilter
 
 	go a.UpdateProgress()
-	dir := a.processDir(path)
+	dir := a.processDir(path, statDir(path))
 
 	dir.BasePath = filepath.Dir(path)
 	a.wait.Wait()
@@ -40,7 +40,7 @@ func (a *ParallelStableOrderAnalyzer) AnalyzeDir(
 	return dir
 }
 
-func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
+func (a *ParallelStableOrderAnalyzer) processDir(path string, dirInfo os.FileInfo) *Dir {
 	type indexedItem struct {
 		index int
 		item  fs.Item
@@ -70,7 +70,9 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 		ItemCount: 1,
 		Files:     make(fs.Files, 0, len(files)),
 	}
-	setDirPlatformSpecificAttrs(dir, path)
+	if dirInfo != nil {
+		setDirPlatformSpecificAttrs(dir, dirInfo)
+	}
 
 	// Buffer channel to prevent deadlock when sending files synchronously
 	itemChan := make(chan indexedItem, len(files))
@@ -86,23 +88,29 @@ func (a *ParallelStableOrderAnalyzer) processDir(path string) *Dir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
+			subInfo := subDirInfo(f, entryPath)
+			if a.isSnapshotDir(entryPath, subInfo) {
+				itemChan <- indexedItem{itemCount, snapshotPlaceholder(name, path, dir)}
+				itemCount++
+				continue
+			}
 			currentIndex := itemCount
 			itemCount++
 			dirCount++
 
-			go func(entryPath string, idx int) {
+			go func(entryPath string, subInfo os.FileInfo, idx int) {
 				concurrencyLimit <- struct{}{}
 				if a.IsCancelled() {
 					<-concurrencyLimit
 					itemChan <- indexedItem{idx, nil}
 					return
 				}
-				subdir := a.processDir(entryPath)
+				subdir := a.processDir(entryPath, subInfo)
 				subdir.Parent = dir
 
 				<-concurrencyLimit
 				itemChan <- indexedItem{idx, subdir}
-			}(entryPath, currentIndex)
+			}(entryPath, subInfo, currentIndex)
 		} else {
 			// Apply file type filter if set
 			if a.ignoreFileType != nil && a.ignoreFileType(name) {

@@ -73,6 +73,8 @@ only.
 
 **-c**, **\--no-color**\[=false\] Do not use colorized output
 
+**\--include-snapshots**\[=false\] Count nested btrfs subvolumes (snapshots), shown as empty 0 B entries by default
+
 **-x**, **\--no-cross**\[=false\] Do not cross filesystem boundaries
 
 **-H**, **\--no-hidden**\[=false\] Ignore hidden directories (beginning with dot)
