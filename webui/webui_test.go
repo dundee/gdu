@@ -943,7 +943,7 @@ func TestReadFromStorage(t *testing.T) {
 
 	ui := newTestUI()
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
-	require.NoError(t, ui.ReadFromStorage(storagePath, "test_dir"))
+	require.NoError(t, ui.ReadFromStorage("test_dir"))
 
 	status := ui.buildStatus()
 	assert.Equal(t, "done", status.State)
@@ -959,12 +959,12 @@ func TestReadFromStorageError(t *testing.T) {
 	storagePath := t.TempDir() + "/badger"
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
 	// A non-existent path yields a badger read error.
-	err := ui.ReadFromStorage(storagePath, "missing_dir")
+	err := ui.ReadFromStorage("missing_dir")
 	assert.ErrorContains(t, err, "holds no analysis of missing_dir")
 }
 
 func TestReadFromStorageNeedsDatabase(t *testing.T) {
-	err := newTestUI().ReadFromStorage("", "test_dir")
+	err := newTestUI().ReadFromStorage("test_dir")
 
 	assert.ErrorIs(t, err, session.ErrNoDatabase)
 }

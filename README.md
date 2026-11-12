@@ -79,7 +79,7 @@ Flags:
   -n, --non-interactive                Do not run in interactive mode
       --output-attrs string            Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino)
   -o, --output-file string             Export all info into file as JSON
-  -r, --read-from-storage              Use existing database instead of re-scanning
+  -r, --read-from-storage              Show the analysis stored by an earlier scan in the database (--db) instead of scanning
       --reverse-sort                   Reverse the sorting order in non-interactive mode (smallest to largest by default)
       --self-update                    Update gdu to the latest release, then run the rest of the command with it (only binaries from GitHub releases)
       --sequential                     Use sequential scanning (intended for rotating HDDs)
@@ -152,7 +152,7 @@ Basic list of actions in interactive mode (show help modal for more):
 
     gdu --db=tmp.badger /                 # use persistent key-value storage for saving analysis data
     gdu --db=tmp.db /                     # use persistent SQLite storage for saving analysis data
-    gdu -r /                              # read saved analysis data from persistent key-value storage
+    gdu -r --db=tmp.badger /              # show the analysis saved earlier instead of scanning again
 
     gdu --web /                           # analyze and browse the results in a web browser
     gdu --web --web-listen localhost:8080 /   # serve the web UI on a fixed address
@@ -448,6 +448,10 @@ gdu --db analysis.sqlite /        # saves analysis data to SQLite database
 gdu --db analysis.badger /        # saves analysis data to BadgerDB
 gdu -r --db analysis.sqlite /     # reads saved data, does not run analysis again
 ```
+
+Reading saved data (`-r`) needs the database and the directory the analysis was
+saved for; gdu reports an error for a missing database or another directory.
+Without `-r`, `--db` always scans and replaces what the database held.
 
 ## Running tests
 

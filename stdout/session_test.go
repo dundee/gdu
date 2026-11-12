@@ -58,14 +58,14 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 	analyzer, err = analyze.CreateSqliteAnalyzer(db)
 	require.NoError(t, err)
 	ui.SetAnalyzer(analyzer)
-	require.NoError(t, ui.ReadFromStorage(db, "test_dir"))
+	require.NoError(t, ui.ReadFromStorage("test_dir"))
 	assert.Equal(t, scanned.String(), stored.String())
 
-	assert.Error(t, ui.ReadFromStorage(db, "test_dir/nested"))
+	assert.Error(t, ui.ReadFromStorage("test_dir/nested"))
 }
 
 func TestReadFromStorageNeedsDatabase(t *testing.T) {
 	ui := CreateStdoutUI(&bytes.Buffer{}, false, false, false, false, false, false, false, "", 0, false, 0)
 
-	assert.ErrorIs(t, ui.ReadFromStorage("", "test_dir"), session.ErrNoDatabase)
+	assert.ErrorIs(t, ui.ReadFromStorage("test_dir"), session.ErrNoDatabase)
 }

@@ -155,7 +155,7 @@ Enable collection of profiling data and provide it on http://localhost:6060/debu
 
 #### `read-from-storage`
 
-Read analysis data from persistent key-value storage
+Show the analysis stored by an earlier scan in the database set by `db`, instead of scanning. Requires `db`, and the directory the analysis was stored for
 
 #### `summarize`
 

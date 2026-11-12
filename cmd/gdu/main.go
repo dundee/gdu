@@ -91,7 +91,7 @@ func init() {
 	flags.BoolVar(&af.Profiling, "enable-profiling", false, "Enable collection of profiling data and provide it on http://localhost:6060/debug/pprof/")
 
 	flags.StringVarP(&af.DbPath, "db", "D", "", "Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)")
-	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Use existing database instead of re-scanning")
+	flags.BoolVarP(&af.ReadFromStorage, "read-from-storage", "r", false, "Show the analysis stored by an earlier scan in the database (--db) instead of scanning")
 	flags.BoolVar(&af.ArchiveBrowsing, "archive-browsing", false, "Enable browsing of zip/jar/tar archives (tar, tar.gz, tar.bz2, tar.xz)")
 	flags.BoolVar(&af.CollapsePath, "collapse-path", false, "Collapse single-child directory chains")
 	flags.BoolVar(&af.ShowSymlinkTarget, "show-symlink-target", false, "Show symlink target (name -> target) in the file list")

@@ -210,7 +210,7 @@ func (ui *UI) ReadAnalysis(input io.Reader) error {
 
 // ReadFromStorage serves the analysis of path stored by an earlier scan with
 // --db.
-func (ui *UI) ReadFromStorage(_, path string) error {
+func (ui *UI) ReadFromStorage(path string) error {
 	dir, err := ui.session.Open(path)
 	if err != nil {
 		return err

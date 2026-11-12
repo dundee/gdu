@@ -179,7 +179,7 @@ carry their *asize*, *dsize* and *items* summary stats so they can be preserved 
 
 **-D**, **\--db** Store analysis in database (*.sqlite for SQLite, *.badger for BadgerDB)
 
-**-r**, **\--read-from-storage**\[=false\] Use existing database instead of re-scanning
+**-r**, **\--read-from-storage**\[=false\] Show the analysis stored by an earlier scan in the database (\--db) instead of scanning
 
 **-v**, **\--version**\[=false\] Print version
 

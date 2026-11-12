@@ -33,7 +33,7 @@ func TestReadFromStorage(t *testing.T) {
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
-	err = ui.ReadFromStorage(storagePath, "test_dir")
+	err = ui.ReadFromStorage("test_dir")
 
 	assert.Nil(t, err)
 	assert.Contains(t, reportOutput.String(), `"name":"nested"`)
@@ -51,7 +51,7 @@ func TestReadFromStorageWithErr(t *testing.T) {
 	ui := CreateExportUI(output, reportOutput, false, false, false, 0, 0, false, nil)
 	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
-	err := ui.ReadFromStorage(storagePath, "test_dir")
+	err := ui.ReadFromStorage("test_dir")
 
 	assert.ErrorContains(t, err, "holds no analysis of test_dir")
 }
@@ -59,7 +59,7 @@ func TestReadFromStorageWithErr(t *testing.T) {
 func TestReadFromStorageNeedsDatabase(t *testing.T) {
 	ui := CreateExportUI(&bytes.Buffer{}, &bytes.Buffer{}, false, false, false, 0, 0, false, nil)
 
-	err := ui.ReadFromStorage("", "test_dir")
+	err := ui.ReadFromStorage("test_dir")
 
 	assert.ErrorIs(t, err, session.ErrNoDatabase)
 }
