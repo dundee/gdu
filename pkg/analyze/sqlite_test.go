@@ -1165,18 +1165,55 @@ func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
 
 	analyzer1.storage.Close()
 
-	// Second analysis should load from existing data
+	// changes made since the scan are not in the stored analysis
+	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("new"), 0o600))
+
 	analyzer2, err := CreateSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer2.storage.Close()
 
-	dir2 := analyzer2.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*SqliteItem)
-	analyzer2.GetDone().Wait()
-
+	dir2, err := analyzer2.LoadAnalysis("test_dir")
+	require.NoError(t, err)
 	assert.Equal(t, "test_dir", dir2.GetName())
 	assert.Equal(t, int64(5), dir2.GetItemCount())
+
+	_, err = analyzer2.LoadAnalysis("test_dir/nested")
+	assert.ErrorContains(t, err, "holds the analysis of test_dir")
+}
+
+func TestSqliteAnalyzerLoadAnalysisFromEmptyDatabase(t *testing.T) {
+	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	require.NoError(t, err)
+	defer analyzer.storage.Close()
+
+	_, err = analyzer.LoadAnalysis("test_dir")
+
+	assert.ErrorContains(t, err, "holds no analysis")
+}
+
+// A scan always walks the filesystem, even when the database already holds an
+// analysis, of the same path or of another one.
+func TestSqliteAnalyzerScansEvenWithStoredAnalysis(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	noIgnore := func(_, _ string) bool { return false }
+
+	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	require.NoError(t, err)
+	defer analyzer.storage.Close()
+
+	analyzer.AnalyzeDir("test_dir", noIgnore, nil)
+	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("new"), 0o600))
+
+	analyzer.ResetProgress()
+	rescanned := analyzer.AnalyzeDir("test_dir", noIgnore, nil)
+	rescanned.UpdateStats(make(fs.HardLinkedItems))
+	assert.Equal(t, int64(6), rescanned.GetItemCount())
+
+	analyzer.ResetProgress()
+	nested := analyzer.AnalyzeDir("test_dir/nested", noIgnore, nil)
+	assert.Equal(t, "nested", nested.GetName())
+	assert.Equal(t, "test_dir/nested", nested.GetPath())
 }
 
 func TestSqliteAnalyzerProgress(t *testing.T) {
