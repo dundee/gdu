@@ -317,7 +317,7 @@ func (ui *UI) enterPreview() {
 	ui.previewing = true
 	ui.previewSavedDir = ui.currentDir
 	ui.currentDir = root
-	ui.markedRows = make(map[int]struct{})
+	ui.markedItems = make(map[fs.Item]struct{})
 	ui.ignoredRows = make(map[int]struct{})
 	ui.pages.RemovePage("progress")
 	ui.showDir()
@@ -604,17 +604,28 @@ func (ui *UI) handleDelete(action DeleteAction) {
 	if ui.currentDir == nil {
 		return
 	}
-	// do not allow deleting parent dir
-	row, column := ui.table.GetSelection()
-	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	if !ok || selectedFile == ui.currentDir.GetParent() {
+	// the "/.." row stands for the parent dir, which is never deleted
+	if _, ok := ui.selectedRowItem(); !ok && len(ui.markedItems) == 0 {
 		return
 	}
 
-	if ui.askBeforeDelete {
-		ui.confirmDeletion(action)
+	// capture what to delete now, so that whatever happens to the selection
+	// or the listing until the deletion runs cannot change it
+	targets := ui.selectedTargets()
+	if len(targets) == 0 {
+		return
+	}
+	disabled := ui.noDelete || ui.noDeleteWithFilter
+	if !disabled && !ui.checkTargets(ui.deleter(), targets, action) {
+		return
+	}
+
+	// confirmDeletion also explains why deletion is disabled, so it runs even
+	// when the user chose not to be asked again
+	if ui.askBeforeDelete || disabled {
+		ui.confirmDeletion(targets, action)
 	} else {
-		ui.delete(action)
+		ui.deleteTargets(targets, action)
 	}
 }
 
@@ -622,13 +633,12 @@ func (ui *UI) handleMark() {
 	if ui.currentDir == nil {
 		return
 	}
-	// do not allow deleting parent dir
-	row, column := ui.table.GetSelection()
-	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	if !ok || selectedFile == ui.currentDir.GetParent() {
+	// do not allow marking parent dir
+	if _, ok := ui.selectedRowItem(); !ok {
 		return
 	}
 
+	row, _ := ui.table.GetSelection()
 	ui.fileItemMarked(row)
 }
 
@@ -637,11 +647,10 @@ func (ui *UI) ignoreItem() {
 		return
 	}
 	// do not allow ignoring parent dir
-	row, column := ui.table.GetSelection()
-	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	if !ok || selectedFile == ui.currentDir.GetParent() {
+	if _, ok := ui.selectedRowItem(); !ok {
 		return
 	}
+	row, _ := ui.table.GetSelection()
 
 	if _, ok := ui.ignoredRows[row]; ok {
 		delete(ui.ignoredRows, row)

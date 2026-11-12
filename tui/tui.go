@@ -48,15 +48,16 @@ type UI struct {
 	filteringInput          *tview.InputField
 	typeFilteringInput      *tview.InputField
 	done                    chan struct{}
-	remover                 func(fs.Item, fs.Item) error
-	emptier                 func(fs.Item, fs.Item) error
 	trasher                 func(fs.Item, fs.Item) error
+	newDeleter              func(roots []string) itemDeleter
 	exec                    func(argv0 string, argv []string, envv []string) error
 	changeCwdFn             func(string) error
 	linkedItems             fs.HardLinkedItems
 	ignoredRows             map[int]struct{}
-	markedRows              map[int]struct{}
+	markedItems             map[fs.Item]struct{}
 	markedPaths             []string
+	parentRowShown          bool
+	deleteInParallel        bool
 	deleteQueue             chan deleteQueueItem
 	resultRow               ResultRow
 	topDirPath              string
@@ -122,8 +123,9 @@ type UI struct {
 }
 
 type deleteQueueItem struct {
-	item   fs.Item
-	action DeleteAction
+	target  deleteTarget
+	action  DeleteAction
+	deleter itemDeleter
 }
 
 // ResultRow is a struct for a row in the result table
@@ -160,8 +162,6 @@ func CreateUI(
 		askBeforeDelete:         true,
 		confirmQuit:             true,
 		showItemCount:           false,
-		remover:                 remove.ItemFromDir,
-		emptier:                 remove.EmptyFileFromDir,
 		trasher:                 remove.MoveItemToTrash,
 		exec:                    Execute,
 		linkedItems:             make(fs.HardLinkedItems, 10),
@@ -173,7 +173,7 @@ func CreateUI(
 		defaultSortBy:           "size",
 		defaultSortOrder:        "desc",
 		ignoredRows:             make(map[int]struct{}),
-		markedRows:              make(map[int]struct{}),
+		markedItems:             make(map[fs.Item]struct{}),
 		exportName:              "export.json",
 		noDelete:                false,
 		noViewFile:              false,
@@ -181,6 +181,7 @@ func CreateUI(
 		deleteQueue:             make(chan deleteQueueItem, 1000),
 		deleteWorkersCount:      3 * runtime.GOMAXPROCS(0),
 	}
+	ui.newDeleter = ui.defaultDeleter
 	if !useSIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
@@ -347,7 +348,7 @@ func (ui *UI) SetChangeCwdFn(fn func(string) error) {
 
 // SetDeleteInParallel sets the flag to delete files in parallel
 func (ui *UI) SetDeleteInParallel() {
-	ui.remover = remove.ItemFromDirParallel
+	ui.deleteInParallel = true
 }
 
 // SetTrashCommand replaces the built-in trash with an external command
@@ -587,7 +588,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 	ui.currentDir = selectedDir
 	ui.hideFilterInput()
 	ui.hideTypeFilterInput()
-	ui.markedRows = make(map[int]struct{})
+	ui.markedItems = make(map[fs.Item]struct{})
 	ui.ignoredRows = make(map[int]struct{})
 	ui.showDir()
 
@@ -653,7 +654,10 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	}
 }
 
-func (ui *UI) confirmDeletion(action DeleteAction) {
+// confirmDeletion asks before deleting targets, which were captured when the
+// deletion was requested: answering yes deletes exactly those, whatever is
+// selected or listed by then.
+func (ui *UI) confirmDeletion(targets []deleteTarget, action DeleteAction) {
 	if ui.noDelete {
 		ui.showMessage(" Deletion is disabled!")
 		return
@@ -675,22 +679,23 @@ func (ui *UI) confirmDeletion(action DeleteAction) {
 		return
 	}
 
-	if len(ui.markedRows) > 0 {
-		ui.confirmDeletionMarked(action)
+	if len(ui.markedItems) > 0 {
+		ui.confirmDeletionMarked(targets, action)
 	} else {
-		ui.confirmDeletionSelected(action)
+		ui.confirmDeletionSelected(targets, action)
 	}
 }
 
-func (ui *UI) confirmDeletionSelected(action DeleteAction) {
-	row, column := ui.table.GetSelection()
-	selectedFile := ui.table.GetCell(row, column).GetReference().(fs.Item)
+func (ui *UI) confirmDeletionSelected(targets []deleteTarget, action DeleteAction) {
+	if len(targets) == 0 {
+		return
+	}
 	modal := tview.NewModal().
 		SetText(
 			"Are you sure you want to " +
 				action.Verb() +
 				" \"" +
-				tview.Escape(selectedFile.GetName()) +
+				tview.Escape(targets[0].item.GetName()) +
 				"\"?",
 		).
 		AddButtons([]string{No, Yes, DontAskAgain}).
@@ -700,7 +705,7 @@ func (ui *UI) confirmDeletionSelected(action DeleteAction) {
 				ui.askBeforeDelete = false
 				fallthrough
 			case 1:
-				ui.deleteSelected(action)
+				ui.deleteTargets(targets, action)
 			}
 			ui.pages.RemovePage("confirm")
 		})

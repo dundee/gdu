@@ -35,7 +35,7 @@ func TestFiltering(t *testing.T) {
 
 	// mark the item for deletion
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
-	assert.Equal(t, 1, len(ui.markedRows))
+	assert.Equal(t, 1, len(ui.markedItems))
 
 	ui.showFilterInput()
 	ui.filterValue = ""
@@ -43,7 +43,7 @@ func TestFiltering(t *testing.T) {
 
 	assert.Contains(t, ui.table.GetCell(0, 0).Text, "ddd") // nothing is filtered
 	// marking should be dropped after sorting
-	assert.Equal(t, 0, len(ui.markedRows))
+	assert.Equal(t, 0, len(ui.markedItems))
 
 	ui.filterValue = "aa"
 	ui.showDir()

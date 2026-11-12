@@ -12,9 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -285,86 +282,6 @@ func (ui *UI) ReadFromStorage(storagePath, path string) error {
 	return nil
 }
 
-func (ui *UI) delete(action DeleteAction) {
-	if len(ui.markedRows) > 0 {
-		ui.deleteMarked(action)
-	} else {
-		ui.deleteSelected(action)
-	}
-}
-
-func (ui *UI) deleteSelected(action DeleteAction) {
-	row, column := ui.table.GetSelection()
-	selectedItem := ui.table.GetCell(row, column).GetReference().(fs.Item)
-
-	if ui.deleteInBackground {
-		ui.queueForDeletion([]fs.Item{selectedItem}, action)
-		return
-	}
-
-	acting := action.Acting()
-	modal := tview.NewModal().SetText(
-		cases.Title(language.English).String(acting) +
-			" " +
-			tview.Escape(selectedItem.GetName()) +
-			"...",
-	)
-	ui.pages.AddPage(acting, modal, true, true)
-
-	var currentDir fs.Item
-	var deleteItems []fs.Item
-	if action == ActionEmpty && selectedItem.IsDir() {
-		currentDir = selectedItem
-		for file := range currentDir.GetFiles(fs.SortBySize, fs.SortDesc) {
-			deleteItems = append(deleteItems, file)
-		}
-	} else {
-		currentDir = ui.currentDir
-		deleteItems = append(deleteItems, selectedItem)
-	}
-
-	var deleteFun func(fs.Item, fs.Item) error
-	switch action {
-	case ActionEmpty:
-		if !selectedItem.IsDir() {
-			deleteFun = ui.emptier
-		} else {
-			deleteFun = ui.remover
-		}
-	case ActionMoveToTrash:
-		deleteFun = ui.trasher
-	case ActionDelete:
-		deleteFun = ui.remover
-	}
-	go func() {
-		for _, item := range deleteItems {
-			if err := deleteFun(currentDir, item); err != nil {
-				msg := "Can't " + action.Verb() + " " + tview.Escape(selectedItem.GetName())
-				ui.app.QueueUpdateDraw(func() {
-					ui.pages.RemovePage(acting)
-					ui.showErr(msg, err)
-				})
-				if ui.done != nil {
-					ui.done <- struct{}{}
-				}
-				return
-			}
-		}
-
-		ui.app.QueueUpdateDraw(func() {
-			ui.pages.RemovePage(acting)
-			x, y := ui.table.GetOffset()
-			ui.showDir()
-			ui.table.Select(min(row, ui.table.GetRowCount()-1), 0)
-			ui.table.SetOffset(min(x, ui.table.GetRowCount()-1), y)
-		})
-
-		if ui.done != nil {
-			ui.done <- struct{}{}
-		}
-	}()
-}
-
 func (ui *UI) showInfo() {
 	if ui.currentDir == nil {
 		return
@@ -454,9 +371,8 @@ func (ui *UI) symlinkTargetInfoLine(item fs.Item) string {
 }
 
 func (ui *UI) openItem() {
-	row, column := ui.table.GetSelection()
-	selectedFile, ok := ui.table.GetCell(row, column).GetReference().(fs.Item)
-	if !ok || selectedFile == ui.currentDir.GetParent() {
+	selectedFile, ok := ui.selectedRowItem()
+	if !ok {
 		return
 	}
 

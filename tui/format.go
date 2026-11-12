@@ -108,7 +108,7 @@ func (ui *UI) columnsWidth() int {
 	if ui.showMtime {
 		width += mtimeColumnWidth
 	}
-	if len(ui.markedRows) > 0 {
+	if len(ui.markedItems) > 0 {
 		width += markedColumnWidth
 	}
 	return width
@@ -161,7 +161,7 @@ func (ui *UI) formatColumns(statsItem fs.Item, maxima rowMaxima, marked, ignored
 		)
 	}
 
-	if len(ui.markedRows) > 0 {
+	if len(ui.markedItems) > 0 {
 		if marked {
 			row += string('✓')
 		} else {

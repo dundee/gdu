@@ -154,9 +154,9 @@ func TestColumnsWidthMatchesRenderedRow(t *testing.T) {
 			ui.showItemCount = tc.count
 			ui.showItemCountBar = tc.countBar
 			ui.showMtime = tc.mtime
-			ui.markedRows = map[int]struct{}{}
+			ui.markedItems = map[fs.Item]struct{}{}
 			if tc.marked {
-				ui.markedRows[0] = struct{}{}
+				ui.markedItems[&analyze.File{Name: "marked"}] = struct{}{}
 			}
 
 			rendered := ui.formatColumns(sub, maxima, false, false)
