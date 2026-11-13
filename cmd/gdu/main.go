@@ -125,6 +125,7 @@ func init() {
 	flags.StringVar(&af.TrashCommand, "trash-command", "",
 		"Command used to move items to trash instead of the built-in trash (e.g. 'trash-put --trash-dir ~/mytrash')")
 	flags.StringVar(&af.Shell, "shell", "", "Set the shell spawned with the b key")
+	flags.StringVar(&af.FileViewer, "file-viewer", "", "Set the executable used by the v key instead of the built-in viewer")
 	flags.BoolVar(&af.WriteConfig, "write-config", false, "Write current configuration to file (default is $HOME/.gdu.yaml)")
 	flags.StringVar(
 		&af.Since, "since", "",

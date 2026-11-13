@@ -36,6 +36,10 @@ func (ui *UI) showFile() *tview.TextView {
 	}
 
 	path := selectedFile.GetPath()
+	if ui.fileViewer != "" {
+		ui.showFileInExternalViewer(path)
+		return nil
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		ui.showErr("Error opening file", err)

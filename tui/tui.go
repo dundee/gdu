@@ -98,6 +98,7 @@ type UI struct {
 	noViewFile              bool
 	noSpawnShell            bool
 	shellBin                string
+	fileViewer              string
 	deleteInBackground      bool
 	timeFilter              *timefilter.TimeFilter
 	timeFilterLoc           *time.Location
@@ -491,6 +492,12 @@ func (ui *UI) SetNoSpawnShell() {
 // SetShellBin sets the shell binary spawned by the b key.
 func (ui *UI) SetShellBin(path string) {
 	ui.shellBin = path
+}
+
+// SetFileViewer sets the executable used by v instead of the built-in viewer.
+// The selected file's absolute path is passed as a single argument, without a shell.
+func (ui *UI) SetFileViewer(path string) {
+	ui.fileViewer = path
 }
 
 func (ui *UI) SetNoViewFile() {

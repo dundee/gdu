@@ -12,6 +12,28 @@ This will create file `$HOME/.gdu.yaml` with all the options set to default valu
 
 Let's go through them one by one:
 
+#### `file-viewer`
+
+Executable used by `v` instead of the built-in file viewer (default empty).
+It is also used when double-clicking a file with mouse mode enabled (`--mouse`).
+For example, `gdu --file-viewer /usr/bin/less` opens the selected file in `less`
+in the current terminal, suspending gdu until the viewer exits. The `o` key
+continues to use the desktop opener.
+
+The setting is an executable name or path, not a shell command line. Paths
+containing spaces are supported; shell expansion and arguments in this setting
+are not. The selected file's absolute path is passed as one literal argument.
+For fixed viewer options, use a wrapper script, for example:
+
+```sh
+#!/bin/sh
+exec less -R -- "$1"
+```
+
+Set `file-viewer` to the executable wrapper's path. `no-view-file` and
+`no-spawn-shell` also disable the external viewer. External actions remain
+unavailable during a mid-scan preview and for archive entries.
+
 #### `log-file`
 
 Path to a logfile (default "/dev/null")

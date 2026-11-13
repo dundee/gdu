@@ -3,6 +3,7 @@ package tui
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 // Execute runs given bin path via exec.Command call
@@ -22,6 +23,26 @@ func (ui *UI) getShellBin() string {
 		return ui.shellBin
 	}
 	return defaultShellBin()
+}
+
+func (ui *UI) showFileInExternalViewer(path string) {
+	if ui.currentDir == nil || ui.previewing || ui.isInArchive() || ui.atVirtualRoot() {
+		return
+	}
+	if ui.noViewFile || ui.noSpawnShell {
+		ui.showMessage(" External file viewing is disabled!")
+		return
+	}
+	path, err := filepath.Abs(path)
+	if err != nil {
+		ui.showErr("Error resolving file path", err)
+		return
+	}
+	ui.app.Suspend(func() {
+		if err := ui.exec(ui.fileViewer, []string{path}, os.Environ()); err != nil {
+			ui.showErr("Error executing file viewer", err)
+		}
+	})
 }
 
 func (ui *UI) spawnShell() {

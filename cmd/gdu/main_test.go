@@ -15,6 +15,26 @@ func TestNoViewFileFlagRegistered(t *testing.T) {
 	}
 }
 
+func TestFileViewerFlag(t *testing.T) {
+	flag := rootCmd.Flags().Lookup("file-viewer")
+	if flag == nil || flag.DefValue != "" {
+		t.Fatal("expected file-viewer flag with an empty default")
+	}
+	original := af.FileViewer
+	changed := flag.Changed
+	t.Cleanup(func() {
+		_ = flag.Value.Set(original)
+		flag.Changed = changed
+	})
+	command := filepath.Join(t.TempDir(), "viewer with spaces")
+	if err := rootCmd.Flags().Set("file-viewer", command); err != nil {
+		t.Fatal(err)
+	}
+	if af.FileViewer != command {
+		t.Fatalf("expected literal executable path %q, got %q", command, af.FileViewer)
+	}
+}
+
 func TestNoViewFileFlagCanBeSet(t *testing.T) {
 	t.Cleanup(func() {
 		_ = rootCmd.Flags().Set("no-view-file", "false")
