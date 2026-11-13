@@ -66,7 +66,7 @@ func ScannedRootPaths(top fs.Item) []string {
 		return []string{top.GetPath()}
 	}
 	var paths []string
-	for root := range top.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for root := range top.GetFiles(fs.SortByName, fs.SortAsc) {
 		paths = append(paths, root.GetPath())
 	}
 	return paths

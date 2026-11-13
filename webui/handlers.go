@@ -100,6 +100,7 @@ func (ui *UI) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
+	defer ui.readTree()()
 
 	node, err := ui.findNode(path)
 	if err != nil {
@@ -112,6 +113,7 @@ func (ui *UI) handleNodes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ui *UI) handleTree(w http.ResponseWriter, r *http.Request) {
+	defer ui.readTree()()
 	node, err := ui.findNode(r.URL.Query().Get("path"))
 	if err != nil {
 		writeNodeError(w, err)
@@ -158,7 +160,9 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	unlock := ui.readTree()
 	node, err := ui.findNode(r.URL.Query().Get("path"))
+	unlock()
 	if err != nil {
 		writeNodeError(w, err)
 		return
@@ -167,7 +171,8 @@ func (ui *UI) handleDeleteNode(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("mode") == deleteModeTrash {
 		mode = remove.ModeTrash
 	}
-	deleter := remove.NewDeleter(ui.scannedRoots(), remove.WithTrash(ui.trasher))
+	deleter := remove.NewDeleter(ui.scannedRoots(),
+		remove.WithTrash(ui.trasher), remove.WithTreeLock(ui.session.TreeLock()))
 	parent := node.GetParent()
 	if err := deleter.Check(parent, node, mode); err != nil {
 		writeRemoveError(w, err)
@@ -198,7 +203,9 @@ func (ui *UI) handleReveal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	unlock := ui.readTree()
 	node, err := ui.findNode(body.Path)
+	unlock()
 	if err != nil {
 		writeNodeError(w, err)
 		return

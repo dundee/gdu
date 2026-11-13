@@ -28,6 +28,10 @@ const (
 )
 
 // Item is a FS item (file or dir)
+//
+// A tree of items is not safe for concurrent use. Its owner serialises the
+// changes to it, and the readers hold the owner's read lock, as the session
+// does for the tree it holds; during a scan, the walk owns the tree it builds.
 type Item interface {
 	GetPath() string
 	GetName() string
@@ -51,10 +55,8 @@ type Item interface {
 	UpdateStats(filteringFiles bool) *HardLinks
 	AddFile(Item)
 	GetFiles(SortBy, SortOrder) iter.Seq[Item]
-	GetFilesLocked(SortBy, SortOrder) iter.Seq[Item]
 	RemoveFile(Item)
 	RemoveFileByName(name string)
-	RLock() func()
 }
 
 // SymlinkItem is an optional interface implemented by items that carry a

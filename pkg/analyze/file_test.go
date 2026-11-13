@@ -371,30 +371,6 @@ func TestGetFiles(t *testing.T) {
 	assert.Equal(t, 0, len(fileFiles))
 }
 
-func TestGetFilesLocked(t *testing.T) {
-	file := &File{
-		Name: "xxx",
-		Mli:  5,
-	}
-	dir := &Dir{
-		File: &File{
-			Name:  "root",
-			Size:  5,
-			Usage: 12,
-		},
-		ItemCount: 3,
-		BasePath:  "/",
-		Files:     fs.Files{file},
-	}
-
-	unlock := dir.RLock()
-	defer unlock()
-	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
-	locked := slices.Collect(dir.GetFilesLocked(fs.SortByName, fs.SortAsc))
-	assert.Equal(t, len(files), len(locked))
-	assert.Equal(t, files[0].GetName(), locked[0].GetName())
-}
-
 func TestAddFilePanicsOnFile(t *testing.T) {
 	file := &File{
 		Name: "xxx",

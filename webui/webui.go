@@ -70,8 +70,16 @@ func (ui *UI) SetNoDelete() {
 	ui.mu.Unlock()
 }
 
+// readTree holds the lock of the session's tree for reading until the
+// returned function is called. Whoever holds it must not take it again.
+func (ui *UI) readTree() func() {
+	lock := ui.session.TreeLock()
+	lock.RLock()
+	return lock.RUnlock
+}
+
 // scannedRoots returns the paths of the scanned roots, the only places
-// deletion may change anything.
+// deletion may change anything. It takes the tree's read lock.
 func (ui *UI) scannedRoots() []string {
 	return ui.session.RootPaths()
 }

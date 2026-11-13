@@ -88,6 +88,8 @@ func (ui *UI) followCurrentDirWithCwd() {
 
 // nolint: funlen // Why: complex function
 func (ui *UI) showDir() {
+	defer ui.readTree()()
+
 	var (
 		totalUsage int64
 		totalSize  int64
@@ -124,9 +126,6 @@ func (ui *UI) showDir() {
 	}
 
 	sortBy, sortOrder := ui.getSortParams()
-
-	unlock := ui.currentDir.RLock()
-	defer unlock()
 
 	i := rowIndex
 	maxima = rowMaxima{}

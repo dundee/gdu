@@ -395,26 +395,6 @@ func TestSqliteItemGetFiles(t *testing.T) {
 	assert.Equal(t, "small.txt", files[2].GetName())
 }
 
-func TestSqliteItemGetFilesLocked(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
-
-	rootID, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
-	assert.NoError(t, err)
-	_, err = storage.InsertItem(&rootID, "file.txt", false, 100, 4096, time.Now(), 1, 0, ' ')
-	assert.NoError(t, err)
-
-	root, err := storage.GetItemByID(rootID)
-	assert.NoError(t, err)
-
-	// GetFilesLocked should work same as GetFiles
-	files := slices.Collect(root.GetFilesLocked(fs.SortByName, fs.SortAsc))
-	assert.Len(t, files, 1)
-	assert.Equal(t, "file.txt", files[0].GetName())
-}
-
 func TestSnapshotSqliteItemTree(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	storage, err := NewSqliteStorage(dbPath)
@@ -455,24 +435,6 @@ func TestSqliteAnalyzerCancellationStopsArchivePersistence(t *testing.T) {
 	children, err := analyzer.storage.GetChildren(parentID)
 	require.NoError(t, err)
 	assert.Empty(t, children)
-}
-
-func TestSqliteItemRLock(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
-
-	id, err := storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
-	assert.NoError(t, err)
-
-	item, err := storage.GetItemByID(id)
-	assert.NoError(t, err)
-
-	// RLock should return unlock function
-	unlock := item.RLock()
-	assert.NotNil(t, unlock)
-	unlock()
 }
 
 func TestSqliteItemGetItemStats(t *testing.T) {

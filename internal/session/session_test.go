@@ -43,7 +43,7 @@ func newSession(analyzer common.Analyzer) *Session {
 
 func child(t *testing.T, dir fs.Item, name string) fs.Item {
 	t.Helper()
-	for entry := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for entry := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if entry.GetName() == name {
 			return entry
 		}
@@ -54,7 +54,7 @@ func child(t *testing.T, dir fs.Item, name string) fs.Item {
 
 func entries(dir fs.Item) []fs.Item {
 	var items []fs.Item
-	for entry := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for entry := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		items = append(items, entry)
 	}
 	return items

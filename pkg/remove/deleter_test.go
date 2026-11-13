@@ -44,7 +44,7 @@ func scanTree(t *testing.T, root string, archives bool) fs.Item {
 
 func child(t *testing.T, dir fs.Item, name string) fs.Item {
 	t.Helper()
-	for entry := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for entry := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if entry.GetName() == name {
 			return entry
 		}
@@ -54,7 +54,7 @@ func child(t *testing.T, dir fs.Item, name string) fs.Item {
 }
 
 func hasChild(dir fs.Item, name string) bool {
-	for entry := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for entry := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if entry.GetName() == name {
 			return true
 		}
@@ -285,7 +285,7 @@ func TestDeleterNeverTouchesArchiveEntries(t *testing.T) {
 		}
 		deleter := NewDeleter([]string{root}, opts...)
 
-		for entry := range archive.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		for entry := range archive.GetFiles(fs.SortByName, fs.SortAsc) {
 			assert.ErrorIs(t, deleter.Delete(archive, entry, ModeRemove), ErrInArchive)
 			assert.ErrorIs(t, deleter.Delete(archive, entry, ModeEmpty), ErrInArchive)
 			assert.ErrorIs(t, deleter.Delete(archive, entry, ModeTrash), ErrInArchive)
