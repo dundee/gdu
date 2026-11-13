@@ -6,9 +6,11 @@ import "github.com/dundee/gdu/v5/pkg/fs"
 // of a browsed zip or tar archive, including the node standing for the archive
 // itself. Its children exist only inside the archive file.
 func IsArchiveDir(item fs.Item) bool {
-	switch item.(type) {
+	switch dir := item.(type) {
 	case *ZipDir, *TarDir:
 		return true
+	case *StoredDir:
+		return dir.inArchive()
 	}
 	return false
 }

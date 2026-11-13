@@ -944,6 +944,9 @@ func TestReadFromStorage(t *testing.T) {
 	ui := newTestUI()
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
 	require.NoError(t, ui.ReadFromStorage("test_dir"))
+	// the classification reads the stored tree in the background, so it has
+	// to be over before the test removes the database
+	waitClassified(t, ui)
 
 	status := ui.buildStatus()
 	assert.Equal(t, "done", status.State)

@@ -33,23 +33,6 @@ func TestStoredAnalyzerSetShowAnnexedSize(t *testing.T) {
 	assert.False(t, analyzer.gitAnnexedSize)
 }
 
-func TestStoredDirGetFilesCached(t *testing.T) {
-	// Test when files are already cached
-	files := make(fs.Files, 0)
-	dir := &StoredDir{
-		Dir: &Dir{
-			File: &File{
-				Name: "test",
-			},
-			BasePath: "/test",
-		},
-		cachedFiles: files,
-	}
-
-	result := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
-	assert.Equal(t, len(files), len(result))
-}
-
 func TestStoredDirRemoveFile(t *testing.T) {
 	// Test RemoveFile functionality
 	fin := testdir.CreateTestDir()
@@ -179,7 +162,7 @@ func TestStoredAnalyzerWithZip(t *testing.T) {
 	var validZip fs.Item
 	var invalidZip fs.Item
 
-	for _, file := range dir.Files {
+	for file := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "valid.zip" {
 			validZip = file
 		}

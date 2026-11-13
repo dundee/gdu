@@ -412,12 +412,5 @@ func (ui *UI) exportAnalysis() {
 }
 
 func (ui *UI) isInArchive() bool {
-	if ui.currentDir == nil {
-		return false
-	}
-	if _, ok := ui.currentDir.(*analyze.ZipDir); ok {
-		return true
-	}
-	_, ok := ui.currentDir.(*analyze.TarDir)
-	return ok
+	return ui.currentDir != nil && analyze.IsArchiveDir(ui.currentDir)
 }

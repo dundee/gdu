@@ -3,25 +3,48 @@ package analyze
 import (
 	"bytes"
 	"encoding/gob"
-	"path/filepath"
+	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/fs"
-	"github.com/pkg/errors"
 )
 
-func init() {
-	gob.RegisterName("analyze.StoredDir", &StoredDir{})
-	gob.RegisterName("analyze.Dir", &Dir{})
-	gob.RegisterName("analyze.File", &File{})
-	gob.RegisterName("analyze.ParentDir", &ParentDir{})
+// storedFormat is the version of the records in the database. A database
+// holding records of another version has to be scanned again.
+const storedFormat = 1
+
+// errStoredFormat is returned for a record of another format.
+var errStoredFormat = errors.New("the database was written by another version of gdu, scan again to replace it")
+
+// storedRecord is what the database holds for a directory, under its path.
+// It holds no references to other items, so a stored tree never has to be
+// encoded as a graph.
+type storedRecord struct {
+	Format int
+	// Type is the GetType of a directory inside a browsed archive, and empty
+	// for a directory on disk.
+	Type                             string
+	Flag                             rune
+	Size, Usage, OwnUsage, ItemCount int64
+	Mtime                            time.Time
+	Entries                          []storedEntry
 }
 
-// DefaultStorage is a default instance of badger storage
-var DefaultStorage *Storage
+// storedEntry is an entry of a stored directory. An entry for a directory
+// only names it; the directory's own record holds the rest.
+type storedEntry struct {
+	Name                     string
+	Dir                      bool
+	Flag                     rune
+	Size, Usage, SharedUsage int64
+	Mtime                    time.Time
+	Mli                      uint64
+	Symlink                  string
+}
 
 // Storage represents a badger storage
 //
@@ -32,25 +55,14 @@ var DefaultStorage *Storage
 type Storage struct {
 	db          *badger.DB
 	storagePath string
-	topDir      string
 	m           sync.RWMutex
 	counter     atomic.Int64
 	openCount   int
 }
 
 // NewStorage returns new instance of badger storage
-func NewStorage(storagePath, topDir string) *Storage {
-	st := &Storage{
-		storagePath: storagePath,
-		topDir:      topDir,
-	}
-	DefaultStorage = st
-	return st
-}
-
-// GetTopDir returns top directory
-func (s *Storage) GetTopDir() string {
-	return s.topDir
+func NewStorage(storagePath string) *Storage {
+	return &Storage{storagePath: storagePath}
 }
 
 // IsOpen returns true if badger DB is open
@@ -115,58 +127,51 @@ func (s *Storage) openLocked() {
 	s.db = db
 }
 
-// StoreDir saves item info into badger DB
-func (s *Storage) StoreDir(dir fs.Item) error {
+// storeRecord stores the record of the directory at path.
+func (s *Storage) storeRecord(path string, record *storedRecord) error {
+	record.Format = storedFormat
+	var value bytes.Buffer
+	if err := gob.NewEncoder(&value).Encode(record); err != nil {
+		return fmt.Errorf("encoding the record of %s: %w", path, err)
+	}
+
 	s.checkCount()
 	s.m.RLock()
 	defer s.m.RUnlock()
-
 	return s.db.Update(func(txn *badger.Txn) error {
-		b := &bytes.Buffer{}
-		enc := gob.NewEncoder(b)
-		err := enc.Encode(dir)
-		if err != nil {
-			return errors.Wrap(err, "encoding dir value")
-		}
-
-		return txn.Set([]byte(dir.GetPath()), b.Bytes())
+		return txn.Set([]byte(path), value.Bytes())
 	})
 }
 
-// LoadDir saves item info into badger DB
-func (s *Storage) LoadDir(dir fs.Item) error {
+// loadRecord returns the record of the directory at path.
+func (s *Storage) loadRecord(path string) (*storedRecord, error) {
 	s.checkCount()
 	s.m.RLock()
 	defer s.m.RUnlock()
 
-	return s.db.View(func(txn *badger.Txn) error {
-		path := dir.GetPath()
+	record := &storedRecord{}
+	err := s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(path))
 		if err != nil {
-			return errors.Wrap(err, "reading stored value for path: "+path)
+			return fmt.Errorf("reading stored value for path %s: %w", path, err)
 		}
-		return item.Value(func(val []byte) error {
-			b := bytes.NewBuffer(val)
-			dec := gob.NewDecoder(b)
-			return dec.Decode(dir)
+		return item.Value(func(value []byte) error {
+			if gob.NewDecoder(bytes.NewReader(value)).Decode(record) != nil || record.Format != storedFormat {
+				return errStoredFormat
+			}
+			return nil
 		})
 	})
+	if err != nil {
+		return nil, err
+	}
+	return record, nil
 }
 
-// GetDirForPath returns Dir for given path
-func (s *Storage) GetDirForPath(path string) (item fs.Item, err error) {
-	dirPath := filepath.Dir(path)
-	name := filepath.Base(path)
-	dir := &StoredDir{
-		Dir: &Dir{
-			File: &File{
-				Name: name,
-			},
-			BasePath: dirPath,
-		},
-	}
-	err = s.LoadDir(dir)
-	if err != nil {
+// GetDirForPath returns the stored directory at path, loaded.
+func (s *Storage) GetDirForPath(path string) (*StoredDir, error) {
+	dir := newStoredDir(s, path, nil)
+	if err := dir.load(); err != nil {
 		return nil, err
 	}
 	return dir, nil
