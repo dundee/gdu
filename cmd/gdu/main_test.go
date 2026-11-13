@@ -191,3 +191,50 @@ func TestInitConfigMalformedUserConfig(t *testing.T) {
 		t.Fatal("expected configErr to be set for malformed user config, got nil")
 	}
 }
+
+// A config file that is just null, as an empty YAML document can be, sets
+// nothing: it must neither crash gdu nor clear what the other file set.
+func TestInitConfigNullConfigs(t *testing.T) {
+	dir := t.TempDir()
+	systemPath := filepath.Join(dir, "gdu.yaml")
+	userPath := filepath.Join(dir, "user.yaml")
+
+	origArgs := os.Args
+	origPath := systemConfigPath
+	origErr := configErr
+	origAf := af
+	t.Cleanup(func() {
+		os.Args = origArgs
+		systemConfigPath = origPath
+		configErr = origErr
+		af = origAf
+	})
+
+	for _, doc := range []string{"null\n", "---\n~\n", "~"} {
+		for _, systemDoc := range []string{doc, "no-color: true\n"} {
+			if err := os.WriteFile(systemPath, []byte(systemDoc), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(userPath, []byte(doc), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			systemConfigPath = systemPath
+			os.Args = []string{"gdu", "--config-file=" + userPath}
+			af = &app.Flags{ShowApparentSize: true}
+			configErr = nil
+
+			initConfig()
+			setDefaults()
+
+			if configErr != nil {
+				t.Fatalf("%q: unexpected config error: %v", doc, configErr)
+			}
+			if !af.ShowApparentSize {
+				t.Errorf("%q: the null config cleared a value set before it", doc)
+			}
+			if wantNoColor := systemDoc != doc; af.NoColor != wantNoColor {
+				t.Errorf("%q: NoColor = %v, want %v", doc, af.NoColor, wantNoColor)
+			}
+		}
+	}
+}
