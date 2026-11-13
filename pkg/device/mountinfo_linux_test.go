@@ -47,6 +47,15 @@ func TestMountInfoEscapedMountpoint(t *testing.T) {
 	assert.Equal(t, "nfs", mounts[0].Fstype)
 }
 
+func TestMountInfoEscapedSource(t *testing.T) {
+	mounts, err := readMountsFile(strings.NewReader(
+		`42 20 0:44 / /mnt/disk ro shared:2 master:1 - ext4 /dev/mapper/My\040Disk rw`))
+
+	require.NoError(t, err)
+	require.Len(t, mounts, 1)
+	assert.Equal(t, "/dev/mapper/My Disk", mounts[0].Name)
+}
+
 func TestMalformedMountInfoLinesAreSkipped(t *testing.T) {
 	mounts, err := readMountsFile(strings.NewReader(`
 20 1 0:11

@@ -10,7 +10,8 @@
 Pretty fast disk usage analyzer written in Go.
 
 Gdu is intended primarily for SSD disks where it can fully utilize parallel processing.
-However HDDs work as well, but the performance gain is not so huge.
+On Linux, rotational HDDs are detected and scanned sequentially, which is much
+faster there.
 
 [![asciicast](https://asciinema.org/a/382738.svg)](https://asciinema.org/a/382738)
 
@@ -82,7 +83,7 @@ Flags:
   -r, --read-from-storage              Show the analysis stored by an earlier scan in the database (--db) instead of scanning
       --reverse-sort                   Reverse the sorting order in non-interactive mode (smallest to largest by default)
       --self-update                    Update gdu to the latest release, then run the rest of the command with it (only binaries from GitHub releases)
-      --sequential                     Use sequential scanning (intended for rotating HDDs)
+      --sequential                     Force sequential scanning (automatic on Linux rotational HDDs, unless --sequential=false)
       --shell string                   Set the shell spawned with the b key
   -A, --show-annexed-size              Use apparent size of git-annex'ed files in case files are not present locally (real usage is zero)
   -a, --show-apparent-size             Show apparent size

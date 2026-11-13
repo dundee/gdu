@@ -39,7 +39,8 @@ var rootCmd = &cobra.Command{
 	Long: `Pretty fast disk usage analyzer written in Go.
 
 Gdu is intended primarily for SSD disks where it can fully utilize parallel processing.
-However HDDs work as well, but the performance gain is not so huge.
+On Linux, rotational HDDs are detected and scanned sequentially, which
+is much faster there.
 
 More than one directory can be given, in which case they are scanned separately
 and presented together under a virtual top level directory.
@@ -59,7 +60,8 @@ func init() {
 	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino)")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
 	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
-	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
+	flags.BoolVar(&af.SequentialScanning, "sequential", false,
+		"Force sequential scanning (automatic on Linux rotational HDDs, unless --sequential=false)")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
 	flags.BoolVar(&af.SelfUpdate, "self-update", false,
 		"Update gdu to the latest release, then run the rest of the command with it (only binaries from GitHub releases)")
@@ -229,6 +231,15 @@ func setDefaultConfigFilePath() {
 	af.CfgFile = filepath.Join(home, ".gdu.yaml")
 }
 
+// markSequentialExplicit records whether --sequential was given on the command
+// line, so that an explicit --sequential=false can disable the automatic
+// detection on rotational disks.
+func markSequentialExplicit(command *cobra.Command) {
+	if command.Flags().Changed("sequential") {
+		af.SequentialScanningExplicit = true
+	}
+}
+
 func runE(command *cobra.Command, args []string) error {
 	var (
 		termApp *tview.Application
@@ -242,6 +253,8 @@ func runE(command *cobra.Command, args []string) error {
 			return err
 		}
 	}
+
+	markSequentialExplicit(command)
 
 	if af.WriteConfig {
 		data, err := yaml.Marshal(af)
