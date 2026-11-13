@@ -30,7 +30,7 @@ func TestAnalyzeDir(t *testing.T) {
 	progress := analyzer.GetProgress()
 	assert.GreaterOrEqual(t, progress.TotalUsage, int64(0))
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
@@ -94,7 +94,7 @@ func TestFlags(t *testing.T) {
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	sort.Sort(sort.Reverse(dir.Files))
 
@@ -121,7 +121,7 @@ func TestHardlink(t *testing.T) {
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	assert.Equal(t, int64(7), dir.Size)      // file2 and file3 are counted just once for size
 	assert.Equal(t, int64(6), dir.ItemCount) // but twice for item count
@@ -147,7 +147,7 @@ func TestFollowSymlink(t *testing.T) {
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	sort.Sort(sort.Reverse(dir.Files))
 
@@ -183,7 +183,7 @@ func TestGitAnnexSymlink(t *testing.T) {
 		FollowSymlinks: true,
 		AnnexedSize:    true,
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	sort.Sort(sort.Reverse(dir.Files))
 
@@ -214,7 +214,7 @@ func TestBrokenSymlinkSkipped(t *testing.T) {
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	sort.Sort(sort.Reverse(dir.Files))
 
@@ -232,7 +232,7 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 
 	analyzer := CreateAnalyzer()
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 }
 
 func TestParallelVsSequentialConsistency(t *testing.T) {
@@ -242,13 +242,13 @@ func TestParallelVsSequentialConsistency(t *testing.T) {
 	// Run sequential analyzer
 	seqAnalyzer := CreateSeqAnalyzer()
 	seqDir := seqAnalyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
-	seqDir.UpdateStats(make(fs.HardLinkedItems))
+	seqDir.UpdateStats(false)
 	seqNames := getFileNames(seqDir)
 
 	// Run parallel analyzer
 	parAnalyzer := CreateAnalyzer()
 	parDir := parAnalyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
-	parDir.UpdateStats(make(fs.HardLinkedItems))
+	parDir.UpdateStats(false)
 	parNames := getFileNames(parDir)
 
 	// Results should match

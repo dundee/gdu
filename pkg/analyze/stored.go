@@ -82,7 +82,7 @@ func (s *storedSink) openDir(parent *StoredDir, path string, root bool) (*Stored
 func (*storedSink) readDir(dir *StoredDir, path string, err error, entries int) {
 	dir.Flag = getDirFlag(err, entries)
 	dir.Files = make(fs.Files, 0, entries)
-	dir.Mtime, dir.OwnUsage = dirStats(path)
+	dir.Mtime, dir.OwnUsage, dir.Dev = dirStats(path)
 }
 
 func (*storedSink) resolveOptions(*StoredDir) resolveOptions {
@@ -244,6 +244,7 @@ func (f *StoredDir) load() error {
 	f.m.Lock()
 	f.Flag = record.Flag
 	f.Size, f.Usage, f.OwnUsage, f.ItemCount = record.Size, record.Usage, record.OwnUsage, record.ItemCount
+	f.Dev = record.Dev
 	f.Mtime = record.Mtime
 	f.Files = files
 	f.m.Unlock()
@@ -296,6 +297,7 @@ func (f *StoredDir) record() *storedRecord {
 		Usage:     f.Usage,
 		OwnUsage:  f.OwnUsage,
 		ItemCount: f.ItemCount,
+		Dev:       f.Dev,
 		Mtime:     f.Mtime,
 		Entries:   make([]storedEntry, 0, len(f.Files)),
 	}
@@ -395,7 +397,7 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 	f.Files = f.Files.Remove(item)
 	f.m.Unlock()
 
-	f.subtractStats(item)
+	removeFromTotals(f, item)
 }
 
 // RemoveFileByName removes file by name from stored directory
@@ -413,53 +415,46 @@ func (f *StoredDir) RemoveFileByName(name string) {
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
 	f.m.Unlock()
 
-	f.subtractStats(item)
+	removeFromTotals(f, item)
 }
 
-// subtractStats removes item's totals from this dir and every ancestor,
-// storing each one. Every directory is updated and stored under its own
-// write lock so readers never see the stats and the stored copy disagree.
-func (f *StoredDir) subtractStats(item fs.Item) {
-	itemCount, size, usage := item.GetItemCount(), item.GetSize(), item.GetUsage()
+// adjustStats adds the deltas to the totals of the directory and stores it,
+// under its write lock so readers never see the totals and the stored copy
+// disagree.
+func (f *StoredDir) adjustStats(itemCount, size, usage int64) {
+	closeFn := f.storage.Open()
+	defer closeFn()
 
-	cur := f
-	for {
-		cur.m.Lock()
-		cur.ItemCount -= itemCount
-		cur.Size -= size
-		cur.Usage -= usage
-		cur.store()
-		parent := cur.Parent
-		cur.m.Unlock()
-
-		if parent == nil {
-			break
-		}
-		cur = parent.(*StoredDir)
-	}
+	f.m.Lock()
+	defer f.m.Unlock()
+	f.ItemCount += itemCount
+	f.Size += size
+	f.Usage += usage
+	f.store()
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
-	f.updateStats(linkedItems, filteringFiles)
+func (f *StoredDir) GetItemStats(links *fs.HardLinks, filteringFiles bool) (itemCount, size, usage int64) {
+	f.updateStats(links, filteringFiles)
 	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }
 
-// UpdateStatsWithFileFiltering recursively updates size and item count
-func (f *StoredDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
-	f.updateStats(linkedItems, true)
-}
-
-// UpdateStats recursively updates size and item count
-func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
-	f.updateStats(linkedItems, false)
+// UpdateStats computes the totals of the tree topped by the directory, which
+// keeps the index of its hard-linked files, and returns the index.
+func (f *StoredDir) UpdateStats(filteringFiles bool) *fs.HardLinks {
+	links := fs.NewHardLinks()
+	f.updateStats(links, filteringFiles)
+	f.m.Lock()
+	f.links = links
+	f.m.Unlock()
+	return links
 }
 
 // updateStats computes the totals of the directory from its entries and
 // stores them. For a directory nobody has loaded, they are computed on a
 // detached copy and only the totals are kept, so computing the totals of a
 // tree does not keep the whole tree in memory.
-func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
+func (f *StoredDir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 	closeFn := f.storage.Open()
 	defer closeFn()
 
@@ -469,7 +464,7 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 			log.Print(err.Error())
 			return
 		}
-		copied.updateStats(linkedItems, filteringFiles)
+		copied.updateStats(links, filteringFiles)
 
 		copied.m.RLock()
 		mtime, flag := copied.Mtime, copied.Flag
@@ -490,9 +485,10 @@ func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles b
 	files := copyFiles(f.Files)
 	curMtime := f.Mtime
 	curFlag := f.Flag
+	dev := f.Dev
 	f.m.RUnlock()
 
-	totals, mtime, flag := aggregateDirEntries(files, curMtime, curFlag, linkedItems, filteringFiles)
+	totals, mtime, flag := aggregateDirEntries(files, curMtime, curFlag, dev, links, filteringFiles)
 
 	// Commit and store under one write lock so neither a concurrent reader
 	// nor the encoder can observe a half-updated directory.

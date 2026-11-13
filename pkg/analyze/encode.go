@@ -43,6 +43,14 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttr
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)
 	}
+	// The device is written where it changes, and inherited from the parent
+	// elsewhere, as ncdu reads it. The top directory is left out, so an
+	// export of one filesystem is the same whether it was scanned to memory
+	// or to a database, which does not know devices; it is imported as 0.
+	if dev := f.device(); attributes.Includes("dev") && !topLevel && f.Parent != nil && dev != Device(f.Parent) {
+		buff = append(buff, []byte(`,"dev":`)...)
+		buff = append(buff, []byte(strconv.FormatUint(dev, 10))...)
+	}
 	// ncdu's name for a directory that could not be read in full; without
 	// it an export cannot be told apart from a complete scan.
 	if f.Flag == '!' {

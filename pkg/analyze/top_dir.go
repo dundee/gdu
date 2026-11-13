@@ -62,19 +62,18 @@ func (d *SimpleDir) GetParent() fs.Item                                  { panic
 func (d *SimpleDir) SetParent(parent fs.Item)                            { panic("not implemented") }
 func (d *SimpleDir) GetMultiLinkedInode() uint64                         { panic("not implemented") }
 func (d *SimpleDir) EncodeJSON(io.Writer, bool, fs.JSONAttributes) error { panic("not implemented") }
-func (d *SimpleDir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
+func (d *SimpleDir) GetItemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
 	panic("not implemented")
 }
 
-func (d *SimpleDir) UpdateStats(linkedItems fs.HardLinkedItems) {
-	d.updateStats(linkedItems, false)
+// UpdateStats computes the totals of the directory from its entries. Hard
+// links are counted once during the scan, so there is no index to return.
+func (d *SimpleDir) UpdateStats(filteringFiles bool) *fs.HardLinks {
+	d.updateStats(filteringFiles)
+	return nil
 }
 
-func (d *SimpleDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
-	d.updateStats(linkedItems, true)
-}
-
-func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, filteringFiles bool) {
+func (d *SimpleDir) updateStats(filteringFiles bool) {
 	totals := dirTotals{itemCount: 1, ownUsage: d.OwnUsage, entries: len(d.Files)}
 	for _, entry := range d.Files {
 		if !entry.alreadyCounted {

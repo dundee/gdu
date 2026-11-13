@@ -22,6 +22,7 @@ import (
 //	  int64 mtime_sec = 8;   // present only for a set mtime
 //	  int32 mtime_nsec = 9;
 //	  repeated Entry entries = 10;
+//	  uint64 dev = 11;
 //	}
 //
 //	message Entry {
@@ -54,6 +55,7 @@ const (
 	recordMtimeSec  recordField = 8
 	recordMtimeNsec recordField = 9
 	recordEntries   recordField = 10
+	recordDev       recordField = 11
 )
 
 const (
@@ -84,6 +86,7 @@ func (r *storedRecord) marshal() []byte {
 	b = appendVarint(b, recordOwnUsage, uint64(r.OwnUsage))
 	b = appendVarint(b, recordItemCount, uint64(r.ItemCount))
 	b = appendTime(b, recordMtimeSec, recordMtimeNsec, r.Mtime)
+	b = appendVarint(b, recordDev, r.Dev)
 
 	var entry []byte
 	for i := range r.Entries {
@@ -142,6 +145,8 @@ func (r *storedRecord) unmarshal(b []byte) error {
 			mtime.setSec(v)
 		case recordMtimeNsec:
 			mtime.nsec = int64(int32(v))
+		case recordDev:
+			r.Dev = v
 		case recordEntries:
 			var entry storedEntry
 			if err := entry.unmarshal(bytes); err != nil {

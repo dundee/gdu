@@ -26,7 +26,7 @@ func TestStoredAnalyzer(t *testing.T) {
 	a := CreateStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
-	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
+	dir.UpdateStats(true)
 
 	// test dir info; must match the parallel analyzer on the same fixture
 	// (see TestAnalyzeDir in dir_test.go)
@@ -63,7 +63,7 @@ func TestStoredAnalyzerLoadAnalysis(t *testing.T) {
 		IgnoreFile: func(_ string) bool { return false },
 	})
 	// computing the totals is what stores them
-	scanned.UpdateStats(make(fs.HardLinkedItems))
+	scanned.UpdateStats(false)
 
 	// changes made since the scan are not in the stored analysis
 	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("new"), 0o600))
@@ -84,7 +84,7 @@ func TestRemoveStoredFile(t *testing.T) {
 	a := CreateStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
