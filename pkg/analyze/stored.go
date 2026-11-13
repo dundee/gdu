@@ -1,13 +1,14 @@
 package analyze
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"iter"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -25,6 +26,7 @@ type StoredAnalyzer struct {
 func CreateStoredAnalyzer(storagePath string) *StoredAnalyzer {
 	a := &StoredAnalyzer{
 		storagePath: storagePath,
+		storage:     NewStorage(storagePath),
 	}
 	a.Init()
 	return a
@@ -33,11 +35,13 @@ func CreateStoredAnalyzer(storagePath string) *StoredAnalyzer {
 // LoadAnalysis returns the analysis of path stored in the database by an
 // earlier scan. It fails when the database holds no analysis of path.
 func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
-	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
 	defer closeFn()
 
 	dir, err := a.storage.GetDirForPath(path)
+	if errors.Is(err, errStoredFormat) {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("the database holds no analysis of %s: %w", path, err)
 	}
@@ -51,15 +55,12 @@ func (a *StoredAnalyzer) AnalyzeDir(
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
 
-	a.storage = NewStorage(a.storagePath, path)
 	closeFn := a.storage.Open()
 	defer closeFn()
 
-	a.ignoreDir = ignore
-
 	go a.UpdateProgress()
 	a.wait.Add(1)
-	dir := a.processDir(path)
+	dir := a.processDir(path, nil)
 
 	a.wait.Wait()
 
@@ -69,32 +70,22 @@ func (a *StoredAnalyzer) AnalyzeDir(
 	return dir
 }
 
-func (a *StoredAnalyzer) processDir(path string) *StoredDir {
-	var (
-		file       fs.Item
-		err        error
-		totalUsage int64
-		info       os.FileInfo
-		dirCount   int
-	)
+// processDir scans the directory at path and stores it. Its subdirectories
+// are scanned and stored concurrently; the returned directory refers to them
+// by placeholders, loaded from the database when needed.
+func (a *StoredAnalyzer) processDir(path string, parent fs.Item) *StoredDir {
+	var totalUsage int64
 
 	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Print(err.Error())
 	}
 
-	dir := &StoredDir{
-		Dir: &Dir{
-			File: &File{
-				Name: filepath.Base(path),
-				Flag: getDirFlag(err, len(files)),
-			},
-			BasePath:  filepath.Dir(path),
-			ItemCount: 1,
-			Files:     make(fs.Files, 0, len(files)),
-		},
-	}
-	parent := &ParentDir{Path: path}
+	dir := newStoredDir(a.storage, path, parent)
+	dir.loaded = true
+	dir.Flag = getDirFlag(err, len(files))
+	dir.ItemCount = 1
+	dir.Files = make(fs.Files, 0, len(files))
 
 	setDirPlatformSpecificAttrs(dir.Dir, path)
 
@@ -108,101 +99,23 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
-			dirCount++
-
-			subdir := &StoredDir{
-				Dir: &Dir{
-					File: &File{
-						Name: name,
-					},
-					BasePath: path,
-				},
-			}
-			dir.AddFile(subdir)
+			dir.Dir.AddFile(newStoredDir(a.storage, entryPath, dir))
 
 			// Counted before the goroutine starts: this directory's Done may
 			// come first, and Wait must not see zero in between.
 			a.wait.Add(1)
 			go func(entryPath string) {
 				concurrencyLimit <- struct{}{}
-				a.processDir(entryPath)
+				a.processDir(entryPath, nil)
 				<-concurrencyLimit
 			}(entryPath)
-		} else {
-			// Apply file type filter if set
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
-				continue // Skip this file
-			}
-
-			info, err = f.Info()
-			if err != nil {
-				log.Print(err.Error())
-				continue
-			}
-
-			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
-				if err != nil {
-					log.Print(err.Error())
-					continue
-				}
-				if infoF != nil {
-					info = infoF
-				}
-			}
-
-			symlinkTarget := readSymlinkTarget(f.Type(), entryPath)
-
-			// Apply time filter if set
-			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-				continue // Skip this file
-			}
-
-			// Check if it's a zip or jar file
-			if a.archiveBrowsing && isZipFile(name) {
-				zipDir, err := processZipFile(entryPath, info)
-				if err != nil {
-					// If unable to process zip file, treat as regular file
-					log.Printf("Failed to process zip file %s: %v", entryPath, err)
-					file = &File{
-						Name:   name,
-						Flag:   getFlag(info),
-						Size:   info.Size(),
-						Parent: parent,
-					}
-				} else {
-					// Successfully processed zip file, use zip content size
-					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
-					if err == nil {
-						zipDir.Size = uncompressedSize
-						zipDir.Usage = compressedSize
-					}
-					zipDir.Parent = parent
-					file = zipDir
-				}
-			} else {
-				file = &File{
-					Name:    name,
-					Flag:    getFlag(info),
-					Size:    info.Size(),
-					Parent:  parent,
-					Symlink: symlinkTarget,
-				}
-			}
-
-			if file != nil {
-				// Only set platform-specific attributes for regular files
-				if regularFile, ok := file.(*File); ok {
-					setPlatformSpecificAttrs(regularFile, info, entryPath)
-					regularFile.Usage, regularFile.SharedUsage = a.MeasureSharedUsage(entryPath, info, regularFile.Usage)
-				}
-				totalUsage += file.GetUsage()
-				dir.AddFile(file)
-			}
+			continue
 		}
+
+		totalUsage += a.processFile(dir, entryPath, f)
 	}
 
-	err = a.storage.StoreDir(dir)
+	err = a.storage.storeRecord(path, dir.record())
 	if err != nil {
 		log.Print(err.Error())
 	}
@@ -216,155 +129,384 @@ func (a *StoredAnalyzer) processDir(path string) *StoredDir {
 	return dir
 }
 
-// StoredDir implements Dir item stored on disk
-//
-// The stat fields inherited from Dir follow Dir's locking protocol: they are
-// written under Dir.m, so readers calling the synchronized accessors (GetSize,
-// GetUsage, GetFlag, GetMtime, GetItemCount) never observe a partially applied
-// stats update.
-//
-// cachedFiles gets its own leaf mutex rather than sharing Dir.m, because
-// loadFiles runs underneath GetFiles, and GetFiles is the caller-locked half
-// of the fs.Item contract: callers such as the TUI hold RLock across the whole
-// iteration (see tui.(*UI).showDir). Taking Dir.m in loadFiles would therefore
-// re-enter a lock the caller already holds, which sync.RWMutex does not allow.
-// cacheLock is never held while Dir.m is held, so the two cannot deadlock.
-type StoredDir struct {
-	*Dir
-	cachedFiles fs.Files
-	cacheLock   sync.Mutex
-}
-
-// GetParent returns parent dir
-func (f *StoredDir) GetParent() fs.Item {
-	if DefaultStorage.GetTopDir() == f.GetPath() {
-		return nil
+// processFile adds the entry f of dir, lying at path, unless it is filtered
+// out, and returns its disk usage.
+func (a *StoredAnalyzer) processFile(dir *StoredDir, path string, f os.DirEntry) int64 {
+	name := f.Name()
+	if a.ignoreFileType != nil && a.ignoreFileType(name) {
+		return 0
 	}
 
-	// Storage.Open is reference counted, so taking a reference unconditionally
-	// is both cheap and free of the check-then-open race that an IsOpen guard
-	// has: another goroutine could close the database between the two.
-	closeFn := DefaultStorage.Open()
-	defer closeFn()
-
-	dir, err := DefaultStorage.GetDirForPath(f.BasePath)
+	info, err := f.Info()
 	if err != nil {
 		log.Print(err.Error())
+		return 0
 	}
-	return dir
-}
 
-// GetFiles returns files in directory as a sorted iterator
-// If files are already cached, use them
-// Otherwise load them from storage
-func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
-	return func(yield func(fs.Item) bool) {
-		files := f.loadFiles()
-		sortFiles(files, sortBy, order)
-
-		for _, item := range files {
-			if !yield(item) {
-				return
-			}
+	if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
+		infoF, err := followSymlink(path, a.gitAnnexedSize)
+		if err != nil {
+			log.Print(err.Error())
+			return 0
 		}
-	}
-}
-
-// loadFiles loads files from storage or returns cached files
-//
-// Like Dir.GetFiles, this reads f.Files without taking Dir.m: it is reached
-// through GetFiles, whose callers are the ones holding the read lock.
-func (f *StoredDir) loadFiles() fs.Files {
-	return f.materializeFiles(f.Files)
-}
-
-// loadFilesLocked is the self-locking counterpart of loadFiles, mirroring the
-// GetFiles / GetFilesLocked split on Dir. Callers that do not already hold the
-// read lock use this so the entry list cannot change underneath them.
-func (f *StoredDir) loadFilesLocked() fs.Files {
-	f.m.RLock()
-	entries := copyFiles(f.Files)
-	f.m.RUnlock()
-
-	return f.materializeFiles(entries)
-}
-
-// materializeFiles turns raw stored entries into usable items, reading child
-// directories back out of storage, and memoizes the result in cachedFiles.
-// Only cachedFiles is synchronized here, under its own leaf mutex.
-func (f *StoredDir) materializeFiles(entries fs.Files) fs.Files {
-	closeFn := DefaultStorage.Open()
-	defer closeFn()
-
-	f.cacheLock.Lock()
-	defer f.cacheLock.Unlock()
-
-	if cached := copyFiles(f.cachedFiles); cached != nil {
-		return cached
-	}
-
-	var files fs.Files
-	for _, file := range entries {
-		if file.IsDir() {
-			dir := &StoredDir{
-				Dir: &Dir{
-					File: &File{
-						Name: file.GetName(),
-					},
-					BasePath: f.GetPath(),
-				},
-			}
-
-			err := DefaultStorage.LoadDir(dir)
-			if err != nil {
-				log.Print(err.Error())
-			}
-			files = append(files, dir)
-		} else {
-			files = append(files, file)
+		if infoF != nil {
+			info = infoF
 		}
 	}
 
-	f.cachedFiles = files
-	return copyFiles(files)
+	symlinkTarget := readSymlinkTarget(f.Type(), path)
+
+	if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+		return 0
+	}
+
+	if archive := a.processArchive(path, name, info); archive != nil {
+		a.storeArchive(archive, path)
+		dir.Dir.AddFile(newStoredDir(a.storage, path, dir))
+		return archive.GetUsage()
+	}
+
+	file := &File{
+		Name:    name,
+		Flag:    getFlag(info),
+		Size:    info.Size(),
+		Parent:  dir,
+		Symlink: symlinkTarget,
+	}
+	setPlatformSpecificAttrs(file, info, path)
+	file.Usage, file.SharedUsage = a.MeasureSharedUsage(path, info, file.Usage)
+	dir.Dir.AddFile(file)
+	return file.Usage
 }
 
-// copyFiles returns a copy of files so callers cannot mutate the cached slice.
-// It returns nil for a nil input, letting callers use the result to distinguish
-// "not cached" from "cached but empty".
-func copyFiles(files fs.Files) fs.Files {
-	if files == nil {
+// processArchive reads the archive at path when archive browsing is on, and
+// returns nil when it is off, path is not an archive, or reading it failed.
+func (a *StoredAnalyzer) processArchive(path, name string, info os.FileInfo) fs.Item {
+	if !a.archiveBrowsing {
 		return nil
 	}
+	switch {
+	case isZipFile(name):
+		zipDir, err := processZipFile(path, info)
+		if err != nil {
+			log.Printf("Failed to process zip file %s: %v", path, err)
+			return nil
+		}
+		if uncompressed, compressed, err := getZipFileSize(path); err == nil {
+			zipDir.Size = uncompressed
+			zipDir.Usage = compressed
+		}
+		return zipDir
+	case isTarFile(name):
+		tarDir, err := processTarFile(path, info)
+		if err != nil {
+			log.Printf("Failed to process tar file %s: %v", path, err)
+			return nil
+		}
+		return tarDir
+	}
+	return nil
+}
+
+// storeArchive stores the directories of a browsed archive lying at path, so
+// that they load like any other stored directory.
+func (a *StoredAnalyzer) storeArchive(dir fs.Item, path string) {
+	record := &storedRecord{
+		Type:      dir.GetType(),
+		Flag:      dir.GetFlag(),
+		Size:      dir.GetSize(),
+		Usage:     dir.GetUsage(),
+		ItemCount: dir.GetItemCount(),
+		Mtime:     dir.GetMtime(),
+	}
+	for entry := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
+		name := entry.GetName()
+		// names inside an archive are whatever its author chose; joined to the
+		// archive path, "..", "/" or "a/b" would name another record
+		if !isPathElement(name) {
+			log.Printf("Skipping archive entry %q in %s", name, path)
+			continue
+		}
+		if entry.IsDir() {
+			record.Entries = append(record.Entries, storedEntry{Name: name, Dir: true})
+			a.storeArchive(entry, filepath.Join(path, name))
+			continue
+		}
+		record.Entries = append(record.Entries, entryOf(entry))
+	}
+	if err := a.storage.storeRecord(path, record); err != nil {
+		log.Print(err.Error())
+	}
+}
+
+// isPathElement reports whether name can only name an entry of its directory.
+func isPathElement(name string) bool {
+	switch name {
+	case "", ".", "..":
+		return false
+	}
+	return !strings.ContainsAny(name, "/\x00"+string(filepath.Separator)) && filepath.VolumeName(name) == ""
+}
+
+// StoredDir is a directory of an analysis kept in the database (--db x.badger).
+//
+// A StoredDir is a placeholder until it is loaded: its record, holding its
+// totals and entries, is read from the database when its parent lists it, or
+// when it is used directly. Loading fills the placeholder in place, so the
+// same item stays the entry of its parent and the parent of its own entries.
+//
+// The fields inherited from Dir follow Dir's locking protocol. loadMu guards
+// loading and kind, and is never taken while Dir.m is held.
+type StoredDir struct {
+	*Dir
+	storage *Storage
+	loadMu  sync.Mutex
+	loaded  bool
+	// kind is the GetType of a directory inside a browsed archive
+	kind string
+}
+
+func newStoredDir(storage *Storage, path string, parent fs.Item) *StoredDir {
+	return &StoredDir{
+		Dir: &Dir{
+			File:     &File{Name: filepath.Base(path), Parent: parent},
+			BasePath: filepath.Dir(path),
+		},
+		storage: storage,
+	}
+}
+
+// GetType returns the type of the directory
+func (f *StoredDir) GetType() string {
+	f.loadMu.Lock()
+	defer f.loadMu.Unlock()
+	if f.kind != "" {
+		return f.kind
+	}
+	return f.Dir.GetType()
+}
+
+// inArchive reports whether the directory lies inside a browsed archive, or
+// stands for the archive itself.
+func (f *StoredDir) inArchive() bool {
+	f.loadMu.Lock()
+	defer f.loadMu.Unlock()
+	return f.kind != ""
+}
+
+// load reads the record of the directory from the database, unless the
+// directory has been loaded already or was built by a scan.
+func (f *StoredDir) load() error {
+	f.loadMu.Lock()
+	defer f.loadMu.Unlock()
+	if f.loaded {
+		return nil
+	}
+
+	closeFn := f.storage.Open()
+	defer closeFn()
+	record, err := f.storage.loadRecord(f.GetPath())
+	if err != nil {
+		return err
+	}
+
+	path := f.GetPath()
+	files := make(fs.Files, 0, len(record.Entries))
+	for _, entry := range record.Entries {
+		if entry.Dir {
+			files = append(files, newStoredDir(f.storage, filepath.Join(path, entry.Name), f))
+			continue
+		}
+		files = append(files, &File{
+			Name:        entry.Name,
+			Flag:        entry.Flag,
+			Size:        entry.Size,
+			Usage:       entry.Usage,
+			SharedUsage: entry.SharedUsage,
+			Mtime:       entry.Mtime,
+			Mli:         entry.Mli,
+			Symlink:     entry.Symlink,
+			Parent:      f,
+		})
+	}
+
+	f.m.Lock()
+	f.Flag = record.Flag
+	f.Size, f.Usage, f.OwnUsage, f.ItemCount = record.Size, record.Usage, record.OwnUsage, record.ItemCount
+	f.Mtime = record.Mtime
+	f.Files = files
+	f.m.Unlock()
+	f.kind = record.Type
+	f.loaded = true
+	return nil
+}
+
+// isLoaded reports whether the directory has its entries.
+func (f *StoredDir) isLoaded() bool {
+	f.loadMu.Lock()
+	defer f.loadMu.Unlock()
+	return f.loaded
+}
+
+// detached returns a loaded copy of the directory read from the database,
+// which shares no items with the tree. Walking the copy instead of the
+// directory leaves the tree as it is, so a walk of the whole tree does not
+// keep the whole tree in memory.
+func (f *StoredDir) detached() (*StoredDir, error) {
+	f.m.RLock()
+	copied := newStoredDir(f.storage, f.GetPath(), f.Parent)
+	f.m.RUnlock()
+	if err := copied.load(); err != nil {
+		return nil, err
+	}
+	return copied, nil
+}
+
+// loadEntries loads the directories among files, whose totals a listing shows.
+func (f *StoredDir) loadEntries(files fs.Files) {
+	closeFn := f.storage.Open()
+	defer closeFn()
+	for _, file := range files {
+		if dir, ok := file.(*StoredDir); ok {
+			if err := dir.load(); err != nil {
+				log.Print(err.Error())
+			}
+		}
+	}
+}
+
+// record returns the record of the directory. The caller must hold f.m, or
+// be the only one using the directory.
+func (f *StoredDir) record() *storedRecord {
+	record := &storedRecord{
+		Type:      f.kind,
+		Flag:      f.Flag,
+		Size:      f.Size,
+		Usage:     f.Usage,
+		OwnUsage:  f.OwnUsage,
+		ItemCount: f.ItemCount,
+		Mtime:     f.Mtime,
+		Entries:   make([]storedEntry, 0, len(f.Files)),
+	}
+	for _, file := range f.Files {
+		if file.IsDir() {
+			record.Entries = append(record.Entries, storedEntry{Name: file.GetName(), Dir: true})
+			continue
+		}
+		record.Entries = append(record.Entries, entryOf(file))
+	}
+	return record
+}
+
+// entryOf returns the stored entry of a file.
+func entryOf(file fs.Item) storedEntry {
+	entry := storedEntry{
+		Name:  file.GetName(),
+		Flag:  file.GetFlag(),
+		Size:  file.GetSize(),
+		Usage: file.GetUsage(),
+		Mtime: file.GetMtime(),
+		Mli:   file.GetMultiLinkedInode(),
+	}
+	if f, ok := file.(*File); ok {
+		entry.SharedUsage = f.SharedUsage
+	}
+	if symlink, ok := file.(fs.SymlinkItem); ok {
+		entry.Symlink = symlink.GetSymlinkTarget()
+	}
+	return entry
+}
+
+// store stores the directory. The caller must hold f.m.
+func (f *StoredDir) store() {
+	if err := f.storage.storeRecord(f.GetPath(), f.record()); err != nil {
+		log.Print(err.Error())
+	}
+}
+
+// GetFiles returns files in directory as a sorted iterator, loading the
+// directories among them. Like Dir.GetFiles, it leaves locking to the caller.
+func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	f.loadEntries(f.Files)
+	return f.Dir.GetFiles(sortBy, order)
+}
+
+// GetFilesLocked returns files in directory as a sorted iterator, loading the
+// directories among them.
+func (f *StoredDir) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
+	f.m.RLock()
+	files := copyFiles(f.Files)
+	f.m.RUnlock()
+	f.loadEntries(files)
+	return f.Dir.GetFilesLocked(sortBy, order)
+}
+
+// EncodeJSON writes JSON representation of the directory and everything in
+// it, reading from the database the directories nobody has loaded.
+func (f *StoredDir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
+	closeFn := f.storage.Open()
+	defer closeFn()
+	if f.isLoaded() {
+		return f.Dir.EncodeJSON(writer, topLevel, attributes)
+	}
+	copied, err := f.detached()
+	if err != nil {
+		return err
+	}
+	return copied.Dir.EncodeJSON(writer, topLevel, attributes)
+}
+
+// copyFiles returns a copy of files so callers cannot mutate the slice.
+func copyFiles(files fs.Files) fs.Files {
 	result := make(fs.Files, len(files))
 	copy(result, files)
 	return result
 }
 
+// AddFile adds item to the directory and stores the directory.
+func (f *StoredDir) AddFile(item fs.Item) {
+	closeFn := f.storage.Open()
+	defer closeFn()
+
+	f.m.Lock()
+	defer f.m.Unlock()
+	f.Files = append(f.Files, item)
+	f.store()
+}
+
 // RemoveFile removes file from stored directory
 // It also updates size and item count of parent directories
 func (f *StoredDir) RemoveFile(item fs.Item) {
-	closeFn := DefaultStorage.Open()
+	closeFn := f.storage.Open()
 	defer closeFn()
 
 	f.m.Lock()
 	f.Files = f.Files.Remove(item)
 	f.m.Unlock()
-	f.invalidateCache()
 
 	f.subtractStats(item)
 }
 
-// invalidateCache drops the loaded children so the next loadFiles re-reads
-// them from storage.
-func (f *StoredDir) invalidateCache() {
-	f.cacheLock.Lock()
-	f.cachedFiles = nil
-	f.cacheLock.Unlock()
+// RemoveFileByName removes file by name from stored directory
+func (f *StoredDir) RemoveFileByName(name string) {
+	closeFn := f.storage.Open()
+	defer closeFn()
+
+	f.m.Lock()
+	idx, ok := f.Files.FindByName(name)
+	if !ok {
+		f.m.Unlock()
+		return
+	}
+	item := f.Files[idx]
+	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
+	f.m.Unlock()
+
+	f.subtractStats(item)
 }
 
 // subtractStats removes item's totals from this dir and every ancestor,
-// persisting each one. Every directory is updated and stored under its own
+// storing each one. Every directory is updated and stored under its own
 // write lock so readers never see the stats and the stored copy disagree.
 func (f *StoredDir) subtractStats(item fs.Item) {
 	itemCount, size, usage := item.GetItemCount(), item.GetSize(), item.GetUsage()
@@ -375,14 +517,10 @@ func (f *StoredDir) subtractStats(item fs.Item) {
 		cur.ItemCount -= itemCount
 		cur.Size -= size
 		cur.Usage -= usage
-		err := DefaultStorage.StoreDir(cur)
+		cur.store()
+		parent := cur.Parent
 		cur.m.Unlock()
 
-		if err != nil {
-			log.Print(err.Error())
-		}
-
-		parent := cur.GetParent()
 		if parent == nil {
 			break
 		}
@@ -396,6 +534,7 @@ func (f *StoredDir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles 
 	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }
 
+// UpdateStatsWithFileFiltering recursively updates size and item count
 func (f *StoredDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
 	f.updateStats(linkedItems, true)
 }
@@ -405,94 +544,52 @@ func (f *StoredDir) UpdateStats(linkedItems fs.HardLinkedItems) {
 	f.updateStats(linkedItems, false)
 }
 
+// updateStats computes the totals of the directory from its entries and
+// stores them. For a directory nobody has loaded, they are computed on a
+// detached copy and only the totals are kept, so computing the totals of a
+// tree does not keep the whole tree in memory.
 func (f *StoredDir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
-	closeFn := DefaultStorage.Open()
+	closeFn := f.storage.Open()
 	defer closeFn()
 
-	// Drop the cache and snapshot the fields we accumulate into, so the stats
-	// are computed from locals while no lock is held. Recursing into
-	// entry.GetItemStats below must not happen under f.m.
-	f.invalidateCache()
+	if !f.isLoaded() {
+		copied, err := f.detached()
+		if err != nil {
+			log.Print(err.Error())
+			return
+		}
+		copied.updateStats(linkedItems, filteringFiles)
 
+		copied.m.RLock()
+		mtime, flag := copied.Mtime, copied.Flag
+		itemCount, size, usage, ownUsage := copied.ItemCount, copied.Size, copied.Usage, copied.OwnUsage
+		copied.m.RUnlock()
+
+		f.m.Lock()
+		f.Mtime, f.Flag = mtime, flag
+		f.ItemCount, f.Size, f.Usage, f.OwnUsage = itemCount, size, usage, ownUsage
+		f.m.Unlock()
+		return
+	}
+
+	// Snapshot the fields we accumulate into, so the stats are computed from
+	// locals while no lock is held. Recursing into entry.GetItemStats below
+	// must not happen under f.m.
 	f.m.RLock()
+	files := copyFiles(f.Files)
 	curMtime := f.Mtime
 	curFlag := f.Flag
 	f.m.RUnlock()
 
-	files := f.loadFilesLocked()
 	totals, mtime, flag := aggregateDirEntries(files, curMtime, curFlag, linkedItems, filteringFiles)
 
-	f.invalidateCache()
-
-	// Commit and persist under one write lock so neither a concurrent reader
-	// nor the gob encoder can observe a half-updated directory.
+	// Commit and store under one write lock so neither a concurrent reader
+	// nor the encoder can observe a half-updated directory.
 	f.m.Lock()
 	defer f.m.Unlock()
-
 	f.Mtime = mtime
 	f.Flag = flag
 	totals.ownUsage = f.OwnUsage
 	f.ItemCount, f.Size, f.Usage = resolveDirStats(totals, filteringFiles)
-
-	if err := DefaultStorage.StoreDir(f); err != nil {
-		log.Print(err.Error())
-	}
-}
-
-// RemoveFileByName removes file by name from stored directory
-func (f *StoredDir) RemoveFileByName(name string) {
-	closeFn := DefaultStorage.Open()
-	defer closeFn()
-
-	f.m.Lock()
-	idx, ok := f.Files.FindByName(name)
-	if !ok {
-		f.m.Unlock()
-		return
-	}
-	item := f.Files[idx]
-	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
-	f.m.Unlock()
-	f.invalidateCache()
-
-	f.subtractStats(item)
-}
-
-// ParentDir represents parent directory of single file
-// It is used to get path to parent directory of a file
-type ParentDir struct {
-	Path string
-}
-
-func (p *ParentDir) GetPath() string {
-	return p.Path
-}
-func (p *ParentDir) GetName() string                                     { panic("must not be called") }
-func (p *ParentDir) GetFlag() rune                                       { panic("must not be called") }
-func (p *ParentDir) IsDir() bool                                         { panic("must not be called") }
-func (p *ParentDir) GetSize() int64                                      { panic("must not be called") }
-func (p *ParentDir) GetType() string                                     { panic("must not be called") }
-func (p *ParentDir) GetUsage() int64                                     { panic("must not be called") }
-func (p *ParentDir) GetMtime() time.Time                                 { panic("must not be called") }
-func (p *ParentDir) GetItemCount() int64                                 { panic("must not be called") }
-func (p *ParentDir) GetParent() fs.Item                                  { panic("must not be called") }
-func (p *ParentDir) SetParent(fs.Item)                                   { panic("must not be called") }
-func (p *ParentDir) GetMultiLinkedInode() uint64                         { panic("must not be called") }
-func (p *ParentDir) EncodeJSON(io.Writer, bool, fs.JSONAttributes) error { panic("must not be called") }
-func (p *ParentDir) UpdateStats(linkedItems fs.HardLinkedItems)          { panic("must not be called") }
-func (p *ParentDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
-	panic("must not be called")
-}
-func (p *ParentDir) AddFile(fs.Item)                                    { panic("must not be called") }
-func (p *ParentDir) GetFiles(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item] { panic("must not be called") }
-func (p *ParentDir) GetFilesLocked(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item] {
-	panic("must not be called")
-}
-func (p *ParentDir) RLock() func()                { panic("must not be called") }
-func (p *ParentDir) RemoveFile(item fs.Item)      { panic("must not be called") }
-func (p *ParentDir) RemoveFileByName(name string) { panic("must not be called") }
-func (p *ParentDir) GetItemStats(
-	linkedItems fs.HardLinkedItems, filteringFiles bool,
-) (itemCount, size, usage int64) {
-	panic("must not be called")
+	f.store()
 }
