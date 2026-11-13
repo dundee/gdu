@@ -20,6 +20,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type devicesInfoGetterErrMock struct{}
@@ -1921,4 +1922,50 @@ func fakeRunningScan(ui *UI) context.Context {
 	ui.scanning = true
 	ui.stopScan = cancel
 	return ctx
+}
+
+// Ctrl+D is EOF in a terminal and Alt+D or Cmd+D are shortcuts elsewhere;
+// they must not run the commands of the plain letters, such as deletion.
+func TestModifiedLetterKeysRunNoCommand(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	require.NoError(t, err)
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+	ui.table.Select(0, 0)
+	apparentSize, itemCount := ui.ShowApparentSize, ui.showItemCount
+
+	for _, letter := range []rune{'d', 'e', 'D', 'a', 'c', 's', 'l', 'q', 'E', 'b'} {
+		for _, key := range []*tcell.EventKey{
+			tcell.NewEventKey(tcell.KeyRune, letter&0x1f, tcell.ModNone), // as a terminal sends Ctrl+letter
+			tcell.NewEventKey(tcell.KeyRune, letter, tcell.ModCtrl),
+			tcell.NewEventKey(tcell.KeyRune, letter, tcell.ModAlt),
+			tcell.NewEventKey(tcell.KeyRune, letter, tcell.ModMeta),
+		} {
+			if key.Key() == tcell.KeyCtrlC || key.Key() == tcell.KeyCtrlZ {
+				continue
+			}
+			ui.keyPressed(key)
+
+			assert.False(t, ui.pages.HasPage("confirm"), key.Name())
+			assert.False(t, ui.pages.HasPage("export"), key.Name())
+			assert.Equal(t, apparentSize, ui.ShowApparentSize, key.Name())
+			assert.Equal(t, itemCount, ui.showItemCount, key.Name())
+			assert.Equal(t, "test_dir", ui.currentDir.GetName(), key.Name())
+		}
+	}
+	assert.DirExists(t, "test_dir/nested")
+
+	// the plain letter still works
+	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
+	assert.True(t, ui.pages.HasPage("confirm"))
 }
