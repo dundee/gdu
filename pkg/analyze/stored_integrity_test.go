@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -244,4 +245,24 @@ func TestStoredDatabaseOfOlderFormatIsRefused(t *testing.T) {
 	_, err := CreateStoredAnalyzer(db).LoadAnalysis(root)
 
 	assert.ErrorContains(t, err, "scan again")
+}
+
+// A directory with very many entries makes a record larger than the largest
+// batch badger accepts with the sizes gdu sets; it has to go to the value log.
+func TestStoredHugeDirectory(t *testing.T) {
+	const entries = 300_000
+	storage := NewStorage(filepath.Join(t.TempDir(), "gdu.badger"))
+	closeFn := storage.Open()
+	defer closeFn()
+	record := &storedRecord{Entries: make([]storedEntry, entries)}
+	for i := range record.Entries {
+		record.Entries[i] = storedEntry{Name: fmt.Sprintf("file-with-a-longish-name-%07d", i), Size: int64(i)}
+	}
+
+	require.NoError(t, storage.storeRecord("/huge", record))
+	loaded, err := storage.loadRecord("/huge")
+
+	require.NoError(t, err)
+	assert.Len(t, loaded.Entries, entries)
+	assert.Equal(t, record.Entries[entries-1], loaded.Entries[entries-1])
 }

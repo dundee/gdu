@@ -109,10 +109,26 @@ func (s *Storage) release() {
 	s.db = nil
 }
 
+// Sizes of badger's in-memory structures. Its defaults (five 64 MiB memtables
+// and a 256 MiB block cache) are meant for a long-running database server and
+// made a scan into badger use several times the memory of a scan without it,
+// although keeping memory low is the point of --db. Smaller ones cost no
+// speed: a scan writes every directory once, and reads go through gdu's own
+// tree. The memtable cannot be much smaller, as badger refuses to open when
+// its largest batch, 15% of a memtable, is below the 1 MiB value threshold.
+const (
+	badgerMemTableSize   = 16 << 20
+	badgerNumMemtables   = 2
+	badgerBlockCacheSize = 16 << 20
+)
+
 // openLocked opens the badger DB. The caller must hold m for writing.
 func (s *Storage) openLocked() {
 	options := badger.DefaultOptions(s.storagePath)
 	options.Logger = nil
+	options.MemTableSize = badgerMemTableSize
+	options.NumMemtables = badgerNumMemtables
+	options.BlockCacheSize = badgerBlockCacheSize
 
 	if !common.Is64Bit {
 		// For 32-bit systems, we need to set ValueLogFileSize to a smaller value to
