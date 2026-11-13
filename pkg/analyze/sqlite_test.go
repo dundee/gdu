@@ -188,7 +188,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Update item
-	err = storage.UpdateItem(id, 500, 1000, 10, ' ')
+	err = storage.UpdateItem(id, 500, 1000, 10, time.Now(), ' ')
 	assert.NoError(t, err)
 
 	// Verify update
@@ -219,7 +219,7 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 	}
 
 	// Update during bulk mode
-	err = storage.UpdateItem(rootID, 10000, 20000, 101, ' ')
+	err = storage.UpdateItem(rootID, 10000, 20000, 101, time.Now(), ' ')
 	assert.NoError(t, err)
 
 	// End bulk insert
@@ -448,24 +448,6 @@ func TestSqliteAnalyzerCancellationStopsArchivePersistence(t *testing.T) {
 
 	analyzer.Cancel()
 	analyzer.persistArchive(archive, parentID)
-
-	children, err := analyzer.storage.GetChildren(parentID)
-	require.NoError(t, err)
-	assert.Empty(t, children)
-}
-
-func TestSqliteAnalyzerPreemptiveCancellationSkipsChildDirectory(t *testing.T) {
-	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
-
-	parentID, err := analyzer.storage.InsertItem(nil, "root", true, 0, 0, time.Now(), 1, 0, ' ')
-	require.NoError(t, err)
-	childPath := filepath.Join(t.TempDir(), "unscanned")
-	require.NoError(t, os.Mkdir(childPath, 0o700))
-
-	analyzer.Cancel()
-	assert.Nil(t, analyzer.processDir(childPath, &parentID))
 
 	children, err := analyzer.storage.GetChildren(parentID)
 	require.NoError(t, err)

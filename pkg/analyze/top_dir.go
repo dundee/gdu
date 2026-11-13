@@ -3,63 +3,12 @@ package analyze
 import (
 	"io"
 	"iter"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 var _ fs.Item = (*SimpleDir)(nil)
-
-type TopDir struct {
-	Name      string
-	Mtime     time.Time
-	Size      atomic.Int64
-	Usage     atomic.Int64
-	ItemCount atomic.Int64
-	Flag      rune
-	m         sync.Mutex
-}
-
-func (d *TopDir) AddUsage(size, usage, itemCount int64) {
-	d.Size.Add(size)
-	d.Usage.Add(usage)
-	d.ItemCount.Add(itemCount)
-}
-
-func (d *TopDir) GetUsage() (size, usage, itemCount int64) {
-	return d.Size.Load(), d.Usage.Load(), d.ItemCount.Load()
-}
-
-func (d *TopDir) SetFlag(flag rune) {
-	d.m.Lock()
-	d.Flag = flag
-	d.m.Unlock()
-}
-
-// markReadError marks the directory as read with errors: '!' for an error
-// in the directory itself, and '.' for one in a directory below it, like Dir
-// does.
-func (d *TopDir) markReadError(own bool) {
-	d.m.Lock()
-	defer d.m.Unlock()
-	switch {
-	case own:
-		d.Flag = '!'
-	case d.Flag != '!':
-		d.Flag = '.'
-	}
-}
-
-// UpdateMtime keeps the newest mtime seen in the directory tree, like Dir does.
-func (d *TopDir) UpdateMtime(mtime time.Time) {
-	d.m.Lock()
-	if mtime.After(d.Mtime) {
-		d.Mtime = mtime
-	}
-	d.m.Unlock()
-}
 
 type SimpleFile struct {
 	Name      string
@@ -105,10 +54,10 @@ func (d *SimpleDir) GetPath() string {
 	return d.BasePath + pathSep + d.Name
 }
 
-func (d *SimpleDir) GetFlag() rune                                       { panic("not implemented") }
+func (d *SimpleDir) GetFlag() rune                                       { return d.Flag }
 func (d *SimpleDir) GetType() string                                     { panic("not implemented") }
-func (d *SimpleDir) GetMtime() time.Time                                 { panic("not implemented") }
-func (d *SimpleDir) GetItemCount() int64                                 { panic("not implemented") }
+func (d *SimpleDir) GetMtime() time.Time                                 { return d.Mtime }
+func (d *SimpleDir) GetItemCount() int64                                 { return d.ItemCount }
 func (d *SimpleDir) GetParent() fs.Item                                  { panic("not implemented") }
 func (d *SimpleDir) SetParent(parent fs.Item)                            { panic("not implemented") }
 func (d *SimpleDir) GetMultiLinkedInode() uint64                         { panic("not implemented") }
@@ -125,16 +74,17 @@ func (d *SimpleDir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems)
 	d.updateStats(linkedItems, true)
 }
 
-func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
-	var totalSize int64
-	var totalUsage int64
-	var itemCount int64
+func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, filteringFiles bool) {
+	totals := dirTotals{itemCount: 1, ownUsage: d.OwnUsage, entries: len(d.Files)}
 	for _, entry := range d.Files {
 		if !entry.alreadyCounted {
-			totalSize += entry.Size
-			totalUsage += entry.Usage
+			totals.size += entry.Size
+			totals.usage += entry.Usage
 		}
-		itemCount += entry.ItemCount
+		totals.itemCount += entry.ItemCount
+		if !entry.IsDir {
+			totals.hasFiles = true
+		}
 
 		switch entry.Flag {
 		case '!', '.':
@@ -143,16 +93,9 @@ func (d *SimpleDir) updateStats(_ fs.HardLinkedItems, _ bool) {
 			}
 		}
 	}
-	if len(d.Files) == 0 {
-		d.ItemCount = 0
-		d.Size = EmptyDirSize
-		d.Usage = d.OwnUsage
-	} else {
-		d.ItemCount = itemCount + 1
-		d.Size = totalSize
-		d.Usage = totalUsage + d.OwnUsage
-	}
+	d.ItemCount, d.Size, d.Usage = resolveDirStats(totals, filteringFiles)
 }
+
 func (d *SimpleDir) AddFile(fs.Item) { panic("not implemented") }
 func (d *SimpleDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
 	return func(yield func(fs.Item) bool) {

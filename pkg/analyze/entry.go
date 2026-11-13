@@ -120,23 +120,6 @@ func (e *fileEntry) item(parent fs.Item) fs.Item {
 	}
 }
 
-// addFile adds the entry d of dir, which lies at dirPath, unless a filter
-// excludes it, and returns the disk usage it added.
-func (a *BaseAnalyzer) addFile(dir *Dir, dirPath string, d os.DirEntry) int64 {
-	entry, ok, err := a.resolveFile(dirPath, d, resolveOptions{browseArchives: true})
-	if err != nil {
-		log.Print(err.Error())
-		dir.SetFlag('!')
-		return 0
-	}
-	if !ok {
-		return 0
-	}
-	item := entry.item(dir)
-	dir.AddFile(item)
-	return item.GetUsage()
-}
-
 // openArchive returns the browsed content of the archive at path, a *ZipDir
 // or *TarDir, or nil when name is not an archive's or the archive cannot be
 // read.

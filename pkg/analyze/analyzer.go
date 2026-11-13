@@ -2,7 +2,6 @@ package analyze
 
 import (
 	"os"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,7 +19,6 @@ type BaseAnalyzer struct {
 	currentDir              atomic.Value
 	doneChan                common.SignalGroup
 	cancelled               atomic.Bool
-	wait                    *sync.WaitGroup
 	ignoreDir               common.ShouldDirBeIgnored
 	ignoreFileType          common.ShouldFileBeIgnored
 	followSymlinks          bool
@@ -36,7 +34,6 @@ func (a *BaseAnalyzer) Init() {
 	a.progressOutChan = make(chan common.CurrentProgress, 1)
 	a.progressDoneChan = make(chan struct{})
 	a.doneChan = make(common.SignalGroup)
-	a.wait = &sync.WaitGroup{}
 	a.progressItemCount.Store(0)
 	a.progressTotalUsage.Store(0)
 	a.progressCurrentItemName.Store("")

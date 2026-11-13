@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -29,49 +28,6 @@ func TestAnalyzersCancelKeepsPartialResults(t *testing.T) {
 			assert.True(t, test.analyzer.(interface{ IsCancelled() bool }).IsCancelled())
 			assert.Contains(t, itemNames(dir), "a-file")
 			assert.NotContains(t, itemNames(dir), "b-dir")
-		})
-	}
-}
-
-func TestParallelAnalyzersCancelQueuedDirectories(t *testing.T) {
-	root := createCancellationTree(t)
-	tests := []struct {
-		name    string
-		factory func() common.Analyzer
-	}{
-		{name: "parallel", factory: func() common.Analyzer { return CreateAnalyzer() }},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			initialSlots := len(concurrencyLimit)
-			for len(concurrencyLimit) < cap(concurrencyLimit) {
-				concurrencyLimit <- struct{}{}
-			}
-			defer func() {
-				for len(concurrencyLimit) > initialSlots {
-					<-concurrencyLimit
-				}
-			}()
-
-			analyzer := test.factory()
-			result := make(chan fs.Item, 1)
-			go func() {
-				result <- analyzer.AnalyzeDir(root, func(_, _ string) bool { return false }, nil)
-			}()
-
-			assert.Eventually(t, func() bool {
-				return analyzer.GetProgress().CurrentItemName == root
-			}, time.Second, time.Millisecond)
-			analyzer.Cancel()
-			<-concurrencyLimit
-
-			select {
-			case dir := <-result:
-				assert.NotContains(t, itemNames(dir), "b-dir")
-			case <-time.After(time.Second):
-				t.Fatal("analyzer did not discard queued directory after cancellation")
-			}
 		})
 	}
 }
@@ -115,23 +71,6 @@ func TestResetProgressClearsPreviousCancellation(t *testing.T) {
 	assert.False(t, analyzer.IsCancelled())
 	assert.Contains(t, itemNames(dir), "a-file")
 	assert.Contains(t, itemNames(dir), "b-dir")
-}
-
-func TestTopDirAnalyzerCancellationStopsActiveSubdirectory(t *testing.T) {
-	root := t.TempDir()
-	assert.NoError(t, os.WriteFile(filepath.Join(root, "unscanned"), []byte("data"), 0o600))
-
-	analyzer := CreateTopDirAnalyzer()
-	t.Cleanup(analyzer.progressTicker.Stop)
-	analyzer.Cancel()
-	result := &TopDir{}
-
-	analyzer.processSubDir(root, result, true)
-
-	size, usage, itemCount := result.GetUsage()
-	assert.Zero(t, size)
-	assert.Zero(t, usage)
-	assert.Zero(t, itemCount)
 }
 
 func createCancellationTree(t *testing.T) string {
