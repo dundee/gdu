@@ -540,9 +540,9 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 		if a.Flags.OutputFile == "-" {
 			output = os.Stdout
 		} else {
-			output, err = os.OpenFile(a.Flags.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+			output, err = newOutputFile(a.Flags.OutputFile)
 			if err != nil {
-				return nil, fmt.Errorf("opening output file: %w", err)
+				return nil, err
 			}
 		}
 		ui = report.CreateExportUI(

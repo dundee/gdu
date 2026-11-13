@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -231,14 +230,13 @@ func (ui *UI) exportDir(dir fs.Item) error {
 	if _, err = buff.Write([]byte("]\n")); err != nil {
 		return err
 	}
-	if _, err = buff.WriteTo(ui.exportOutput); err != nil {
-		return err
+	_, err = buff.WriteTo(ui.exportOutput)
+	// closing finishes the export also after a failed write, which it then
+	// discards
+	if closer, ok := ui.exportOutput.(io.Closer); ok {
+		err = errors.Join(err, closer.Close())
 	}
-
-	if f, ok := ui.exportOutput.(*os.File); ok {
-		return f.Close()
-	}
-	return nil
+	return err
 }
 
 var progressRunes = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
