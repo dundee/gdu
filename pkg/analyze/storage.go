@@ -1,8 +1,6 @@
 package analyze
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"sync"
@@ -15,7 +13,7 @@ import (
 
 // storedFormat is the version of the records in the database. A database
 // holding records of another version has to be scanned again.
-const storedFormat = 1
+const storedFormat = 2
 
 // errStoredFormat is returned for a record of another format.
 var errStoredFormat = errors.New("the database was written by another version of gdu, scan again to replace it")
@@ -146,16 +144,13 @@ func (s *Storage) openLocked() {
 // storeRecord stores the record of the directory at path.
 func (s *Storage) storeRecord(path string, record *storedRecord) error {
 	record.Format = storedFormat
-	var value bytes.Buffer
-	if err := gob.NewEncoder(&value).Encode(record); err != nil {
-		return fmt.Errorf("encoding the record of %s: %w", path, err)
-	}
+	value := record.marshal()
 
 	s.checkCount()
 	s.m.RLock()
 	defer s.m.RUnlock()
 	return s.db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte(path), value.Bytes())
+		return txn.Set([]byte(path), value)
 	})
 }
 
@@ -172,7 +167,7 @@ func (s *Storage) loadRecord(path string) (*storedRecord, error) {
 			return fmt.Errorf("reading stored value for path %s: %w", path, err)
 		}
 		return item.Value(func(value []byte) error {
-			if gob.NewDecoder(bytes.NewReader(value)).Decode(record) != nil || record.Format != storedFormat {
+			if record.unmarshal(value) != nil || record.Format != storedFormat {
 				return errStoredFormat
 			}
 			return nil
