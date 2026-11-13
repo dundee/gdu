@@ -41,3 +41,12 @@ func dirInfoOwnUsage(info os.FileInfo) int64 {
 	}
 	return 0
 }
+
+// dirInfoDevice returns the device of a directory that has been stat'ed.
+func dirInfoDevice(info os.FileInfo) uint64 {
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		// Dev is int32 on some platforms
+		return uint64(stat.Dev)
+	}
+	return 0
+}

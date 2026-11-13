@@ -33,7 +33,7 @@ func TestStoredDirUpdateStatsLockedAccessors(t *testing.T) {
 
 	// updateStats is idempotent over a static tree, so the concurrent run must
 	// converge on the values a single-threaded run produces.
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 	wantCount, wantSize, wantUsage := dir.GetItemCount(), dir.GetSize(), dir.GetUsage()
 
 	const workers = 4
@@ -45,7 +45,7 @@ func TestStoredDirUpdateStatsLockedAccessors(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for range rounds {
-				dir.UpdateStats(make(fs.HardLinkedItems))
+				dir.UpdateStats(false)
 				runtime.Gosched()
 			}
 		}()
@@ -87,7 +87,7 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for range 5 {
-				dir.UpdateStats(make(fs.HardLinkedItems))
+				dir.UpdateStats(false)
 				readLockedStoredDir(dir)
 				runtime.Gosched()
 			}
@@ -113,7 +113,7 @@ func TestStoredDirGetFilesUnderCallerHeldReadLock(t *testing.T) {
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	done := make(chan int, 1)
 	go func() {

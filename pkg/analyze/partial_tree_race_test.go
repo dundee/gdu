@@ -52,8 +52,8 @@ func TestPartialTreeLockedAccessors(t *testing.T) {
 					Parent: child,
 				})
 				child.SetFlag('!')
-				child.UpdateStats(make(fs.HardLinkedItems))
-				root.UpdateStats(make(fs.HardLinkedItems))
+				child.UpdateStats(false)
+				root.UpdateStats(false)
 				runtime.Gosched()
 			}
 		}(round)
@@ -64,7 +64,7 @@ func TestPartialTreeLockedAccessors(t *testing.T) {
 			defer workers.Done()
 			<-start
 			for range mutationsPerRound {
-				root.UpdateStats(make(fs.HardLinkedItems))
+				root.UpdateStats(false)
 				runtime.Gosched()
 			}
 		}()
@@ -78,7 +78,7 @@ func TestPartialTreeLockedAccessors(t *testing.T) {
 		workers.Wait()
 	}
 
-	root.UpdateStats(make(fs.HardLinkedItems))
+	root.UpdateStats(false)
 	if got, want := root.GetItemCount(), int64(1+rounds*(mutationsPerRound+1)); got != want {
 		t.Fatalf("partial tree stats = %d, want %d", got, want)
 	}
@@ -108,7 +108,7 @@ func TestRemoveFileUpdatesAncestorsUnderTheirOwnLock(t *testing.T) {
 			Parent: child,
 		})
 	}
-	root.UpdateStats(make(fs.HardLinkedItems))
+	root.UpdateStats(false)
 
 	doomed := make(fs.Files, 0, fileCount)
 	for item := range child.GetFilesLocked(fs.SortByName, fs.SortAsc) {

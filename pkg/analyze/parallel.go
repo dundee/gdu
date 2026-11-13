@@ -59,7 +59,7 @@ func (treeSink) readDir(dir *Dir, path string, err error, entries int) {
 	defer dir.m.Unlock()
 	dir.Flag = getDirFlag(err, entries)
 	dir.Files = make(fs.Files, 0, entries)
-	dir.Mtime, dir.OwnUsage = dirStats(path)
+	dir.Mtime, dir.OwnUsage, dir.Dev = dirStats(path)
 }
 
 func (treeSink) resolveOptions(*Dir) resolveOptions {

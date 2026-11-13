@@ -306,9 +306,9 @@ func (ui *UI) enterPreview() {
 		return // nothing scanned yet
 	}
 
-	// compute aggregated sizes on the partial tree using a throwaway hard-link
-	// map so the running scan's accounting is left untouched
-	root.UpdateStats(make(fs.HardLinkedItems))
+	// compute the totals of the partial tree, a copy, so the running scan is
+	// left untouched
+	root.UpdateStats(false)
 
 	ui.previewing = true
 	ui.previewSavedDir = ui.currentDir

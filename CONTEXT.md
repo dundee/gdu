@@ -46,6 +46,14 @@ The part of a file's disk usage that it does not share with any other file
 free. When asked for, it takes the place of disk usage everywhere disk usage
 is shown. The rest of the file's data is its **shared size**.
 
+## Hard-linked file
+
+A file reachable through several links, identified by its device and inode
+number together, as inode numbers repeat across filesystems. Every link is an
+item of its own, but the file's size and disk usage are counted once in the
+totals, through the first link met. Removing a link frees nothing while
+another is left; the file is then counted through the next one.
+
 ## Displayed item count
 
 The number of items a row reports.

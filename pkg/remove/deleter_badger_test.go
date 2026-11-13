@@ -21,7 +21,7 @@ func scanBadger(t *testing.T, root string, archives bool) (fs.Item, string) {
 	db := filepath.Join(t.TempDir(), "gdu.badger")
 	analyzer := analyze.CreateStoredAnalyzer(db)
 	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{ArchiveBrowsing: archives})
-	tree.UpdateStats(make(fs.HardLinkedItems))
+	tree.UpdateStats(false)
 	return tree, db
 }
 

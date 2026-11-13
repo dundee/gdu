@@ -350,12 +350,12 @@ func TestHardLinksCountedOnce(t *testing.T) {
 		IgnoreFile:    func(_ string) bool { return false },
 		ExclusiveSize: true,
 	})
-	root.UpdateStats(make(fs.HardLinkedItems))
+	root.UpdateStats(false)
 
 	// same figure as the plain analyzer, which counts a hard link once
 	plain := CreateSeqAnalyzer()
 	plainRoot := plain.AnalyzeDir(context.Background(), dir, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
-	plainRoot.UpdateStats(make(fs.HardLinkedItems))
+	plainRoot.UpdateStats(false)
 
 	assert.Equal(t, plainRoot.GetUsage(), root.GetUsage())
 	assert.Equal(t, allocated(t, a)+dirOwnUsage(dir), root.GetUsage())
@@ -398,7 +398,7 @@ func TestAnalyzersMeasureHardLinkedFileOnce(t *testing.T) {
 			calls := fakeFiemap(t, mapExtents(fiemapExtent{length: 4096, flags: fiemapExtentLast}))
 
 			root := scan(dir)
-			root.UpdateStats(make(fs.HardLinkedItems))
+			root.UpdateStats(false)
 
 			assert.Equal(t, 1, *calls, "the second link is not measured")
 			assert.Equal(t, int64(4096), root.GetUsage()-dirOwnUsage(dir)-dirOwnUsage(sub))
@@ -420,7 +420,7 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 	run := func(name string, exclusive bool, scan func() fs.Item) int64 {
 		t.Helper()
 		root := scan()
-		root.UpdateStats(make(fs.HardLinkedItems))
+		root.UpdateStats(false)
 		var usage int64
 		for f := range root.GetFiles(fs.SortByName, fs.SortAsc) {
 			usage += f.GetUsage()
@@ -597,7 +597,7 @@ func TestEveryAnalyzerUsesExclusiveSizeWithFakeKernel(t *testing.T) {
 
 			a := tc.analyzer(t)
 			root := a.AnalyzeDir(context.Background(), dir, common.ScanOptions{ExclusiveSize: true})
-			root.UpdateStats(make(fs.HardLinkedItems))
+			root.UpdateStats(false)
 
 			assert.Equal(t, 2*4096+dirOwnUsage(dir)+dirOwnUsage(sub), root.GetUsage())
 			if tc.name == "top-dir" {

@@ -487,7 +487,7 @@ func TestSqliteItemGetItemStats(t *testing.T) {
 	item, err := storage.GetItemByID(id)
 	assert.NoError(t, err)
 
-	count, size, usage := item.GetItemStats(make(fs.HardLinkedItems), false)
+	count, size, usage := item.GetItemStats(fs.NewHardLinks(), false)
 	assert.Equal(t, int64(5), count)
 	assert.Equal(t, int64(1000), size)
 	assert.Equal(t, int64(2000), usage)
@@ -506,7 +506,7 @@ func TestSqliteItemUpdateStats(t *testing.T) {
 	assert.NoError(t, err)
 
 	// UpdateStats is a no-op for SqliteItem
-	item.UpdateStats(make(fs.HardLinkedItems))
+	item.UpdateStats(false)
 	// Just verify it doesn't panic
 }
 
@@ -1053,7 +1053,7 @@ func TestSqliteAnalyzerScansEvenWithStoredAnalysis(t *testing.T) {
 	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("new"), 0o600))
 
 	rescanned := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreDir: noIgnore})
-	rescanned.UpdateStats(make(fs.HardLinkedItems))
+	rescanned.UpdateStats(false)
 	assert.Equal(t, int64(6), rescanned.GetItemCount())
 
 	nested := analyzer.AnalyzeDir(context.Background(), "test_dir/nested", common.ScanOptions{IgnoreDir: noIgnore})

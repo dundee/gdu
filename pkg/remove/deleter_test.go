@@ -38,7 +38,7 @@ func scanTree(t *testing.T, root string, archives bool) fs.Item {
 	t.Helper()
 	analyzer := analyze.CreateAnalyzer()
 	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{ArchiveBrowsing: archives})
-	tree.UpdateStats(make(fs.HardLinkedItems))
+	tree.UpdateStats(false)
 	return tree
 }
 

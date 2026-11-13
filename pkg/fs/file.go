@@ -42,9 +42,13 @@ type Item interface {
 	SetParent(Item)
 	GetMultiLinkedInode() uint64
 	EncodeJSON(writer io.Writer, topLevel bool, attributes JSONAttributes) error
-	GetItemStats(linkedItems HardLinkedItems, filteringFiles bool) (itemCount int64, size, usage int64)
-	UpdateStats(linkedItems HardLinkedItems)
-	UpdateStatsWithFileFiltering(linkedItems HardLinkedItems)
+	// GetItemStats computes the totals of the item, counting the hard-linked
+	// files of its tree in links, and returns them.
+	GetItemStats(links *HardLinks, filteringFiles bool) (itemCount int64, size, usage int64)
+	// UpdateStats computes the totals of the tree topped by the item and
+	// returns the index of its hard-linked files. filteringFiles tells the
+	// totals that the scan left out files by their name or mtime.
+	UpdateStats(filteringFiles bool) *HardLinks
 	AddFile(Item)
 	GetFiles(SortBy, SortOrder) iter.Seq[Item]
 	GetFilesLocked(SortBy, SortOrder) iter.Seq[Item]
@@ -62,9 +66,6 @@ type SymlinkItem interface {
 
 // Files - slice of pointers to File
 type Files []Item
-
-// HardLinkedItems maps inode number to array of all hard linked items
-type HardLinkedItems map[uint64]Files
 
 // IndexOf searches File in Files and returns its index
 func (f Files) IndexOf(file Item) (int, bool) {

@@ -46,7 +46,7 @@ func TestStoredDirUpdateStats(t *testing.T) {
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 }
 
 func TestStoredDirUpdateStatsWithMtimeUpdate(t *testing.T) {
@@ -66,7 +66,7 @@ func TestStoredDirUpdateStatsWithMtimeUpdate(t *testing.T) {
 	}
 	dir.AddFile(file)
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 }
 
 func TestStoredDirUpdateStatsWithFlagUpdate(t *testing.T) {
@@ -86,7 +86,7 @@ func TestStoredDirUpdateStatsWithFlagUpdate(t *testing.T) {
 	}
 	dir.AddFile(file)
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 	// Just test that UpdateStats runs without error
 	// The flag behavior depends on the specific implementation
 }
@@ -108,7 +108,7 @@ func TestStoredDirUpdateStatsWithDotFlag(t *testing.T) {
 	}
 	dir.AddFile(file)
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 	assert.Equal(t, '.', dir.Flag)
 }
 

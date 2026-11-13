@@ -56,7 +56,7 @@ func TestPreviewWhileScanning(t *testing.T) {
 			default:
 			}
 			if cur := analyzer.GetCurrentDir(); cur != nil {
-				cur.UpdateStats(make(fs.HardLinkedItems))
+				cur.UpdateStats(false)
 				var total int64
 				for item := range cur.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
 					total += item.GetSize()
@@ -70,7 +70,7 @@ func TestPreviewWhileScanning(t *testing.T) {
 	close(stop)
 	wg.Wait()
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 	assert.Equal(t, root, dir.GetPath())
 	// 40 dirs * (20 files + nested dir with 20 files) + nested dirs + root
 	assert.Greater(t, dir.GetItemCount(), int64(40*40))
@@ -91,8 +91,8 @@ func TestCurrentDirSnapshotCannotOverwriteLiveStats(t *testing.T) {
 
 	snapshot := analyzer.GetCurrentDir()
 	live.AddFile(&File{Name: "complete", Size: 7, Usage: 5, Parent: live})
-	live.UpdateStats(make(fs.HardLinkedItems))
-	snapshot.UpdateStats(make(fs.HardLinkedItems))
+	live.UpdateStats(false)
+	snapshot.UpdateStats(false)
 
 	assert.Equal(t, int64(7), live.GetSize())
 	assert.Equal(t, int64(5), live.GetUsage())
@@ -119,7 +119,7 @@ func TestCurrentDirSnapshotKeepsDirOwnUsage(t *testing.T) {
 	analyzer := CreateAnalyzer()
 	analyzer.setCurrentDir(live)
 	snapshot := analyzer.GetCurrentDir()
-	snapshot.UpdateStats(make(fs.HardLinkedItems))
+	snapshot.UpdateStats(false)
 
 	assert.Equal(t, int64(3*4096), snapshot.GetUsage())
 }
