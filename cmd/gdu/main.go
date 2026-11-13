@@ -284,9 +284,8 @@ func runE(command *cobra.Command, args []string) error {
 
 	istty := isatty.IsTerminal(os.Stdout.Fd())
 
-	// disk usage is only partially available on Windows (compressed, sparse
-	// and OneDrive files) and not at all on Plan9, so show apparent size
-	if runtime.GOOS == osWindows || runtime.GOOS == osPlan9 {
+	// disk usage is not available on Plan9, so show apparent size
+	if runtime.GOOS == osPlan9 {
 		af.ShowApparentSize = true
 	}
 
