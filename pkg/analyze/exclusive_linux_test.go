@@ -314,13 +314,6 @@ func TestAnalyzersRecordSharedUsage(t *testing.T) {
 			a.GetDone().Wait()
 			return r
 		},
-		"stable-order": func(exclusive bool) fs.Item {
-			a := CreateStableOrderAnalyzer()
-			a.SetExclusiveSize(exclusive)
-			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
-			a.GetDone().Wait()
-			return r
-		},
 	}
 	for name, scan := range scanners {
 		t.Run(name, func(t *testing.T) {
@@ -453,13 +446,6 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 			a, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = a.storage.Close() })
-			a.SetExclusiveSize(exclusive)
-			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
-			a.GetDone().Wait()
-			return r
-		},
-		"stable-order": func(exclusive bool) fs.Item {
-			a := CreateStableOrderAnalyzer()
 			a.SetExclusiveSize(exclusive)
 			r := a.AnalyzeDir(dir, ignoreDir, ignoreFile)
 			a.GetDone().Wait()

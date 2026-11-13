@@ -20,6 +20,10 @@ _analyzer_, _Item_, _Dir_, _storage strategy_, _hard-link tracker_.
 
 **Strength: Strong**
 
+**Status: Partly done.** Every analyzer resolves its files through
+`BaseAnalyzer.resolveFile` (`pkg/analyze/entry.go`), and the stable-order analyzer
+is gone. The directory traversal, preview and progress are still per analyzer.
+
 - **Files:** `pkg/analyze/parallel.go:30`, `sequential.go:25`, `parallel_stable.go:25`,
   `stored.go:33`, `parallel_top_dir.go:40`, `sqlite.go:896` (six `AnalyzeDir` +
   `processDir` implementations); prototype already in `sqlite.go:983` (`processFile`)
@@ -116,6 +120,10 @@ _analyzer_, _Item_, _Dir_, _storage strategy_, _hard-link tracker_.
 ## P4 — Consolidate hard-link "count once" into one tracker module
 
 **Strength: Worth exploring**
+
+**Status: Partly done.** Analyzers that total during the scan (top-dir, SQLite) share
+`linkTracker` (`pkg/analyze/hardlinks.go`), keyed by device and inode. The in-memory
+tree still counts through `alreadyCounted` and `fileFlagMu`, keyed by inode alone.
 
 - **Files:** `analyze/file.go:108` (`alreadyCounted`, package-global `fileFlagMu`),
   `analyze/parallel_top_dir.go:237` (`sync.Map`), `analyze/sqlite.go:1028`

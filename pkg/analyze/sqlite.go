@@ -20,13 +20,12 @@ import (
 
 // SqliteStorage represents SQLite database storage
 type SqliteStorage struct {
-	db           *sql.DB
-	dbPath       string
-	m            sync.RWMutex
-	tx           *sql.Tx
-	insertStmt   *sql.Stmt
-	updateStmt   *sql.Stmt
-	hasInodeStmt *sql.Stmt
+	db         *sql.DB
+	dbPath     string
+	m          sync.RWMutex
+	tx         *sql.Tx
+	insertStmt *sql.Stmt
+	updateStmt *sql.Stmt
 }
 
 // NewSqliteStorage creates a new SQLite storage and initializes the schema
@@ -83,7 +82,6 @@ func (s *SqliteStorage) createTables() error {
 
 	CREATE INDEX IF NOT EXISTS idx_items_parent_id ON items(parent_id);
 	CREATE INDEX IF NOT EXISTS idx_items_parent_name ON items(parent_id, name);
-	CREATE INDEX IF NOT EXISTS idx_items_mli ON items(mli) WHERE mli != 0;
 
 	CREATE TABLE IF NOT EXISTS metadata (
 		key   TEXT PRIMARY KEY,
@@ -146,19 +144,6 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 		return err
 	}
 
-	s.hasInodeStmt, err = tx.Prepare(
-		`SELECT 1 FROM items WHERE mli = ? LIMIT 1`,
-	)
-	if err != nil {
-		s.insertStmt.Close()
-		s.updateStmt.Close()
-		rollbackErr := tx.Rollback()
-		if rollbackErr != nil {
-			log.Errorf("failed to rollback transaction: %v", rollbackErr)
-		}
-		return err
-	}
-
 	return nil
 }
 
@@ -174,10 +159,6 @@ func (s *SqliteStorage) EndBulkInsert() error {
 	if s.updateStmt != nil {
 		s.updateStmt.Close()
 		s.updateStmt = nil
-	}
-	if s.hasInodeStmt != nil {
-		s.hasInodeStmt.Close()
-		s.hasInodeStmt = nil
 	}
 	if s.tx != nil {
 		err := s.tx.Commit()
@@ -198,22 +179,6 @@ func (s *SqliteStorage) HasData() bool {
 		return false
 	}
 	return rowid > 0
-}
-
-// HasInode returns true if a file with the given inode already exists in the database
-func (s *SqliteStorage) HasInode(mli uint64) bool {
-	var exists int
-	var err error
-
-	if s.hasInodeStmt != nil {
-		err = s.hasInodeStmt.QueryRow(mli).Scan(&exists)
-	} else {
-		s.m.RLock()
-		err = s.db.QueryRow(`SELECT 1 FROM items WHERE mli = ? LIMIT 1`, mli).Scan(&exists)
-		s.m.RUnlock()
-	}
-
-	return err == nil
 }
 
 // GetRootItem returns the root item (item with no parent)
@@ -846,6 +811,7 @@ type SqliteAnalyzer struct {
 	BaseAnalyzer
 	storage   *SqliteStorage
 	dbWriteMu sync.Mutex
+	links     linkTracker
 }
 
 // insertItemLocked is a serialized wrapper around storage.InsertItem.
@@ -865,13 +831,6 @@ func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, flag 
 	a.dbWriteMu.Lock()
 	defer a.dbWriteMu.Unlock()
 	return a.storage.UpdateItem(id, size, usage, itemCount, flag)
-}
-
-// hasInodeLocked is a serialized wrapper around storage.HasInode.
-func (a *SqliteAnalyzer) hasInodeLocked(mli uint64) bool {
-	a.dbWriteMu.Lock()
-	defer a.dbWriteMu.Unlock()
-	return a.storage.HasInode(mli)
 }
 
 // CreateSqliteAnalyzer creates a new SQLite analyzer
@@ -916,6 +875,7 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 ) fs.Item {
 	a.ignoreDir = ignore
 	a.ignoreFileType = fileTypeFilter
+	a.links.reset()
 
 	// Clear existing data and store metadata
 	err := a.storage.ClearItems()
@@ -948,102 +908,6 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 	a.doneChan.Broadcast()
 
 	return rootItem
-}
-
-// fileStat holds stats for a single file entry computed by processFile.
-type fileStat struct {
-	size      int64
-	usage     int64
-	itemCount int64
-	mli       uint64
-	flag      rune
-	// archiveDir is non-nil when the file is an archive that was expanded.
-	archiveDir *Dir
-}
-
-// processArchiveEntry tries to expand name/entryPath as a zip or tar archive.
-// Returns the archive *Dir on success, or nil on failure (in which case err is set).
-func (a *SqliteAnalyzer) processArchiveEntry(entryPath, name string, info os.FileInfo) (*Dir, error) {
-	if isZipFile(name) {
-		archiveDirZip, errZip := processZipFile(entryPath, info)
-		if errZip != nil {
-			return nil, errZip
-		}
-		uncompressedSize, compressedSize, errSize := getZipFileSize(entryPath)
-		if errSize == nil {
-			archiveDirZip.Size = uncompressedSize
-			archiveDirZip.Usage = compressedSize
-		}
-		return archiveDirZip.Dir, nil
-	}
-	archiveDirTar, errTar := processTarFile(entryPath, info)
-	if errTar != nil {
-		return nil, errTar
-	}
-	return archiveDirTar.Dir, nil
-}
-
-// processFile resolves a single non-directory entry and returns its stats.
-// It returns nil when the file should be skipped entirely.
-func (a *SqliteAnalyzer) processFile(entryPath, name string, f os.DirEntry) (stat fileStat) {
-	if a.ignoreFileType != nil && a.ignoreFileType(name) {
-		return stat
-	}
-
-	info, err := f.Info()
-	if err != nil {
-		log.Print(err.Error())
-		return stat
-	}
-
-	if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-		infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
-		if err != nil {
-			log.Print(err.Error())
-			return stat
-		}
-		if infoF != nil {
-			info = infoF
-		}
-	}
-
-	if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-		return stat
-	}
-
-	if a.archiveBrowsing && (isZipFile(name) || isTarFile(name)) {
-		archiveDir, err := a.processArchiveEntry(entryPath, name, info)
-		if err != nil {
-			log.Printf("Failed to process archive %s: %v", entryPath, err)
-		} else {
-			return fileStat{
-				size:       archiveDir.Size,
-				usage:      archiveDir.Usage,
-				itemCount:  archiveDir.ItemCount,
-				flag:       archiveDir.Flag,
-				archiveDir: archiveDir,
-			}
-		}
-	}
-
-	fileSize := info.Size()
-	fileUsage, fileMli := getSyscallStats(info, entryPath)
-	fileFlag := getFlag(info)
-
-	if fileMli != 0 && a.hasInodeLocked(fileMli) {
-		fileSize = 0
-		fileUsage = 0
-		fileFlag = 'H'
-	} else {
-		fileUsage, _ = a.MeasureSharedUsage(entryPath, info, fileUsage)
-	}
-
-	return fileStat{
-		size:  fileSize,
-		usage: fileUsage,
-		mli:   fileMli,
-		flag:  fileFlag,
-	}
 }
 
 // nolint:funlen
@@ -1118,10 +982,9 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 		if a.IsCancelled() {
 			break
 		}
-		name := f.Name()
-		entryPath := filepath.Join(path, name)
-
 		if f.IsDir() {
+			name := f.Name()
+			entryPath := filepath.Join(path, name)
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
@@ -1134,65 +997,70 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 			continue
 		}
 
-		info, err := f.Info()
+		entry, ok, err := a.resolveFile(path, f, resolveOptions{browseArchives: true, links: &a.links})
 		if err != nil {
 			log.Print(err.Error())
+			dirFlag = '!'
+			continue
+		}
+		if !ok {
 			continue
 		}
 
-		stat := a.processFile(entryPath, name, f)
-		if stat == (fileStat{}) {
-			continue
-		}
-
-		if stat.archiveDir != nil {
+		if entry.archive != nil {
+			archive := entry.archive
 			archiveID, err := a.insertItemLocked(
 				&dirID,
-				name,
+				entry.name,
 				true,
-				stat.archiveDir.Size,
-				stat.archiveDir.Usage,
-				info.ModTime(),
-				stat.archiveDir.ItemCount,
+				archive.GetSize(),
+				archive.GetUsage(),
+				entry.info.ModTime(),
+				archive.GetItemCount(),
 				0,
-				stat.archiveDir.Flag,
+				archive.GetFlag(),
 			)
 			if err != nil {
 				log.Print(err.Error())
 				continue
 			}
-			a.persistArchive(stat.archiveDir, archiveID)
+			a.persistArchive(archive, archiveID)
 
-			totals.size += stat.size
-			totals.usage += stat.usage
-			totals.itemCount += stat.itemCount
+			totals.size += archive.GetSize()
+			totals.usage += archive.GetUsage()
+			totals.itemCount += archive.GetItemCount()
 			totals.entries++
-			filesSize += stat.usage
+			filesSize += archive.GetUsage()
 			continue
 		}
 
+		// a file met through another hard link before is counted there
+		size, usage := entry.info.Size(), entry.usage
+		if entry.duplicate {
+			size, usage = 0, 0
+		}
 		_, err = a.insertItemLocked(
 			&dirID,
-			name,
+			entry.name,
 			false,
-			stat.size,
-			stat.usage,
-			info.ModTime(),
+			size,
+			usage,
+			entry.info.ModTime(),
 			1,
-			stat.mli,
-			stat.flag,
+			entry.link.ino,
+			entry.flag,
 		)
 		if err != nil {
 			log.Print(err.Error())
 			continue
 		}
 
-		totals.size += stat.size
-		totals.usage += stat.usage
+		totals.size += size
+		totals.usage += usage
 		totals.itemCount++
 		totals.entries++
 		totals.hasFiles = true
-		filesSize += stat.usage
+		filesSize += usage
 	}
 
 	// Release the concurrency slot before draining subDirChan so children
@@ -1245,7 +1113,10 @@ func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
 	}
 }
 
-func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
+// persistArchive stores the entries of a browsed archive, or of a directory
+// in one, under parentID.
+func (a *SqliteAnalyzer) persistArchive(archive fs.Item, parentID int64) {
+	archiveDir := archiveDirOf(archive)
 	if archiveDir == nil {
 		return
 	}
@@ -1254,18 +1125,6 @@ func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
 			return
 		}
 		if f.IsDir() {
-			var subDir *Dir
-			switch v := f.(type) {
-			case *ZipDir:
-				subDir = v.Dir
-			case *TarDir:
-				subDir = v.Dir
-			}
-
-			if subDir == nil {
-				continue
-			}
-
 			id, err := a.insertItemLocked(
 				&parentID,
 				f.GetName(),
@@ -1281,7 +1140,7 @@ func (a *SqliteAnalyzer) persistArchive(archiveDir *Dir, parentID int64) {
 				log.Print(err.Error())
 				continue
 			}
-			a.persistArchive(subDir, id)
+			a.persistArchive(f, id)
 		} else {
 			_, err := a.insertItemLocked(
 				&parentID,

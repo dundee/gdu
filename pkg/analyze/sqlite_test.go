@@ -232,45 +232,6 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 	assert.Len(t, children, 100)
 }
 
-func TestSqliteStorageHasInode(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
-
-	// No inode initially
-	assert.False(t, storage.HasInode(12345))
-
-	// Insert item with inode
-	_, err = storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), 1, 12345, 'H')
-	assert.NoError(t, err)
-
-	// Now inode exists
-	assert.True(t, storage.HasInode(12345))
-	assert.False(t, storage.HasInode(99999))
-}
-
-func TestSqliteStorageHasInodeBulkMode(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
-
-	err = storage.BeginBulkInsert()
-	assert.NoError(t, err)
-
-	// Insert item with inode in bulk mode
-	_, err = storage.InsertItem(nil, "file", false, 100, 4096, time.Now(), 1, 12345, 'H')
-	assert.NoError(t, err)
-
-	// Check inode during bulk mode (uses prepared statement)
-	assert.True(t, storage.HasInode(12345))
-	assert.False(t, storage.HasInode(99999))
-
-	err = storage.EndBulkInsert()
-	assert.NoError(t, err)
-}
-
 func TestSqliteItemGetPath(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	storage, err := NewSqliteStorage(dbPath)

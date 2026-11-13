@@ -142,7 +142,6 @@ func TestAnalyzersMarkFilesystemErrors(t *testing.T) {
 		new  func() common.Analyzer
 	}{
 		{name: "parallel", new: func() common.Analyzer { return CreateAnalyzer() }},
-		{name: "stable parallel", new: func() common.Analyzer { return CreateStableOrderAnalyzer() }},
 		{name: "sequential", new: func() common.Analyzer { return CreateSeqAnalyzer() }},
 	}
 

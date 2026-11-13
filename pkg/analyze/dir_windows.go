@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -52,24 +51,19 @@ func getCompressedFileSize(path string) (int64, error) {
 	return int64(high)<<32 | int64(uint32(low)), nil
 }
 
-func getPlatformSpecificUsageAndMli(info os.FileInfo, path string) (usage int64, ino uint64) {
+// fileStats returns the disk usage of the file described by info. Hard links
+// are not identified on Windows.
+func fileStats(info os.FileInfo, path string) (usage int64, link inodeKey) {
 	if isRecallFile(info) {
-		return 0, 0
+		return 0, link
 	}
 	// Only compressed and sparse files are worth the extra syscall, which follows symlinks
 	if info.Mode()&os.ModeSymlink == 0 && isCompressedOrSparseFile(info) {
 		if size, err := getCompressedFileSize(path); err == nil {
-			return size, 0
+			return size, link
 		}
 	}
-	return info.Size(), 0 // No block info on Windows, use apparent size
-}
-
-func setPlatformSpecificAttrs(file *File, f os.FileInfo, path string) {
-	if stat, ok := f.Sys().(*syscall.Win32FileAttributeData); ok {
-		file.Mtime = time.Unix(0, stat.LastWriteTime.Nanoseconds())
-	}
-	file.Usage, _ = getPlatformSpecificUsageAndMli(f, path)
+	return info.Size(), link // No block info on Windows, use apparent size
 }
 
 func setDirPlatformSpecificAttrs(dir *Dir, path string) {
@@ -89,9 +83,4 @@ func dirOwnUsage(string) int64 {
 // dirInfoOwnUsage is dirOwnUsage for a directory that has already been stat'ed.
 func dirInfoOwnUsage(os.FileInfo) int64 {
 	return 0
-}
-
-// getSyscallStats extracts usage and inode info from os.FileInfo using syscall
-func getSyscallStats(info os.FileInfo, path string) (usage int64, mli uint64) {
-	return getPlatformSpecificUsageAndMli(info, path)
 }

@@ -68,10 +68,7 @@ func addSubDir(parent, child *Dir) {
 
 func (a *ParallelAnalyzer) processDir(path string) *Dir {
 	var (
-		file       fs.Item
-		err        error
 		totalUsage int64
-		info       os.FileInfo
 		subDirChan = make(chan *Dir)
 		dirCount   int
 	)
@@ -97,101 +94,18 @@ func (a *ParallelAnalyzer) processDir(path string) *Dir {
 		if a.IsCancelled() {
 			break
 		}
-		name := f.Name()
-		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
+			name := f.Name()
+			entryPath := filepath.Join(path, name)
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
 			dirCount++
 
 			go a.processQueuedDir(entryPath, dir, subDirChan)
-		} else {
-			// Apply file type filter if set
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
-				continue // Skip this file
-			}
-
-			info, err = f.Info()
-			if err != nil {
-				log.Print(err.Error())
-				dir.SetFlag('!')
-				continue
-			}
-
-			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
-				if err != nil {
-					log.Print(err.Error())
-					dir.SetFlag('!')
-					continue
-				}
-				if infoF != nil {
-					info = infoF
-				}
-			}
-
-			symlinkTarget := readSymlinkTarget(f.Type(), entryPath)
-
-			// Apply time filter if set
-			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-				continue // Skip this file
-			}
-
-			switch {
-			case a.archiveBrowsing && isZipFile(name):
-				zipDir, err := processZipFile(entryPath, info)
-				if err != nil {
-					log.Printf("Failed to process zip file %s: %v", entryPath, err)
-					file = &File{
-						Name:   name,
-						Flag:   getFlag(info),
-						Size:   info.Size(),
-						Parent: dir,
-					}
-				} else {
-					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
-					if err == nil {
-						zipDir.Size = uncompressedSize
-						zipDir.Usage = compressedSize
-					}
-					zipDir.Parent = dir
-					file = zipDir
-				}
-			case a.archiveBrowsing && isTarFile(name):
-				tarDir, err := processTarFile(entryPath, info)
-				if err != nil {
-					log.Printf("Failed to process tar file %s: %v", entryPath, err)
-					file = &File{
-						Name:   name,
-						Flag:   getFlag(info),
-						Size:   info.Size(),
-						Parent: dir,
-					}
-				} else {
-					tarDir.Parent = dir
-					file = tarDir
-				}
-			default:
-				file = &File{
-					Name:    name,
-					Flag:    getFlag(info),
-					Size:    info.Size(),
-					Parent:  dir,
-					Symlink: symlinkTarget,
-				}
-			}
-
-			if file != nil {
-				// Only set platform-specific attributes for regular files
-				if regularFile, ok := file.(*File); ok {
-					setPlatformSpecificAttrs(regularFile, info, entryPath)
-					regularFile.Usage, regularFile.SharedUsage = a.MeasureSharedUsage(entryPath, info, regularFile.Usage)
-				}
-				totalUsage += file.GetUsage()
-				dir.AddFile(file)
-			}
+			continue
 		}
+		totalUsage += a.addFile(dir, path, f)
 	}
 
 	go func() {

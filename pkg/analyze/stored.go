@@ -93,9 +93,9 @@ func (a *StoredAnalyzer) processDir(path string, parent fs.Item) *StoredDir {
 		if a.IsCancelled() {
 			break
 		}
-		name := f.Name()
-		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
+			name := f.Name()
+			entryPath := filepath.Join(path, name)
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
@@ -112,7 +112,7 @@ func (a *StoredAnalyzer) processDir(path string, parent fs.Item) *StoredDir {
 			continue
 		}
 
-		totalUsage += a.processFile(dir, entryPath, f)
+		totalUsage += a.processFile(dir, path, f)
 	}
 
 	err = a.storage.storeRecord(path, dir.record())
@@ -129,83 +129,27 @@ func (a *StoredAnalyzer) processDir(path string, parent fs.Item) *StoredDir {
 	return dir
 }
 
-// processFile adds the entry f of dir, lying at path, unless it is filtered
-// out, and returns its disk usage.
-func (a *StoredAnalyzer) processFile(dir *StoredDir, path string, f os.DirEntry) int64 {
-	name := f.Name()
-	if a.ignoreFileType != nil && a.ignoreFileType(name) {
-		return 0
-	}
-
-	info, err := f.Info()
+// processFile adds the entry f of dir, which lies at dirPath, unless a
+// filter excludes it, and returns the disk usage it added.
+func (a *StoredAnalyzer) processFile(dir *StoredDir, dirPath string, f os.DirEntry) int64 {
+	entry, ok, err := a.resolveFile(dirPath, f, resolveOptions{browseArchives: true})
 	if err != nil {
 		log.Print(err.Error())
+		dir.SetFlag('!')
 		return 0
 	}
-
-	if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-		infoF, err := followSymlink(path, a.gitAnnexedSize)
-		if err != nil {
-			log.Print(err.Error())
-			return 0
-		}
-		if infoF != nil {
-			info = infoF
-		}
-	}
-
-	symlinkTarget := readSymlinkTarget(f.Type(), path)
-
-	if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+	if !ok {
 		return 0
 	}
-
-	if archive := a.processArchive(path, name, info); archive != nil {
-		a.storeArchive(archive, path)
+	if entry.archive != nil {
+		path := filepath.Join(dirPath, entry.name)
+		a.storeArchive(entry.archive, path)
 		dir.Dir.AddFile(newStoredDir(a.storage, path, dir))
-		return archive.GetUsage()
+		return entry.archive.GetUsage()
 	}
-
-	file := &File{
-		Name:    name,
-		Flag:    getFlag(info),
-		Size:    info.Size(),
-		Parent:  dir,
-		Symlink: symlinkTarget,
-	}
-	setPlatformSpecificAttrs(file, info, path)
-	file.Usage, file.SharedUsage = a.MeasureSharedUsage(path, info, file.Usage)
+	file := entry.item(dir)
 	dir.Dir.AddFile(file)
-	return file.Usage
-}
-
-// processArchive reads the archive at path when archive browsing is on, and
-// returns nil when it is off, path is not an archive, or reading it failed.
-func (a *StoredAnalyzer) processArchive(path, name string, info os.FileInfo) fs.Item {
-	if !a.archiveBrowsing {
-		return nil
-	}
-	switch {
-	case isZipFile(name):
-		zipDir, err := processZipFile(path, info)
-		if err != nil {
-			log.Printf("Failed to process zip file %s: %v", path, err)
-			return nil
-		}
-		if uncompressed, compressed, err := getZipFileSize(path); err == nil {
-			zipDir.Size = uncompressed
-			zipDir.Usage = compressed
-		}
-		return zipDir
-	case isTarFile(name):
-		tarDir, err := processTarFile(path, info)
-		if err != nil {
-			log.Printf("Failed to process tar file %s: %v", path, err)
-			return nil
-		}
-		return tarDir
-	}
-	return nil
+	return file.GetUsage()
 }
 
 // storeArchive stores the directories of a browsed archive lying at path, so
