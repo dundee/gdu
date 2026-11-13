@@ -43,7 +43,7 @@ type UI struct {
 	pages                   *tview.Pages
 	progress                *tview.TextView
 	progressBar             *ProgressBar
-	status                  *tview.TextView
+	statusOverlay           *deletionStatusOverlay
 	help                    *tview.Flex
 	table                   *tview.Table
 	filteringInput          *tview.InputField
@@ -79,11 +79,14 @@ type UI struct {
 	selectedBackgroundColor tcell.Color
 	markedTextColor         tcell.Color
 	markedBackgroundColor   tcell.Color
+	queuedTextColor         tcell.Color
 	currentItemNameMaxLen   int
 	activeWorkers           int
 	deleteWorkersCount      int
-	statusMut               sync.RWMutex
+	deletionMut             sync.RWMutex
 	workersMut              sync.Mutex
+	queuedMut               sync.Mutex
+	queuedDeletions         map[string]struct{}
 	askBeforeDelete         bool
 	showItemCount           bool
 	showSymlinkTarget       bool
@@ -99,6 +102,7 @@ type UI struct {
 	noSpawnShell            bool
 	shellBin                string
 	deleteInBackground      bool
+	activeDeletion          *deletionJob
 	timeFilter              *timefilter.TimeFilter
 	timeFilterLoc           *time.Location
 	noDeleteWithFilter      bool
@@ -123,6 +127,28 @@ type deleteQueueItem struct {
 	target  deleteTarget
 	action  DeleteAction
 	deleter itemDeleter
+}
+
+// deletionProgress is the modal of a foreground deletion. It can be hidden so
+// that the user can keep browsing while the deletion continues in the
+// background of the UI, and shown again to watch it finish.
+type deletionProgress struct {
+	page   string
+	modal  *tview.Modal
+	hidden bool
+}
+
+// deletionJob runs a foreground deletion and accepts more items while it is
+// running, so deletions issued with the dialog hidden are queued behind the
+// current ones instead of starting another dialog.
+type deletionJob struct {
+	ui          *UI
+	progress    *deletionProgress
+	mut         sync.Mutex
+	pending     []deleteQueueItem
+	running     bool
+	closed      bool
+	currentPath string
 }
 
 // ResultRow is a struct for a row in the result table
@@ -165,6 +191,7 @@ func CreateUI(
 		selectedBackgroundColor: tview.Styles.MoreContrastBackgroundColor,
 		markedTextColor:         tview.Styles.PrimaryTextColor,
 		markedBackgroundColor:   tview.Styles.ContrastBackgroundColor,
+		queuedTextColor:         tcell.ColorGray,
 		currentItemNameMaxLen:   70,
 		defaultSortBy:           "size",
 		defaultSortOrder:        "desc",
@@ -233,7 +260,8 @@ func CreateUI(
 		AddPage("background", ui.grid, true, true)
 	ui.pages.SetBackgroundColor(tcell.ColorDefault)
 
-	ui.app.SetRoot(ui.pages, true)
+	ui.statusOverlay = newDeletionStatusOverlay(ui.pages, ui.UseColors)
+	ui.app.SetRoot(ui.statusOverlay, true)
 
 	return ui
 }
@@ -586,7 +614,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 				sortBy, sortOrder := ui.getSortParams()
 				index := -1
 				i := 0
-				for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
+				for item := range ui.currentDir.GetFilesLocked(sortBy, sortOrder) {
 					if item.GetName() == nestedDir.GetName() {
 						index = i
 						break

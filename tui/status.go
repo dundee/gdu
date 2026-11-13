@@ -2,83 +2,152 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func (ui *UI) toggleStatusBar(show bool) {
-	var textColor, textBgColor tcell.Color
-	if ui.UseColors {
-		textColor = tcell.NewRGBColor(0, 0, 0)
-		textBgColor = tcell.NewRGBColor(36, 121, 208)
+// deletionStatusLinger keeps the popup visible long enough to notice even when
+// the deletion itself finishes almost immediately.
+const deletionStatusLinger = 1500 * time.Millisecond
+
+// deletionStatusOverlay draws the deletion status line on top of the pages,
+// anchored to the bottom right of the screen. It is not focusable, so drawing
+// it never takes the keyboard away from the tree.
+type deletionStatusOverlay struct {
+	*tview.Pages
+	status  *tview.TextView
+	visible bool
+}
+
+func newDeletionStatusOverlay(pages *tview.Pages, useColors bool) *deletionStatusOverlay {
+	status := tview.NewTextView()
+	status.SetTextColor(tcell.NewRGBColor(0, 0, 0))
+	if useColors {
+		status.SetBackgroundColor(tcell.NewRGBColor(36, 121, 208))
 	} else {
-		textColor = tcell.NewRGBColor(0, 0, 0)
-		textBgColor = tcell.NewRGBColor(255, 255, 255)
+		status.SetBackgroundColor(tcell.NewRGBColor(255, 255, 255))
 	}
 
-	ui.grid.Clear()
+	return &deletionStatusOverlay{Pages: pages, status: status}
+}
 
-	ui.statusMut.Lock()
-	defer ui.statusMut.Unlock()
+// SetRect lays the pages out and keeps the status line in the bottom right
+// corner, just above the footer.
+func (o *deletionStatusOverlay) SetRect(x, y, width, height int) {
+	o.Pages.SetRect(x, y, width, height)
+	o.layout(width, height)
+}
 
-	if show {
-		ui.status = tview.NewTextView().SetDynamicColors(true)
-		ui.status.SetTextColor(textColor)
-		ui.status.SetBackgroundColor(textBgColor)
+func (o *deletionStatusOverlay) Draw(screen tcell.Screen) {
+	o.Pages.Draw(screen)
+	if o.visible {
+		o.status.Draw(screen)
+	}
+}
 
-		ui.grid.SetRows(1, 1, 0, 1, 1)
-		ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
-			AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
-			AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
-			AddItem(ui.status, 3, 0, 1, 1, 0, 0, false).
-			AddItem(ui.footer, 4, 0, 1, 1, 0, 0, false)
+func (o *deletionStatusOverlay) layout(width, height int) {
+	if !o.visible || width <= 0 || height < 2 {
 		return
 	}
-	ui.status = nil
-	ui.grid.SetRows(1, 1, 0, 1)
-	ui.grid.AddItem(ui.header, 0, 0, 1, 1, 0, 0, false).
-		AddItem(ui.currentDirLabel, 1, 0, 1, 1, 0, 0, false).
-		AddItem(ui.table, 2, 0, 1, 1, 0, 0, true).
-		AddItem(ui.footer, 3, 0, 1, 1, 0, 0, false)
+
+	lineWidth := tview.TaggedStringWidth(o.status.GetText(true)) + 2
+	if lineWidth > width {
+		lineWidth = width
+	}
+	o.status.SetRect(width-lineWidth, height-2, lineWidth, 1)
+}
+
+func (o *deletionStatusOverlay) show(text string) {
+	o.status.SetText(" " + text + " ")
+	o.visible = true
+}
+
+func (o *deletionStatusOverlay) hide() {
+	o.visible = false
 }
 
 func (ui *UI) updateStatusWorker() {
 	for {
-		ui.updateStatus()
+		if ui.hasDeletionActivity() {
+			ui.app.QueueUpdateDraw(ui.updateDeletionStatus)
+		}
 		time.Sleep(500 * time.Millisecond)
 	}
 }
 
-func (ui *UI) updateStatus() {
+func (ui *UI) hasDeletionActivity() bool {
 	ui.workersMut.Lock()
-	cnt := ui.activeWorkers
+	workers := ui.activeWorkers
+	ui.workersMut.Unlock()
+	if workers > 0 {
+		return true
+	}
+
+	job := ui.activeDeletionJob()
+	if job == nil {
+		return false
+	}
+	job.mut.Lock()
+	defer job.mut.Unlock()
+	return job.progress.hidden
+}
+
+// updateDeletionStatus shows what is being deleted in the bottom right corner
+// and hides the popup once nothing is left. A foreground deletion whose dialog
+// is hidden is background activity too, so it gets a popup; while its dialog is
+// visible the dialog itself is the progress display.
+func (ui *UI) updateDeletionStatus() {
+	if ui.statusOverlay == nil {
+		return
+	}
+
+	job := ui.activeDeletionJob()
+	if job != nil {
+		job.mut.Lock()
+		hidden := job.progress.hidden
+		pending := len(job.pending)
+		current := job.currentPath
+		job.mut.Unlock()
+
+		if hidden {
+			text := "Deletion in progress"
+			if current != "" {
+				text = "Deleting: " + filepath.Base(current)
+			}
+			if pending > 0 {
+				text += fmt.Sprintf(" (%d queued)", pending)
+			}
+			ui.statusOverlay.show(text)
+			return
+		}
+	}
+
+	ui.workersMut.Lock()
+	workers := ui.activeWorkers
 	ui.workersMut.Unlock()
 
-	ui.statusMut.RLock()
-	status := ui.status
-	ui.statusMut.RUnlock()
+	if workers == 0 {
+		ui.statusOverlay.hide()
+		return
+	}
+	ui.showDeletionStatus(workers)
+}
 
-	if cnt == 0 && status == nil {
+// showDeletionStatus displays the popup for the given number of workers. The
+// caller passes the count it observed, so an update queued while a short
+// deletion was running still shows the popup even if the deletion has finished
+// by the time the event loop processes the update.
+func (ui *UI) showDeletionStatus(workers int) {
+	if ui.statusOverlay == nil {
 		return
 	}
 
-	if cnt > 0 && status == nil {
-		ui.app.QueueUpdateDraw(func() {
-			ui.toggleStatusBar(true)
-		})
-	} else if cnt == 0 {
-		ui.app.QueueUpdateDraw(func() {
-			ui.toggleStatusBar(false)
-		})
-		return
+	text := fmt.Sprintf("Background deletions: %d", workers)
+	if queued := len(ui.deleteQueue); queued > 0 {
+		text += fmt.Sprintf(" (%d queued)", queued)
 	}
-
-	ui.app.QueueUpdateDraw(func() {
-		msg := fmt.Sprintf(" Active background deletions: %d", cnt)
-		ui.statusMut.RLock()
-		ui.status.SetText(msg)
-		ui.statusMut.RUnlock()
-	})
+	ui.statusOverlay.show(text)
 }

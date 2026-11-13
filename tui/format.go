@@ -121,10 +121,10 @@ func (ui *UI) columnsWidth() int {
 // statsItem is the item the numbers are taken from, which is not always the
 // item whose name ends up on the row: a collapsed path displays the name of a
 // whole chain of directories but the stats of its deepest one.
-func (ui *UI) formatColumns(statsItem fs.Item, maxima rowMaxima, marked, ignored bool) string {
+func (ui *UI) formatColumns(statsItem fs.Item, maxima rowMaxima, marked, ignored, queued bool) string {
 	// numberPrefix is the color tag introducing a numeric column.
 	numberPrefix := func() string {
-		if ui.UseColors && !marked && !ignored {
+		if ui.UseColors && !marked && !ignored && !queued {
 			return fmt.Sprintf("[%s::b]", ui.resultRow.NumberColor)
 		}
 		return defaultColorBold
@@ -174,29 +174,29 @@ func (ui *UI) formatColumns(statsItem fs.Item, maxima rowMaxima, marked, ignored
 }
 
 // dirRowStyle returns the styling that introduces a directory name in a row.
-func (ui *UI) dirRowStyle(marked, ignored bool) string {
-	if ui.UseColors && !marked && !ignored {
+func (ui *UI) dirRowStyle(marked, ignored, queued bool) string {
+	if ui.UseColors && !marked && !ignored && !queued {
 		return fmt.Sprintf("[%s::b]", ui.resultRow.DirectoryColor)
 	}
 	return defaultColorBold
 }
 
-func (ui *UI) formatFileRow(item fs.Item, maxima rowMaxima, marked, ignored bool) string {
-	row := ui.formatColumns(item, maxima, marked, ignored)
+func (ui *UI) formatFileRow(item fs.Item, maxima rowMaxima, marked, ignored, queued bool) string {
+	row := ui.formatColumns(item, maxima, marked, ignored, queued)
 
 	// Display symlink name in cyan/aqua (like ls --color) and target
-	if name := ui.formatItemName(item, marked, ignored); name != "" {
+	if name := ui.formatItemName(item, marked, ignored, queued); name != "" {
 		return row + name
 	}
 
 	// Scanned roots are labelled with their absolute path, which already reads
 	// as a path and must not be given another leading separator.
 	if ui.atVirtualRoot() {
-		return row + ui.dirRowStyle(marked, ignored) + tview.Escape(item.GetPath())
+		return row + ui.dirRowStyle(marked, ignored, queued) + tview.Escape(item.GetPath())
 	}
 
 	if item.IsDir() {
-		row += ui.dirRowStyle(marked, ignored) + "/"
+		row += ui.dirRowStyle(marked, ignored, queued) + "/"
 	}
 	row += tview.Escape(item.GetName())
 
@@ -205,7 +205,7 @@ func (ui *UI) formatFileRow(item fs.Item, maxima rowMaxima, marked, ignored bool
 
 // formatItemName returns formatted name for special item types (e.g. symlinks).
 // Returns empty string if the item has no special formatting.
-func (ui *UI) formatItemName(item fs.Item, marked, ignored bool) string {
+func (ui *UI) formatItemName(item fs.Item, marked, ignored, queued bool) string {
 	if !ui.showSymlinkTarget {
 		return ""
 	}
@@ -219,7 +219,7 @@ func (ui *UI) formatItemName(item fs.Item, marked, ignored bool) string {
 	}
 
 	var name string
-	if ui.UseColors && !marked && !ignored {
+	if ui.UseColors && !marked && !ignored && !queued {
 		name = "[aqua::b]" + tview.Escape(item.GetName())
 	} else {
 		name = tview.Escape(item.GetName())
@@ -229,13 +229,13 @@ func (ui *UI) formatItemName(item fs.Item, marked, ignored bool) string {
 
 // formatCollapsedRow formats a collapsed directory path for display
 func (ui *UI) formatCollapsedRow(
-	collapsedPath *CollapsedPath, maxima rowMaxima, marked, ignored bool,
+	collapsedPath *CollapsedPath, maxima rowMaxima, marked, ignored, queued bool,
 ) string {
 	// Use the deepest directory's stats for display
-	row := ui.formatColumns(collapsedPath.DeepestDir, maxima, marked, ignored)
+	row := ui.formatColumns(collapsedPath.DeepestDir, maxima, marked, ignored, queued)
 
 	// Always display as directory with special formatting for collapsed path
-	row += ui.dirRowStyle(marked, ignored)
+	row += ui.dirRowStyle(marked, ignored, queued)
 	// a collapsed scanned root already starts from an absolute path
 	if !ui.atVirtualRoot() {
 		row += "/"

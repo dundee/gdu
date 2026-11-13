@@ -760,6 +760,37 @@ func TestSpawnShell(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestCtrlBDoesNotSpawnShellWithoutDeletion(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	called := false
+	ui.exec = func(argv0 string, argv, envv []string) error {
+		called = true
+		return nil
+	}
+
+	ui.done = make(chan struct{})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	<-ui.done
+
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	// Terminals report Ctrl+B either as a control key or as the rune with the
+	// control modifier. Neither may fall through to the shell binding when no
+	// deletion is running.
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl)))
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModCtrl)))
+	assert.False(t, called)
+}
+
 func TestSpawnShellWithConfiguredShell(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
