@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -260,8 +259,8 @@ func TestAnalyzerMeasureSharedUsageWithFakeKernel(t *testing.T) {
 
 func TestEveryAnalyzerReportsExclusiveSizeOfClones(t *testing.T) {
 	analyzers := append(parityAnalyzers(),
-		parityAnalyzer{name: "parallel", analyzer: func(*testing.T) common.Analyzer { return CreateAnalyzer() }},
-		parityAnalyzer{name: "top-dir", analyzer: func(*testing.T) common.Analyzer { return CreateTopDirAnalyzer() }},
+		parityAnalyzer{name: "parallel", analyzer: func(*testing.T) Analyzer { return CreateAnalyzer() }},
+		parityAnalyzer{name: "top-dir", analyzer: func(*testing.T) Analyzer { return CreateTopDirAnalyzer() }},
 	)
 	const size = 1 << 20
 	for _, tc := range analyzers {
@@ -272,7 +271,7 @@ func TestEveryAnalyzerReportsExclusiveSizeOfClones(t *testing.T) {
 
 			scan := func(exclusive bool) fs.Item {
 				a := tc.analyzer(t)
-				root := a.AnalyzeDir(context.Background(), dir, common.ScanOptions{ExclusiveSize: exclusive})
+				root := a.AnalyzeDir(context.Background(), dir, Options{ExclusiveSize: exclusive})
 				root.UpdateStats(false)
 				return root
 			}

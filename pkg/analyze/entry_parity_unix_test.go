@@ -13,8 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dundee/gdu/v5/internal/common"
 )
 
 // Only a regular file is opened as an archive: opening a FIFO blocks until
@@ -44,7 +42,7 @@ func TestOnlyRegularFilesAreBrowsedAsArchives(t *testing.T) {
 
 	for _, tc := range entryParityAnalyzers() {
 		t.Run(tc.name, func(t *testing.T) {
-			got := collectEntries(scanConfigured(t, tc.analyzer(t), root, func(o *common.ScanOptions) {
+			got := collectEntries(scanConfigured(t, tc.analyzer(t), root, func(o *Options) {
 				o.ArchiveBrowsing = true
 			}))
 
@@ -83,7 +81,7 @@ func TestHardLinkTotalsParity(t *testing.T) {
 
 	for _, tc := range append(analyzers[1:], parityAnalyzer{
 		name:     "top-dir",
-		analyzer: func(*testing.T) common.Analyzer { return CreateTopDirAnalyzer() },
+		analyzer: func(*testing.T) Analyzer { return CreateTopDirAnalyzer() },
 	}) {
 		t.Run(tc.name, func(t *testing.T) {
 			// the order links are met in varies, so scan several times

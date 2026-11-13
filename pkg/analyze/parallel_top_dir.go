@@ -6,13 +6,12 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 var pathSep = string(os.PathSeparator)
 
-var _ common.Analyzer = (*TopDirAnalyzer)(nil)
+var _ Analyzer = (*TopDirAnalyzer)(nil)
 
 // TopDirAnalyzer implements Analyzer
 // It doesn't return the full directory structure, only the top level directory,
@@ -30,7 +29,7 @@ func CreateTopDirAnalyzer() *TopDirAnalyzer {
 }
 
 // AnalyzeDir analyzes given path
-func (a *TopDirAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+func (a *TopDirAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
 	s := a.begin(ctx, opts)
 	return walkTree[*topDirNode](&a.BaseAnalyzer, s, &topDirSink{scan: s}, path, true).dir
 }

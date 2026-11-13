@@ -8,14 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/require"
 )
 
 type cancelRaceAnalyzerFactory struct {
 	name string
-	new  func(*testing.T) common.Analyzer
+	new  func(*testing.T) Analyzer
 }
 
 func TestCancelPreemptiveAnalyzers(t *testing.T) {
@@ -27,7 +26,7 @@ func TestCancelPreemptiveAnalyzers(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 
-			dir := analyzer.AnalyzeDir(ctx, root, common.ScanOptions{})
+			dir := analyzer.AnalyzeDir(ctx, root, Options{})
 
 			require.NotNil(t, dir)
 			var children int
@@ -61,7 +60,7 @@ func TestCancelWhileAnalyzingAnalyzers(t *testing.T) {
 			defer cancel()
 			result := make(chan fs.Item, 1)
 			go func() {
-				result <- analyzer.AnalyzeDir(ctx, root, common.ScanOptions{IgnoreDir: ignore})
+				result <- analyzer.AnalyzeDir(ctx, root, Options{IgnoreDir: ignore})
 			}()
 
 			select {
@@ -85,18 +84,18 @@ func TestCancelWhileAnalyzingAnalyzers(t *testing.T) {
 
 func cancelRaceAnalyzerFactories() []cancelRaceAnalyzerFactory {
 	return []cancelRaceAnalyzerFactory{
-		{name: "parallel", new: func(*testing.T) common.Analyzer { return CreateAnalyzer() }},
-		{name: "sequential", new: func(*testing.T) common.Analyzer { return CreateSeqAnalyzer() }},
-		{name: "stored", new: func(t *testing.T) common.Analyzer {
+		{name: "parallel", new: func(*testing.T) Analyzer { return CreateAnalyzer() }},
+		{name: "sequential", new: func(*testing.T) Analyzer { return CreateSeqAnalyzer() }},
+		{name: "stored", new: func(t *testing.T) Analyzer {
 			return CreateStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))
 		}},
-		{name: "sqlite", new: func(t *testing.T) common.Analyzer {
+		{name: "sqlite", new: func(t *testing.T) Analyzer {
 			analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "results.sqlite"))
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
 			return analyzer
 		}},
-		{name: "top-dir", new: func(*testing.T) common.Analyzer { return CreateTopDirAnalyzer() }},
+		{name: "top-dir", new: func(*testing.T) Analyzer { return CreateTopDirAnalyzer() }},
 	}
 }
 

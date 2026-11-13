@@ -6,11 +6,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-var _ common.Analyzer = (*ParallelAnalyzer)(nil)
+var _ Analyzer = (*ParallelAnalyzer)(nil)
 
 // ParallelAnalyzer implements Analyzer
 type ParallelAnalyzer struct {
@@ -25,12 +24,12 @@ func CreateAnalyzer() *ParallelAnalyzer {
 }
 
 // AnalyzeDir analyzes given path
-func (a *ParallelAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+func (a *ParallelAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
 	return a.analyzeTree(ctx, path, opts, true)
 }
 
 // analyzeTree scans path into an in-memory tree, in parallel or in sequence.
-func (a *BaseAnalyzer) analyzeTree(ctx context.Context, path string, opts common.ScanOptions, parallel bool) fs.Item {
+func (a *BaseAnalyzer) analyzeTree(ctx context.Context, path string, opts Options, parallel bool) fs.Item {
 	s := a.begin(ctx, opts)
 	return walkTree[*Dir](a, s, newTreeSink(a), path, parallel)
 }

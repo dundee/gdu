@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -54,14 +53,14 @@ func collectEntries(root fs.Item) map[string]entryStats {
 func entryParityAnalyzers() []parityAnalyzer {
 	return append([]parityAnalyzer{{
 		name:     "parallel",
-		analyzer: func(*testing.T) common.Analyzer { return CreateAnalyzer() },
+		analyzer: func(*testing.T) Analyzer { return CreateAnalyzer() },
 	}}, parityAnalyzers()...)
 }
 
 // scanConfigured scans root with an analyzer set up by configure and computes
 // its totals the way the session does.
 func scanConfigured(
-	t *testing.T, analyzer common.Analyzer, root string, configure func(*common.ScanOptions),
+	t *testing.T, analyzer Analyzer, root string, configure func(*Options),
 ) fs.Item {
 	t.Helper()
 	return scanFiltered(t, analyzer, root, configure, nil)
@@ -69,11 +68,11 @@ func scanConfigured(
 
 // scanFiltered is scanConfigured with a file type filter.
 func scanFiltered(
-	t *testing.T, analyzer common.Analyzer, root string, configure func(*common.ScanOptions),
-	fileFilter common.ShouldFileBeIgnored,
+	t *testing.T, analyzer Analyzer, root string, configure func(*Options),
+	fileFilter ShouldFileBeIgnored,
 ) fs.Item {
 	t.Helper()
-	opts := common.ScanOptions{IgnoreFile: fileFilter}
+	opts := Options{IgnoreFile: fileFilter}
 	if configure != nil {
 		configure(&opts)
 	}
@@ -98,14 +97,14 @@ func scanFiltered(
 
 // assertEntryParity scans root with every analyzer configured alike and
 // checks each reports the tree the in-memory analyzer reports.
-func assertEntryParity(t *testing.T, root string, configure func(*common.ScanOptions)) map[string]entryStats {
+func assertEntryParity(t *testing.T, root string, configure func(*Options)) map[string]entryStats {
 	t.Helper()
 	return assertFilteredParity(t, root, configure, nil)
 }
 
 // assertFilteredParity is assertEntryParity with a file type filter.
 func assertFilteredParity(
-	t *testing.T, root string, configure func(*common.ScanOptions), fileFilter common.ShouldFileBeIgnored,
+	t *testing.T, root string, configure func(*Options), fileFilter ShouldFileBeIgnored,
 ) map[string]entryStats {
 	t.Helper()
 	analyzers := entryParityAnalyzers()
@@ -152,7 +151,7 @@ func TestFollowedSymlinkTimeFilterParity(t *testing.T) {
 	writeSized(t, filepath.Join(root, "sub", "new"), 300, time.Time{})
 	require.NoError(t, os.Symlink(target, filepath.Join(root, "sub", "link")))
 
-	want := assertEntryParity(t, root, func(o *common.ScanOptions) {
+	want := assertEntryParity(t, root, func(o *Options) {
 		o.FollowSymlinks = true
 		o.TimeFilter = func(mtime time.Time) bool { return mtime.Before(old.Add(time.Hour)) }
 	})
@@ -167,7 +166,7 @@ func TestUnreadableEntryFlagParity(t *testing.T) {
 	writeSized(t, filepath.Join(root, "sub", "file"), 300, time.Time{})
 	require.NoError(t, os.Symlink(filepath.Join(root, "missing"), filepath.Join(root, "sub", "dangling")))
 
-	want := assertEntryParity(t, root, func(o *common.ScanOptions) { o.FollowSymlinks = true })
+	want := assertEntryParity(t, root, func(o *Options) { o.FollowSymlinks = true })
 
 	assert.Equal(t, '!', want["sub"].flag)
 	assert.Equal(t, '.', want["."].flag)

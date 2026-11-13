@@ -8,7 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +65,7 @@ func TestPreviewWhileScanning(t *testing.T) {
 		}
 	}()
 
-	dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), root, Options{IgnoreFile: func(_ string) bool { return false }})
 	close(stop)
 	wg.Wait()
 
@@ -76,7 +75,7 @@ func TestPreviewWhileScanning(t *testing.T) {
 	assert.Greater(t, dir.GetItemCount(), int64(40*40))
 
 	// the analyzer exposes a point-in-time snapshot of the returned root
-	var _ common.Analyzer = analyzer
+	var _ Analyzer = analyzer
 	assert.Equal(t, dir.GetPath(), analyzer.GetCurrentDir().GetPath())
 }
 

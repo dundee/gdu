@@ -8,7 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +21,7 @@ func TestAnalyzeDirSeq(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 
@@ -70,7 +69,7 @@ func TestIgnoreDirSeq(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	dir := CreateSeqAnalyzer().AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := CreateSeqAnalyzer().AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreDir:  func(_, _ string) bool { return true },
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
@@ -90,7 +89,7 @@ func TestFlagsSeq(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 	dir.UpdateStats(false)
@@ -117,7 +116,7 @@ func TestHardlinkSeq(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 	dir.UpdateStats(false)
@@ -142,7 +141,7 @@ func TestFollowSymlinkSeq(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
@@ -173,7 +172,7 @@ func TestBrokenSymlinkSkippedSeq(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
@@ -194,6 +193,6 @@ func BenchmarkAnalyzeDirSeq(b *testing.B) {
 	b.ResetTimer()
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 	dir.UpdateStats(false)
 }

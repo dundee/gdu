@@ -18,16 +18,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
-	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/report"
+	"github.com/dundee/gdu/v5/internal/stdout"
+	"github.com/dundee/gdu/v5/internal/timefilter"
+	"github.com/dundee/gdu/v5/internal/tui"
+	"github.com/dundee/gdu/v5/internal/webui"
 	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/cleanup"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
-	"github.com/dundee/gdu/v5/pkg/timefilter"
-	"github.com/dundee/gdu/v5/report"
-	"github.com/dundee/gdu/v5/stdout"
-	"github.com/dundee/gdu/v5/tui"
-	"github.com/dundee/gdu/v5/webui"
 )
 
 // UI is common interface for both terminal UI and text output
@@ -53,8 +51,8 @@ type UI interface {
 	SetFollowSymlinks(value bool)
 	SetShowAnnexedSize(value bool)
 	SetExclusiveSize(value bool)
-	SetAnalyzer(analyzer common.Analyzer)
-	SetTimeFilter(timeFilter common.TimeFilter)
+	SetAnalyzer(analyzer analyze.Analyzer)
+	SetTimeFilter(timeFilter analyze.TimeFilter)
 	SetArchiveBrowsing(value bool)
 	SetCollapsePath(value bool)
 	SetShowSymlinkTarget(value bool)
@@ -129,7 +127,7 @@ type Flags struct {
 	WebConfig           WebConfig `yaml:"web"`
 	// Cleanup holds user rules and exclusions for the web UI's cleanup
 	// projections.
-	Cleanup cleanup.Config `yaml:"cleanup"`
+	Cleanup CleanupConfig `yaml:"cleanup"`
 }
 
 // WebConfig defines the web UI options that can be set from the config file.
@@ -218,10 +216,26 @@ type Sorting struct {
 	Order string `yaml:"order"`
 }
 
+// TermApplication is the terminal application gdu runs its interactive UI in,
+// usually a *tview.Application.
+type TermApplication interface {
+	Run() error
+	Stop()
+	Suspend(f func()) bool
+	SetRoot(root tview.Primitive, fullscreen bool) *tview.Application
+	SetFocus(p tview.Primitive) *tview.Application
+	SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) *tview.Application
+	SetMouseCapture(
+		capture func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction),
+	) *tview.Application
+	QueueUpdateDraw(f func()) *tview.Application
+	SetBeforeDrawFunc(func(screen tcell.Screen) bool) *tview.Application
+}
+
 // App defines the main application
 type App struct {
 	Writer      io.Writer
-	TermApp     common.TermApplication
+	TermApp     TermApplication
 	Screen      tcell.Screen
 	Getter      device.DevicesInfoGetter
 	Flags       *Flags
@@ -531,7 +545,7 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 		if a.Flags.TrashCommand != "" {
 			webUI.SetTrashCommand(a.Flags.TrashCommand)
 		}
-		if err := webUI.SetCleanupConfig(a.Flags.Cleanup); err != nil {
+		if err := webUI.SetCleanupConfig(a.Flags.Cleanup.config()); err != nil {
 			return nil, fmt.Errorf("cleanup config: %w", err)
 		}
 		ui = webUI

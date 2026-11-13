@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +24,7 @@ func TestStoredDirRemoveFile(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
@@ -42,7 +41,7 @@ func TestStoredDirUpdateStats(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
@@ -55,7 +54,7 @@ func TestStoredDirUpdateStatsWithMtimeUpdate(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
@@ -75,7 +74,7 @@ func TestStoredDirUpdateStatsWithFlagUpdate(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
@@ -97,7 +96,7 @@ func TestStoredDirUpdateStatsWithDotFlag(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
@@ -127,7 +126,7 @@ func TestStoredAnalyzerWithZip(t *testing.T) {
 	f.Close()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:      func(_ string) bool { return false },
 		ArchiveBrowsing: true,
 	}).(*StoredDir)

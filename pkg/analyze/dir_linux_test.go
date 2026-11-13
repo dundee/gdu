@@ -7,7 +7,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +23,7 @@ func TestErr(t *testing.T) {
 	}()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 	dir.UpdateStats(false)
@@ -49,7 +48,7 @@ func TestSeqErr(t *testing.T) {
 	}()
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 	dir.UpdateStats(false)

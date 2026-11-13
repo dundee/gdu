@@ -25,21 +25,21 @@ jobs:
           go-version: 1.27.x
 
       - name: Install frontend dependencies
-        working-directory: webui/frontend
+        working-directory: internal/webui/frontend
         run: npm ci
 
       - name: Run frontend tests
-        working-directory: webui/frontend
+        working-directory: internal/webui/frontend
         run: npm test
 
       - name: Build frontend
-        working-directory: webui/frontend
+        working-directory: internal/webui/frontend
         run: npm run build
 
       - name: Verify committed bundle is up to date
         run: |
-          if ! git diff --exit-code -- webui/dist; then
-            echo "::error::webui/dist is out of date. Run 'make build-web' and commit the result."
+          if ! git diff --exit-code -- internal/webui/dist; then
+            echo "::error::internal/webui/dist is out of date. Run 'make build-web' and commit the result."
             exit 1
           fi
 

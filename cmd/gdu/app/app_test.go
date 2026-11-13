@@ -16,11 +16,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/cleanup"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
-	"github.com/dundee/gdu/v5/pkg/cleanup"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -912,7 +912,7 @@ func TestWebFlagRejectsInvalidCleanupRule(t *testing.T) {
 		&Flags{
 			LogFile: "/dev/null",
 			Web:     true,
-			Cleanup: cleanup.Config{Rules: []cleanup.Rule{{Category: "junk", Dir: "x"}}},
+			Cleanup: CleanupConfig{Rules: []CleanupRule{{Category: "junk", Dir: "x"}}},
 		},
 		[]string{"test_dir"},
 		false,
@@ -949,7 +949,7 @@ cleanup:
 			Category: cleanup.BuildArtifact, Confidence: cleanup.Safe,
 			Dir: ".gradle", Markers: []string{"build.gradle"},
 		}},
-	}, f.Cleanup)
+	}, f.Cleanup.config())
 }
 
 func TestListDevices(t *testing.T) {
@@ -1045,7 +1045,7 @@ func TestMaxCoresLowEdge(t *testing.T) {
 }
 
 type uiTimeFilterMock struct {
-	timeFilter common.TimeFilter
+	timeFilter analyze.TimeFilter
 }
 
 func (m *uiTimeFilterMock) ListDevices(getter device.DevicesInfoGetter) error { return nil }
@@ -1063,11 +1063,11 @@ func (m *uiTimeFilterMock) SetIncludeTypes(types []string)                    {}
 func (m *uiTimeFilterMock) SetFollowSymlinks(value bool)                      {}
 func (m *uiTimeFilterMock) SetShowAnnexedSize(value bool)                     {}
 func (m *uiTimeFilterMock) SetExclusiveSize(value bool)                       {}
-func (m *uiTimeFilterMock) SetAnalyzer(analyzer common.Analyzer)              {}
+func (m *uiTimeFilterMock) SetAnalyzer(analyzer analyze.Analyzer)             {}
 func (m *uiTimeFilterMock) SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error {
 	return nil
 }
-func (m *uiTimeFilterMock) SetTimeFilter(timeFilter common.TimeFilter) {
+func (m *uiTimeFilterMock) SetTimeFilter(timeFilter analyze.TimeFilter) {
 	m.timeFilter = timeFilter
 }
 func (m *uiTimeFilterMock) SetArchiveBrowsing(value bool)   {}

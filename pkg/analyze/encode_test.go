@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -182,7 +181,7 @@ func TestExportMarksAnUnreadableDirectory(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
 
 	a := CreateAnalyzer()
-	root := a.AnalyzeDir(context.Background(), dir, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	root := a.AnalyzeDir(context.Background(), dir, Options{IgnoreFile: func(_ string) bool { return false }})
 	root.UpdateStats(false)
 
 	var buff bytes.Buffer

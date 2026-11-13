@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
 // CreateIgnorePattern creates one pattern from all path patterns.
@@ -174,7 +176,7 @@ func (ui *UI) SetIgnoreHidden(value bool) {
 	ui.IgnoreHidden = value
 }
 
-// ShouldDirBeIgnored returns true if given path should be ignored
+// analyze.ShouldDirBeIgnored returns true if given path should be ignored
 func (ui *UI) ShouldDirBeIgnored(name, path string) bool {
 	_, shouldIgnore := ui.IgnoreDirPaths[path]
 	if shouldIgnore {
@@ -259,7 +261,7 @@ func (ui *UI) SetIgnoreOtherFilesystems(value bool) {
 }
 
 // CreateIgnoreFunc returns function for detecting if dir should be ignored
-func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
+func (ui *UI) CreateIgnoreFunc() analyze.ShouldDirBeIgnored {
 	ignore := ui.createPathIgnoreFunc()
 	if !ui.IgnoreOtherFilesystems {
 		return ignore
@@ -273,7 +275,7 @@ func (ui *UI) CreateIgnoreFunc() ShouldDirBeIgnored {
 // createPathIgnoreFunc returns function for detecting if dir should be ignored
 // based on its name or path only
 // nolint: gocyclo // Why: This function is a switch statement that is not too complex
-func (ui *UI) createPathIgnoreFunc() ShouldDirBeIgnored {
+func (ui *UI) createPathIgnoreFunc() analyze.ShouldDirBeIgnored {
 	switch {
 	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns == nil && !ui.IgnoreHidden:
 		return ui.ShouldDirBeIgnored
@@ -303,7 +305,7 @@ func (ui *UI) createPathIgnoreFunc() ShouldDirBeIgnored {
 }
 
 // CreateFileTypeFilter returns function for detecting if file should be ignored based on type
-func (ui *UI) CreateFileTypeFilter() ShouldFileBeIgnored {
+func (ui *UI) CreateFileTypeFilter() analyze.ShouldFileBeIgnored {
 	// If we have include types, use whitelist mode
 	if len(ui.IncludeTypes) > 0 {
 		return func(name string) bool {

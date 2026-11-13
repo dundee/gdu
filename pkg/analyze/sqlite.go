@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -859,7 +858,7 @@ func (a *SqliteAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 
 // AnalyzeDir analyzes the given path and stores results in SQLite, replacing
 // whatever the database held before. LoadAnalysis reads a stored analysis.
-func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
 	s := a.begin(ctx, opts)
 
 	// Clear existing data and store metadata
