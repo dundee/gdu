@@ -75,7 +75,7 @@ func (ui *UI) showFile() *tview.TextView {
 	totalLines += readNextPart(defaultLinesCount)
 
 	file.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Rune() == 'q' || event.Key() == tcell.KeyESC {
+		if typedRune(event) == 'q' || event.Key() == tcell.KeyESC {
 			err = f.Close()
 			if err != nil {
 				ui.showErr("Error closing file", err)
@@ -89,7 +89,7 @@ func (ui *UI) showFile() *tview.TextView {
 			return event
 		}
 
-		if event.Rune() == 'j' || event.Rune() == 'G' ||
+		if typedRune(event) == 'j' || typedRune(event) == 'G' ||
 			event.Key() == tcell.KeyDown || event.Key() == tcell.KeyPgDn {
 			_, _, _, height := file.GetInnerRect()
 			row, _ := file.GetScrollOffset()
