@@ -200,6 +200,26 @@ describe('treemap actions', () => {
     expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
   });
 
+  it('ignores browser shortcuts such as Ctrl+D and Cmd+D', async () => {
+    vi.mocked(api.revealNode).mockResolvedValue(undefined);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Treemap' }));
+    fireEvent.click(await screen.findByRole('button', { name: /file\.txt/ }));
+    for (const modifier of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
+      for (const key of [{ code: 'KeyD' }, { key: 'Delete' }, { code: 'KeyO' }]) {
+        const notCancelled = fireEvent.keyDown(window, { ...key, ...modifier });
+
+        expect(notCancelled).toBe(true);
+        expect(screen.queryByRole('dialog', { name: 'Delete item' })).toBeNull();
+      }
+    }
+    expect(api.revealNode).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(window, { code: 'KeyD' });
+    expect(screen.getByRole('dialog', { name: 'Delete item' })).toBeTruthy();
+  });
+
   it('moves focus between the delete modal buttons with the arrow keys', async () => {
     render(<App />);
 
