@@ -151,7 +151,9 @@ func loadConfig(path string) error {
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(data, &af)
+	// into the struct, not the pointer: a document that is just null would
+	// set the pointer to nil
+	return yaml.Unmarshal(data, af)
 }
 
 func initConfig() {
