@@ -3,8 +3,10 @@
 package common
 
 import (
+	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -15,40 +17,35 @@ func TestFormatNumber(t *testing.T) {
 	assert.Equal(t, "1,234,567,890", res)
 }
 
-func TestSetFollowSymlinks(t *testing.T) {
-	ui := UI{
-		Analyzer: &MockedAnalyzer{},
-	}
+// The scan settings are kept by the UI and passed to each scan, whichever
+// analyzer is set, before or after them.
+func TestScanSettingsAreScanOptions(t *testing.T) {
+	ui := UI{}
 	ui.SetFollowSymlinks(true)
-
-	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).FollowSymlinks)
-}
-
-func TestSetShowAnnexedSize(t *testing.T) {
-	ui := UI{
-		Analyzer: &MockedAnalyzer{},
-	}
 	ui.SetShowAnnexedSize(true)
-
-	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ShowAnnexedSize)
-}
-
-func TestSetExclusiveSize(t *testing.T) {
-	ui := UI{
-		Analyzer: &MockedAnalyzer{},
-	}
 	ui.SetExclusiveSize(true)
+	ui.SetArchiveBrowsing(true)
+	ui.SetTimeFilter(func(time.Time) bool { return true })
+	ui.SetAnalyzer(&MockedAnalyzer{})
 
-	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ExclusiveSize)
+	opts := ui.ScanOptions()
+
+	assert.True(t, opts.FollowSymlinks)
+	assert.True(t, opts.AnnexedSize)
+	assert.True(t, opts.ExclusiveSize)
+	assert.True(t, opts.ArchiveBrowsing)
+	assert.NotNil(t, opts.TimeFilter)
+	assert.NotNil(t, opts.IgnoreDir)
+	assert.Nil(t, opts.IgnoreFile, "no file is filtered by its name")
+	assert.True(t, opts.FilteringFiles())
+	assert.True(t, ui.IsFilteringFiles())
 }
 
-func TestSetEnableArchiveBrowsing(t *testing.T) {
-	ui := UI{
-		Analyzer: &MockedAnalyzer{},
-	}
-	ui.SetArchiveBrowsing(true)
+func TestScanOptionsByDefault(t *testing.T) {
+	opts := (&UI{}).ScanOptions()
 
-	assert.Equal(t, true, ui.Analyzer.(*MockedAnalyzer).ArchiveBrowsing)
+	assert.False(t, opts.FollowSymlinks || opts.AnnexedSize || opts.ExclusiveSize || opts.ArchiveBrowsing)
+	assert.False(t, opts.FilteringFiles())
 }
 
 func TestSetAnalyzer(t *testing.T) {
@@ -58,75 +55,16 @@ func TestSetAnalyzer(t *testing.T) {
 	assert.Equal(t, a, ui.Analyzer)
 }
 
-func TestSetTimeFilter(t *testing.T) {
-	ui := UI{Analyzer: &MockedAnalyzer{}}
-	assert.NotPanics(t, func() {
-		ui.SetTimeFilter(nil)
-	})
-}
+type MockedAnalyzer struct{}
 
-type MockedAnalyzer struct {
-	FollowSymlinks  bool
-	ShowAnnexedSize bool
-	ExclusiveSize   bool
-	ArchiveBrowsing bool
-}
-
-// SetFileTypeFilter sets the file type filter function
-func (a *MockedAnalyzer) SetFileTypeFilter(filter ShouldFileBeIgnored) {
-	// Mock implementation - do nothing
-}
-
-// AnalyzeDir returns dir with files with different size exponents
-func (a *MockedAnalyzer) AnalyzeDir(
-	path string, ignore ShouldDirBeIgnored, fileTypeFilter ShouldFileBeIgnored,
-) fs.Item {
+// AnalyzeDir returns nothing
+func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, ScanOptions) fs.Item {
 	return nil
 }
 
 // GetProgress returns empty progress
 func (a *MockedAnalyzer) GetProgress() CurrentProgress {
 	return CurrentProgress{}
-}
-
-// GetDone returns always Done
-func (a *MockedAnalyzer) GetDone() SignalGroup {
-	c := make(SignalGroup)
-	defer c.Broadcast()
-	return c
-}
-
-// ResetProgress does nothing
-func (a *MockedAnalyzer) ResetProgress() {}
-
-func (a *MockedAnalyzer) Cancel() {}
-
-// SetFollowSymlinks does nothing
-func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {
-	a.FollowSymlinks = v
-}
-
-// SetExclusiveSize records the value
-func (a *MockedAnalyzer) SetExclusiveSize(v bool) {
-	a.ExclusiveSize = v
-}
-
-// MeasureSharedUsage keeps the given usage, with nothing shared
-func (a *MockedAnalyzer) MeasureSharedUsage(_ string, _ os.FileInfo, usage int64) (exclusive, shared int64) {
-	return usage, 0
-}
-
-// SetShowAnnexedSize does nothing
-func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {
-	a.ShowAnnexedSize = v
-}
-
-// SetTimeFilter does nothing
-func (a *MockedAnalyzer) SetTimeFilter(timeFilter TimeFilter) {}
-
-// SetArchiveBrowsing sets EnableArchiveBrowsing
-func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {
-	a.ArchiveBrowsing = v
 }
 
 func TestSetBlockSizeFromEnvironment(t *testing.T) {

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"sync"
 	"testing"
@@ -83,41 +84,39 @@ func (app *signalLifecycleApp) Run() error {
 	return nil
 }
 
+// cancelRaceAnalyzer scans until it is released or its scan is cancelled,
+// and counts the cancellations it sees while scanning.
 type cancelRaceAnalyzer struct {
 	*testanalyze.MockedAnalyzer
 	started   chan struct{}
 	release   chan struct{}
 	cancelled chan struct{}
-	done      common.SignalGroup
 	cancelMu  sync.Mutex
 	cancels   int
 	once      sync.Once
 }
 
 func newCancelRaceAnalyzer() *cancelRaceAnalyzer {
-	progressDone := make(common.SignalGroup)
-	progressDone.Broadcast()
 	return &cancelRaceAnalyzer{
 		MockedAnalyzer: &testanalyze.MockedAnalyzer{},
 		started:        make(chan struct{}),
 		release:        make(chan struct{}),
 		cancelled:      make(chan struct{}),
-		done:           progressDone,
 	}
 }
 
-func (a *cancelRaceAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
+func (a *cancelRaceAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+	stop := context.AfterFunc(ctx, a.cancel)
+	defer stop()
 	close(a.started)
 	select {
 	case <-a.cancelled:
 	case <-a.release:
 	}
-	return a.MockedAnalyzer.AnalyzeDir(path, ignore, fileTypeFilter)
+	return a.MockedAnalyzer.AnalyzeDir(ctx, path, opts)
 }
 
-func (a *cancelRaceAnalyzer) Cancel() {
+func (a *cancelRaceAnalyzer) cancel() {
 	a.cancelMu.Lock()
 	a.cancels++
 	a.cancelMu.Unlock()
@@ -128,10 +127,6 @@ func (a *cancelRaceAnalyzer) cancelCount() int {
 	a.cancelMu.Lock()
 	defer a.cancelMu.Unlock()
 	return a.cancels
-}
-
-func (a *cancelRaceAnalyzer) GetDone() common.SignalGroup {
-	return a.done
 }
 
 func newCancelRaceUI(app *cancelRaceApp, analyzer *cancelRaceAnalyzer) *UI {

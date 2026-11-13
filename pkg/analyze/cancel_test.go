@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +26,6 @@ func TestAnalyzersCancelKeepsPartialResults(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			dir := scanUntilCancelled(t, test.analyzer, root)
 
-			assert.True(t, test.analyzer.(interface{ IsCancelled() bool }).IsCancelled())
 			assert.Contains(t, itemNames(dir), "a-file")
 			assert.NotContains(t, itemNames(dir), "b-dir")
 		})
@@ -37,7 +37,6 @@ func TestStorageBackedAnalyzersCancelKeepsPartialResults(t *testing.T) {
 
 	stored := CreateStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))
 	dir := scanUntilCancelled(t, stored, root)
-	assert.True(t, stored.IsCancelled())
 	assert.Contains(t, itemNames(dir), "a-file")
 	assert.NotContains(t, itemNames(dir), "b-dir")
 
@@ -45,30 +44,31 @@ func TestStorageBackedAnalyzersCancelKeepsPartialResults(t *testing.T) {
 	assert.NoError(t, err)
 	defer sqliteAnalyzer.storage.Close()
 	dir = scanUntilCancelled(t, sqliteAnalyzer, root)
-	assert.True(t, sqliteAnalyzer.IsCancelled())
 	assert.Contains(t, itemNames(dir), "a-file")
 	assert.NotContains(t, itemNames(dir), "b-dir")
 }
 
 func TestAnalyzeDirHonorsPreemptiveCancellation(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
-	analyzer.Cancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 
-	dir := analyzer.AnalyzeDir(createCancellationTree(t), func(_, _ string) bool { return false }, nil)
+	dir := analyzer.AnalyzeDir(ctx, createCancellationTree(t), common.ScanOptions{})
 
-	assert.True(t, analyzer.IsCancelled())
 	assert.NotContains(t, itemNames(dir), "a-file")
 	assert.NotContains(t, itemNames(dir), "b-dir")
 }
 
-func TestResetProgressClearsPreviousCancellation(t *testing.T) {
+// A scan is cancelled by its own context only.
+func TestScanAfterCancelledScanIsComplete(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
-	analyzer.Cancel()
-	analyzer.ResetProgress()
+	root := createCancellationTree(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	analyzer.AnalyzeDir(ctx, root, common.ScanOptions{})
 
-	dir := analyzer.AnalyzeDir(createCancellationTree(t), func(_, _ string) bool { return false }, nil)
+	dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{})
 
-	assert.False(t, analyzer.IsCancelled())
 	assert.Contains(t, itemNames(dir), "a-file")
 	assert.Contains(t, itemNames(dir), "b-dir")
 }
@@ -82,14 +82,17 @@ func createCancellationTree(t *testing.T) string {
 	return root
 }
 
+// scanUntilCancelled scans root, cancelling the scan when it meets b-dir.
 func scanUntilCancelled(t *testing.T, analyzer common.Analyzer, root string) fs.Item {
 	t.Helper()
-	return analyzer.AnalyzeDir(root, func(name, _ string) bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	return analyzer.AnalyzeDir(ctx, root, common.ScanOptions{IgnoreDir: func(name, _ string) bool {
 		if name == "b-dir" {
-			analyzer.Cancel()
+			cancel()
 		}
 		return false
-	}, nil)
+	}})
 }
 
 func itemNames(dir fs.Item) []string {

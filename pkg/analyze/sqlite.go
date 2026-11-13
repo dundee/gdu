@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -811,7 +812,6 @@ type SqliteAnalyzer struct {
 	BaseAnalyzer
 	storage   *SqliteStorage
 	dbWriteMu sync.Mutex
-	links     linkTracker
 }
 
 // insertItemLocked is a serialized wrapper around storage.InsertItem.
@@ -870,12 +870,8 @@ func (a *SqliteAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 
 // AnalyzeDir analyzes the given path and stores results in SQLite, replacing
 // whatever the database held before. LoadAnalysis reads a stored analysis.
-func (a *SqliteAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
-	a.ignoreDir = ignore
-	a.ignoreFileType = fileTypeFilter
-	a.links.reset()
+func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+	s := a.begin(ctx, opts)
 
 	// Clear existing data and store metadata
 	err := a.storage.ClearItems()
@@ -892,17 +888,12 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 		log.Printf("Error starting bulk insert: %v", err)
 	}
 
-	go a.UpdateProgress()
-
-	root := walkTree[*sqliteDir](&a.BaseAnalyzer, sqliteSink{a}, path, true)
+	root := walkTree[*sqliteDir](&a.BaseAnalyzer, s, sqliteSink{a: a, scan: s}, path, true)
 
 	// Commit bulk insert transaction
 	if err := a.storage.EndBulkInsert(); err != nil {
 		log.Printf("Error committing bulk insert: %v", err)
 	}
-
-	a.progressDoneChan <- struct{}{}
-	a.doneChan.Broadcast()
 
 	if root == nil {
 		return nil
@@ -924,7 +915,8 @@ type sqliteDir struct {
 // the directories as it goes: a directory's row is completed once everything
 // below it has been inserted.
 type sqliteSink struct {
-	a *SqliteAnalyzer
+	a    *SqliteAnalyzer
+	scan *scan
 }
 
 func (s sqliteSink) openDir(parent *sqliteDir, path string, root bool) (*sqliteDir, bool) {
@@ -950,7 +942,7 @@ func (sqliteSink) readDir(dir *sqliteDir, _ string, err error, entries int) {
 }
 
 func (s sqliteSink) resolveOptions(*sqliteDir) resolveOptions {
-	return resolveOptions{browseArchives: true, links: &s.a.links}
+	return resolveOptions{browseArchives: true, links: &s.scan.links}
 }
 
 func (s sqliteSink) addFile(dir *sqliteDir, entry *fileEntry) int64 {
@@ -964,7 +956,7 @@ func (s sqliteSink) addFile(dir *sqliteDir, entry *fileEntry) int64 {
 			log.Print(err.Error())
 			return 0
 		}
-		s.a.persistArchive(archive, archiveID)
+		s.a.persistArchive(s.scan, archive, archiveID)
 		dir.totals.addEntry(archive.GetItemCount(), archive.GetSize(), archive.GetUsage(), mtime, archive.GetFlag(), true)
 		return archive.GetUsage()
 	}
@@ -990,7 +982,7 @@ func (sqliteSink) fileError(dir *sqliteDir) {
 func (sqliteSink) entriesDone(*sqliteDir) {}
 
 func (s sqliteSink) closeDir(dir *sqliteDir) {
-	itemCount, size, usage, mtime, flag := dir.totals.result(s.a.isFilteringFiles())
+	itemCount, size, usage, mtime, flag := dir.totals.result(s.scan.filteringFiles())
 	if err := s.a.updateDirLocked(dir.id, size, usage, itemCount, mtime, flag); err != nil {
 		log.Printf("Error updating item: %v", err)
 	}
@@ -1015,13 +1007,13 @@ func (sqliteSink) addDir(parent, child *sqliteDir) {
 
 // persistArchive stores the entries of a browsed archive, or of a directory
 // in one, under parentID.
-func (a *SqliteAnalyzer) persistArchive(archive fs.Item, parentID int64) {
+func (a *SqliteAnalyzer) persistArchive(s *scan, archive fs.Item, parentID int64) {
 	archiveDir := archiveDirOf(archive)
 	if archiveDir == nil {
 		return
 	}
 	for _, f := range archiveDir.Files {
-		if a.IsCancelled() {
+		if s.isCancelled() {
 			return
 		}
 		if f.IsDir() {
@@ -1040,7 +1032,7 @@ func (a *SqliteAnalyzer) persistArchive(archive fs.Item, parentID int64) {
 				log.Print(err.Error())
 				continue
 			}
-			a.persistArchive(f, id)
+			a.persistArchive(s, f, id)
 		} else {
 			_, err := a.insertItemLocked(
 				&parentID,

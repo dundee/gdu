@@ -58,14 +58,12 @@ Two related decisions:
 
 ## Consequences
 
-- Roots are scanned sequentially, not concurrently. The analyzer owns one set of
-  progress channels per scan and `ResetProgress` replaces them, so a second
-  concurrent scan on the same analyzer would close a closed channel. Progress
-  therefore restarts per root, and the modal reports `Scanning 2/3...`.
-- `ResetProgress` also clears the analyzer's cancelled flag, so a cancel request
-  made between roots would be lost. The TUI tracks the request separately in
-  `scanCancelRequested` and stops the loop itself, keeping partial results as a
-  cancelled single scan does.
+- Roots are scanned sequentially, not concurrently: an analyzer runs one scan at
+  a time and keeps the progress of that scan only. Progress therefore restarts
+  per root, and the modal reports `Scanning 2/3...`.
+- One context cancels the scan of all roots: the session stops before the next
+  root once it is cancelled, keeping partial results as a cancelled single scan
+  does.
 - The non-interactive stdout mode gives up its memory-efficient `SimpleDir`
   analyzer for multiple roots: `SimpleDir` deliberately panics on `SetParent` and
   cannot be re-parented. `--top` and `--depth` already make the same trade.

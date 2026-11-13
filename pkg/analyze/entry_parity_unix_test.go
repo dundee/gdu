@@ -44,8 +44,8 @@ func TestOnlyRegularFilesAreBrowsedAsArchives(t *testing.T) {
 
 	for _, tc := range entryParityAnalyzers() {
 		t.Run(tc.name, func(t *testing.T) {
-			got := collectEntries(scanConfigured(t, tc.analyzer(t), root, func(a common.Analyzer) {
-				a.SetArchiveBrowsing(true)
+			got := collectEntries(scanConfigured(t, tc.analyzer(t), root, func(o *common.ScanOptions) {
+				o.ArchiveBrowsing = true
 			}))
 
 			assert.True(t, got["real.zip"].dir, "real.zip is browsed")

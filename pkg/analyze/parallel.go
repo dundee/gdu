@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -23,26 +24,14 @@ func CreateAnalyzer() *ParallelAnalyzer {
 }
 
 // AnalyzeDir analyzes given path
-func (a *ParallelAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
-	return a.analyzeTree(path, ignore, fileTypeFilter, true)
+func (a *ParallelAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+	return a.analyzeTree(ctx, path, opts, true)
 }
 
 // analyzeTree scans path into an in-memory tree, in parallel or in sequence.
-func (a *BaseAnalyzer) analyzeTree(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored, parallel bool,
-) fs.Item {
-	a.ignoreDir = ignore
-	a.ignoreFileType = fileTypeFilter
-
-	go a.UpdateProgress()
-	dir := walkTree[*Dir](a, treeSink{a}, path, parallel)
-
-	a.progressDoneChan <- struct{}{}
-	a.doneChan.Broadcast()
-
-	return dir
+func (a *BaseAnalyzer) analyzeTree(ctx context.Context, path string, opts common.ScanOptions, parallel bool) fs.Item {
+	s := a.begin(ctx, opts)
+	return walkTree[*Dir](a, s, treeSink{a}, path, parallel)
 }
 
 // treeSink builds the in-memory tree of a scan. A directory is added to its

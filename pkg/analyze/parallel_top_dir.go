@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sync"
@@ -19,7 +20,6 @@ var _ common.Analyzer = (*TopDirAnalyzer)(nil)
 // It keeps only the totals of the directories below the top level.
 type TopDirAnalyzer struct {
 	BaseAnalyzer
-	links linkTracker
 }
 
 // CreateTopDirAnalyzer returns Analyzer
@@ -29,29 +29,10 @@ func CreateTopDirAnalyzer() *TopDirAnalyzer {
 	return a
 }
 
-// FullAnalyzer returns a parallel analyzer with the same settings, for when
-// the full tree is needed, which the top dir analyzer does not build.
-func (a *TopDirAnalyzer) FullAnalyzer() *ParallelAnalyzer {
-	full := CreateAnalyzer()
-	full.copySettings(&a.BaseAnalyzer)
-	return full
-}
-
 // AnalyzeDir analyzes given path
-func (a *TopDirAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
-	a.links.reset()
-	a.ignoreDir = ignore
-	a.ignoreFileType = fileTypeFilter
-
-	go a.UpdateProgress()
-	root := walkTree[*topDirNode](&a.BaseAnalyzer, &topDirSink{a: a}, path, true)
-
-	a.progressDoneChan <- struct{}{}
-	a.doneChan.Broadcast()
-
-	return root.dir
+func (a *TopDirAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+	s := a.begin(ctx, opts)
+	return walkTree[*topDirNode](&a.BaseAnalyzer, s, &topDirSink{scan: s}, path, true).dir
 }
 
 // topDirNode is a directory of a top-dir scan: the scanned root, listing its
@@ -66,7 +47,7 @@ type topDirNode struct {
 // topDirSink lists the entries of the scanned root, with the totals of each
 // of its subdirectories.
 type topDirSink struct {
-	a *TopDirAnalyzer
+	scan *scan
 	// mu guards the entries of the root, to which its subdirectories are
 	// added by the goroutines walking them
 	mu sync.Mutex
@@ -100,7 +81,7 @@ func (s *topDirSink) resolveOptions(node *topDirNode) resolveOptions {
 		// when another link to it is counted instead.
 		return resolveOptions{}
 	}
-	return resolveOptions{links: &s.a.links}
+	return resolveOptions{links: &s.scan.links}
 }
 
 func (s *topDirSink) addFile(node *topDirNode, entry *fileEntry) int64 {
@@ -123,7 +104,7 @@ func (s *topDirSink) addFile(node *topDirNode, entry *fileEntry) int64 {
 		ItemCount: 1,
 	}
 	if entry.link != (inodeKey{}) {
-		file.alreadyCounted = !s.a.links.claim(entry.link)
+		file.alreadyCounted = !s.scan.links.claim(entry.link)
 	}
 	s.mu.Lock()
 	node.dir.Files = append(node.dir.Files, file)
@@ -149,7 +130,7 @@ func (s *topDirSink) entriesDone(*topDirNode) {}
 func (s *topDirSink) closeDir(*topDirNode) {}
 
 func (s *topDirSink) addDir(parent, child *topDirNode) {
-	itemCount, size, usage, mtime, flag := child.totals.result(s.a.isFilteringFiles())
+	itemCount, size, usage, mtime, flag := child.totals.result(s.scan.filteringFiles())
 	if parent.dir == nil {
 		parent.totals.addEntry(itemCount, size, usage, mtime, flag, true)
 		return

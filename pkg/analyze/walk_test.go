@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -90,7 +91,9 @@ func TestPreviewDuringScan(t *testing.T) {
 				return false
 			}
 			done := make(chan fs.Item, 1)
-			go func() { done <- tc.analyzer.AnalyzeDir(root, ignore, nil) }()
+			go func() {
+				done <- tc.analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: ignore})
+			}()
 
 			<-reached
 			preview := tc.analyzer.GetCurrentDir()
@@ -129,8 +132,7 @@ func TestScanConcurrencyFollowsGOMAXPROCS(t *testing.T) {
 			}
 
 			analyzer := tc.analyzer(t)
-			analyzer.AnalyzeDir(root, ignore, nil)
-			analyzer.GetDone().Wait()
+			analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: ignore})
 
 			// the goroutine walking the root, and two per CPU
 			assert.LessOrEqual(t, most.Load(), int32(3))

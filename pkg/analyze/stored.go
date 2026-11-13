@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -48,22 +49,13 @@ func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 }
 
 // AnalyzeDir analyzes given path
-func (a *StoredAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
-	a.ignoreDir = ignore
-	a.ignoreFileType = fileTypeFilter
+func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+	s := a.begin(ctx, opts)
 
 	closeFn := a.storage.Open()
 	defer closeFn()
 
-	go a.UpdateProgress()
-	dir := walkTree[*StoredDir](&a.BaseAnalyzer, &storedSink{a: a}, path, true)
-
-	a.progressDoneChan <- struct{}{}
-	a.doneChan.Broadcast()
-
-	return dir
+	return walkTree[*StoredDir](&a.BaseAnalyzer, s, &storedSink{a: a}, path, true)
 }
 
 // storedSink stores each directory of a scan as soon as its entries are

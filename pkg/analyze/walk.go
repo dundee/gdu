@@ -52,6 +52,7 @@ type dirSink[D any] interface {
 // otherwise, so it never waits for a slot.
 type walker[D any] struct {
 	a    *BaseAnalyzer
+	scan *scan
 	sink dirSink[D]
 	// slots bounds the goroutines walking at once; nil walks in sequence
 	slots chan struct{}
@@ -70,10 +71,11 @@ type walkNode[D any] struct {
 	pending atomic.Int64
 }
 
-// walkTree walks the tree at path with sink, in parallel or in sequence, and
-// returns the sink's handle of path. Progress is reported on a as it goes.
-func walkTree[D any](a *BaseAnalyzer, sink dirSink[D], path string, parallel bool) D {
-	w := &walker[D]{a: a, sink: sink}
+// walkTree walks the tree at path for the scan s with sink, in parallel or in
+// sequence, and returns the sink's handle of path. Progress is reported on a
+// as it goes.
+func walkTree[D any](a *BaseAnalyzer, s *scan, sink dirSink[D], path string, parallel bool) D {
+	w := &walker[D]{a: a, scan: s, sink: sink}
 	if parallel {
 		// sized now rather than at start-up, so that it follows --max-cores
 		w.slots = make(chan struct{}, 2*runtime.GOMAXPROCS(0))
@@ -104,7 +106,7 @@ func (w *walker[D]) walkDir(node *walkNode[D], path string) {
 		subdirs      []string
 	)
 	for _, entry := range entries {
-		if w.a.IsCancelled() {
+		if w.scan.isCancelled() {
 			break
 		}
 		if entry.IsDir() {
@@ -112,7 +114,7 @@ func (w *walker[D]) walkDir(node *walkNode[D], path string) {
 			continue
 		}
 
-		file, ok, err := w.a.resolveFile(path, entry, opts)
+		file, ok, err := w.scan.resolveFile(path, entry, opts)
 		if err != nil {
 			log.Print(err.Error())
 			w.sink.fileError(node.dir)
@@ -132,7 +134,7 @@ func (w *walker[D]) walkDir(node *walkNode[D], path string) {
 	children := make([]*walkNode[D], 0, len(subdirs))
 	for _, name := range subdirs {
 		subPath := filepath.Join(path, name)
-		if w.a.shouldSkipDir(name, subPath) {
+		if w.scan.shouldSkipDir(name, subPath) {
 			continue
 		}
 		if sub, ok := w.sink.openDir(node.dir, subPath, false); ok {

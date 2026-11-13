@@ -200,6 +200,9 @@ func (ui *UI) ListDevices(getter device.DevicesInfoGetter) error {
 	return nil
 }
 
+// measureSharedUsage measures a file given as the path to analyze.
+var measureSharedUsage = analyze.MeasureSharedUsage
+
 // AnalyzePath analyzes recursively disk usage in given path
 func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	// When path is a regular file, create a File item directly so that
@@ -209,7 +212,9 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 	info, err := os.Stat(path)
 	if err == nil && info.Mode().IsRegular() {
 		file := analyze.CreateFileItem(path, info)
-		file.Usage, file.SharedUsage = ui.Analyzer.MeasureSharedUsage(path, info, file.Usage)
+		if ui.ScanOptions().ExclusiveSize {
+			file.Usage, file.SharedUsage = measureSharedUsage(path, info, file.Usage)
+		}
 		ui.printTotalItem(file)
 		return nil
 	}
@@ -231,8 +236,8 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 	// The top dir analyzer returns SimpleDir, a reduced item that cannot be
 	// re-parented, so it cannot live under a virtual root. Trade its lower
 	// memory use for the full tree, as --top and --depth already do.
-	if topDir, ok := ui.Analyzer.(*analyze.TopDirAnalyzer); ok {
-		ui.Analyzer = topDir.FullAnalyzer()
+	if _, ok := ui.Analyzer.(*analyze.TopDirAnalyzer); ok {
+		ui.Analyzer = analyze.CreateAnalyzer()
 	}
 
 	dir := ui.session.Scan(context.Background(), paths, ui.scanObserver())

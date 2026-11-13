@@ -2,10 +2,10 @@ package tui
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"slices"
-	"sync"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -125,11 +125,7 @@ func TestCtrlCDuringScanShowsPartialResults(t *testing.T) {
 
 	app := testapp.CreateMockedApp(false)
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
-	analyzer := &blockingAnalyzer{
-		started:   make(chan struct{}),
-		cancelled: make(chan struct{}),
-		done:      make(common.SignalGroup),
-	}
+	analyzer := &blockingAnalyzer{started: make(chan struct{})}
 	ui.Analyzer = analyzer
 	ui.done = make(chan struct{})
 
@@ -157,11 +153,7 @@ func TestEscDuringScanShowsPartialResults(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
 	// Ctrl+C is configured to quit, so Esc is the only way to keep results
 	ui.SetCtrlCQuits()
-	analyzer := &blockingAnalyzer{
-		started:   make(chan struct{}),
-		cancelled: make(chan struct{}),
-		done:      make(common.SignalGroup),
-	}
+	analyzer := &blockingAnalyzer{started: make(chan struct{})}
 	ui.Analyzer = analyzer
 	ui.done = make(chan struct{})
 
@@ -181,31 +173,16 @@ func TestEscDuringScanShowsPartialResults(t *testing.T) {
 	assert.Equal(t, 4, ui.table.GetRowCount())
 }
 
+// blockingAnalyzer scans until its scan is cancelled.
 type blockingAnalyzer struct {
 	testanalyze.MockedAnalyzer
-	started   chan struct{}
-	cancelled chan struct{}
-	done      common.SignalGroup
-	once      sync.Once
+	started chan struct{}
 }
 
-func (a *blockingAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
+func (a *blockingAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
 	close(a.started)
-	<-a.cancelled
-	defer a.done.Broadcast()
-	return a.MockedAnalyzer.AnalyzeDir(path, ignore, fileTypeFilter)
-}
-
-func (a *blockingAnalyzer) Cancel() {
-	a.once.Do(func() {
-		close(a.cancelled)
-	})
-}
-
-func (a *blockingAnalyzer) GetDone() common.SignalGroup {
-	return a.done
+	<-ctx.Done()
+	return a.MockedAnalyzer.AnalyzeDir(ctx, path, opts)
 }
 
 // Rescanning a subdirectory puts the new scan in its place, keeping the rest of

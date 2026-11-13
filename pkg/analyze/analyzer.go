@@ -1,45 +1,94 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"sync/atomic"
-	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-// BaseAnalyzer provides common logic for all analyzers
+// BaseAnalyzer provides what all analyzers have in common: the progress of
+// the running scan, and the tree it has built so far.
 type BaseAnalyzer struct {
-	progressOutChan         chan common.CurrentProgress
-	progressDoneChan        chan struct{}
 	progressItemCount       atomic.Int64
 	progressTotalUsage      atomic.Int64
 	progressCurrentItemName atomic.Value
 	currentDir              atomic.Value
-	doneChan                common.SignalGroup
-	cancelled               atomic.Bool
-	ignoreDir               common.ShouldDirBeIgnored
-	ignoreFileType          common.ShouldFileBeIgnored
-	followSymlinks          bool
-	gitAnnexedSize          bool
-	extents                 *extentMeter // nil unless exclusive size is on
-	matchesTimeFilterFn     common.TimeFilter
-	archiveBrowsing         bool
-	progressTicker          *time.Ticker
 }
 
 // Init initializes the BaseAnalyzer
 func (a *BaseAnalyzer) Init() {
-	a.progressOutChan = make(chan common.CurrentProgress, 1)
-	a.progressDoneChan = make(chan struct{})
-	a.doneChan = make(common.SignalGroup)
+	a.progressCurrentItemName.Store("")
+	a.currentDir.Store((*Dir)(nil))
+}
+
+// scan is one run of an analyzer: its options, and what it keeps while it
+// runs.
+type scan struct {
+	// ctx stops the scan when cancelled
+	ctx  context.Context
+	opts common.ScanOptions
+	// extents is nil unless exclusive size is on
+	extents *extentMeter
+	// links counts hard-linked files once, for the analyzers that total as
+	// they scan
+	links linkTracker
+}
+
+// begin starts a scan with opts, which cancelling ctx stops, and resets the
+// progress.
+func (a *BaseAnalyzer) begin(ctx context.Context, opts common.ScanOptions) *scan {
 	a.progressItemCount.Store(0)
 	a.progressTotalUsage.Store(0)
 	a.progressCurrentItemName.Store("")
 	a.currentDir.Store((*Dir)(nil))
-	a.cancelled.Store(false)
-	a.progressTicker = time.NewTicker(50 * time.Millisecond)
+
+	s := &scan{ctx: ctx, opts: opts}
+	if s.opts.IgnoreDir == nil {
+		s.opts.IgnoreDir = func(string, string) bool { return false }
+	}
+	if opts.ExclusiveSize {
+		s.extents = &extentMeter{}
+	}
+	return s
+}
+
+// isCancelled reports whether the scan has been cancelled. The walk then
+// stops starting work; what it found so far is kept.
+func (s *scan) isCancelled() bool {
+	return s.ctx.Err() != nil
+}
+
+func (s *scan) shouldSkipDir(name, path string) bool {
+	return s.opts.IgnoreDir(name, path) || s.isCancelled()
+}
+
+// filteringFiles reports whether the scan leaves out files, which analyzers
+// that total as they scan need for the empty-directory rule (see
+// resolveDirStats). A nil filter means no filtering.
+func (s *scan) filteringFiles() bool {
+	return s.opts.FilteringFiles()
+}
+
+// measureSharedUsage returns the disk usage to record for a file and the
+// bytes it shares with other files. With exclusive size off, or when the file
+// cannot be measured, that is the given st_blocks based usage with nothing
+// shared.
+func (s *scan) measureSharedUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
+	if s.extents == nil {
+		return usage, 0
+	}
+	return s.extents.measure(path, info, usage)
+}
+
+// MeasureSharedUsage returns the bytes of the file at path not shared with
+// other files, and the bytes it shares (Linux and macOS only, measured with
+// FIEMAP and getattrlist respectively). usage is its st_blocks based usage,
+// which is returned, with nothing shared, when the file cannot be measured.
+func MeasureSharedUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
+	return (&extentMeter{}).measure(path, info, usage)
 }
 
 // setCurrentDir stores the root directory currently being analyzed so it can be
@@ -59,128 +108,11 @@ func (a *BaseAnalyzer) GetCurrentDir() fs.Item {
 	return snapshotDir(dir, nil)
 }
 
-// SetFollowSymlinks sets whether symlink to files should be followed
-func (a *BaseAnalyzer) SetFollowSymlinks(v bool) {
-	a.followSymlinks = v
-}
-
-// SetShowAnnexedSize sets whether to use annexed size of git-annex files
-func (a *BaseAnalyzer) SetShowAnnexedSize(v bool) {
-	a.gitAnnexedSize = v
-}
-
-// SetExclusiveSize sets whether disk usage of files is the number of bytes not
-// shared with other files (Linux and macOS only, measured with FIEMAP and
-// getattrlist respectively)
-func (a *BaseAnalyzer) SetExclusiveSize(v bool) {
-	switch {
-	case !v:
-		a.extents = nil
-	case a.extents == nil:
-		a.extents = &extentMeter{}
-	}
-}
-
-// MeasureSharedUsage returns the disk usage to record for a file and the bytes
-// it shares with other files. With exclusive size off, or when the file cannot be
-// measured, that is the given st_blocks based usage with nothing shared.
-func (a *BaseAnalyzer) MeasureSharedUsage(path string, info os.FileInfo, usage int64) (exclusive, shared int64) {
-	if a.extents == nil {
-		return usage, 0
-	}
-	exclusive, shared = a.extents.measure(path, info, usage)
-	return exclusive, shared
-}
-
-// copySettings makes a use the scan settings of from.
-func (a *BaseAnalyzer) copySettings(from *BaseAnalyzer) {
-	a.ignoreFileType = from.ignoreFileType
-	a.followSymlinks = from.followSymlinks
-	a.gitAnnexedSize = from.gitAnnexedSize
-	a.extents = from.extents
-	a.matchesTimeFilterFn = from.matchesTimeFilterFn
-	a.archiveBrowsing = from.archiveBrowsing
-}
-
-// SetTimeFilter sets the time filter function for file inclusion
-func (a *BaseAnalyzer) SetTimeFilter(matchesTimeFilterFn common.TimeFilter) {
-	a.matchesTimeFilterFn = matchesTimeFilterFn
-}
-
-// SetArchiveBrowsing sets whether browsing of zip/jar/tar archives is enabled
-func (a *BaseAnalyzer) SetArchiveBrowsing(v bool) {
-	a.archiveBrowsing = v
-}
-
-// SetFileTypeFilter sets the file type filter function
-func (a *BaseAnalyzer) SetFileTypeFilter(filter common.ShouldFileBeIgnored) {
-	a.ignoreFileType = filter
-}
-
-// isFilteringFiles reports whether a file-level filter is active. It mirrors
-// common.UI.IsFilteringFiles, which is what decides between UpdateStats and
-// UpdateStatsWithFileFiltering, so analyzers that finalize stats during the
-// scan can apply the same empty-directory rule (see resolveDirStats).
-//
-// This relies on the convention that a nil filter means "no filtering":
-// common.UI.CreateFileTypeFilter returns nil rather than a predicate that
-// accepts everything, and SetTimeFilter is only called when a time filter was
-// actually requested. Callers must not pass an always-false filter to mean
-// "unfiltered", or a filtered scan's accounting will be applied to it.
-func (a *BaseAnalyzer) isFilteringFiles() bool {
-	return a.ignoreFileType != nil || a.matchesTimeFilterFn != nil
-}
-
-// GetDone returns channel for checking when analysis is done
-func (a *BaseAnalyzer) GetDone() common.SignalGroup {
-	return a.doneChan
-}
-
-// Cancel stops scheduling new scan work. In-flight filesystem operations are
-// allowed to finish so the caller can safely use the partial directory tree.
-func (a *BaseAnalyzer) Cancel() {
-	a.cancelled.Store(true)
-}
-
-// IsCancelled reports whether the current scan has been cancelled.
-func (a *BaseAnalyzer) IsCancelled() bool {
-	return a.cancelled.Load()
-}
-
-func (a *BaseAnalyzer) shouldSkipDir(name, path string) bool {
-	return a.ignoreDir(name, path) || a.IsCancelled()
-}
-
-// ResetProgress prepares the analyzer for a new scan. Call it only after the
-// previous scan has completed and before exposing the new scan to cancellation.
-func (a *BaseAnalyzer) ResetProgress() {
-	if a.progressTicker != nil {
-		a.progressTicker.Stop()
-	}
-	a.Init()
-}
-
+// GetProgress returns the progress of the running scan, or of the last one.
 func (a *BaseAnalyzer) GetProgress() common.CurrentProgress {
 	return common.CurrentProgress{
 		CurrentItemName: a.progressCurrentItemName.Load().(string),
 		ItemCount:       a.progressItemCount.Load(),
 		TotalUsage:      a.progressTotalUsage.Load(),
-	}
-}
-
-// UpdateProgress updates progress
-func (a *BaseAnalyzer) UpdateProgress() {
-	ticker := a.progressTicker
-	defer ticker.Stop()
-	for {
-		select {
-		case <-a.progressDoneChan:
-			return
-		case <-ticker.C:
-			select {
-			case a.progressOutChan <- a.GetProgress():
-			default:
-			}
-		}
 	}
 }

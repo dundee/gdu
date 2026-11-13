@@ -48,9 +48,9 @@ type resolveOptions struct {
 // Every analyzer resolves the entries it counts here, so that they all count
 // the same: the filters, followed symlinks, archives, hard links and disk
 // usage are decided in one place.
-func (a *BaseAnalyzer) resolveFile(dirPath string, d os.DirEntry, opts resolveOptions) (fileEntry, bool, error) {
+func (s *scan) resolveFile(dirPath string, d os.DirEntry, opts resolveOptions) (fileEntry, bool, error) {
 	name := d.Name()
-	if a.ignoreFileType != nil && a.ignoreFileType(name) {
+	if s.opts.IgnoreFile != nil && s.opts.IgnoreFile(name) {
 		return fileEntry{}, false, nil
 	}
 	path := filepath.Join(dirPath, name)
@@ -59,8 +59,8 @@ func (a *BaseAnalyzer) resolveFile(dirPath string, d os.DirEntry, opts resolveOp
 	if err != nil {
 		return fileEntry{}, false, err
 	}
-	if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-		target, err := followSymlink(path, a.gitAnnexedSize)
+	if s.opts.FollowSymlinks && info.Mode()&os.ModeSymlink != 0 {
+		target, err := followSymlink(path, s.opts.AnnexedSize)
 		if err != nil {
 			return fileEntry{}, false, err
 		}
@@ -70,7 +70,7 @@ func (a *BaseAnalyzer) resolveFile(dirPath string, d os.DirEntry, opts resolveOp
 	}
 
 	// after following, so the filter judges the file whose size is counted
-	if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
+	if s.opts.TimeFilter != nil && !s.opts.TimeFilter(info.ModTime()) {
 		return fileEntry{}, false, nil
 	}
 
@@ -83,7 +83,7 @@ func (a *BaseAnalyzer) resolveFile(dirPath string, d os.DirEntry, opts resolveOp
 
 	// Only a regular file is opened as an archive: opening a FIFO would block
 	// the scan, and a symlink to an archive would count the archive twice.
-	if opts.browseArchives && a.archiveBrowsing && info.Mode().IsRegular() {
+	if opts.browseArchives && s.opts.ArchiveBrowsing && info.Mode().IsRegular() {
 		if entry.archive = openArchive(path, name, info); entry.archive != nil {
 			return entry, true, nil
 		}
@@ -97,7 +97,7 @@ func (a *BaseAnalyzer) resolveFile(dirPath string, d os.DirEntry, opts resolveOp
 			return entry, true, nil
 		}
 	}
-	entry.usage, entry.shared = a.MeasureSharedUsage(path, info, entry.usage)
+	entry.usage, entry.shared = s.measureSharedUsage(path, info, entry.usage)
 	return entry, true, nil
 }
 
