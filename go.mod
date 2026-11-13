@@ -19,7 +19,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/ulikunitz/xz v0.5.17
 	golang.org/x/sys v0.50.0
-	golang.org/x/text v0.43.0
+	golang.org/x/text v0.44.0
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.62.0
