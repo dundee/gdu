@@ -130,6 +130,10 @@ type Flags struct {
 	// Cleanup holds user rules and exclusions for the web UI's cleanup
 	// projections.
 	Cleanup cleanup.Config `yaml:"cleanup"`
+	// SequentialScanningExplicit records that --sequential was given on the
+	// command line, including --sequential=false. Without it gdu falls back to
+	// detecting rotational disks.
+	SequentialScanningExplicit bool `yaml:"-"`
 }
 
 // WebConfig defines the web UI options that can be set from the config file.
@@ -226,8 +230,11 @@ type App struct {
 	Getter      device.DevicesInfoGetter
 	Flags       *Flags
 	PathChecker func(string) (fs.FileInfo, error)
-	Args        []string
-	Istty       bool
+	// RotationalChecker reports whether a path is on a rotational disk. When
+	// nil, device.IsRotational is used.
+	RotationalChecker func(string) (rotational bool, known bool)
+	Args              []string
+	Istty             bool
 }
 
 func init() {
@@ -302,7 +309,7 @@ func (a *App) Run() error {
 			ui.SetAnalyzer(sqliteAnalyzer)
 		}
 	}
-	if a.Flags.SequentialScanning {
+	if a.shouldUseSequentialScanning(paths) {
 		ui.SetAnalyzer(analyze.CreateSeqAnalyzer())
 	}
 	if a.Flags.FollowSymlinks {
@@ -466,6 +473,39 @@ func isSubPath(path, parent string) bool {
 	// only a leading ".." path *element* means "outside parent"; a name such as
 	// "..foo" is an ordinary child
 	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// shouldUseSequentialScanning decides which analyzer to use. An explicit
+// --sequential always wins, and --sequential=false disables detection.
+// Otherwise gdu scans sequentially when any scanned root lives on a rotational
+// disk, where parallel access makes the head seek back and forth.
+func (a *App) shouldUseSequentialScanning(paths []string) bool {
+	if a.Flags.SequentialScanning {
+		return true
+	}
+	if a.Flags.SequentialScanningExplicit {
+		return false
+	}
+	// Database analyzers store the scan as they go, so replacing them with a
+	// plain analyzer would break --db and --read-from-storage.
+	if a.Flags.DbPath != "" || a.Flags.InputFile != "" {
+		return false
+	}
+
+	checker := a.RotationalChecker
+	if checker == nil {
+		checker = device.IsRotational
+	}
+	for _, path := range paths {
+		rotational, known := checker(build.RootPathPrefix + path)
+		log.Printf("Rotational check for %s: rotational=%t known=%t", path, rotational, known)
+		if known && rotational {
+			log.Printf("Path %s is on a rotational disk, using sequential scanning", path)
+			return true
+		}
+	}
+	log.Printf("Using parallel scanning")
+	return false
 }
 
 func (a *App) setMaxProcs() {

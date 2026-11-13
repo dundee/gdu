@@ -117,6 +117,78 @@ func TestSequentialScanning(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestShouldUseSequentialScanning(t *testing.T) {
+	rotational := func(string) (bool, bool) { return true, true }
+	nonRotational := func(string) (bool, bool) { return false, true }
+	unknown := func(string) (bool, bool) { return false, false }
+
+	for _, tt := range []struct {
+		name  string
+		flags *Flags
+		check func(string) (bool, bool)
+		want  bool
+	}{
+		{
+			name:  "explicitly forced",
+			flags: &Flags{SequentialScanning: true},
+			check: nonRotational,
+			want:  true,
+		},
+		{
+			name:  "explicitly disabled",
+			flags: &Flags{SequentialScanningExplicit: true},
+			check: rotational,
+			want:  false,
+		},
+		{
+			name:  "rotational disk",
+			flags: &Flags{},
+			check: rotational,
+			want:  true,
+		},
+		{
+			name:  "non-rotational disk",
+			flags: &Flags{},
+			check: nonRotational,
+			want:  false,
+		},
+		{
+			name:  "unknown disk",
+			flags: &Flags{},
+			check: unknown,
+			want:  false,
+		},
+		{
+			name:  "database analyzer wins",
+			flags: &Flags{DbPath: "scan.sqlite"},
+			check: rotational,
+			want:  false,
+		},
+		{
+			name:  "input file needs no analyzer",
+			flags: &Flags{InputFile: "scan.json"},
+			check: rotational,
+			want:  false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &App{Flags: tt.flags, RotationalChecker: tt.check}
+			assert.Equal(t, tt.want, app.shouldUseSequentialScanning([]string{"/scan"}))
+		})
+	}
+}
+
+func TestShouldUseSequentialScanningWithMultiplePaths(t *testing.T) {
+	app := &App{
+		Flags: &Flags{},
+		RotationalChecker: func(path string) (bool, bool) {
+			return path == "/hdd", path == "/hdd" || path == "/ssd"
+		},
+	}
+
+	assert.True(t, app.shouldUseSequentialScanning([]string{"/ssd", "/hdd"}))
+}
+
 func TestFollowSymlinks(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()

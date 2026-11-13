@@ -161,6 +161,25 @@ func TestInitConfigMalformedSystemConfig(t *testing.T) {
 	}
 }
 
+func TestLoadConfigSequentialScanning(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), "gdu.yaml")
+	if err := os.WriteFile(tmp, []byte("sequential-scanning: true\n"), 0o600); err != nil {
+		t.Fatalf("could not write temp config: %v", err)
+	}
+
+	origAf := af
+	t.Cleanup(func() { af = origAf })
+	af = &app.Flags{}
+
+	if err := loadConfig(tmp); err != nil {
+		t.Fatalf("could not load config: %v", err)
+	}
+
+	if !af.SequentialScanning {
+		t.Fatal("expected sequential-scanning to be true")
+	}
+}
+
 func TestInitConfigMalformedUserConfig(t *testing.T) {
 	// Write invalid YAML to a temp file and pass it via --config-file.
 	tmp := filepath.Join(t.TempDir(), "user.yaml")
