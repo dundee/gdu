@@ -91,7 +91,8 @@ func toNodeJSON(it fs.Item, res *cleanup.Result) nodeJSON {
 }
 
 // findNode locates an item by absolute path, descending from the scanned root.
-// It guards against path traversal outside the root.
+// It guards against path traversal outside the root. The caller holds the
+// tree's read lock.
 func (ui *UI) findNode(path string) (fs.Item, error) {
 	ui.mu.RLock()
 	root := ui.session.Root()
@@ -125,7 +126,7 @@ func (ui *UI) findNode(path string) (fs.Item, error) {
 	// The virtual top level dir has no path of its own, so paths are resolved
 	// against each of the scanned roots it holds instead.
 	if analyze.IsVirtualRootDir(root) {
-		for child := range root.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		for child := range root.GetFiles(fs.SortByName, fs.SortAsc) {
 			if node, err := descendFrom(child, child.GetPath(), cleanPath); err == nil {
 				return node, nil
 			}
@@ -216,7 +217,7 @@ func childByName(parent fs.Item, name string) (fs.Item, bool) {
 	if !parent.IsDir() {
 		return nil, false
 	}
-	for child := range parent.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for child := range parent.GetFiles(fs.SortByName, fs.SortAsc) {
 		if child.GetName() == name {
 			return child, true
 		}
@@ -233,7 +234,7 @@ func buildNodeResponse(it fs.Item, sortBy fs.SortBy, order fs.SortOrder, res *cl
 		Children:    []nodeJSON{},
 	}
 	if it.IsDir() {
-		for child := range it.GetFilesLocked(sortBy, order) {
+		for child := range it.GetFiles(sortBy, order) {
 			resp.Children = append(resp.Children, toNodeJSON(child, res))
 		}
 	}
@@ -287,7 +288,7 @@ func buildTree(it fs.Item, res *cleanup.Result) treeJSON {
 	queue := &expansionQueue{{item: it, slot: root}}
 	for queue.Len() > 0 && remaining > 0 {
 		next := heap.Pop(queue).(pendingExpansion)
-		for child := range next.item.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
+		for child := range next.item.GetFiles(fs.SortBySize, fs.SortDesc) {
 			if remaining <= 0 {
 				break
 			}

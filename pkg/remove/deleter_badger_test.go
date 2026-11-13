@@ -36,8 +36,6 @@ func loadBadger(t *testing.T, db, root string) fs.Item {
 // items: listing dir under its read lock.
 func listed(t *testing.T, dir fs.Item, name string) fs.Item {
 	t.Helper()
-	unlock := dir.RLock()
-	defer unlock()
 	for entry := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if entry.GetName() == name {
 			return entry

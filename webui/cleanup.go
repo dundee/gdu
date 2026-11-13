@@ -127,7 +127,7 @@ func (ui *UI) runClassification() {
 		}
 		c.mu.Unlock()
 
-		res := ui.classifier.Analyze(root)
+		res := ui.classifier.Analyze(root, ui.session.TreeLock())
 
 		c.mu.Lock()
 		nowRoot, nowGen, ok := ui.currentTree()
@@ -171,6 +171,7 @@ func (ui *UI) removeNode(removeFunc func(fs.Item, fs.Item) error, parent, node f
 		ui.treeChanged()
 		return false, err
 	}
+	defer ui.readTree()()
 	// a trash command may succeed and leave the item in place
 	if current, ok := childByName(parent, node.GetName()); ok && current == node {
 		return false, nil
@@ -180,7 +181,8 @@ func (ui *UI) removeNode(removeFunc func(fs.Item, fs.Item) error, parent, node f
 }
 
 // itemRemoved updates the cached classification for one item that was removed
-// from the tree, instead of invalidating it.
+// from the tree, instead of invalidating it. The caller holds the tree's read
+// lock.
 func (ui *UI) itemRemoved(it fs.Item) {
 	c := &ui.cleanup
 	c.mu.Lock()
@@ -203,6 +205,7 @@ type categoriesResponse struct {
 }
 
 func (ui *UI) handleCategories(w http.ResponseWriter, r *http.Request) {
+	defer ui.readTree()()
 	node, err := ui.findNode(r.URL.Query().Get("path"))
 	if err != nil {
 		writeNodeError(w, err)
@@ -291,7 +294,7 @@ func collectUnits(it fs.Item, res *cleanup.Result, units map[cleanup.Category][]
 	if !it.IsDir() || len(res.Totals(it)) == 0 {
 		return
 	}
-	for child := range it.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
+	for child := range it.GetFiles(fs.SortBySize, fs.SortDesc) {
 		collectUnits(child, res, units)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -125,16 +124,6 @@ func (f *File) UpdateStats(bool) *fs.HardLinks { return nil }
 // GetFiles returns all files in directory
 func (f *File) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
 	return func(yield func(fs.Item) bool) {}
-}
-
-// GetFilesLocked returns all files in directory
-func (f *File) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
-	return f.GetFiles(sortBy, order)
-}
-
-// RLock panics on file
-func (f *File) RLock() func() {
-	panic("RLock should not be called on file")
 }
 
 // AddFile panics on file
@@ -260,11 +249,11 @@ type Dir struct {
 	// links is the index of the hard-linked files of the tree, kept by the
 	// directory topping the tree when its totals are computed
 	links *fs.HardLinks
-	m     sync.RWMutex
 }
 
+// snapshotDir returns a copy of the tree topped by source, which no one may
+// change meanwhile.
 func snapshotDir(source *Dir, parent fs.Item) *Dir {
-	source.m.RLock()
 	snapshot := &Dir{
 		File: &File{
 			Mtime:  source.Mtime,
@@ -281,10 +270,7 @@ func snapshotDir(source *Dir, parent fs.Item) *Dir {
 		OwnUsage:  source.OwnUsage,
 		Dev:       source.Dev,
 	}
-	children := append(fs.Files(nil), source.Files...)
-	source.m.RUnlock()
-
-	for _, child := range children {
+	for _, child := range source.Files {
 		snapshot.Files = append(snapshot.Files, snapshotItem(child, snapshot))
 	}
 	return snapshot
@@ -324,7 +310,7 @@ func snapshotItem(source, parent fs.Item) fs.Item {
 			Files:     make(fs.Files, 0),
 			ItemCount: source.GetItemCount(),
 		}
-		for child := range source.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		for child := range source.GetFiles(fs.SortByName, fs.SortAsc) {
 			snapshot.Files = append(snapshot.Files, snapshotItem(child, snapshot))
 		}
 		return snapshot
@@ -356,16 +342,12 @@ func snapshotFile(source, parent fs.Item) *File {
 
 // AddFile add item to files
 func (f *Dir) AddFile(item fs.Item) {
-	f.m.Lock()
-	defer f.m.Unlock()
 	f.Files = append(f.Files, item)
 }
 
 // SetFlag updates the directory flag while preserving snapshot consistency.
 func (f *Dir) SetFlag(flag rune) {
-	f.m.Lock()
 	f.Flag = flag
-	f.m.Unlock()
 }
 
 // SetStatsFromJSON marks directory statistics decoded from an export as authoritative.
@@ -402,63 +384,13 @@ func (f *Dir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
 	}
 }
 
-// GetFilesLocked returns all files in directory as a sorted iterator
-// It is safe to call this function from multiple goroutines
-func (f *Dir) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
-	return func(yield func(fs.Item) bool) {
-		f.m.RLock()
-		defer f.m.RUnlock()
-
-		// Make a copy to avoid modifying the original slice
-		sorted := make(fs.Files, len(f.Files))
-		copy(sorted, f.Files)
-		sortFiles(sorted, sortBy, order)
-
-		for _, item := range sorted {
-			if !yield(item) {
-				return
-			}
-		}
-	}
-}
-
 // GetType returns name type of item
 func (f *Dir) GetType() string {
 	return "Directory"
 }
 
-// GetFlag returns the current directory flag.
-func (f *Dir) GetFlag() rune {
-	f.m.RLock()
-	defer f.m.RUnlock()
-	return f.Flag
-}
-
-// GetSize returns the current apparent size.
-func (f *Dir) GetSize() int64 {
-	f.m.RLock()
-	defer f.m.RUnlock()
-	return f.Size
-}
-
-// GetUsage returns the current disk usage.
-func (f *Dir) GetUsage() int64 {
-	f.m.RLock()
-	defer f.m.RUnlock()
-	return f.Usage
-}
-
-// GetMtime returns the current modification time.
-func (f *Dir) GetMtime() time.Time {
-	f.m.RLock()
-	defer f.m.RUnlock()
-	return f.Mtime
-}
-
 // GetItemCount returns number of files in dir
 func (f *Dir) GetItemCount() int64 {
-	f.m.RLock()
-	defer f.m.RUnlock()
 	return f.ItemCount
 }
 
@@ -489,9 +421,7 @@ func (f *Dir) GetItemStats(links *fs.HardLinks, filteringFiles bool) (itemCount,
 func (f *Dir) UpdateStats(filteringFiles bool) *fs.HardLinks {
 	links := fs.NewHardLinks()
 	f.updateStats(links, filteringFiles)
-	f.m.Lock()
 	f.links = links
-	f.m.Unlock()
 	return links
 }
 
@@ -501,20 +431,8 @@ func (f *Dir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 		return
 	}
 
-	// Snapshot the file list under the read lock so it is safe to compute stats
-	// even while the analyzer is still appending items in another goroutine
-	// (e.g. when previewing a directory mid-scan).
-	f.m.RLock()
-	files := make(fs.Files, len(f.Files))
-	copy(files, f.Files)
-	mtime := f.Mtime
-	flag := f.Flag
-	f.m.RUnlock()
+	totals, mtime, flag := aggregateDirEntries(f.Files, f.Mtime, f.Flag, f.Dev, links, filteringFiles)
 
-	totals, mtime, flag := aggregateDirEntries(files, mtime, flag, f.Dev, links, filteringFiles)
-
-	f.m.Lock()
-	defer f.m.Unlock()
 	f.Mtime = mtime
 	f.Flag = flag
 	totals.ownUsage = f.OwnUsage
@@ -523,9 +441,7 @@ func (f *Dir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 
 // RemoveFile removes item from dir, updates size and item count
 func (f *Dir) RemoveFile(item fs.Item) {
-	f.m.Lock()
 	f.Files = f.Files.Remove(item)
-	f.m.Unlock()
 
 	removeFromTotals(f, item)
 }
@@ -534,8 +450,6 @@ func (f *Dir) RemoveFile(item fs.Item) {
 // updated under its own lock, so readers calling GetSize, GetUsage or
 // GetItemCount see consistent totals.
 func (f *Dir) adjustStats(itemCount, size, usage int64) {
-	f.m.Lock()
-	defer f.m.Unlock()
 	f.ItemCount += itemCount
 	f.Size += size
 	f.Usage += usage
@@ -544,15 +458,11 @@ func (f *Dir) adjustStats(itemCount, size, usage int64) {
 // hardLinks returns the index of the hard-linked files kept by the directory,
 // if it topped a tree whose totals were computed.
 func (f *Dir) hardLinks() *fs.HardLinks {
-	f.m.RLock()
-	defer f.m.RUnlock()
 	return f.links
 }
 
 // device returns the device the directory lies on.
 func (f *Dir) device() uint64 {
-	f.m.RLock()
-	defer f.m.RUnlock()
 	return f.Dev
 }
 
@@ -579,23 +489,14 @@ func sortFiles(files fs.Files, sortBy fs.SortBy, order fs.SortOrder) {
 	}
 }
 
-// RLock read locks dir
-func (f *Dir) RLock() func() {
-	f.m.RLock()
-	return f.m.RUnlock
-}
-
 // RemoveFileByName removes item by name from dir
 func (f *Dir) RemoveFileByName(name string) {
-	f.m.Lock()
 	idx, ok := f.Files.FindByName(name)
 	if !ok {
-		f.m.Unlock()
 		return
 	}
 	item := f.Files[idx]
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
-	f.m.Unlock()
 
 	removeFromTotals(f, item)
 }
