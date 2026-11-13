@@ -67,7 +67,7 @@ func usageOf(t *testing.T, path string) int64 {
 	t.Helper()
 	info, err := os.Lstat(path)
 	assert.NoError(t, err)
-	usage, _ := getPlatformSpecificUsageAndMli(info, path)
+	usage, _ := fileStats(info, path)
 	return usage
 }
 
@@ -210,10 +210,6 @@ func parityAnalyzers() []parityAnalyzer {
 		{
 			name:     "sequential",
 			analyzer: func(*testing.T) common.Analyzer { return CreateSeqAnalyzer() },
-		},
-		{
-			name:     "stable order",
-			analyzer: func(*testing.T) common.Analyzer { return CreateStableOrderAnalyzer() },
 		},
 		{
 			name: "stored (badger)",

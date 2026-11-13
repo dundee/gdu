@@ -74,12 +74,6 @@ func symlinkTreeAnalyzers() []analyzerFactory {
 			a.GetDone().Wait()
 			return item
 		}},
-		{"stable", func(path string) fs.Item {
-			a := CreateStableOrderAnalyzer()
-			item := a.AnalyzeDir(path, ignoreDir, ignoreType)
-			a.GetDone().Wait()
-			return item
-		}},
 	}
 }
 

@@ -41,13 +41,7 @@ func (a *SequentialAnalyzer) AnalyzeDir(
 }
 
 func (a *SequentialAnalyzer) processDir(path string) *Dir {
-	var (
-		file      fs.Item
-		err       error
-		totalSize int64
-		info      os.FileInfo
-		dirCount  int
-	)
+	var totalSize int64
 
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -68,103 +62,18 @@ func (a *SequentialAnalyzer) processDir(path string) *Dir {
 		if a.IsCancelled() {
 			break
 		}
-		name := f.Name()
-		entryPath := filepath.Join(path, name)
 		if f.IsDir() {
+			name := f.Name()
+			entryPath := filepath.Join(path, name)
 			if a.shouldSkipDir(name, entryPath) {
 				continue
 			}
-			dirCount++
-
 			subdir := a.processDir(entryPath)
 			subdir.Parent = dir
 			dir.AddFile(subdir)
-		} else {
-			// Apply file type filter if set
-			if a.ignoreFileType != nil && a.ignoreFileType(name) {
-				continue // Skip this file
-			}
-
-			info, err = f.Info()
-			if err != nil {
-				log.Print(err.Error())
-				dir.SetFlag('!')
-				continue
-			}
-
-			if a.followSymlinks && info.Mode()&os.ModeSymlink != 0 {
-				infoF, err := followSymlink(entryPath, a.gitAnnexedSize)
-				if err != nil {
-					log.Print(err.Error())
-					dir.SetFlag('!')
-					continue
-				}
-				if infoF != nil {
-					info = infoF
-				}
-			}
-
-			symlinkTarget := readSymlinkTarget(f.Type(), entryPath)
-
-			// Apply time filter if set
-			if a.matchesTimeFilterFn != nil && !a.matchesTimeFilterFn(info.ModTime()) {
-				continue // Skip this file
-			}
-
-			switch {
-			case a.archiveBrowsing && isZipFile(name):
-				zipDir, err := processZipFile(entryPath, info)
-				if err != nil {
-					log.Printf("Failed to process zip file %s: %v", entryPath, err)
-					file = &File{
-						Name:   name,
-						Flag:   getFlag(info),
-						Size:   info.Size(),
-						Parent: dir,
-					}
-				} else {
-					uncompressedSize, compressedSize, err := getZipFileSize(entryPath)
-					if err == nil {
-						zipDir.Size = uncompressedSize
-						zipDir.Usage = compressedSize
-					}
-					zipDir.Parent = dir
-					file = zipDir
-				}
-			case a.archiveBrowsing && isTarFile(name):
-				tarDir, err := processTarFile(entryPath, info)
-				if err != nil {
-					log.Printf("Failed to process tar file %s: %v", entryPath, err)
-					file = &File{
-						Name:   name,
-						Flag:   getFlag(info),
-						Size:   info.Size(),
-						Parent: dir,
-					}
-				} else {
-					tarDir.Parent = dir
-					file = tarDir
-				}
-			default:
-				file = &File{
-					Name:    name,
-					Flag:    getFlag(info),
-					Size:    info.Size(),
-					Parent:  dir,
-					Symlink: symlinkTarget,
-				}
-			}
-
-			if file != nil {
-				// Only set platform-specific attributes for regular files
-				if regularFile, ok := file.(*File); ok {
-					setPlatformSpecificAttrs(regularFile, info, entryPath)
-					regularFile.Usage, regularFile.SharedUsage = a.MeasureSharedUsage(entryPath, info, regularFile.Usage)
-				}
-				totalSize += file.GetUsage()
-				dir.AddFile(file)
-			}
+			continue
 		}
+		totalSize += a.addFile(dir, path, f)
 	}
 
 	a.progressCurrentItemName.Store(path)

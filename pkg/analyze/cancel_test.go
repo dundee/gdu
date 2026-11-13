@@ -19,7 +19,6 @@ func TestAnalyzersCancelKeepsPartialResults(t *testing.T) {
 		analyzer common.Analyzer
 	}{
 		{name: "parallel", analyzer: CreateAnalyzer()},
-		{name: "stable parallel", analyzer: CreateStableOrderAnalyzer()},
 		{name: "sequential", analyzer: CreateSeqAnalyzer()},
 	}
 
@@ -41,7 +40,6 @@ func TestParallelAnalyzersCancelQueuedDirectories(t *testing.T) {
 		factory func() common.Analyzer
 	}{
 		{name: "parallel", factory: func() common.Analyzer { return CreateAnalyzer() }},
-		{name: "stable parallel", factory: func() common.Analyzer { return CreateStableOrderAnalyzer() }},
 	}
 
 	for _, test := range tests {

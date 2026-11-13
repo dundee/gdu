@@ -38,6 +38,20 @@ func (d *TopDir) SetFlag(flag rune) {
 	d.m.Unlock()
 }
 
+// markReadError marks the directory as read with errors: '!' for an error
+// in the directory itself, and '.' for one in a directory below it, like Dir
+// does.
+func (d *TopDir) markReadError(own bool) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	switch {
+	case own:
+		d.Flag = '!'
+	case d.Flag != '!':
+		d.Flag = '.'
+	}
+}
+
 // UpdateMtime keeps the newest mtime seen in the directory tree, like Dir does.
 func (d *TopDir) UpdateMtime(mtime time.Time) {
 	d.m.Lock()

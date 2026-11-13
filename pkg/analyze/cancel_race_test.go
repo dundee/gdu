@@ -89,7 +89,6 @@ func TestCancelWhileAnalyzingAnalyzers(t *testing.T) {
 func cancelRaceAnalyzerFactories() []cancelRaceAnalyzerFactory {
 	return []cancelRaceAnalyzerFactory{
 		{name: "parallel", new: func(*testing.T) cancelRaceAnalyzer { return CreateAnalyzer() }},
-		{name: "stable", new: func(*testing.T) cancelRaceAnalyzer { return CreateStableOrderAnalyzer() }},
 		{name: "sequential", new: func(*testing.T) cancelRaceAnalyzer { return CreateSeqAnalyzer() }},
 		{name: "stored", new: func(t *testing.T) cancelRaceAnalyzer {
 			return CreateStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))

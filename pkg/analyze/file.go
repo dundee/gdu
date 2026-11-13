@@ -125,13 +125,15 @@ func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
 
 // CreateFileItem creates a File from an os.FileInfo with correct platform-specific attributes
 func CreateFileItem(path string, info os.FileInfo) *File {
-	file := &File{
-		Name: filepath.Base(path),
-		Size: info.Size(),
-		Flag: getFlag(info),
+	usage, link := fileStats(info, path)
+	return &File{
+		Name:  filepath.Base(path),
+		Size:  info.Size(),
+		Usage: usage,
+		Mtime: info.ModTime(),
+		Mli:   link.ino,
+		Flag:  getFlag(info),
 	}
-	setPlatformSpecificAttrs(file, info, path)
-	return file
 }
 
 // GetItemStats returns 1 as count of items, apparent usage and real usage of this file

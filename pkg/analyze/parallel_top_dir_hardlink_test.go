@@ -50,8 +50,8 @@ func TestTopDirAnalyzeHardLinks(t *testing.T) {
 
 			info, err := os.Stat(original)
 			require.NoError(t, err)
-			usage, mli := getPlatformSpecificUsageAndMli(info, original)
-			if !tc.independent && mli == 0 {
+			usage, link := fileStats(info, original)
+			if !tc.independent && link == (inodeKey{}) {
 				t.Skip("hard-link accounting is not supported on this platform")
 			}
 
