@@ -139,27 +139,28 @@ func TestShowSummaryApparentSizeForFilePath(t *testing.T) {
 	assert.Contains(t, out, "small.txt")
 }
 
-// fileMeasuringAnalyzer stands in for an analyzer whose settings change how a
-// file is measured, such as --exclusive-size.
-type fileMeasuringAnalyzer struct {
-	*analyze.TopDirAnalyzer
-}
-
-func (fileMeasuringAnalyzer) MeasureSharedUsage(string, os.FileInfo, int64) (exclusive, shared int64) {
-	return 12345, 0
-}
-
-func TestFilePathIsMeasuredByTheAnalyzer(t *testing.T) {
+// A file given as the path is measured as a scan measures files, so
+// --exclusive-size applies to it too.
+func TestFilePathIsMeasuredWithExclusiveSize(t *testing.T) {
 	filePath := filepath.Join(t.TempDir(), "small.txt")
 	assert.Nil(t, os.WriteFile(filePath, []byte("hello"), 0o644))
+	measure := measureSharedUsage
+	t.Cleanup(func() { measureSharedUsage = measure })
+	measureSharedUsage = func(string, os.FileInfo, int64) (exclusive, shared int64) { return 12345, 0 }
 
-	output := bytes.NewBuffer(make([]byte, 10))
-	// summarize=true, noPrefix=true
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, true, "", 0, false, 0)
-	ui.SetAnalyzer(fileMeasuringAnalyzer{analyze.CreateTopDirAnalyzer()})
-	assert.Nil(t, ui.AnalyzePath(filePath, nil))
+	for _, exclusive := range []bool{false, true} {
+		output := bytes.NewBuffer(make([]byte, 10))
+		// summarize=true, noPrefix=true
+		ui := CreateStdoutUI(output, false, false, false, false, true, false, true, "", 0, false, 0)
+		ui.SetExclusiveSize(exclusive)
+		assert.Nil(t, ui.AnalyzePath(filePath, nil))
 
-	assert.Contains(t, output.String(), "12345")
+		if exclusive {
+			assert.Contains(t, output.String(), "12345")
+		} else {
+			assert.NotContains(t, output.String(), "12345")
+		}
+	}
 }
 
 func TestShowSummaryDiskUsageForFilePath(t *testing.T) {

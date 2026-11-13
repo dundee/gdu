@@ -5,7 +5,6 @@ package analyze
 import (
 	"os"
 	"syscall"
-	"time"
 )
 
 const devBSize = 512
@@ -22,16 +21,6 @@ func fileStats(info os.FileInfo, _ string) (usage int64, link inodeKey) {
 		link = inodeKey{dev: uint64(stat.Dev), ino: stat.Ino}
 	}
 	return stat.Blocks * devBSize, link
-}
-
-func setDirPlatformSpecificAttrs(dir *Dir, path string) {
-	var stat syscall.Stat_t
-	if err := syscall.Stat(path, &stat); err != nil {
-		return
-	}
-
-	dir.Mtime = time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec))
-	dir.OwnUsage = stat.Blocks * devBSize
 }
 
 // dirOwnUsage returns the disk usage of the blocks allocated to the directory

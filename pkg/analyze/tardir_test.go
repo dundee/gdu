@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
+	"context"
 	"io"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -438,12 +440,11 @@ func TestSequentialAnalyzerWithTarFile(t *testing.T) {
 	createTestTarFile(t, filepath.Join(tmpDir, "test.tar"))
 
 	a := CreateSeqAnalyzer()
-	a.SetArchiveBrowsing(true)
 
-	result := a.AnalyzeDir(tmpDir,
-		func(string, string) bool { return false },
-		func(string) bool { return false },
-	)
+	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+		IgnoreFile:      func(string) bool { return false },
+		ArchiveBrowsing: true,
+	})
 
 	require.NotNil(t, result)
 
@@ -470,12 +471,11 @@ func TestSequentialAnalyzerWithTarGzFile(t *testing.T) {
 	createTestTarGzFile(t, filepath.Join(tmpDir, "test.tar.gz"))
 
 	a := CreateSeqAnalyzer()
-	a.SetArchiveBrowsing(true)
 
-	result := a.AnalyzeDir(tmpDir,
-		func(string, string) bool { return false },
-		func(string) bool { return false },
-	)
+	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+		IgnoreFile:      func(string) bool { return false },
+		ArchiveBrowsing: true,
+	})
 
 	require.NotNil(t, result)
 
@@ -499,12 +499,11 @@ func TestParallelAnalyzerWithTarFile(t *testing.T) {
 	createTestTarFile(t, filepath.Join(tmpDir, "archive.tar"))
 
 	a := CreateAnalyzer()
-	a.SetArchiveBrowsing(true)
 
-	result := a.AnalyzeDir(tmpDir,
-		func(string, string) bool { return false },
-		func(string) bool { return false },
-	)
+	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+		IgnoreFile:      func(string) bool { return false },
+		ArchiveBrowsing: true,
+	})
 
 	require.NotNil(t, result)
 
@@ -525,12 +524,11 @@ func TestParallelAnalyzerWithTarXzFile(t *testing.T) {
 	createTestTarXzFile(t, filepath.Join(tmpDir, "archive.tar.xz"))
 
 	a := CreateAnalyzer()
-	a.SetArchiveBrowsing(true)
 
-	result := a.AnalyzeDir(tmpDir,
-		func(string, string) bool { return false },
-		func(string) bool { return false },
-	)
+	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+		IgnoreFile:      func(string) bool { return false },
+		ArchiveBrowsing: true,
+	})
 
 	require.NotNil(t, result)
 
@@ -603,10 +601,7 @@ func TestAnalyzerTarBrowsingDisabled(t *testing.T) {
 	a := CreateSeqAnalyzer()
 	// archiveBrowsing is false by default
 
-	result := a.AnalyzeDir(tmpDir,
-		func(string, string) bool { return false },
-		func(string) bool { return false },
-	)
+	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(string) bool { return false }})
 
 	require.NotNil(t, result)
 

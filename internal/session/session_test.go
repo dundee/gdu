@@ -86,12 +86,10 @@ func newGatedAnalyzer() *gatedAnalyzer {
 	}
 }
 
-func (a *gatedAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, filter common.ShouldFileBeIgnored,
-) fs.Item {
+func (a *gatedAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
 	a.started <- path
 	<-a.release
-	return &gatedTotals{Item: a.ParallelAnalyzer.AnalyzeDir(path, ignore, filter), gate: a.finalize}
+	return &gatedTotals{Item: a.ParallelAnalyzer.AnalyzeDir(ctx, path, opts), gate: a.finalize}
 }
 
 // gatedTotals waits for its gate before computing its totals.
@@ -212,9 +210,6 @@ func TestCancelKeepsWhatWasFoundAndSkipsRemainingRoots(t *testing.T) {
 
 	assert.Equal(t, first, <-analyzer.started)
 	cancel()
-	// the analyzer is cancelled from a goroutine of the context; let the walk
-	// start only once it is
-	require.Eventually(t, analyzer.IsCancelled, 5*time.Second, time.Millisecond)
 	analyzer.release <- struct{}{}
 	root := <-done
 
@@ -233,26 +228,11 @@ func TestCancelKeepsWhatWasFoundAndSkipsRemainingRoots(t *testing.T) {
 	assert.Equal(t, int64(5), fs.DisplayedItemCount(<-done))
 }
 
-// countingAnalyzer counts how often it is cancelled.
-type countingAnalyzer struct {
-	*analyze.ParallelAnalyzer
-	mu      sync.Mutex
-	cancels int
-}
-
-func (a *countingAnalyzer) Cancel() {
-	a.mu.Lock()
-	a.cancels++
-	a.mu.Unlock()
-	a.ParallelAnalyzer.Cancel()
-}
-
 // A frontend may cancel a scan before the goroutine running it has started;
-// the scan must still stop, and the analyzer be cancelled once.
+// the scan must still stop.
 func TestScanCancelledBeforeItStarts(t *testing.T) {
 	first, second := makeTree(t, "first"), makeTree(t, "second")
-	analyzer := &countingAnalyzer{ParallelAnalyzer: analyze.CreateAnalyzer()}
-	s := newSession(analyzer)
+	s := newSession(analyze.CreateAnalyzer())
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -261,7 +241,6 @@ func TestScanCancelledBeforeItStarts(t *testing.T) {
 	roots := entries(root)
 	require.Len(t, roots, 1)
 	assert.Equal(t, int64(0), fs.DisplayedItemCount(roots[0]))
-	assert.Equal(t, 1, analyzer.cancels)
 }
 
 func TestRescanReplacesTheDirectory(t *testing.T) {

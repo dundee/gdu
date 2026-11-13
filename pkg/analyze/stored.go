@@ -1,11 +1,11 @@
 package analyze
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"iter"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -49,108 +49,75 @@ func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 }
 
 // AnalyzeDir analyzes given path
-func (a *StoredAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
-	a.ignoreDir = ignore
-	a.ignoreFileType = fileTypeFilter
+func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+	s := a.begin(ctx, opts)
 
 	closeFn := a.storage.Open()
 	defer closeFn()
 
-	go a.UpdateProgress()
-	a.wait.Add(1)
-	dir := a.processDir(path, nil)
-
-	a.wait.Wait()
-
-	a.progressDoneChan <- struct{}{}
-	a.doneChan.Broadcast()
-
-	return dir
+	return walkTree[*StoredDir](&a.BaseAnalyzer, s, &storedSink{a: a}, path, true)
 }
 
-// processDir scans the directory at path and stores it. Its subdirectories
-// are scanned and stored concurrently; the returned directory refers to them
-// by placeholders, loaded from the database when needed.
-func (a *StoredAnalyzer) processDir(path string, parent fs.Item) *StoredDir {
-	var totalUsage int64
+// storedSink stores each directory of a scan as soon as its entries are
+// known. The scanned root is returned with its entries; the directories
+// below it are left to be loaded from the database when needed.
+type storedSink struct {
+	a    *StoredAnalyzer
+	root *StoredDir
+}
 
-	files, err := os.ReadDir(path)
-	if err != nil {
-		log.Print(err.Error())
+func (s *storedSink) openDir(parent *StoredDir, path string, root bool) (*StoredDir, bool) {
+	if !root {
+		parent.Dir.AddFile(newStoredDir(s.a.storage, path, parent))
 	}
-
-	dir := newStoredDir(a.storage, path, parent)
+	dir := newStoredDir(s.a.storage, path, nil)
 	dir.loaded = true
-	dir.Flag = getDirFlag(err, len(files))
 	dir.ItemCount = 1
-	dir.Files = make(fs.Files, 0, len(files))
-
-	setDirPlatformSpecificAttrs(dir.Dir, path)
-
-	for _, f := range files {
-		if a.IsCancelled() {
-			break
-		}
-		if f.IsDir() {
-			name := f.Name()
-			entryPath := filepath.Join(path, name)
-			if a.shouldSkipDir(name, entryPath) {
-				continue
-			}
-			dir.Dir.AddFile(newStoredDir(a.storage, entryPath, dir))
-
-			// Counted before the goroutine starts: this directory's Done may
-			// come first, and Wait must not see zero in between.
-			a.wait.Add(1)
-			go func(entryPath string) {
-				concurrencyLimit <- struct{}{}
-				a.processDir(entryPath, nil)
-				<-concurrencyLimit
-			}(entryPath)
-			continue
-		}
-
-		totalUsage += a.processFile(dir, path, f)
+	if root {
+		s.root = dir
 	}
-
-	err = a.storage.storeRecord(path, dir.record())
-	if err != nil {
-		log.Print(err.Error())
-	}
-
-	a.wait.Done()
-
-	a.progressCurrentItemName.Store(path)
-	a.progressItemCount.Add(int64(len(files)))
-	a.progressTotalUsage.Add(totalUsage)
-
-	return dir
+	return dir, true
 }
 
-// processFile adds the entry f of dir, which lies at dirPath, unless a
-// filter excludes it, and returns the disk usage it added.
-func (a *StoredAnalyzer) processFile(dir *StoredDir, dirPath string, f os.DirEntry) int64 {
-	entry, ok, err := a.resolveFile(dirPath, f, resolveOptions{browseArchives: true})
-	if err != nil {
-		log.Print(err.Error())
-		dir.SetFlag('!')
-		return 0
-	}
-	if !ok {
-		return 0
-	}
+func (*storedSink) readDir(dir *StoredDir, path string, err error, entries int) {
+	dir.Flag = getDirFlag(err, entries)
+	dir.Files = make(fs.Files, 0, entries)
+	dir.Mtime, dir.OwnUsage = dirStats(path)
+}
+
+func (*storedSink) resolveOptions(*StoredDir) resolveOptions {
+	return resolveOptions{browseArchives: true}
+}
+
+func (s *storedSink) addFile(dir *StoredDir, entry *fileEntry) int64 {
 	if entry.archive != nil {
-		path := filepath.Join(dirPath, entry.name)
-		a.storeArchive(entry.archive, path)
-		dir.Dir.AddFile(newStoredDir(a.storage, path, dir))
+		path := filepath.Join(dir.GetPath(), entry.name)
+		s.a.storeArchive(entry.archive, path)
+		dir.Dir.AddFile(newStoredDir(s.a.storage, path, dir))
 		return entry.archive.GetUsage()
 	}
 	file := entry.item(dir)
 	dir.Dir.AddFile(file)
 	return file.GetUsage()
 }
+
+func (*storedSink) fileError(dir *StoredDir) {
+	dir.SetFlag('!')
+}
+
+func (s *storedSink) entriesDone(dir *StoredDir) {
+	if err := s.a.storage.storeRecord(dir.GetPath(), dir.record()); err != nil {
+		log.Print(err.Error())
+	}
+	if dir != s.root {
+		// stored, and loaded again from the database when needed
+		dir.Files = nil
+	}
+}
+
+func (*storedSink) closeDir(*StoredDir) {}
+
+func (*storedSink) addDir(_, _ *StoredDir) {}
 
 // storeArchive stores the directories of a browsed archive lying at path, so
 // that they load like any other stored directory.

@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,8 +21,7 @@ func TestScannedDirIncludesOwnBlocks(t *testing.T) {
 	want := usageOf(t, dir) + usageOf(t, filepath.Join(dir, "a")) + usageOf(t, filepath.Join(dir, "b"))
 
 	analyzer := CreateSeqAnalyzer()
-	scanned := analyzer.AnalyzeDir(root, func(_, _ string) bool { return false }, nil).(*Dir)
-	analyzer.GetDone().Wait()
+	scanned := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{}).(*Dir)
 	scanned.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, want, scanned.Files[0].GetUsage())
@@ -38,8 +38,7 @@ func TestZeroBlockDirIsNotChargedABlock(t *testing.T) {
 		"parallel": CreateAnalyzer(),
 		"top-dir":  CreateTopDirAnalyzer(),
 	} {
-		scanned := analyzer.AnalyzeDir(root, func(_, _ string) bool { return false }, nil)
-		analyzer.GetDone().Wait()
+		scanned := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{})
 		scanned.UpdateStats(make(fs.HardLinkedItems))
 
 		assert.Equal(t, int64(0), scanned.GetUsage(), name)

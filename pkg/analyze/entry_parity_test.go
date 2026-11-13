@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,6 +20,8 @@ type entryStats struct {
 	dir                bool
 	size, usage, count int64
 	flag               rune
+	// mtime in whole seconds, the precision SQLite keeps
+	mtime int64
 }
 
 // collectEntries walks a scanned tree and records the stats of every item,
@@ -33,7 +36,9 @@ func collectEntries(root fs.Item) map[string]entryStats {
 		if err != nil {
 			key = item.GetPath()
 		}
-		stats[key] = entryStats{item.IsDir(), item.GetSize(), item.GetUsage(), item.GetItemCount(), item.GetFlag()}
+		stats[key] = entryStats{
+			item.IsDir(), item.GetSize(), item.GetUsage(), item.GetItemCount(), item.GetFlag(), item.GetMtime().Unix(),
+		}
 		if item.IsDir() {
 			for child := range item.GetFiles(fs.SortByName, fs.SortAsc) {
 				walk(child)
@@ -56,15 +61,25 @@ func entryParityAnalyzers() []parityAnalyzer {
 // scanConfigured scans root with an analyzer set up by configure and computes
 // its totals the way the session does.
 func scanConfigured(
-	t *testing.T, analyzer common.Analyzer, root string, configure func(common.Analyzer),
+	t *testing.T, analyzer common.Analyzer, root string, configure func(*common.ScanOptions),
 ) fs.Item {
 	t.Helper()
+	return scanFiltered(t, analyzer, root, configure, nil)
+}
+
+// scanFiltered is scanConfigured with a file type filter.
+func scanFiltered(
+	t *testing.T, analyzer common.Analyzer, root string, configure func(*common.ScanOptions),
+	fileFilter common.ShouldFileBeIgnored,
+) fs.Item {
+	t.Helper()
+	opts := common.ScanOptions{IgnoreFile: fileFilter}
 	if configure != nil {
-		configure(analyzer)
+		configure(&opts)
 	}
 	done := make(chan fs.Item, 1)
 	go func() {
-		done <- analyzer.AnalyzeDir(root, func(_, _ string) bool { return false }, nil)
+		done <- analyzer.AnalyzeDir(context.Background(), root, opts)
 	}()
 	var dir fs.Item
 	select {
@@ -72,32 +87,46 @@ func scanConfigured(
 	case <-time.After(20 * time.Second):
 		t.Fatal("the scan did not finish")
 	}
-	analyzer.GetDone().Wait()
-	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
+	// as the session does, by whether the scan filtered files
+	if opts.FilteringFiles() {
+		dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
+	} else {
+		dir.UpdateStats(make(fs.HardLinkedItems))
+	}
 	return dir
 }
 
 // assertEntryParity scans root with every analyzer configured alike and
 // checks each reports the tree the in-memory analyzer reports.
-func assertEntryParity(t *testing.T, root string, configure func(common.Analyzer)) map[string]entryStats {
+func assertEntryParity(t *testing.T, root string, configure func(*common.ScanOptions)) map[string]entryStats {
+	t.Helper()
+	return assertFilteredParity(t, root, configure, nil)
+}
+
+// assertFilteredParity is assertEntryParity with a file type filter.
+func assertFilteredParity(
+	t *testing.T, root string, configure func(*common.ScanOptions), fileFilter common.ShouldFileBeIgnored,
+) map[string]entryStats {
 	t.Helper()
 	analyzers := entryParityAnalyzers()
-	want := collectEntries(scanConfigured(t, analyzers[0].analyzer(t), root, configure))
+	want := collectEntries(scanFiltered(t, analyzers[0].analyzer(t), root, configure, fileFilter))
 	for _, tc := range analyzers[1:] {
 		t.Run(tc.name, func(t *testing.T) {
-			got := collectEntries(scanConfigured(t, tc.analyzer(t), root, configure))
+			got := collectEntries(scanFiltered(t, tc.analyzer(t), root, configure, fileFilter))
 			assert.Equal(t, want, got)
 		})
 	}
 	t.Run("top-dir", func(t *testing.T) {
-		got := scanConfigured(t, CreateTopDirAnalyzer(), root, configure)
+		got := scanFiltered(t, CreateTopDirAnalyzer(), root, configure, fileFilter)
 		assert.Equal(t, want["."].size, got.GetSize(), "size at the root")
 		assert.Equal(t, want["."].usage, got.GetUsage(), "usage at the root")
 		for child := range got.GetFiles(fs.SortByName, fs.SortAsc) {
 			w := want[child.GetName()]
 			assert.Equal(t, w.size, child.GetSize(), "size of %s", child.GetName())
 			assert.Equal(t, w.usage, child.GetUsage(), "usage of %s", child.GetName())
+			assert.Equal(t, w.count, child.GetItemCount(), "item count of %s", child.GetName())
 			assert.Equal(t, w.flag, child.GetFlag(), "flag of %s", child.GetName())
+			assert.Equal(t, w.mtime, child.GetMtime().Unix(), "mtime of %s", child.GetName())
 		}
 	})
 	return want
@@ -123,9 +152,9 @@ func TestFollowedSymlinkTimeFilterParity(t *testing.T) {
 	writeSized(t, filepath.Join(root, "sub", "new"), 300, time.Time{})
 	require.NoError(t, os.Symlink(target, filepath.Join(root, "sub", "link")))
 
-	want := assertEntryParity(t, root, func(a common.Analyzer) {
-		a.SetFollowSymlinks(true)
-		a.SetTimeFilter(func(mtime time.Time) bool { return mtime.Before(old.Add(time.Hour)) })
+	want := assertEntryParity(t, root, func(o *common.ScanOptions) {
+		o.FollowSymlinks = true
+		o.TimeFilter = func(mtime time.Time) bool { return mtime.Before(old.Add(time.Hour)) }
 	})
 
 	assert.Equal(t, int64(10000), want["sub/link"].size)
@@ -138,7 +167,7 @@ func TestUnreadableEntryFlagParity(t *testing.T) {
 	writeSized(t, filepath.Join(root, "sub", "file"), 300, time.Time{})
 	require.NoError(t, os.Symlink(filepath.Join(root, "missing"), filepath.Join(root, "sub", "dangling")))
 
-	want := assertEntryParity(t, root, func(a common.Analyzer) { a.SetFollowSymlinks(true) })
+	want := assertEntryParity(t, root, func(o *common.ScanOptions) { o.FollowSymlinks = true })
 
 	assert.Equal(t, '!', want["sub"].flag)
 	assert.Equal(t, '.', want["."].flag)

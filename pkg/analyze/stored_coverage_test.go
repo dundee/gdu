@@ -1,11 +1,13 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"slices"
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -17,33 +19,15 @@ func TestStoredAnalyzerGetProgress(t *testing.T) {
 	assert.Equal(t, int64(0), progress.ItemCount)
 }
 
-func TestStoredAnalyzerSetFollowSymlinks(t *testing.T) {
-	analyzer := CreateStoredAnalyzer("/tmp/test")
-	analyzer.SetFollowSymlinks(true)
-	assert.True(t, analyzer.followSymlinks)
-	analyzer.SetFollowSymlinks(false)
-	assert.False(t, analyzer.followSymlinks)
-}
-
-func TestStoredAnalyzerSetShowAnnexedSize(t *testing.T) {
-	analyzer := CreateStoredAnalyzer("/tmp/test")
-	analyzer.SetShowAnnexedSize(true)
-	assert.True(t, analyzer.gitAnnexedSize)
-	analyzer.SetShowAnnexedSize(false)
-	assert.False(t, analyzer.gitAnnexedSize)
-}
-
 func TestStoredDirRemoveFile(t *testing.T) {
 	// Test RemoveFile functionality
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	// Remove a file
 	files := slices.Collect(dir.GetFiles(fs.SortByName, fs.SortAsc))
@@ -58,11 +42,9 @@ func TestStoredDirUpdateStats(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	dir.UpdateStats(make(fs.HardLinkedItems))
 }
@@ -73,11 +55,9 @@ func TestStoredDirUpdateStatsWithMtimeUpdate(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	// Create a file with newer mtime
 	file := &File{
@@ -95,11 +75,9 @@ func TestStoredDirUpdateStatsWithFlagUpdate(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	// Create a file with error flag
 	file := &File{
@@ -119,11 +97,9 @@ func TestStoredDirUpdateStatsWithDotFlag(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	// Create a file with dot flag
 	file := &File{
@@ -151,12 +127,10 @@ func TestStoredAnalyzerWithZip(t *testing.T) {
 	f.Close()
 
 	analyzer := CreateStoredAnalyzer("/tmp/test")
-	analyzer.SetArchiveBrowsing(true)
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile:      func(_ string) bool { return false },
+		ArchiveBrowsing: true,
+	}).(*StoredDir)
 
 	// Check valid.zip
 	var validZip fs.Item

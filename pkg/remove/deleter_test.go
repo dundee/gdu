@@ -2,6 +2,7 @@ package remove
 
 import (
 	"archive/zip"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -35,8 +37,7 @@ func writeFile(t *testing.T, path, content string) {
 func scanTree(t *testing.T, root string, archives bool) fs.Item {
 	t.Helper()
 	analyzer := analyze.CreateAnalyzer()
-	analyzer.SetArchiveBrowsing(archives)
-	tree := analyzer.AnalyzeDir(root, func(string, string) bool { return false }, nil)
+	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{ArchiveBrowsing: archives})
 	tree.UpdateStats(make(fs.HardLinkedItems))
 	return tree
 }

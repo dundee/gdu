@@ -3,6 +3,7 @@
 package analyze
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -246,14 +247,13 @@ func TestExclusiveUsageFollowsSymlinks(t *testing.T) {
 func TestAnalyzerMeasureSharedUsageWithFakeKernel(t *testing.T) {
 	fakeGetattrlist(t, privateReply(4096))
 
-	off := &BaseAnalyzer{}
-	usage, shared := off.MeasureSharedUsage("f", statInfo{}, 8192)
+	off := &scan{}
+	usage, shared := off.measureSharedUsage("f", statInfo{}, 8192)
 	assert.Equal(t, int64(8192), usage, "disabled keeps st_blocks")
 	assert.Equal(t, int64(0), shared)
 
-	on := &BaseAnalyzer{}
-	on.SetExclusiveSize(true)
-	usage, shared = on.MeasureSharedUsage("f", statInfo{}, 8192)
+	on := &scan{extents: &extentMeter{}}
+	usage, shared = on.measureSharedUsage("f", statInfo{}, 8192)
 	assert.Equal(t, int64(4096), usage)
 	assert.Equal(t, int64(4096), shared)
 }
@@ -272,9 +272,7 @@ func TestEveryAnalyzerReportsExclusiveSizeOfClones(t *testing.T) {
 
 			scan := func(exclusive bool) fs.Item {
 				a := tc.analyzer(t)
-				a.SetExclusiveSize(exclusive)
-				root := a.AnalyzeDir(dir, func(_, _ string) bool { return false }, nil)
-				a.GetDone().Wait()
+				root := a.AnalyzeDir(context.Background(), dir, common.ScanOptions{ExclusiveSize: exclusive})
 				root.UpdateStats(make(fs.HardLinkedItems))
 				return root
 			}
