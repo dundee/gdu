@@ -12,6 +12,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
 )
 
 func TestScanObserverPrintsTheProgress(t *testing.T) {
@@ -45,7 +46,7 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 
 	scanned := bytes.Buffer{}
 	ui := CreateStdoutUI(&scanned, false, false, false, false, false, false, false, "", 0, false, 0)
-	analyzer, err := analyze.CreateSqliteAnalyzer(db)
+	analyzer, err := sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
 	ui.SetAnalyzer(analyzer)
 	require.NoError(t, ui.AnalyzePath("test_dir", nil))
@@ -54,7 +55,7 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 
 	stored := bytes.Buffer{}
 	ui = CreateStdoutUI(&stored, false, false, false, false, false, false, false, "", 0, false, 0)
-	analyzer, err = analyze.CreateSqliteAnalyzer(db)
+	analyzer, err = sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
 	ui.SetAnalyzer(analyzer)
 	require.NoError(t, ui.ReadFromStorage("test_dir"))

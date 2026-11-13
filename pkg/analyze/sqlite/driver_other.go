@@ -1,6 +1,6 @@
 //go:build (linux && (mips64 || mipsle || mips || mips64le || ppc64)) || (freebsd && (arm || 386)) || (openbsd && 386) || (netbsd && (arm || 386 || amd64)) || plan9
 
-package analyze
+package sqlite
 
 import "errors"
 

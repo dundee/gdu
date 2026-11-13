@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/badger"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -18,7 +19,7 @@ import (
 func scanBadger(t *testing.T, root string, archives bool) (fs.Item, string) {
 	t.Helper()
 	db := filepath.Join(t.TempDir(), "gdu.badger")
-	analyzer := analyze.CreateStoredAnalyzer(db)
+	analyzer := badger.CreateAnalyzer(db)
 	tree := analyzer.AnalyzeDir(context.Background(), root, analyze.Options{ArchiveBrowsing: archives})
 	tree.UpdateStats(false)
 	return tree, db
@@ -26,7 +27,7 @@ func scanBadger(t *testing.T, root string, archives bool) (fs.Item, string) {
 
 func loadBadger(t *testing.T, db, root string) fs.Item {
 	t.Helper()
-	tree, err := analyze.CreateStoredAnalyzer(db).LoadAnalysis(root)
+	tree, err := badger.CreateAnalyzer(db).LoadAnalysis(root)
 	require.NoError(t, err)
 	return tree
 }

@@ -24,6 +24,8 @@ import (
 	"github.com/dundee/gdu/v5/internal/tui"
 	"github.com/dundee/gdu/v5/internal/webui"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/badger"
+	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -307,9 +309,9 @@ func (a *App) Run() error {
 			}
 		}
 		if strings.HasSuffix(a.Flags.DbPath, ".badger") {
-			ui.SetAnalyzer(analyze.CreateStoredAnalyzer(a.Flags.DbPath))
+			ui.SetAnalyzer(badger.CreateAnalyzer(a.Flags.DbPath))
 		} else {
-			sqliteAnalyzer, err := analyze.CreateSqliteAnalyzer(a.Flags.DbPath)
+			sqliteAnalyzer, err := sqlite.CreateAnalyzer(a.Flags.DbPath)
 			if err != nil {
 				return fmt.Errorf("creating sqlite analyzer: %w", err)
 			}

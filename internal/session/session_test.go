@@ -15,6 +15,7 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -306,7 +307,7 @@ func TestRescanOfTheTopScansAgain(t *testing.T) {
 // of one scans the whole tree again.
 func TestRescanWithDatabaseScansTheWholeTree(t *testing.T) {
 	path := makeTree(t, "scan")
-	analyzer, err := analyze.CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "gdu.sqlite"))
+	analyzer, err := sqlite.CreateAnalyzer(filepath.Join(t.TempDir(), "gdu.sqlite"))
 	require.NoError(t, err)
 	s := newSession(analyzer)
 	root := s.Scan(ctx, []string{path}, nil)
@@ -356,13 +357,13 @@ func TestOpenNeedsDatabase(t *testing.T) {
 func TestOpenLoadsTheStoredAnalysis(t *testing.T) {
 	path := makeTree(t, "scan")
 	db := filepath.Join(t.TempDir(), "gdu.sqlite")
-	analyzer, err := analyze.CreateSqliteAnalyzer(db)
+	analyzer, err := sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
 	scanned := newSession(analyzer).Scan(ctx, []string{path}, nil)
 	// changes made since the scan are not in the stored analysis
 	writeFile(t, filepath.Join(path, "added"), "added")
 
-	analyzer, err = analyze.CreateSqliteAnalyzer(db)
+	analyzer, err = sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
 	s := newSession(analyzer)
 	root, err := s.Open(path)

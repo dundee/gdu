@@ -129,7 +129,7 @@ func TestStoredAnalyzerPopulatesSymlinkTarget(t *testing.T) {
 	err := os.Symlink("nested/file2", "test_dir/link")
 	assert.Nil(t, err)
 
-	a := CreateStoredAnalyzer("/tmp/badger")
+	a := createStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
 	idx, ok := dir.Files.FindByName("link")

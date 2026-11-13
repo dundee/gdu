@@ -17,6 +17,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/badger"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
@@ -702,7 +703,7 @@ func TestDeleteMarkedInBackgroundWithStorage(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.SetAnalyzer(analyze.CreateStoredAnalyzer("/tmp/badger"))
+	ui.SetAnalyzer(badger.CreateAnalyzer("/tmp/badger"))
 	ui.SetDeleteInBackground()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
@@ -731,7 +732,7 @@ func TestDeleteMarkedInBackgroundWithStorageAndParallel(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.SetAnalyzer(analyze.CreateStoredAnalyzer("/tmp/badger"))
+	ui.SetAnalyzer(badger.CreateAnalyzer("/tmp/badger"))
 	ui.SetDeleteInBackground()
 	ui.SetDeleteInParallel()
 
