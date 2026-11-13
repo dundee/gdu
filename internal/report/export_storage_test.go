@@ -9,6 +9,8 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/badger"
+	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,7 +63,7 @@ func reportWithoutHeader(report string) string {
 
 func createSqliteAnalyzer(t *testing.T) analyze.Analyzer {
 	t.Helper()
-	analyzer, err := analyze.CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.sqlite"))
+	analyzer, err := sqlite.CreateAnalyzer(filepath.Join(t.TempDir(), "test.sqlite"))
 	if err != nil {
 		t.Skipf("sqlite storage not available: %v", err)
 	}
@@ -69,11 +71,11 @@ func createSqliteAnalyzer(t *testing.T) analyze.Analyzer {
 }
 
 func TestAnalyzePathWithSummarizeFromStorage(t *testing.T) {
-	assertStorageExportMatchesPlain(t, analyze.CreateStoredAnalyzer(t.TempDir()), 0, true)
+	assertStorageExportMatchesPlain(t, badger.CreateAnalyzer(t.TempDir()), 0, true)
 }
 
 func TestAnalyzePathWithDepthFromStorage(t *testing.T) {
-	report := assertStorageExportMatchesPlain(t, analyze.CreateStoredAnalyzer(t.TempDir()), 1, false)
+	report := assertStorageExportMatchesPlain(t, badger.CreateAnalyzer(t.TempDir()), 1, false)
 	assert.Contains(t, report, `"name":"nested"`)
 }
 

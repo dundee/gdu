@@ -27,6 +27,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/badger"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -932,12 +933,12 @@ func TestReadFromStorage(t *testing.T) {
 	storagePath := t.TempDir() + "/badger"
 
 	// Populate the storage with a stored analysis.
-	a := analyze.CreateStoredAnalyzer(storagePath)
+	a := badger.CreateAnalyzer(storagePath)
 	dir := a.AnalyzeDir(context.Background(), "test_dir", analyze.Options{})
 	dir.UpdateStats(false)
 
 	ui := newTestUI()
-	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
+	ui.SetAnalyzer(badger.CreateAnalyzer(storagePath))
 	require.NoError(t, ui.ReadFromStorage("test_dir"))
 	// the classification reads the stored tree in the background, so it has
 	// to be over before the test removes the database
@@ -955,7 +956,7 @@ func TestReadFromStorage(t *testing.T) {
 func TestReadFromStorageError(t *testing.T) {
 	ui := newTestUI()
 	storagePath := t.TempDir() + "/badger"
-	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))
+	ui.SetAnalyzer(badger.CreateAnalyzer(storagePath))
 	// A non-existent path yields a badger read error.
 	err := ui.ReadFromStorage("missing_dir")
 	assert.ErrorContains(t, err, "holds no analysis of missing_dir")

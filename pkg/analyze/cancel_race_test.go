@@ -87,10 +87,10 @@ func cancelRaceAnalyzerFactories() []cancelRaceAnalyzerFactory {
 		{name: "parallel", new: func(*testing.T) Analyzer { return CreateAnalyzer() }},
 		{name: "sequential", new: func(*testing.T) Analyzer { return CreateSeqAnalyzer() }},
 		{name: "stored", new: func(t *testing.T) Analyzer {
-			return CreateStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))
+			return createStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))
 		}},
 		{name: "sqlite", new: func(t *testing.T) Analyzer {
-			analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "results.sqlite"))
+			analyzer, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "results.sqlite"))
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
 			return analyzer

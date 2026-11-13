@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger/v4"
+	"github.com/dundee/gdu/v5/internal/badgerstore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protowire"
@@ -90,14 +90,11 @@ func TestStoredRecordMalformed(t *testing.T) {
 }
 
 func TestStoredRecordOfOtherFormatIsRefused(t *testing.T) {
-	storage := NewStorage(t.TempDir())
+	storage := records{badgerstore.New(t.TempDir())}
 	closeFn := storage.Open()
 	defer closeFn()
-	require.NoError(t, storage.storeRecord("/dir", &storedRecord{}))
 	value := (&storedRecord{Format: storedFormat - 1}).marshal()
-	require.NoError(t, storage.db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte("/dir"), value)
-	}))
+	require.NoError(t, storage.Put([]byte("/dir"), value))
 
 	_, err := storage.loadRecord("/dir")
 

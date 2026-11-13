@@ -14,19 +14,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// StoredAnalyzer implements Analyzer
+// StoredAnalyzer scans directories into a RecordStore, keeping in memory only
+// the directories in use (--db x.badger).
 type StoredAnalyzer struct {
 	BaseAnalyzer
-	storage     *Storage
-	storagePath string
+	storage records
 }
 
-// CreateStoredAnalyzer returns Analyzer
-func CreateStoredAnalyzer(storagePath string) *StoredAnalyzer {
-	a := &StoredAnalyzer{
-		storagePath: storagePath,
-		storage:     NewStorage(storagePath),
-	}
+// NewStoredAnalyzer returns an analyzer storing its results in store.
+// Package github.com/dundee/gdu/v5/pkg/analyze/badger creates one storing
+// them in a badger database.
+func NewStoredAnalyzer(store RecordStore) *StoredAnalyzer {
+	a := &StoredAnalyzer{storage: records{store}}
 	a.Init()
 	return a
 }
@@ -37,7 +36,7 @@ func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 	closeFn := a.storage.Open()
 	defer closeFn()
 
-	dir, err := a.storage.GetDirForPath(path)
+	dir, err := a.storage.dirForPath(path)
 	if errors.Is(err, errStoredFormat) {
 		return nil, err
 	}
@@ -169,14 +168,14 @@ func isPathElement(name string) bool {
 // loading and kind, and is never taken while Dir.m is held.
 type StoredDir struct {
 	*Dir
-	storage *Storage
+	storage records
 	loadMu  sync.Mutex
 	loaded  bool
 	// kind is the GetType of a directory inside a browsed archive
 	kind string
 }
 
-func newStoredDir(storage *Storage, path string, parent fs.Item) *StoredDir {
+func newStoredDir(storage records, path string, parent fs.Item) *StoredDir {
 	return &StoredDir{
 		Dir: &Dir{
 			File:     &File{Name: filepath.Base(path), Parent: parent},

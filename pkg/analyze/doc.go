@@ -17,6 +17,11 @@
 // memory. Cancelling ctx stops a scan, which returns what it found so far;
 // GetProgress tells how far a running scan has got.
 //
+// The analyzers of packages analyze/badger and analyze/sqlite keep their
+// results in a database, from which a later run can load them again with
+// LoadAnalysis. They are packages of their own, so that a program not using
+// them does not link the databases.
+//
 // A tree is not safe for concurrent use: whoever reads it while another
 // goroutine changes it must synchronise the two.
 package analyze

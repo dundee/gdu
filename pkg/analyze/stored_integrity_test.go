@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dgraph-io/badger/v4"
+	"github.com/dundee/gdu/v5/internal/badgerstore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -63,7 +63,7 @@ func noIgnoredDirs(string, string) bool { return false }
 func scanStored(t *testing.T, root string, archives bool) (fs.Item, string) {
 	t.Helper()
 	db := filepath.Join(t.TempDir(), "gdu.badger")
-	analyzer := CreateStoredAnalyzer(db)
+	analyzer := createStoredAnalyzer(db)
 	tree := analyzer.AnalyzeDir(context.Background(), root, Options{IgnoreDir: noIgnoredDirs, ArchiveBrowsing: archives})
 	tree.UpdateStats(false)
 	return tree, db
@@ -138,7 +138,7 @@ func TestStoredTreeKeepsArchives(t *testing.T) {
 
 	assert.Equal(t, want, flatten(stored))
 
-	loaded, err := CreateStoredAnalyzer(db).LoadAnalysis(root)
+	loaded, err := createStoredAnalyzer(db).LoadAnalysis(root)
 	require.NoError(t, err)
 	assert.Equal(t, want, flatten(loaded))
 	assert.True(t, IsArchiveDir(entry(t, loaded, "archive.zip")))
@@ -161,7 +161,7 @@ func TestStoredArchiveEntriesCannotOverwriteOtherRecords(t *testing.T) {
 	require.NoError(t, zipped.Close())
 
 	_, db := scanStored(t, root, true)
-	loaded, err := CreateStoredAnalyzer(db).LoadAnalysis(root)
+	loaded, err := createStoredAnalyzer(db).LoadAnalysis(root)
 
 	require.NoError(t, err)
 	assert.True(t, hasEntry(loaded, "sub"))
@@ -172,7 +172,7 @@ func TestStoredArchiveEntriesCannotOverwriteOtherRecords(t *testing.T) {
 func TestStoredParentsAreTheDirectoriesListingThem(t *testing.T) {
 	root := makeStoredFixture(t)
 	stored, db := scanStored(t, root, false)
-	loaded, err := CreateStoredAnalyzer(db).LoadAnalysis(root)
+	loaded, err := createStoredAnalyzer(db).LoadAnalysis(root)
 	require.NoError(t, err)
 
 	for _, tree := range []fs.Item{stored, loaded} {
@@ -201,7 +201,7 @@ func TestStoredRemoveDirectoryIsStored(t *testing.T) {
 	assert.Equal(t, usage-sub.GetUsage(), tree.GetUsage())
 	assert.Equal(t, count-sub.GetItemCount(), tree.GetItemCount())
 
-	loaded, err := CreateStoredAnalyzer(db).LoadAnalysis(root)
+	loaded, err := createStoredAnalyzer(db).LoadAnalysis(root)
 	require.NoError(t, err)
 	assert.False(t, hasEntry(loaded, "sub"))
 	assert.Equal(t, tree.GetSize(), loaded.GetSize())
@@ -220,7 +220,7 @@ func TestStoredReplaceFileThenRemoveAnother(t *testing.T) {
 	sub.AddFile(&File{Name: "x", Flag: x.GetFlag(), Parent: sub})
 	sub.RemoveFile(entry(t, sub, "deeper"))
 
-	loaded, err := CreateStoredAnalyzer(db).LoadAnalysis(root)
+	loaded, err := createStoredAnalyzer(db).LoadAnalysis(root)
 	require.NoError(t, err)
 	loadedSub := entry(t, loaded, "sub")
 	assert.Equal(t, int64(0), entry(t, loadedSub, "x").GetSize())
@@ -232,14 +232,12 @@ func TestStoredReplaceFileThenRemoveAnother(t *testing.T) {
 func TestStoredDatabaseOfOlderFormatIsRefused(t *testing.T) {
 	root := makeStoredFixture(t)
 	_, db := scanStored(t, root, false)
-	storage := NewStorage(db)
+	storage := badgerstore.New(db)
 	closeFn := storage.Open()
-	require.NoError(t, storage.db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte(root), []byte("not a record"))
-	}))
+	require.NoError(t, storage.Put([]byte(root), []byte("not a record")))
 	closeFn()
 
-	_, err := CreateStoredAnalyzer(db).LoadAnalysis(root)
+	_, err := createStoredAnalyzer(db).LoadAnalysis(root)
 
 	assert.ErrorContains(t, err, "scan again")
 }
@@ -248,7 +246,7 @@ func TestStoredDatabaseOfOlderFormatIsRefused(t *testing.T) {
 // batch badger accepts with the sizes gdu sets; it has to go to the value log.
 func TestStoredHugeDirectory(t *testing.T) {
 	const entries = 300_000
-	storage := NewStorage(filepath.Join(t.TempDir(), "gdu.badger"))
+	storage := records{badgerstore.New(filepath.Join(t.TempDir(), "gdu.badger"))}
 	closeFn := storage.Open()
 	defer closeFn()
 	record := &storedRecord{Entries: make([]storedEntry, entries)}

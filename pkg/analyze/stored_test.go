@@ -22,7 +22,7 @@ func TestStoredAnalyzer(t *testing.T) {
 	assert.NoError(t, err)
 	wantUsage, _ := fileStats(info, "test_dir/nested/file2")
 
-	a := CreateStoredAnalyzer("/tmp/badger")
+	a := createStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
 	dir.UpdateStats(true)
@@ -58,7 +58,7 @@ func TestStoredAnalyzerLoadAnalysis(t *testing.T) {
 	defer fin()
 
 	storagePath := filepath.Join(t.TempDir(), "db.badger")
-	scanned := CreateStoredAnalyzer(storagePath).AnalyzeDir(context.Background(), "test_dir", Options{
+	scanned := createStoredAnalyzer(storagePath).AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	})
 	// computing the totals is what stores them
@@ -67,12 +67,12 @@ func TestStoredAnalyzerLoadAnalysis(t *testing.T) {
 	// changes made since the scan are not in the stored analysis
 	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("new"), 0o600))
 
-	loaded, err := CreateStoredAnalyzer(storagePath).LoadAnalysis("test_dir")
+	loaded, err := createStoredAnalyzer(storagePath).LoadAnalysis("test_dir")
 	require.NoError(t, err)
 	assert.Equal(t, "test_dir", loaded.GetName())
 	assert.Equal(t, int64(5), loaded.GetItemCount())
 
-	_, err = CreateStoredAnalyzer(storagePath).LoadAnalysis("other_dir")
+	_, err = createStoredAnalyzer(storagePath).LoadAnalysis("other_dir")
 	assert.ErrorContains(t, err, "holds no analysis of other_dir")
 }
 
@@ -80,7 +80,7 @@ func TestRemoveStoredFile(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	a := CreateStoredAnalyzer("/tmp/badger")
+	a := createStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
 	dir.UpdateStats(false)
@@ -98,7 +98,7 @@ func TestRemoveStoredFile(t *testing.T) {
 
 	closeFn := a.storage.Open()
 	defer closeFn()
-	stored, err := a.storage.GetDirForPath("test_dir")
+	stored, err := a.storage.dirForPath("test_dir")
 	assert.NoError(t, err)
 
 	assert.Equal(t, int64(4), stored.GetItemCount())

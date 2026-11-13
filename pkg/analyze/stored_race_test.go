@@ -19,7 +19,7 @@ func TestStoredTreeConcurrentReaders(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	analyzer := CreateStoredAnalyzer(t.TempDir())
+	analyzer := createStoredAnalyzer(t.TempDir())
 	scanned := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{})
 	scanned.UpdateStats(false)
 	want := flatten(scanned)
@@ -52,12 +52,12 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	analyzer := CreateStoredAnalyzer(t.TempDir())
+	analyzer := createStoredAnalyzer(t.TempDir())
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
-	assert.False(t, analyzer.storage.IsOpen(), "the analyzer should have closed storage on the way out")
+	assert.False(t, storageIsOpen(analyzer), "the analyzer should have closed storage on the way out")
 
 	// as the session does: computing the totals changes the tree, reading
 	// it does not, and readers open the storage at once
@@ -80,7 +80,7 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 	}
 	wg.Wait()
 
-	assert.False(t, analyzer.storage.IsOpen(), "every reference must be released again")
+	assert.False(t, storageIsOpen(analyzer), "every reference must be released again")
 	assert.Positive(t, dir.GetSize())
 }
 
@@ -101,53 +101,4 @@ func readLockedStoredDir(dir *StoredDir) {
 		_ = item.GetMtime()
 		_ = item.GetItemCount()
 	}
-}
-
-// TestStorageOpenIsReferenceCounted covers the storage contract StoredDir
-// relies on: badger locks its directory, so overlapping Open calls must share
-// one instance and only the last closer may actually close it.
-func TestStorageOpenIsReferenceCounted(t *testing.T) {
-	storage := NewStorage(t.TempDir())
-
-	outer := storage.Open()
-	assert.True(t, storage.IsOpen())
-
-	inner := storage.Open()
-	inner()
-	assert.True(t, storage.IsOpen(), "inner closer must not close the shared database")
-
-	outer()
-	assert.False(t, storage.IsOpen())
-
-	// closers are idempotent
-	outer()
-	inner()
-	assert.False(t, storage.IsOpen())
-}
-
-// TestStorageOpenConcurrent asserts concurrent Open/close pairs never trip
-// badger's exclusive directory lock, which would panic inside Open.
-func TestStorageOpenConcurrent(t *testing.T) {
-	storage := NewStorage(t.TempDir())
-
-	pin := storage.Open()
-
-	var wg sync.WaitGroup
-	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for range 20 {
-				closeFn := storage.Open()
-				assert.True(t, storage.IsOpen())
-				closeFn()
-				runtime.Gosched()
-			}
-		}()
-	}
-	wg.Wait()
-
-	assert.True(t, storage.IsOpen())
-	pin()
-	assert.False(t, storage.IsOpen())
 }

@@ -6,8 +6,3 @@ import (
 	// nolint:revive // Why: importing SQLite driver for side effects
 	_ "modernc.org/sqlite"
 )
-
-// checkAvailable checks if the modernc SQLite driver is available
-func checkAvailable() error {
-	return nil
-}
