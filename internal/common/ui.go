@@ -6,11 +6,13 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+
+	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
 // UI struct
 type UI struct {
-	Analyzer               Analyzer
+	Analyzer               analyze.Analyzer
 	IgnoreDirPaths         map[string]struct{}
 	IgnoreDirPathPatterns  *regexp.Regexp
 	IgnoreHidden           bool
@@ -29,16 +31,16 @@ type UI struct {
 	ignorePatternFragments []string
 	blockSize              int64
 	blockSuffix            string
-	// scan settings, see ScanOptions
+	// scan settings, see analyze.Options
 	followSymlinks  bool
 	exclusiveSize   bool
 	annexedSize     bool
 	archiveBrowsing bool
-	timeFilter      TimeFilter
+	timeFilter      analyze.TimeFilter
 }
 
 // SetAnalyzer sets analyzer instance
-func (ui *UI) SetAnalyzer(a Analyzer) {
+func (ui *UI) SetAnalyzer(a analyze.Analyzer) {
 	ui.Analyzer = a
 }
 
@@ -58,7 +60,7 @@ func (ui *UI) SetShowAnnexedSize(v bool) {
 }
 
 // SetTimeFilter sets the time filter function for file inclusion
-func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
+func (ui *UI) SetTimeFilter(timeFilter analyze.TimeFilter) {
 	ui.timeFilter = timeFilter
 	ui.FilteringFiles = true
 }
@@ -69,8 +71,8 @@ func (ui *UI) SetArchiveBrowsing(v bool) {
 }
 
 // ScanOptions returns the options of a scan with the current settings.
-func (ui *UI) ScanOptions() ScanOptions {
-	return ScanOptions{
+func (ui *UI) ScanOptions() analyze.Options {
+	return analyze.Options{
 		IgnoreDir:       ui.CreateIgnoreFunc(),
 		IgnoreFile:      ui.CreateFileTypeFilter(),
 		TimeFilter:      ui.timeFilter,

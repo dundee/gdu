@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -26,7 +25,7 @@ func scanLinkedTree(t *testing.T) (root *Dir, fileUsage int64) {
 	require.NoError(t, os.MkdirAll(filepath.Join(path, "b"), 0o755))
 	require.NoError(t, os.Link(filepath.Join(path, "a", "f"), filepath.Join(path, "b", "g")))
 
-	root = CreateAnalyzer().AnalyzeDir(context.Background(), path, common.ScanOptions{}).(*Dir)
+	root = CreateAnalyzer().AnalyzeDir(context.Background(), path, Options{}).(*Dir)
 	updateTotals(root)
 	return root, usageOf(t, filepath.Join(path, "a", "f"))
 }

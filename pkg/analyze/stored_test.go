@@ -7,7 +7,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +23,7 @@ func TestStoredAnalyzer(t *testing.T) {
 	wantUsage, _ := fileStats(info, "test_dir/nested/file2")
 
 	a := CreateStoredAnalyzer("/tmp/badger")
-	dir := a.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
+	dir := a.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
 	dir.UpdateStats(true)
 
@@ -59,7 +58,7 @@ func TestStoredAnalyzerLoadAnalysis(t *testing.T) {
 	defer fin()
 
 	storagePath := filepath.Join(t.TempDir(), "db.badger")
-	scanned := CreateStoredAnalyzer(storagePath).AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	scanned := CreateStoredAnalyzer(storagePath).AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	})
 	// computing the totals is what stores them
@@ -82,7 +81,7 @@ func TestRemoveStoredFile(t *testing.T) {
 	defer fin()
 
 	a := CreateStoredAnalyzer("/tmp/badger")
-	dir := a.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
+	dir := a.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
 	dir.UpdateStats(false)
 

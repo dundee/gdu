@@ -37,7 +37,7 @@ func writeFile(t *testing.T, path, content string) {
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 }
 
-func newSession(analyzer common.Analyzer) *Session {
+func newSession(analyzer analyze.Analyzer) *Session {
 	return New(&common.UI{Analyzer: analyzer})
 }
 
@@ -86,7 +86,7 @@ func newGatedAnalyzer() *gatedAnalyzer {
 	}
 }
 
-func (a *gatedAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+func (a *gatedAnalyzer) AnalyzeDir(ctx context.Context, path string, opts analyze.Options) fs.Item {
 	a.started <- path
 	<-a.release
 	return &gatedTotals{Item: a.ParallelAnalyzer.AnalyzeDir(ctx, path, opts), gate: a.finalize}

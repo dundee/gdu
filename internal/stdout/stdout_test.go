@@ -1,0 +1,946 @@
+package stdout
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"testing"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/dundee/gdu/v5/internal/testanalyze"
+	"github.com/dundee/gdu/v5/internal/testdev"
+	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/stretchr/testify/assert"
+)
+
+func init() {
+	log.SetLevel(log.WarnLevel)
+}
+
+func TestMain(m *testing.M) {
+	os.Unsetenv("BLOCK_SIZE")
+	os.Unsetenv("BLOCKSIZE")
+	os.Exit(m.Run())
+}
+
+func TestAnalyzePath(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
+}
+
+func TestShowItemCountInNonInteractiveMode(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	for dirName, fileCount := range map[string]int{"a": 5, "b": 10, "c": 15} {
+		dirPath := filepath.Join(tmpDir, dirName)
+		err := os.Mkdir(dirPath, 0o755)
+		assert.Nil(t, err)
+
+		for i := 0; i < fileCount; i++ {
+			filePath := filepath.Join(dirPath, "f"+string(rune('a'+i)))
+			err = os.WriteFile(filePath, []byte("x"), 0o644)
+			assert.Nil(t, err)
+		}
+	}
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetShowItemCount()
+
+	err := ui.AnalyzePath(tmpDir, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+5\s+/a$`), out)
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+10\s+/b$`), out)
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+15\s+/c$`), out)
+}
+
+func TestShowItemCountIsTheSameForEveryAnalyzer(t *testing.T) {
+	tmpDir := t.TempDir()
+	assert.Nil(t, os.MkdirAll(filepath.Join(tmpDir, "a", "sub"), 0o755))
+	assert.Nil(t, os.WriteFile(filepath.Join(tmpDir, "a", "f"), []byte("x"), 0o644))
+	assert.Nil(t, os.WriteFile(filepath.Join(tmpDir, "a", "sub", "f"), []byte("x"), 0o644))
+	assert.Nil(t, os.Mkdir(filepath.Join(tmpDir, "empty"), 0o755))
+
+	analyzers := map[string]func() analyze.Analyzer{
+		"top dir":    func() analyze.Analyzer { return analyze.CreateTopDirAnalyzer() },
+		"parallel":   func() analyze.Analyzer { return analyze.CreateAnalyzer() },
+		"sequential": func() analyze.Analyzer { return analyze.CreateSeqAnalyzer() },
+	}
+	for name, createAnalyzer := range analyzers {
+		t.Run(name, func(t *testing.T) {
+			output := bytes.NewBuffer(make([]byte, 10))
+			ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+			ui.SetAnalyzer(createAnalyzer())
+			ui.SetShowItemCount()
+
+			err := ui.AnalyzePath(tmpDir, nil)
+			assert.Nil(t, err)
+
+			out := output.String()
+			assert.Regexp(t, regexp.MustCompile(`(?m)\s+3\s+/a$`), out)
+			assert.Regexp(t, regexp.MustCompile(`(?m)\s+0\s+/empty$`), out)
+		})
+	}
+}
+
+func TestShowItemCountInNonInteractiveModeWithColorsAndFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "single")
+	err := os.WriteFile(filePath, []byte("x"), 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, true, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetShowItemCount()
+
+	err = ui.AnalyzePath(tmpDir, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	assert.Regexp(t, regexp.MustCompile(`(?m)\s+1\s+single$`), out)
+}
+
+func TestShowSummaryApparentSizeForFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "small.txt")
+	err := os.WriteFile(filePath, []byte("hello"), 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	// showApparentSize=true, summarize=true
+	ui := CreateStdoutUI(output, false, false, true, false, true, false, false, "", 0, false, 0)
+	err = ui.AnalyzePath(filePath, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	// With apparent size, a 5-byte file should show "5 B", not "4.0 KiB"
+	assert.Contains(t, out, "5 B")
+	assert.Contains(t, out, "small.txt")
+}
+
+// A file given as the path is measured as a scan measures files, so
+// --exclusive-size applies to it too.
+func TestFilePathIsMeasuredWithExclusiveSize(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "small.txt")
+	assert.Nil(t, os.WriteFile(filePath, []byte("hello"), 0o644))
+	measure := measureSharedUsage
+	t.Cleanup(func() { measureSharedUsage = measure })
+	measureSharedUsage = func(string, os.FileInfo, int64) (exclusive, shared int64) { return 12345, 0 }
+
+	for _, exclusive := range []bool{false, true} {
+		output := bytes.NewBuffer(make([]byte, 10))
+		// summarize=true, noPrefix=true
+		ui := CreateStdoutUI(output, false, false, false, false, true, false, true, "", 0, false, 0)
+		ui.SetExclusiveSize(exclusive)
+		assert.Nil(t, ui.AnalyzePath(filePath, nil))
+
+		if exclusive {
+			assert.Contains(t, output.String(), "12345")
+		} else {
+			assert.NotContains(t, output.String(), "12345")
+		}
+	}
+}
+
+func TestShowSummaryDiskUsageForFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "small.txt")
+	err := os.WriteFile(filePath, []byte("hello"), 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	// showApparentSize=false, summarize=true
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
+	err = ui.AnalyzePath(filePath, nil)
+	assert.Nil(t, err)
+
+	out := output.String()
+	// Without apparent size, should show disk usage (>= 5 bytes, typically 4 KiB)
+	assert.Contains(t, out, "small.txt")
+	assert.NotContains(t, out, "5 B")
+}
+
+func TestShowSummary(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, "", 0, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+}
+
+func TestShowSummaryBw(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+}
+
+func TestShowTop(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, "", 2, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir/nested/subnested/file")
+	assert.Contains(t, output.String(), "test_dir/nested/file2")
+}
+
+func TestShowTopBw(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 2, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir/nested/subnested/file")
+	assert.Contains(t, output.String(), "test_dir/nested/file2")
+}
+
+func TestShowTopWithApparentSize(t *testing.T) {
+	// "sparse" has the bigger apparent size but no disk usage at all, so --top
+	// has to rank "dense" first by default and "sparse" first with
+	// --show-apparent-size, matching the size printed next to each path.
+	root := &analyze.Dir{
+		File:      &analyze.File{Name: "root"},
+		BasePath:  "/",
+		ItemCount: 3,
+	}
+	root.AddFile(&analyze.File{Name: "sparse", Parent: root, Size: 50 << 20})
+	root.AddFile(&analyze.File{Name: "dense", Parent: root, Size: 5 << 20, Usage: 5 << 20})
+
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	ui.printTopFiles(root)
+
+	out := output.String()
+	assert.Less(t, strings.Index(out, "/root/dense"), strings.Index(out, "/root/sparse"),
+		"largest disk usage should be printed first, got:\n"+out)
+
+	output = bytes.NewBuffer(nil)
+	ui = CreateStdoutUI(output, false, false, true, false, false, false, false, "", 2, false, 0)
+	ui.printTopFiles(root)
+
+	out = output.String()
+	assert.Less(t, strings.Index(out, "/root/sparse"), strings.Index(out, "/root/dense"),
+		"largest apparent size should be printed first, got:\n"+out)
+}
+
+func TestShowTopIgnoresConfiguredSorting(t *testing.T) {
+	root := &analyze.Dir{
+		File:      &analyze.File{Name: "root"},
+		BasePath:  "/",
+		ItemCount: 4,
+	}
+	root.AddFile(&analyze.File{Name: "a", Parent: root, Usage: 1 << 20})
+	root.AddFile(&analyze.File{Name: "b", Parent: root, Usage: 3 << 20})
+	root.AddFile(&analyze.File{Name: "c", Parent: root, Usage: 2 << 20})
+
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	ui.SetDefaultSorting("name", "asc")
+	ui.printTopFiles(root)
+
+	out := output.String()
+	assert.NotContains(t, out, "/root/a")
+	assert.Less(t, strings.Index(out, "/root/b"), strings.Index(out, "/root/c"),
+		"largest files should be printed first, got:\n"+out)
+}
+
+func TestShowDepth(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 2)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+	assert.Contains(t, output.String(), "test_dir/nested")
+	assert.Contains(t, output.String(), "test_dir/nested/subnested")
+}
+
+func TestShowDepthWithColors(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, true, false, false, false, false, false, false, "", 0, false, 2)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+	assert.Contains(t, output.String(), "test_dir/nested")
+}
+
+func TestShowDepthWithReverseSort(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, true, 2)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	outputStr := output.String()
+	assert.Contains(t, outputStr, "test_dir")
+	assert.Contains(t, outputStr, "test_dir/nested")
+	assert.Contains(t, outputStr, "test_dir/nested/subnested")
+}
+
+func TestShowDepthWithApparentSize(t *testing.T) {
+	// "sparse" has the bigger apparent size but the smaller disk usage, so
+	// --show-apparent-size has to flip the order of the two subdirectories.
+	root := &analyze.Dir{
+		File:      &analyze.File{Name: "root"},
+		BasePath:  "/",
+		ItemCount: 3,
+	}
+	sparse := &analyze.Dir{
+		File:      &analyze.File{Name: "sparse", Parent: root, Size: 50 << 20, Usage: 4096},
+		ItemCount: 1,
+	}
+	dense := &analyze.Dir{
+		File:      &analyze.File{Name: "dense", Parent: root, Size: 5 << 20, Usage: 5 << 20},
+		ItemCount: 1,
+	}
+	root.AddFile(sparse)
+	root.AddFile(dense)
+
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, true, false, false, false, false, "", 0, false, 1)
+	ui.printDirWithDepth(root, 0)
+
+	out := output.String()
+	assert.Less(t, strings.Index(out, "/root/sparse"), strings.Index(out, "/root/dense"),
+		"largest apparent size should be printed first, got:\n"+out)
+}
+
+func TestAnalyzeSubdir(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir/nested", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "file2")
+}
+
+func TestAnalyzePathWithTypeFiltering(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetIncludeTypes([]string{"go"})
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
+}
+
+func TestAnalyzePathWithColors(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, "", 0, false, 0)
+	ui.SetIgnoreTypes([]string{"go"})
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir/nested", nil)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "subnested")
+}
+
+func TestAnalyzePathWoUnicode(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, "", 0, false, 0)
+	ui.UseOldProgressRunes()
+	err := ui.AnalyzePath("test_dir/nested", nil)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "subnested")
+}
+
+func TestItemRows(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, "", 0, false, 0)
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	err := ui.AnalyzePath("test_dir", nil)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "B")
+}
+
+func TestAnalyzePathWithProgress(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, "", 0, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
+}
+
+func TestShowDevices(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, "", 0, false, 0)
+	err := ui.ListDevices(getDevicesInfoMock())
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "Device")
+	assert.Contains(t, output.String(), "xxx")
+}
+
+func TestShowDevicesWithColor(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+	err := ui.ListDevices(getDevicesInfoMock())
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "Device")
+	assert.Contains(t, output.String(), "xxx")
+}
+
+func TestReadAnalysisWithColor(t *testing.T) {
+	input, err := os.OpenFile("../testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "main.go")
+}
+
+func TestReadAnalysisBw(t *testing.T) {
+	input, err := os.OpenFile("../testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "main.go")
+}
+
+func TestReadAnalysisWithWrongFile(t *testing.T) {
+	input, err := os.OpenFile("../testdata/wrong.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.NotNil(t, err)
+}
+
+func TestReadAnalysisWithSummarize(t *testing.T) {
+	input, err := os.OpenFile("../testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), " gdu\n")
+}
+
+func TestReadAnalysisWithSummarizeAndTop(t *testing.T) {
+	input, err := os.OpenFile("../testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 2, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+
+	out := output.String()
+	// --top wins over --summarize, the same way it does for a scan
+	assert.Contains(t, out, "/home/gdu/app/app_test.go")
+	assert.NotContains(t, out, " gdu\n")
+}
+
+func TestReadAnalysisWithTop(t *testing.T) {
+	input, err := os.OpenFile("../testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+
+	out := output.String()
+	// the two largest files of the imported analysis, printed by their path
+	// instead of the plain listing of the root
+	assert.Contains(t, out, "/home/gdu/app/app_test.go")
+	assert.Contains(t, out, "/home/gdu/app/app.go")
+	assert.NotContains(t, out, "/home/gdu/main.go")
+	assert.NotContains(t, out, "app_linux_test.go")
+}
+
+func TestReadAnalysisWithDepth(t *testing.T) {
+	input, err := os.OpenFile("../testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 1)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+
+	out := output.String()
+	assert.Contains(t, out, "/home/gdu\n")
+	assert.Contains(t, out, "/home/gdu/app\n")
+	assert.Contains(t, out, "/home/gdu/main.go\n")
+	// depth 1 stops at the direct children of the root
+	assert.NotContains(t, out, "/home/gdu/app/app.go")
+}
+
+func TestMaxInt(t *testing.T) {
+	assert.Equal(t, 5, maxInt(2, 5))
+	assert.Equal(t, 4, maxInt(4, 2))
+}
+
+func TestFormatSize(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+
+	assert.Contains(t, ui.formatSize(1), "B")
+	assert.Contains(t, ui.formatSize(1<<10+1), "KiB")
+	assert.Contains(t, ui.formatSize(1<<20+1), "MiB")
+	assert.Contains(t, ui.formatSize(1<<30+1), "GiB")
+	assert.Contains(t, ui.formatSize(1<<40+1), "TiB")
+	assert.Contains(t, ui.formatSize(1<<50+1), "PiB")
+	assert.Contains(t, ui.formatSize(1<<60+1), "EiB")
+}
+
+func TestFormatSizeDec(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true, false, false, true, false, "", 0, false, 0)
+
+	assert.Contains(t, ui.formatSize(1), "B")
+	assert.Contains(t, ui.formatSize(1<<10+1), "kB")
+	assert.Contains(t, ui.formatSize(1<<20+1), "MB")
+	assert.Contains(t, ui.formatSize(1<<30+1), "GB")
+	assert.Contains(t, ui.formatSize(1<<40+1), "TB")
+	assert.Contains(t, ui.formatSize(1<<50+1), "PB")
+	assert.Contains(t, ui.formatSize(1<<60+1), "EB")
+}
+
+func TestFormatCount(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, true, true, true, false, false, true, false, "", 0, false, 0)
+
+	assert.Equal(t, "42", ui.formatCount(42))
+	assert.Equal(t, "1.5k", ui.formatCount(1500))
+	assert.Equal(t, "2.5M", ui.formatCount(2500000))
+	assert.Equal(t, "3.5G", ui.formatCount(3500000000))
+}
+
+func TestFormatSizeRaw(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true, false, false, true, true, "", 0, false, 0)
+
+	assert.Equal(t, ui.formatSize(1), "1")
+	assert.Equal(t, ui.formatSize(1<<10+1), "1025")
+	assert.Equal(t, ui.formatSize(1<<20+1), "1048577")
+	assert.Equal(t, ui.formatSize(1<<30+1), "1073741825")
+	assert.Equal(t, ui.formatSize(1<<40+1), "1099511627777")
+	assert.Equal(t, ui.formatSize(1<<50+1), "1125899906842625")
+	assert.Equal(t, ui.formatSize(1<<60+1), "1152921504606846977")
+}
+func TestFormatSizeFixedUnitBinary(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "k", 0, false, 0)
+	assert.Equal(t, "0.1 KiB", ui.formatSize(100))
+	assert.Equal(t, "1500.0 KiB", ui.formatSize(1536000))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, false, false, "m", 0, false, 0)
+	assert.Equal(t, "0.1 MiB", ui.formatSize(100*1024))
+	assert.Equal(t, "1500.0 MiB", ui.formatSize(1536000*1024))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, false, false, "g", 0, false, 0)
+	assert.Equal(t, "0.1 GiB", ui.formatSize(100*1024*1024))
+	assert.Equal(t, "1500.0 GiB", ui.formatSize(1536000*1024*1024))
+}
+func TestFormatSizeFixedUnitSI(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	// -k --si
+	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, "k", 0, false, 0)
+	assert.Equal(t, "0.1 kB", ui.formatSize(100))
+	assert.Equal(t, "1500.0 kB", ui.formatSize(15e+5))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, true, false, "m", 0, false, 0)
+	assert.Equal(t, "0.1 MB", ui.formatSize(1e+5))
+	assert.Equal(t, "1500.0 MB", ui.formatSize(1.5e+9))
+
+	ui = CreateStdoutUI(output, false, false, false, false, false, true, false, "g", 0, false, 0)
+	assert.Equal(t, "0.1 GB", ui.formatSize(1e+8))
+	assert.Equal(t, "1500.0 GB", ui.formatSize(1.5e+12))
+}
+
+// func printBuffer(buff *bytes.Buffer) {
+// 	for i, x := range buff.String() {
+// 		println(i, string(x))
+// 	}
+// }
+
+func getDevicesInfoMock() device.DevicesInfoGetter {
+	item := &device.Device{
+		Name: "xxx",
+	}
+
+	mock := testdev.DevicesInfoGetterMock{}
+	mock.Devices = []*device.Device{item}
+	return mock
+}
+
+// New tests for reverse sort functionality
+func TestAnalyzePathWithReverseSort(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, true, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
+
+	// Verify that smaller items appear first when reverse sort is enabled
+	outputStr := output.String()
+	lines := strings.Split(outputStr, "\n")
+
+	// Filter out empty lines and progress lines
+	var fileLines []string
+	for _, line := range lines {
+		if strings.Contains(line, " ") && !strings.Contains(line, "Scanning") {
+			fileLines = append(fileLines, line)
+		}
+	}
+
+	// With reverse sort, smaller files should appear before larger ones
+	assert.True(t, len(fileLines) > 0, "Should have file entries in output")
+}
+
+func TestAnalyzePathWithoutReverseSort(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
+}
+
+func TestReverseSortWithColors(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, "", 0, true, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir/nested", nil)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "subnested")
+}
+
+func TestReverseSortWithSummarize(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, true, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir")
+}
+
+func TestReverseSortWithTop(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	buff := make([]byte, 10)
+	output := bytes.NewBuffer(buff)
+
+	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, "", 2, true, 0)
+	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "test_dir/nested/subnested/file")
+	assert.Contains(t, output.String(), "test_dir/nested/file2")
+}
+
+func TestReverseSortFromAnalysisFile(t *testing.T) {
+	input, err := os.OpenFile("../testdata/test.json", os.O_RDONLY, 0o644)
+	assert.Nil(t, err)
+
+	output := bytes.NewBuffer(make([]byte, 10))
+
+	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, true, 0)
+	err = ui.ReadAnalysis(input)
+
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "main.go")
+}
+
+func TestDefaultAnalyzerIsTopDir(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+
+	_, ok := ui.Analyzer.(*analyze.TopDirAnalyzer)
+	assert.True(t, ok, "default analyzer should be TopDirAnalyzer")
+}
+
+func TestAnalyzerWithTopIsParallel(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 5, false, 0)
+
+	_, ok := ui.Analyzer.(*analyze.ParallelAnalyzer)
+	assert.True(t, ok, "analyzer with top > 0 should be ParallelAnalyzer")
+}
+
+func TestAnalyzerWithDepthIsParallel(t *testing.T) {
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 3)
+
+	_, ok := ui.Analyzer.(*analyze.ParallelAnalyzer)
+	assert.True(t, ok, "analyzer with depth > 0 should be ParallelAnalyzer")
+}
+
+func TestAnalyzePathWithTopDirAnalyzer(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	output := bytes.NewBuffer(make([]byte, 10))
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	err := ui.AnalyzePath("test_dir", nil)
+	assert.Nil(t, err)
+	err = ui.StartUILoop()
+	assert.Nil(t, err)
+	assert.Contains(t, output.String(), "nested")
+}
+
+func TestBlockSizeEnvironment(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	t.Setenv("BLOCKSIZE", "1MB")
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+	assert.Equal(t, "2", ui.formatSize(1025))
+}
+
+func TestBlockSizeEnvironmentFormats(t *testing.T) {
+	tests := []struct {
+		name      string
+		blockSize string
+		size      int64
+		expected  string
+	}{
+		{name: "decimal suffix", blockSize: "kB", size: 1025, expected: "2kB"},
+		{name: "numeric suffix", blockSize: "2kB", size: 1025, expected: "1"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("BLOCK_SIZE", test.blockSize)
+			t.Setenv("BLOCKSIZE", "")
+			ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+			assert.Equal(t, test.expected, ui.formatSize(test.size))
+		})
+	}
+}
+
+func TestBlockSizeEnvironmentHumanReadableModes(t *testing.T) {
+	t.Run("binary", func(t *testing.T) {
+		t.Setenv("BLOCK_SIZE", "human-readable")
+		ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+		assert.Equal(t, "1.0 KiB", ui.formatSize(1025))
+	})
+	t.Run("si", func(t *testing.T) {
+		t.Setenv("BLOCK_SIZE", "si")
+		ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+		assert.Equal(t, "1.0 kB", ui.formatSize(1025))
+	})
+}
+
+func TestBlockSizeEnvironmentIsOverriddenByFlags(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, true, "", 0, false, 0)
+	assert.Equal(t, "1025", ui.formatSize(1025))
+}
+
+func TestBlockSizeEnvironmentSIFlagOverridesEnvironment(t *testing.T) {
+	t.Setenv("BLOCK_SIZE", "1K")
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, true, false, "", 0, false, 0)
+	assert.Equal(t, "1.0 kB", ui.formatSize(1025))
+}
+
+func newStdoutSymlinkFile() *analyze.File {
+	dir := &analyze.Dir{File: &analyze.File{Name: "test_dir"}}
+	return &analyze.File{
+		Name:    "bin",
+		Parent:  dir,
+		Size:    7,
+		Flag:    '@',
+		Symlink: "usr/bin",
+	}
+}
+
+func TestPrintItemShowsSymlinkTarget(t *testing.T) {
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui.SetShowSymlinkTarget(true)
+
+	ui.printItem(nil, newStdoutSymlinkFile())
+
+	assert.Contains(t, output.String(), "bin -> usr/bin")
+}
+
+func TestPrintItemHidesSymlinkTargetByDefault(t *testing.T) {
+	output := bytes.NewBuffer(nil)
+	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+
+	ui.printItem(nil, newStdoutSymlinkFile())
+
+	out := output.String()
+	assert.NotContains(t, out, "-> usr/bin")
+	assert.Contains(t, out, "bin")
+}

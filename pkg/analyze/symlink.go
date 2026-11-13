@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dundee/gdu/v5/pkg/annex"
+	"github.com/dundee/gdu/v5/internal/annex"
 )
 
 // readSymlinkTarget returns the target path of the entry at path if it is a

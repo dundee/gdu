@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 )
@@ -49,7 +48,7 @@ func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 }
 
 // AnalyzeDir analyzes given path
-func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
 	s := a.begin(ctx, opts)
 
 	closeFn := a.storage.Open()

@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -65,7 +64,7 @@ func scanStored(t *testing.T, root string, archives bool) (fs.Item, string) {
 	t.Helper()
 	db := filepath.Join(t.TempDir(), "gdu.badger")
 	analyzer := CreateStoredAnalyzer(db)
-	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: noIgnoredDirs, ArchiveBrowsing: archives})
+	tree := analyzer.AnalyzeDir(context.Background(), root, Options{IgnoreDir: noIgnoredDirs, ArchiveBrowsing: archives})
 	tree.UpdateStats(false)
 	return tree, db
 }
@@ -73,7 +72,7 @@ func scanStored(t *testing.T, root string, archives bool) (fs.Item, string) {
 func scanInMemory(t *testing.T, root string, archives bool) fs.Item {
 	t.Helper()
 	analyzer := CreateAnalyzer()
-	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: noIgnoredDirs, ArchiveBrowsing: archives})
+	tree := analyzer.AnalyzeDir(context.Background(), root, Options{IgnoreDir: noIgnoredDirs, ArchiveBrowsing: archives})
 	tree.UpdateStats(false)
 	return tree
 }

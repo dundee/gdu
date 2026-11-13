@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ func TestTopDirAnalyzeDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 
 	assert.Equal(t, "test_dir", dir.GetName())
 
@@ -45,7 +44,7 @@ func TestTopDirAnalyzeDirWithFiles(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, Options{IgnoreFile: func(_ string) bool { return false }})
 
 	simpleDir := dir.(*SimpleDir)
 	simpleDir.UpdateStats(false)
@@ -62,7 +61,7 @@ func TestTopDirAnalyzeDirIgnoreDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreDir:  func(name, _ string) bool { return name == "nested" },
 		IgnoreFile: func(_ string) bool { return false },
 	})
@@ -81,7 +80,7 @@ func TestTopDirAnalyzeDirIgnoreFileType(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(name string) bool {
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, Options{IgnoreFile: func(name string) bool {
 		return len(name) > 4 && name[len(name)-4:] == ".log"
 	}})
 
@@ -101,7 +100,7 @@ func TestTopDirAnalyzeDirIgnoreFileTypeInSubDir(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(name string) bool {
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, Options{IgnoreFile: func(name string) bool {
 		return len(name) > 4 && name[len(name)-4:] == ".log"
 	}})
 
@@ -118,7 +117,7 @@ func TestTopDirAnalyzeDirProgress(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	_ = analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	_ = analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 
 	// Just verify the progress channel is accessible and was used
 	assert.NotNil(t, analyzer.GetProgress())
@@ -130,20 +129,20 @@ func TestTopDirAnalyzeDirTwice(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	_ = analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	_ = analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 
 	progress := analyzer.GetProgress()
 	assert.GreaterOrEqual(t, progress.TotalUsage, int64(0))
 
 	// Analyze again
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 
 	assert.Equal(t, "test_dir", dir.GetName())
 }
 
 func TestTopDirAnalyzeDirNonExistent(t *testing.T) {
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "/nonexistent_path_xyz", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "/nonexistent_path_xyz", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	})
 
@@ -165,7 +164,7 @@ func TestTopDirAnalyzeDirIgnoreSubDir(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, Options{
 		IgnoreDir:  func(name, _ string) bool { return name == "ignored" },
 		IgnoreFile: func(_ string) bool { return false },
 	})
@@ -179,7 +178,7 @@ func topDirFlags(t *testing.T, path string) map[string]rune {
 	t.Helper()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), path, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), path, Options{IgnoreFile: func(_ string) bool { return false }})
 
 	flags := make(map[string]rune)
 	for file := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
@@ -229,7 +228,7 @@ func TestTopDirGetFiles(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 
 	simpleDir := dir.(*SimpleDir)
 	simpleDir.UpdateStats(false)
@@ -252,7 +251,7 @@ func TestTopDirFollowSymlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*SimpleDir)
@@ -283,7 +282,7 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*SimpleDir)
