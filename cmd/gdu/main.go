@@ -231,6 +231,15 @@ func setDefaultConfigFilePath() {
 	af.CfgFile = filepath.Join(home, ".gdu.yaml")
 }
 
+// markSequentialExplicit records whether --sequential was given on the command
+// line, so that an explicit --sequential=false can disable the automatic
+// detection on rotational disks.
+func markSequentialExplicit(command *cobra.Command) {
+	if command.Flags().Changed("sequential") {
+		af.SequentialScanningExplicit = true
+	}
+}
+
 func runE(command *cobra.Command, args []string) error {
 	var (
 		termApp *tview.Application
@@ -245,9 +254,7 @@ func runE(command *cobra.Command, args []string) error {
 		}
 	}
 
-	if command.Flags().Changed("sequential") {
-		af.SequentialScanningExplicit = true
-	}
+	markSequentialExplicit(command)
 
 	if af.WriteConfig {
 		data, err := yaml.Marshal(af)

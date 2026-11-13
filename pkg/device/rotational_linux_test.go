@@ -127,6 +127,178 @@ func TestMountSourceDeviceMapperName(t *testing.T) {
 	assert.True(t, known)
 }
 
+func TestIsRotationalDefaultSysfs(t *testing.T) {
+	// Exercises the package-level wrapper and the default /sys path. The
+	// result depends on the filesystem backing the test directory.
+	_, _ = IsRotational(t.TempDir())
+}
+
+func TestIsRotationalUsesStDev(t *testing.T) {
+	sysfs := t.TempDir()
+	scanDir := t.TempDir()
+
+	var stat unix.Stat_t
+	require.NoError(t, unix.Stat(scanDir, &stat))
+	disk := createBlockDevice(t, sysfs, "sda", "1")
+	linkBlockDevice(t, sysfs, uint64(stat.Dev), disk)
+
+	checker := LinuxRotationalChecker{SysfsPath: sysfs}
+	rotational, known := checker.IsRotational(scanDir)
+
+	assert.True(t, rotational)
+	assert.True(t, known)
+}
+
+func TestIsRotationalMountMissingTable(t *testing.T) {
+	checker := LinuxRotationalChecker{
+		SysfsPath:     t.TempDir(),
+		MountInfoPath: filepath.Join(t.TempDir(), "missing"),
+	}
+
+	rotational, known := checker.isRotationalMount(t.TempDir())
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestIsRotationalMountUnreadableTable(t *testing.T) {
+	checker := LinuxRotationalChecker{
+		SysfsPath:     t.TempDir(),
+		MountInfoPath: t.TempDir(), // a directory cannot be read as a mount table
+	}
+
+	rotational, known := checker.isRotationalMount(t.TempDir())
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestIsRotationalMountNoMatchingMount(t *testing.T) {
+	mountInfo := filepath.Join(t.TempDir(), "mountinfo")
+	line := "1 1 0:28 / /somewhere/else rw - btrfs /dev/sda1 rw\n"
+	require.NoError(t, os.WriteFile(mountInfo, []byte(line), 0o600))
+
+	checker := LinuxRotationalChecker{SysfsPath: t.TempDir(), MountInfoPath: mountInfo}
+	rotational, known := checker.isRotationalMount(t.TempDir())
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestIsRotationalMountDefaultTable(t *testing.T) {
+	// Exercises the default /proc/self/mountinfo path.
+	checker := LinuxRotationalChecker{SysfsPath: t.TempDir()}
+	_, _ = checker.isRotationalMount(t.TempDir())
+}
+
+func TestLongestMountPointEdgeCases(t *testing.T) {
+	root := t.TempDir()
+	mounts := Devices{
+		{MountPoint: ""},
+		{MountPoint: "relative"},
+		{MountPoint: root},
+	}
+
+	best := longestMountPoint(filepath.Join(root, "missing"), mounts)
+
+	require.NotNil(t, best)
+	assert.Equal(t, root, best.MountPoint)
+}
+
+func TestRotationalSourceWithoutClassDir(t *testing.T) {
+	checker := LinuxRotationalChecker{SysfsPath: t.TempDir()}
+
+	rotational, known := checker.rotationalSource("/missing/device")
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestRotationalSourceNoMatchingDevice(t *testing.T) {
+	sysfs := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(sysfs, "class", "block", "other"), 0o755))
+
+	checker := LinuxRotationalChecker{SysfsPath: sysfs}
+	rotational, known := checker.rotationalSource("missing")
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestRotationalSourceSymlinkFallsBackToSourceName(t *testing.T) {
+	sysfs := t.TempDir()
+	disk := createBlockDevice(t, sysfs, "sda", "1")
+	require.NoError(t, os.MkdirAll(filepath.Join(sysfs, "class", "block"), 0o755))
+	require.NoError(t, os.Symlink(disk, filepath.Join(sysfs, "class", "block", "luks")))
+
+	// The resolved target has a different name, so the first lookup misses and
+	// the original source name is tried.
+	target := filepath.Join(t.TempDir(), "backing")
+	require.NoError(t, os.WriteFile(target, nil, 0o600))
+	link := filepath.Join(t.TempDir(), "luks")
+	require.NoError(t, os.Symlink(target, link))
+
+	checker := LinuxRotationalChecker{SysfsPath: sysfs}
+	rotational, known := checker.rotationalSource(link)
+
+	assert.True(t, rotational)
+	assert.True(t, known)
+}
+
+func TestRotationalBlockDirCycle(t *testing.T) {
+	dir := t.TempDir()
+	seen := map[string]bool{filepath.Clean(dir): true}
+
+	checker := LinuxRotationalChecker{}
+	rotational, known := checker.rotationalBlockDir(dir, seen)
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestRotationalBlockDirSlavesOnly(t *testing.T) {
+	sysfs := t.TempDir()
+	disk := createBlockDevice(t, sysfs, "sda", "1")
+	stacked := filepath.Join(sysfs, "devices", "block", "stacked")
+	require.NoError(t, os.MkdirAll(filepath.Join(stacked, "slaves"), 0o755))
+	require.NoError(t, os.Symlink(disk, filepath.Join(stacked, "slaves", "sda")))
+
+	checker := LinuxRotationalChecker{SysfsPath: sysfs}
+	rotational, known := checker.rotationalBlockDir(stacked, make(map[string]bool))
+
+	assert.True(t, rotational)
+	assert.True(t, known)
+}
+
+func TestRotationalBlockDirUnknown(t *testing.T) {
+	checker := LinuxRotationalChecker{}
+
+	rotational, known := checker.rotationalBlockDir(t.TempDir(), make(map[string]bool))
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestRotationalFlagStopsAtRoot(t *testing.T) {
+	rotational, known := rotationalFlag("/")
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
+func TestAnySlaveRotationalBrokenAndUnknown(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "slaves"), 0o755))
+	require.NoError(t, os.Symlink(filepath.Join(dir, "missing"), filepath.Join(dir, "slaves", "broken")))
+	require.NoError(t, os.Symlink(t.TempDir(), filepath.Join(dir, "slaves", "unknown")))
+
+	checker := LinuxRotationalChecker{}
+	rotational, known := checker.anySlaveRotational(dir, make(map[string]bool))
+
+	assert.False(t, rotational)
+	assert.False(t, known)
+}
+
 func createBlockDevice(t *testing.T, sysfs, name, rotational string) string {
 	t.Helper()
 

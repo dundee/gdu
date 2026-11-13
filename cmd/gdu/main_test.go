@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/spf13/cobra"
 )
 
 func TestNoViewFileFlagRegistered(t *testing.T) {
@@ -158,6 +159,33 @@ func TestInitConfigMalformedSystemConfig(t *testing.T) {
 
 	if configErr == nil {
 		t.Fatal("expected configErr to be set for malformed system config, got nil")
+	}
+}
+
+func TestMarkSequentialExplicit(t *testing.T) {
+	origAf := af
+	t.Cleanup(func() { af = origAf })
+
+	newCommand := func() *cobra.Command {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("sequential", false, "")
+		return cmd
+	}
+
+	af = &app.Flags{}
+	cmd := newCommand()
+	if err := cmd.Flags().Set("sequential", "false"); err != nil {
+		t.Fatalf("could not set sequential flag: %v", err)
+	}
+	markSequentialExplicit(cmd)
+	if !af.SequentialScanningExplicit {
+		t.Fatal("expected explicit flag to be recorded when --sequential is given")
+	}
+
+	af = &app.Flags{}
+	markSequentialExplicit(newCommand())
+	if af.SequentialScanningExplicit {
+		t.Fatal("expected explicit flag to stay false when --sequential is not given")
 	}
 }
 
