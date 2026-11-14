@@ -3,11 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -15,7 +12,6 @@ import (
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
 	"github.com/dundee/gdu/v5/internal/selfupdate"
@@ -145,93 +141,6 @@ func init() {
 	setDefaults()
 }
 
-var systemConfigPath = "/etc/gdu.yaml"
-
-func loadConfig(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	// into the struct, not the pointer: a document that is just null would
-	// set the pointer to nil
-	return yaml.Unmarshal(data, af)
-}
-
-func initConfig() {
-	// Load system-wide config first (ignored on Windows/Plan9 and when absent).
-	if runtime.GOOS != osWindows && runtime.GOOS != osPlan9 {
-		if err := loadConfig(systemConfigPath); err != nil && !os.IsNotExist(err) {
-			configErr = fmt.Errorf("%s: %w", systemConfigPath, err)
-			return
-		}
-	}
-
-	// Load user config; its values overwrite whatever the system config set.
-	setConfigFilePath()
-	if err := loadConfig(af.CfgFile); err != nil {
-		if !os.IsNotExist(err) {
-			configErr = fmt.Errorf("%s: %w", af.CfgFile, err)
-		}
-		return
-	}
-}
-
-func setDefaults() {
-	if af.Style.Footer.BackgroundColor == "" {
-		af.Style.Footer.BackgroundColor = "#2479D0"
-	}
-	if af.Style.Footer.TextColor == "" {
-		af.Style.Footer.TextColor = "#000000"
-	}
-	if af.Style.Footer.NumberColor == "" {
-		af.Style.Footer.NumberColor = "#FFFFFF"
-	}
-	if af.Style.Header.BackgroundColor == "" {
-		af.Style.Header.BackgroundColor = "#2479D0"
-	}
-	if af.Style.Header.TextColor == "" {
-		af.Style.Header.TextColor = "#000000"
-	}
-	if af.Style.ResultRow.NumberColor == "" {
-		af.Style.ResultRow.NumberColor = "#e67100"
-	}
-	if af.Style.ResultRow.DirectoryColor == "" {
-		af.Style.ResultRow.DirectoryColor = "#3498db"
-	}
-}
-
-func setConfigFilePath() {
-	// Read the arguments one by one instead of joining them, so that paths
-	// containing spaces are not truncated.
-	for i, arg := range os.Args {
-		if value, found := strings.CutPrefix(arg, "--config-file="); found {
-			af.CfgFile = value
-			return
-		}
-		if arg == "--config-file" && i+1 < len(os.Args) {
-			af.CfgFile = os.Args[i+1]
-			return
-		}
-	}
-	setDefaultConfigFilePath()
-}
-
-func setDefaultConfigFilePath() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		configErr = err
-		return
-	}
-
-	path := filepath.Join(home, ".config", "gdu", "gdu.yaml")
-	if _, err := os.Stat(path); err == nil {
-		af.CfgFile = path
-		return
-	}
-
-	af.CfgFile = filepath.Join(home, ".gdu.yaml")
-}
-
 func runE(command *cobra.Command, args []string) error {
 	var (
 		termApp *tview.Application
@@ -247,16 +156,8 @@ func runE(command *cobra.Command, args []string) error {
 	}
 
 	if af.WriteConfig {
-		data, err := yaml.Marshal(af)
-		if err != nil {
-			return fmt.Errorf("error marshaling config file: %w", err)
-		}
-		if af.CfgFile == "" {
-			setDefaultConfigFilePath()
-		}
-		err = os.WriteFile(af.CfgFile, data, 0o600)
-		if err != nil {
-			return fmt.Errorf("error writing config file %s: %w", af.CfgFile, err)
+		if err := writeConfig(); err != nil {
+			return err
 		}
 	}
 
@@ -324,17 +225,6 @@ func setMaxProcs(n int) {
 	}
 	runtime.GOMAXPROCS(n)
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
-}
-
-// reportConfigError tells w that a config file could not be read; gdu then
-// runs with the settings read before the failure. It used to go to the log
-// only, which by default is /dev/null.
-func reportConfigError(w io.Writer) {
-	if configErr == nil {
-		return
-	}
-	log.Printf("Error reading config file: %s", configErr)
-	fmt.Fprintf(w, "gdu: ignoring the config file: %s\n", configErr)
 }
 
 // selfUpdate runs --self-update. It returns done when gdu should not continue
