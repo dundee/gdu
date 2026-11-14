@@ -284,9 +284,9 @@ func writeZip(t *testing.T, path string, names ...string) {
 	require.NoError(t, out.Close())
 }
 
-// An archive entry named "../victim" becomes a synthetic directory named ".."
-// whose path is the directory holding the archive. Removing or emptying
-// anything inside an archive must never reach the disk.
+// Removing or emptying anything inside an archive must never reach the disk,
+// also for an entry named "../victim", which climbed out of the archive before
+// its name was cleaned.
 func TestDeleterNeverTouchesArchiveEntries(t *testing.T) {
 	root := makeScanRoot(t)
 	writeZip(t, filepath.Join(root, "evil.zip"), "../victim/f", "inner/g")
