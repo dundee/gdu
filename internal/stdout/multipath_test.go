@@ -2,6 +2,7 @@ package stdout
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -34,7 +35,7 @@ func TestAnalyzePathsListsEveryRoot(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui := CreateStdoutUI(output, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 
 	assert.Contains(t, output.String(), first)
@@ -56,7 +57,7 @@ func TestAnalyzePathsLabelsRootsWithTheirPath(t *testing.T) {
 	})
 
 	output := &bytes.Buffer{}
-	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui := CreateStdoutUI(output, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 
 	assert.Contains(t, output.String(), first)
@@ -69,7 +70,7 @@ func TestAnalyzePathsSummarizeReportsCombinedTotal(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Summarize: true}})
+	ui := CreateStdoutUI(output, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Summarize: true}})
 	require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 
 	assert.NotEmpty(t, output.String())
@@ -79,7 +80,7 @@ func TestAnalyzePathsSwapsTopDirAnalyzerForFullTree(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui := CreateStdoutUI(output, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	// the default stdout analyzer produces SimpleDir, which cannot be re-parented
 	_, isTopDirAnalyzer := ui.Analyzer.(*analyze.TopDirAnalyzer)
 	require.True(t, isTopDirAnalyzer)
@@ -101,7 +102,7 @@ func TestAnalyzePathsKeepsAnalyzerSettings(t *testing.T) {
 			require.NoError(t, err)
 			s.Scan.TimeFilter, s.Scan.TimeLocation = filter, time.UTC
 		}
-		ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), s)
+		ui := CreateStdoutUI(output, io.Discard, analyze.CreateTopDirAnalyzer(), s)
 		require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 		return output.String()
 	}
@@ -114,7 +115,7 @@ func TestAnalyzePathsWithSinglePathBehavesLikeAnalyzePath(t *testing.T) {
 	first, _ := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui := CreateStdoutUI(output, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	require.NoError(t, ui.AnalyzePaths([]string{first}))
 
 	// contents of the single root are listed, not the root itself

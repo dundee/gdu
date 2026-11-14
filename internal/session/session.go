@@ -12,6 +12,8 @@ import (
 	"errors"
 	"io"
 	"runtime"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -71,6 +73,8 @@ type Session struct {
 	analyzer analyze.Analyzer
 	phase    Phase
 	current  int
+	// readErrors are what the last scan could not read
+	readErrors []analyze.ReadError
 }
 
 // New returns a session scanning with the analyzer and the ignore rules of
@@ -140,6 +144,7 @@ func (s *Session) Scan(ctx context.Context, paths []string, observe Observer) an
 	if len(paths) == 0 {
 		return nil
 	}
+	s.resetReadErrors()
 	stop := s.watch(observe, len(paths))
 	defer stop()
 
@@ -190,6 +195,7 @@ func (s *Session) Rescan(ctx context.Context, dir fs.Item, observe Observer) fs.
 	stop := s.watch(observe, 1)
 	defer stop()
 
+	s.resetReadErrors()
 	scanned, _ := s.walk(ctx, dir.GetPath(), 1)
 
 	s.tree.Lock()
@@ -267,7 +273,31 @@ func (s *Session) walk(ctx context.Context, path string, number int) (analyze.No
 	s.analyzer, s.phase, s.current = analyzer, Scanning, number
 	s.mu.Unlock()
 
-	return analyzer.AnalyzeDir(ctx, path, s.settings.ScanOptions()), true
+	opts := s.settings.ScanOptions()
+	opts.OnReadError = s.addReadError
+	return analyzer.AnalyzeDir(ctx, path, opts), true
+}
+
+// ReadErrors returns the directories and entries the last scan or rescan
+// could not read, sorted by path.
+func (s *Session) ReadErrors() []analyze.ReadError {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	errs := slices.Clone(s.readErrors)
+	slices.SortFunc(errs, func(a, b analyze.ReadError) int { return strings.Compare(a.Path, b.Path) })
+	return errs
+}
+
+func (s *Session) addReadError(e analyze.ReadError) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.readErrors = append(s.readErrors, e)
+}
+
+func (s *Session) resetReadErrors() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.readErrors = nil
 }
 
 // finalize computes the totals of the tree topped by root, with a fresh

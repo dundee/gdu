@@ -183,6 +183,8 @@ In non-interactive mode (and without `--top` and `--depth` flags), gdu uses a me
 This means memory usage stays constant regardless of how large the scanned directory tree is.
 When `--top` or `--depth` flags are used, the full directory tree is built in memory as in interactive mode.
 
+Directories gdu cannot read are flagged with `!`. In non-interactive mode gdu also reports each of them on stderr, as `du` does (`gdu: cannot read directory '/root/x': Permission denied`); the listing on stdout and the exit status stay as they are. The export (`-o`) marks them with `"read_error":true`, as ncdu does.
+
 Export mode (flag `-o`) outputs all usage data as JSON, which can be later opened using the `-f` flag. In interactive mode, press `Esc` or `Ctrl+C` during a scan to stop scheduling new work and keep the results found so far; pressing `Ctrl+C` again while the scan is stopping quits gdu. If you would rather have the first `Ctrl+C` quit gdu outright, use `--ctrl-c-quits`; `Esc` keeps working either way.
 
 The export is in ncdu's format, so `ncdu -f` opens it too. As ncdu reads it, a directory's `dsize` is the disk usage of the directory itself; its totals, which gdu reads back, are in `gdu_asize`, `gdu_dsize` and `items`, keys ncdu ignores. Exports written by earlier gdu versions, with the totals in `asize` and `dsize`, and exports written by ncdu are read as they were meant. By default the export includes every attribute. Use `--output-attrs=asize,dsize` to emit only selected optional attributes; `name` is always included. Available attributes are `asize`, `dsize`, `shsize`, `items`, `mtime`, `notreg`, and `ino`. A directory that could not be read in full carries `"read_error":true`.

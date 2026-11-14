@@ -210,6 +210,7 @@ func runE(command *cobra.Command, args []string) error {
 		Args:        args,
 		Istty:       istty,
 		Writer:      os.Stdout,
+		ErrWriter:   os.Stderr,
 		TermApp:     termApp,
 		Screen:      screen,
 		Getter:      device.Getter,

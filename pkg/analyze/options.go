@@ -34,6 +34,20 @@ type Options struct {
 	ExclusiveSize bool
 	// ArchiveBrowsing reads zip and tar archives as directories
 	ArchiveBrowsing bool
+	// OnReadError is told about every directory whose entries the scan
+	// cannot list, which it flags with '!', and every entry it cannot
+	// stat, which it leaves out. It is called from the goroutines of the
+	// scan, so it must be safe for concurrent use; nil ignores them.
+	OnReadError func(ReadError)
+}
+
+// ReadError is a directory or an entry a scan could not read.
+type ReadError struct {
+	Path string
+	// Dir is set for a directory whose entries could not be listed, and
+	// unset for an entry which could not be stat'ed
+	Dir bool
+	Err error
 }
 
 // FilteringFiles reports whether the scan leaves out files by their name or

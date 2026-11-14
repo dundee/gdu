@@ -217,7 +217,10 @@ type TermApplication interface {
 
 // App defines the main application
 type App struct {
-	Writer      io.Writer
+	Writer io.Writer
+	// ErrWriter is told what went wrong without stopping gdu, such as the
+	// directories a scan could not read; os.Stderr when nil
+	ErrWriter   io.Writer
 	TermApp     TermApplication
 	Screen      tcell.Screen
 	Getter      device.DevicesInfoGetter
@@ -346,7 +349,11 @@ func (a *App) createUI(front frontend, analyzer analyze.Analyzer, s *config.Sett
 		}
 		return report.CreateExportUI(a.Writer, output, analyzer, s), nil
 	case frontendStdout:
-		return stdout.CreateStdoutUI(a.Writer, analyzer, s), nil
+		errWriter := a.ErrWriter
+		if errWriter == nil {
+			errWriter = os.Stderr
+		}
+		return stdout.CreateStdoutUI(a.Writer, errWriter, analyzer, s), nil
 	case frontendTUI:
 	}
 	return tui.CreateUI(a.TermApp, a.Screen, os.Stdout, analyzer, s), nil

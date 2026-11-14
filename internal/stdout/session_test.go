@@ -2,6 +2,7 @@ package stdout
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,7 +18,7 @@ import (
 
 func TestScanObserverPrintsTheProgress(t *testing.T) {
 	output := bytes.Buffer{}
-	ui := CreateStdoutUI(&output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
+	ui := CreateStdoutUI(&output, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	observe := ui.scanObserver()
 
 	observe(session.Progress{Progress: analyze.Progress{ItemCount: 1234, TotalUsage: 2048}})
@@ -32,7 +33,7 @@ func TestScanObserverPrintsTheProgress(t *testing.T) {
 }
 
 func TestScanObserverIsNilWithoutProgress(t *testing.T) {
-	ui := CreateStdoutUI(&bytes.Buffer{}, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui := CreateStdoutUI(&bytes.Buffer{}, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 
 	assert.Nil(t, ui.scanObserver())
 }
@@ -45,7 +46,7 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 	db := filepath.Join(t.TempDir(), "gdu.sqlite")
 
 	scanned := bytes.Buffer{}
-	ui := CreateStdoutUI(&scanned, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui := CreateStdoutUI(&scanned, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	analyzer, err := sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
 	ui.Analyzer = (analyzer)
@@ -54,7 +55,7 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 	require.NoError(t, os.WriteFile("test_dir/nested/added", make([]byte, 100000), 0o600))
 
 	stored := bytes.Buffer{}
-	ui = CreateStdoutUI(&stored, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui = CreateStdoutUI(&stored, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	analyzer, err = sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
 	ui.Analyzer = (analyzer)
@@ -65,7 +66,7 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 }
 
 func TestReadFromStorageNeedsDatabase(t *testing.T) {
-	ui := CreateStdoutUI(&bytes.Buffer{}, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui := CreateStdoutUI(&bytes.Buffer{}, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 
 	assert.ErrorIs(t, ui.ReadFromStorage("test_dir"), session.ErrNoDatabase)
 }

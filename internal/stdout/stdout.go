@@ -2,12 +2,15 @@ package stdout
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/config"
@@ -21,6 +24,8 @@ import (
 // UI struct
 type UI struct {
 	output io.Writer
+	// errOutput is told what a scan could not read
+	errOutput io.Writer
 	*common.UI
 	session           *session.Session
 	red               *color.Color
@@ -41,11 +46,13 @@ type UI struct {
 	configuredOrder   string
 }
 
-// CreateStdoutUI returns the UI printing the analysis to output.
-func CreateStdoutUI(output io.Writer, analyzer analyze.Analyzer, s *config.Settings) *UI {
+// CreateStdoutUI returns the UI printing the analysis to output, and what it
+// could not read to errOutput, as du does.
+func CreateStdoutUI(output, errOutput io.Writer, analyzer analyze.Analyzer, s *config.Settings) *UI {
 	ui := &UI{
 		UI:                common.NewUI(analyzer, s),
 		output:            output,
+		errOutput:         errOutput,
 		summarize:         s.Display.Summarize,
 		noPrefix:          s.Display.NoPrefix,
 		top:               s.Display.Top,
@@ -178,6 +185,7 @@ func (ui *UI) AnalyzePath(path string, _ fs.Item) error {
 
 	dir := ui.session.Scan(context.Background(), []string{path}, ui.scanObserver())
 	ui.clearProgress()
+	ui.reportReadErrors()
 	ui.printAnalyzedDir(dir)
 
 	return nil
@@ -199,9 +207,39 @@ func (ui *UI) AnalyzePaths(paths []string) error {
 
 	dir := ui.session.Scan(context.Background(), paths, ui.scanObserver())
 	ui.clearProgress()
+	ui.reportReadErrors()
 	ui.printAnalyzedDir(dir)
 
 	return nil
+}
+
+// reportReadErrors tells errOutput what the scan could not read, one line
+// each, as du does; the listing on output stays as it is.
+func (ui *UI) reportReadErrors() {
+	for _, e := range ui.session.ReadErrors() {
+		fmt.Fprintln(ui.errOutput, readErrorMessage(e))
+	}
+}
+
+// readErrorMessage tells e in the words of GNU du.
+func readErrorMessage(e analyze.ReadError) string {
+	action := "cannot access"
+	if e.Dir {
+		action = "cannot read directory"
+	}
+	return fmt.Sprintf("gdu: %s '%s': %s", action, e.Path, errorReason(e.Err))
+}
+
+// errorReason returns what went wrong, as the system says it, without the
+// operation and path err repeats: "Permission denied".
+func errorReason(err error) string {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		err = pathErr.Err
+	}
+	reason := err.Error()
+	first, size := utf8.DecodeRuneInString(reason)
+	return string(unicode.ToUpper(first)) + reason[size:]
 }
 
 func (ui *UI) printAnalyzedDir(dir fs.Item) {

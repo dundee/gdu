@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -850,6 +851,7 @@ func TestAnalyzePathWithErr(t *testing.T) {
 		Args:        []string{"xxx"},
 		Istty:       false,
 		Writer:      buff,
+		ErrWriter:   io.Discard,
 		TermApp:     testapp.CreateMockedApp(false),
 		Getter:      testdev.DevicesInfoGetterMock{},
 		PathChecker: os.Stat,

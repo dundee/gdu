@@ -5,6 +5,8 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // BaseAnalyzer provides what all analyzers have in common: the progress of
@@ -60,6 +62,14 @@ func (a *BaseAnalyzer) begin(ctx context.Context, opts Options) *scan {
 		s.extents = &extentMeter{}
 	}
 	return s
+}
+
+// readError logs e and tells it to the scan's OnReadError.
+func (s *scan) readError(e ReadError) {
+	log.Print(e.Err.Error())
+	if s.opts.OnReadError != nil {
+		s.opts.OnReadError(e)
+	}
 }
 
 // isCancelled reports whether the scan has been cancelled. The walk then
