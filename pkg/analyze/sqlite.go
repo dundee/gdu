@@ -813,20 +813,23 @@ func NewSqliteAnalyzer(db *sql.DB) (*SqliteAnalyzer, error) {
 }
 
 // LoadAnalysis returns the analysis of path stored in the database by an
-// earlier scan. It fails when the database holds no analysis, or the analysis
-// of another path.
+// earlier scan, as Database says.
 func (a *SqliteAnalyzer) LoadAnalysis(path string) (Node, error) {
 	if !a.storage.HasData() {
-		return nil, fmt.Errorf("the database holds no analysis of %s", path)
+		return nil, fmt.Errorf("%w of %s", ErrNoAnalysis, path)
 	}
 	stored, err := a.storage.GetMetadata("top_dir_path")
 	if err != nil {
 		return nil, fmt.Errorf("reading the path of the stored analysis: %w", err)
 	}
 	if filepath.Clean(stored) != filepath.Clean(path) {
-		return nil, fmt.Errorf("the database holds the analysis of %s, not of %s", stored, path)
+		return nil, fmt.Errorf("%w of %s, it holds the analysis of %s", ErrNoAnalysis, path, stored)
 	}
-	return a.storage.GetRootItem()
+	root, err := a.storage.GetRootItem()
+	if err != nil {
+		return nil, err
+	}
+	return root, nil
 }
 
 // AnalyzeDir analyzes the given path and stores results in SQLite, replacing

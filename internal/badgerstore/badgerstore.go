@@ -3,6 +3,7 @@
 package badgerstore
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -125,22 +126,26 @@ func (s *Store) Put(key, value []byte) error {
 	})
 }
 
-// Get returns the value stored under key. The database must be open.
-func (s *Store) Get(key []byte) ([]byte, error) {
+// Get returns the value stored under key; found is false when there is
+// none. The database must be open.
+func (s *Store) Get(key []byte) (value []byte, found bool, err error) {
 	s.checkCount()
 	s.m.RLock()
 	defer s.m.RUnlock()
 
-	var value []byte
-	err := s.db.View(func(txn *badger.Txn) error {
+	err = s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("reading stored value for path %s: %w", key, err)
 		}
+		found = true
 		value, err = item.ValueCopy(nil)
 		return err
 	})
-	return value, err
+	return value, found, err
 }
 
 // checkCount reopens the database every reopenEvery operations.

@@ -16,12 +16,14 @@ func TestPutGet(t *testing.T) {
 	defer closeFn()
 
 	require.NoError(t, store.Put([]byte("/a"), []byte("record")))
-	value, err := store.Get([]byte("/a"))
+	value, found, err := store.Get([]byte("/a"))
 
 	require.NoError(t, err)
+	assert.True(t, found)
 	assert.Equal(t, []byte("record"), value)
-	_, err = store.Get([]byte("/b"))
-	assert.ErrorContains(t, err, "/b")
+	_, found, err = store.Get([]byte("/b"))
+	require.NoError(t, err)
+	assert.False(t, found)
 }
 
 // The database is reopened every reopenEvery operations, also while a caller
@@ -35,8 +37,9 @@ func TestReopenKeepsRecords(t *testing.T) {
 		require.NoError(t, store.Put(fmt.Appendf(nil, "/%d", i), fmt.Appendf(nil, "%d", i)))
 	}
 	for _, i := range []int{0, reopenEvery - 1, reopenEvery + 9} {
-		value, err := store.Get(fmt.Appendf(nil, "/%d", i))
+		value, found, err := store.Get(fmt.Appendf(nil, "/%d", i))
 		require.NoError(t, err)
+		require.True(t, found)
 		assert.Equal(t, fmt.Appendf(nil, "%d", i), value)
 	}
 	assert.True(t, store.IsOpen())

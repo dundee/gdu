@@ -2,8 +2,6 @@ package analyze
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"iter"
 	"path/filepath"
@@ -31,17 +29,14 @@ func NewStoredAnalyzer(store RecordStore) *StoredAnalyzer {
 }
 
 // LoadAnalysis returns the analysis of path stored in the database by an
-// earlier scan. It fails when the database holds no analysis of path.
+// earlier scan, as Database says.
 func (a *StoredAnalyzer) LoadAnalysis(path string) (Node, error) {
 	closeFn := a.storage.Open()
 	defer closeFn()
 
 	dir, err := a.storage.dirForPath(path)
-	if errors.Is(err, errStoredFormat) {
-		return nil, err
-	}
 	if err != nil {
-		return nil, fmt.Errorf("the database holds no analysis of %s: %w", path, err)
+		return nil, err
 	}
 	return dir, nil
 }

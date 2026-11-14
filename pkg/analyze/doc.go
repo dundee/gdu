@@ -19,8 +19,8 @@
 // GetProgress tells how far a running scan has got.
 //
 // The analyzers of packages analyze/badger and analyze/sqlite keep their
-// results in a database, from which a later run can load them again with
-// LoadAnalysis. They are packages of their own, so that a program not using
+// results in a database, from which a later run can load them again: both are
+// a Database. They are packages of their own, so that a program not using
 // them does not link the databases.
 //
 // The entries of a tree are fs.Item, which only read it. A Node can also

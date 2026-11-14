@@ -98,5 +98,5 @@ func TestStoredRecordOfOtherFormatIsRefused(t *testing.T) {
 
 	_, err := storage.loadRecord("/dir")
 
-	assert.ErrorIs(t, err, errStoredFormat)
+	assert.ErrorIs(t, err, ErrStoredFormat)
 }

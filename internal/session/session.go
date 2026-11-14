@@ -51,12 +51,6 @@ var progressInterval = 100 * time.Millisecond
 // results in a database.
 var ErrNoDatabase = errors.New("reading a stored analysis needs a database (--db)")
 
-// storedAnalyzer is an analyzer storing its results in a database (--db),
-// from which the analysis of an earlier scan can be loaded.
-type storedAnalyzer interface {
-	LoadAnalysis(path string) (analyze.Node, error)
-}
-
 // Session is the analysis a frontend presents, and every way of producing or
 // refreshing it. All its methods are safe to call from any goroutine.
 //
@@ -187,7 +181,7 @@ func (s *Session) Rescan(ctx context.Context, dir fs.Item, observe Observer) fs.
 		s.tree.RUnlock()
 		return s.Scan(ctx, paths, observe)
 	}
-	if _, ok := s.settings.Analyzer.(storedAnalyzer); ok {
+	if _, ok := s.settings.Analyzer.(analyze.Database); ok {
 		// a database holds the analysis of whole scanned roots, so it cannot
 		// take the scan of a part of one
 		return s.Scan(ctx, s.RootPaths(), observe)
@@ -232,7 +226,7 @@ func (s *Session) Load(input io.Reader) (analyze.Node, error) {
 // the tree of the session. It fails with ErrNoDatabase when the analyzer has
 // no database.
 func (s *Session) Open(path string) (analyze.Node, error) {
-	stored, ok := s.settings.Analyzer.(storedAnalyzer)
+	stored, ok := s.settings.Analyzer.(analyze.Database)
 	if !ok {
 		return nil, ErrNoDatabase
 	}
