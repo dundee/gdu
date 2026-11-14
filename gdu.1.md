@@ -157,8 +157,9 @@ terminal UI). Gdu scans the given directory, prints the URL and serves a
 read-only browser interface for it.
 
 **\--web-listen**=\"\" Address for the web UI to listen on. By default the server
-binds to localhost on a random free port. Binding to a non-loopback address
-makes scan details reachable by other hosts on the network.
+binds to localhost on a random free port. Reading scan details needs the
+token in the printed URL. Binding to a non-loopback address makes them
+reachable, with that URL, by other hosts on the network, over unencrypted HTTP.
 
 **\--web-open**\[=true\] Open the web UI in the default browser on start. Use
 \--web-open=false to only print the URL.

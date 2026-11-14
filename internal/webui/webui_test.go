@@ -32,6 +32,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// getAPI requests url of the API with the token of ui, as the page does.
+func getAPI(ui *UI, url string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set(actionHeader, ui.actionToken)
+	return http.DefaultClient.Do(req)
+}
+
 func newTestUI() *UI {
 	return newTestUIWith(&config.Settings{})
 }
@@ -90,7 +100,7 @@ func TestStatusEndpoint(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/v1/status")
+	resp, err := getAPI(ui, srv.URL+"/api/v1/status")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -109,7 +119,7 @@ func TestNodesEndpoint(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(root))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(root))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -141,7 +151,7 @@ func TestNodesNested(t *testing.T) {
 	defer srv.Close()
 
 	sub := filepath.Join(root, "sub")
-	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(sub))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(sub))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -171,7 +181,7 @@ func TestTreeEndpointReturnsCompleteSubtree(t *testing.T) {
 
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
-	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(root))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/tree?path="+url.QueryEscape(root))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -205,7 +215,7 @@ func TestTreeEndpointRejectsPathOutsideRoot(t *testing.T) {
 
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
-	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(filepath.Dir(root)))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/tree?path="+url.QueryEscape(filepath.Dir(root)))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -219,7 +229,7 @@ func TestNodesPathTraversalRejected(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape("/etc"))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/nodes?path="+url.QueryEscape("/etc"))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
@@ -234,7 +244,7 @@ func TestNodesNotFound(t *testing.T) {
 	defer srv.Close()
 
 	missing := filepath.Join(root, "does-not-exist")
-	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(missing))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(missing))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -689,7 +699,7 @@ func TestActionEndpointsRequireLocalActionHeader(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	_, err = os.Stat(path)
 	assert.NoError(t, err, "file should remain after rejected delete")
 }
@@ -709,9 +719,81 @@ func TestActionEndpointsRejectWrongToken(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	_, err = os.Stat(path)
 	assert.NoError(t, err, "file should remain after rejected delete")
+}
+
+// Any local user can find the port, so reading the tree needs the token as
+// much as changing it: gdu often runs as root, and the tree names files other
+// users cannot list.
+func TestReadEndpointsRequireTheToken(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+	query := "?path=" + url.QueryEscape(root)
+
+	for _, endpoint := range []string{
+		"/api/v1/status", "/api/v1/nodes" + query, "/api/v1/tree" + query,
+		"/api/v1/categories" + query, "/api/v1/devices", "/api/v1/events", "/api/v1/unknown",
+	} {
+		for _, token := range []string{"", "not-the-real-token", ui.actionToken + "x"} {
+			req, err := http.NewRequest(http.MethodGet, srv.URL+endpoint, nil)
+			require.NoError(t, err)
+			if token != "" {
+				req.Header.Set(actionHeader, token)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			resp.Body.Close()
+
+			assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "%s with %q", endpoint, token)
+			assert.NotContains(t, string(body), "big.bin", endpoint)
+			assert.Contains(t, string(body), "open the URL gdu printed", endpoint)
+		}
+	}
+
+	resp, err := getAPI(ui, srv.URL+"/api/v1/nodes"+query)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// EventSource cannot send headers, so the events take the token as a query
+// parameter; no other route does, so the token stays out of other URLs.
+func TestOnlyEventsTakeTheTokenAsQueryParameter(t *testing.T) {
+	ui := newTestUI()
+	root := makeTree(t)
+	scan(t, ui, root)
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(root) + "&token=" + ui.actionToken)
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+
+	resp, err = http.Get(srv.URL + "/api/v1/events?token=" + ui.actionToken)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+}
+
+// The page holds no data and is what receives the token, so it needs none.
+func TestPageNeedsNoToken(t *testing.T) {
+	ui := newTestUI()
+	srv := httptest.NewServer(ui.routes())
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestActionEndpointsRejectCrossSiteFetch(t *testing.T) {
@@ -862,7 +944,7 @@ func TestListDevicesAndHandleDevices(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/v1/devices")
+	resp, err := getAPI(ui, srv.URL+"/api/v1/devices")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -884,7 +966,7 @@ func TestHandleDevicesEmpty(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/v1/devices")
+	resp, err := getAPI(ui, srv.URL+"/api/v1/devices")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -1014,9 +1096,7 @@ func TestHandleEventsSSE(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/events", nil)
-	require.NoError(t, err)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := getAPI(ui, srv.URL+"/api/v1/events")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -1228,7 +1308,7 @@ func TestNodesEndpointDefaultsToRootWhenPathOmitted(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/v1/nodes")
+	resp, err := getAPI(ui, srv.URL+"/api/v1/nodes")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1247,7 +1327,7 @@ func TestNodesPathThroughFileSegmentNotFound(t *testing.T) {
 	defer srv.Close()
 
 	bogus := filepath.Join(root, "big.bin", "nested")
-	resp, err := http.Get(srv.URL + "/api/v1/nodes?path=" + url.QueryEscape(bogus))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/nodes?path="+url.QueryEscape(bogus))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -1304,7 +1384,7 @@ func TestTreeEndpointForFileRoot(t *testing.T) {
 	defer srv.Close()
 
 	filePath := filepath.Join(root, "big.bin")
-	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(filePath))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/tree?path="+url.QueryEscape(filePath))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1330,7 +1410,7 @@ func TestTreeEndpointOrdersMultipleDirectoriesBySize(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/v1/tree?path=" + url.QueryEscape(root))
+	resp, err := getAPI(ui, srv.URL+"/api/v1/tree?path="+url.QueryEscape(root))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -1564,6 +1644,7 @@ func TestRoutesAllowConfiguredDNSHost(t *testing.T) {
 	ui := newTestUI()
 	ui.listenAddr = "fileserver.example:8080"
 	req := httptest.NewRequest(http.MethodGet, "http://fileserver.example:8080/api/v1/status", nil)
+	req.Header.Set(actionHeader, ui.actionToken)
 	w := httptest.NewRecorder()
 
 	ui.routes().ServeHTTP(w, req)

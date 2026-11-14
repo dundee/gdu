@@ -238,7 +238,7 @@ Allow navigating above the launch directory by pressing the left arrow key. When
 
 #### `web.listen`
 
-Address the web UI (`--web`) listens on, e.g. `localhost:8080`. When empty (the default), Gdu binds to `localhost` on a random free port. Binding to a non-loopback address exposes file names and sizes to other hosts on the network and prints a warning.
+Address the web UI (`--web`) listens on, e.g. `localhost:8080`. When empty (the default), Gdu binds to `localhost` on a random free port. Reading file names and sizes needs the token in the URL gdu prints. Binding to a non-loopback address exposes them, with that URL, to other hosts on the network over unencrypted HTTP, and prints a warning.
 
 #### `web.open-browser`
 

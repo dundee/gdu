@@ -9,7 +9,8 @@ import (
 )
 
 // actionHeader is the request header the frontend echoes ui.actionToken back
-// on for every mutating request (delete, reveal).
+// on for every API request; delete and reveal need it, and more, see
+// requireLocalAction.
 const actionHeader = "X-GDU-Action"
 
 // actionTokenParam is the URL query parameter StartUILoop appends the action
