@@ -245,7 +245,7 @@ func TestStoredDatabaseOfOlderFormatIsRefused(t *testing.T) {
 // batch badger accepts with the sizes gdu sets; it has to go to the value log.
 func TestStoredHugeDirectory(t *testing.T) {
 	const entries = 300_000
-	storage := records{badgerstore.New(filepath.Join(t.TempDir(), "gdu.badger"))}
+	storage := newRecords(badgerstore.New(filepath.Join(t.TempDir(), "gdu.badger")))
 	closeFn := storage.Open()
 	defer closeFn()
 	record := &storedRecord{Entries: make([]storedEntry, entries)}

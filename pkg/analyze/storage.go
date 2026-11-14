@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -57,12 +58,22 @@ type RecordStore interface {
 // records reads and writes the records of directories in a RecordStore.
 type records struct {
 	RecordStore
+	// failed is set when storing a record fails
+	failed *atomic.Bool
+}
+
+func newRecords(store RecordStore) records {
+	return records{RecordStore: store, failed: &atomic.Bool{}}
 }
 
 // storeRecord stores the record of the directory at path.
 func (s records) storeRecord(path string, record *storedRecord) error {
 	record.Format = storedFormat
-	return s.Put([]byte(path), record.marshal())
+	err := s.Put([]byte(path), record.marshal())
+	if err != nil {
+		s.failed.Store(true)
+	}
+	return err
 }
 
 // loadRecord returns the record of the directory at path.
@@ -88,4 +99,30 @@ func (s records) dirForPath(path string) (*StoredDir, error) {
 		return nil, err
 	}
 	return dir, nil
+}
+
+// infoKey is the key of the record of the analysis the store holds. No path
+// starts with a NUL.
+var infoKey = []byte("\x00analysis")
+
+func (s records) writeInfo(info analysisInfo) error {
+	value, err := info.marshal()
+	if err != nil {
+		return err
+	}
+	return s.Put(infoKey, value)
+}
+
+func (s records) holdsUnrecorded(path string) (bool, error) {
+	_, found, err := s.Get([]byte(path))
+	return found, err
+}
+
+func (s records) readInfo() (info analysisInfo, ok bool, err error) {
+	value, found, err := s.Get(infoKey)
+	if err != nil || !found {
+		return info, false, err
+	}
+	info, err = unmarshalInfo(value)
+	return info, err == nil, err
 }
