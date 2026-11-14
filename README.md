@@ -211,7 +211,8 @@ folded into their nearest visible parent directory. Scan progress is streamed
 live while the analysis runs.
 
 In the treemap, press `O` to reveal the selected item in the system file
-manager, `D` (or `Delete`) to permanently delete it after confirmation, or `?`
+manager (Finder and Explorer select it, Linux file managers open its
+directory; it is never opened itself), `D` (or `Delete`) to permanently delete it after confirmation, or `?`
 to show the keyboard shortcuts. In the donut view, each row of the table has
 its own reveal and delete buttons that act on that item; deletion asks for
 confirmation with the same dialog. The deletion dialog can suppress further

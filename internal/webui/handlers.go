@@ -209,20 +209,12 @@ func (ui *UI) handleReveal(w http.ResponseWriter, r *http.Request) {
 		writeNodeError(w, err)
 		return
 	}
-	target := node
-	if !node.IsDir() {
-		target = node.GetParent()
-	}
-	if target == nil {
+	// an entry of a browsed archive has no path of its own: show the
+	// archive file
+	target := realPathAncestor(node)
+	if !target.IsDir() && target.GetParent() == nil {
 		writeError(w, http.StatusBadRequest, "path has no directory to reveal")
 		return
-	}
-	target = realPathAncestor(target)
-	if isArchiveRoot(target) {
-		// target is a browsed archive's own top-level node: its GetPath
-		// names the archive file, so reveal its containing directory
-		// instead of opening the archive itself.
-		target = target.GetParent()
 	}
 	if err := ui.revealPath(target.GetPath()); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

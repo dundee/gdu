@@ -475,7 +475,7 @@ func TestDeleteEndpointStaysIdempotentWhenItemAlreadyGone(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
 
-func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
+func TestRevealEndpointShowsTheFile(t *testing.T) {
 	ui := newTestUI()
 	root := makeTree(t)
 	scan(t, ui, root)
@@ -498,7 +498,7 @@ func TestRevealEndpointOpensParentDirectoryForFile(t *testing.T) {
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
-	assert.Equal(t, root, revealed)
+	assert.Equal(t, filepath.Join(root, "big.bin"), revealed)
 }
 
 // makeZip creates a zip archive at path containing a single file entry
@@ -534,7 +534,7 @@ func makeNestedZip(t *testing.T, path string) {
 	require.NoError(t, zw.Close())
 }
 
-func TestRevealEndpointOpensArchiveParentDirectoryForDeeplyNestedEntry(t *testing.T) {
+func TestRevealEndpointShowsTheArchiveOfADeeplyNestedEntry(t *testing.T) {
 	ui := newTestUIWith(&config.Settings{Scan: config.Scan{ArchiveBrowsing: true}})
 	root := t.TempDir()
 	zipPath := filepath.Join(root, "archive.zip")
@@ -562,10 +562,10 @@ func TestRevealEndpointOpensArchiveParentDirectoryForDeeplyNestedEntry(t *testin
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
-	assert.Equal(t, root, revealed)
+	assert.Equal(t, zipPath, revealed)
 }
 
-func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
+func TestRevealEndpointShowsTheArchiveOfAnEntry(t *testing.T) {
 	ui := newTestUIWith(&config.Settings{Scan: config.Scan{ArchiveBrowsing: true}})
 	root := t.TempDir()
 	zipPath := filepath.Join(root, "archive.zip")
@@ -590,7 +590,7 @@ func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
-	assert.Equal(t, root, revealed, "revealed path should be the archive's containing directory, not the archive file itself")
+	assert.Equal(t, zipPath, revealed, "an entry of an archive has no path of its own")
 }
 
 func TestTrashCommandReplacesDefaultTrasher(t *testing.T) {
@@ -1517,8 +1517,8 @@ func TestRevealEndpointNotFound(t *testing.T) {
 
 func TestRevealEndpointNoDirectoryToReveal(t *testing.T) {
 	ui := newTestUI()
-	// A root that is itself a file (not a directory) has no parent, so
-	// revealing it hits the "no directory to reveal" guard.
+	// A root that is itself a file has no directory holding it, which
+	// gdu knows of
 	ui.mu.Lock()
 	ui.session.SetRoot(&analyze.File{Name: "onlyfile"})
 	ui.topDirPath = "onlyfile"
