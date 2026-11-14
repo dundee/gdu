@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 
@@ -32,6 +33,15 @@ func IsArchiveEntry(item fs.Item) bool {
 	}
 	return IsArchiveDir(item.GetParent())
 }
+
+// maxArchiveEntries is how many entries gdu reads of an archive at most;
+// past it, the archive is counted as the file it is. The headers of a few
+// kilobytes of gzip can make millions of entries.
+var maxArchiveEntries = 1_000_000
+
+// errTooManyEntries is returned for an archive of more than
+// maxArchiveEntries entries.
+var errTooManyEntries = errors.New("too many entries to browse")
 
 // isPathElement reports whether name can only name an entry of its directory.
 func isPathElement(name string) bool {

@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -83,7 +84,7 @@ func (s *scan) resolveFile(dirPath string, d os.DirEntry, opts resolveOptions) (
 	// Only a regular file is opened as an archive: opening a FIFO would block
 	// the scan, and a symlink to an archive would count the archive twice.
 	if opts.browseArchives && s.opts.ArchiveBrowsing && info.Mode().IsRegular() {
-		if entry.archive = openArchive(path, name, info); entry.archive != nil {
+		if entry.archive = openArchive(s.ctx, path, name, info); entry.archive != nil {
 			return entry, true, nil
 		}
 	}
@@ -122,7 +123,7 @@ func (e *fileEntry) item(parent fs.Item) fs.Item {
 // openArchive returns the browsed content of the archive at path, a *ZipDir
 // or *TarDir, or nil when name is not an archive's or the archive cannot be
 // read. Its totals are computed already, see finishArchive.
-func openArchive(path, name string, info os.FileInfo) fs.Item {
+func openArchive(ctx context.Context, path, name string, info os.FileInfo) fs.Item {
 	switch {
 	case isZipFile(name):
 		zipDir, err := processZipFile(path, info)
@@ -133,7 +134,7 @@ func openArchive(path, name string, info os.FileInfo) fs.Item {
 		finishArchive(zipDir.Dir, path, info)
 		return zipDir
 	case isTarFile(name):
-		tarDir, err := processTarFile(path, info)
+		tarDir, err := readTarFile(ctx, path, info)
 		if err != nil {
 			slog.Warn("reading tar file", "path", path, "err", err)
 			return nil
