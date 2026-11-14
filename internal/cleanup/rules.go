@@ -216,7 +216,9 @@ var DefaultRules = []Rule{
 	{Category: Toolchain, Confidence: Review, Path: "~/Library/Developer/Xcode/Archives", Hint: "App archives; keep the ones you may need to symbolicate"},
 	{Category: Toolchain, Confidence: Review, Path: "~/Library/Developer/CoreSimulator/Devices", Hint: "Simulators, `xcrun simctl delete unavailable`"},
 
-	// Application caches.
+	// Application caches. Some apps keep more than a cache where caches go;
+	// their own rules come first and ask for a review.
+	{Category: AppCache, Confidence: Review, Path: "~/.cache/lm-studio", Hint: "Data of older LM Studio versions: conversations, user files, presets"},
 	{Category: AppCache, Confidence: Safe, Path: "~/Library/Caches/*", Hint: hintAppCache},
 	{Category: AppCache, Confidence: Safe, Path: "~/.cache/*", Hint: hintAppCache},
 	{Category: AppCache, Confidence: Safe, Path: "~/Library/Developer/CoreSimulator/Caches", Hint: hintAppCache},

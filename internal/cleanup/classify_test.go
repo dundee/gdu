@@ -451,12 +451,37 @@ func TestMoreSpecificPathRuleSplitsUnit(t *testing.T) {
 	for _, name := range []string{"logs", "state.json"} {
 		m, ok := res.Match(child(t, root, ".cache", "lm-studio", name))
 		require.True(t, ok, name)
-		assert.Equal(t, Match{Category: AppCache, Confidence: Safe, Hint: hintAppCache}, m, name)
+		assert.Equal(t, AppCache, m.Category, name)
+		assert.Equal(t, Review, m.Confidence, name)
 	}
 	assert.Equal(t, Totals{
 		MLModel:  {Usage: 50, Size: 50},
 		AppCache: {Usage: 5, Size: 5},
 	}, res.Totals(child(t, root, ".cache", "lm-studio")))
+}
+
+// Older LM Studio versions keep all their data in ~/.cache/lm-studio, chats
+// included: only its models are re-downloadable, nothing in it is safe.
+func TestLMStudioDataIsNoSafeCache(t *testing.T) {
+	root := build("/home", dir("u",
+		dir(".cache", dir("lm-studio",
+			dir("models", file("m.gguf", 50)),
+			dir("conversations", file("chat.json", 3)),
+			dir("user-files", file("u", 4)),
+			dir("config-presets", file("p", 1)),
+		)),
+	))
+	res := newClassifier(t, Config{}).Analyze(root, nil)
+
+	for _, name := range []string{"conversations", "user-files", "config-presets"} {
+		m, ok := res.Match(child(t, root, ".cache", "lm-studio", name))
+		require.True(t, ok, name)
+		assert.Equal(t, Review, m.Confidence, name)
+		assert.Contains(t, m.Hint, "conversations", name)
+	}
+	m, ok := res.Match(child(t, root, ".cache", "lm-studio", "models"))
+	require.True(t, ok)
+	assert.Equal(t, MLModel, m.Category)
 }
 
 func TestExclusionSplitsUnit(t *testing.T) {
