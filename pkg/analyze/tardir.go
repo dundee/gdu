@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/ulikunitz/xz"
@@ -41,6 +40,12 @@ func (tf *TarFile) GetType() string {
 // EncodeJSON encodes tar file to JSON
 func (tf *TarFile) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	return tf.File.EncodeJSON(writer, topLevel, attributes)
+}
+
+// itemStats returns the totals of the directory, computed when the archive
+// was opened (see finishArchive)
+func (td *TarDir) itemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
+	return td.ItemCount, td.Size, td.Usage
 }
 
 // GetType returns type of tar directory
@@ -128,9 +133,8 @@ func openTarReader(tarPath string) (*tar.Reader, io.Closer, error) {
 	}
 }
 
-// processTarFile reads a tar archive and returns a TarDir representing its contents.
-// TarDir.Size is set to the total uncompressed content size; TarDir.Usage is the
-// size of the archive file on disk.
+// processTarFile reads a tar archive and returns a TarDir representing its
+// contents, whose totals finishArchive computes.
 func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 	tr, closer, err := openTarReader(tarPath)
 	if err != nil {
@@ -156,8 +160,6 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 	dirMap := make(map[string]*TarDir)
 	dirMap[""] = tarDir
 
-	var totalUncompressed int64
-
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -175,6 +177,7 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 		switch header.Typeflag {
 		case tar.TypeDir:
 			ensureTarDirExists(dirMap, name, tarPath, tarDir)
+			dirMap[name].Mtime = header.ModTime
 
 		case tar.TypeReg, tar.TypeLink, tar.TypeSymlink:
 			dirPath := path.Dir(name)
@@ -184,7 +187,6 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 			ensureTarDirExists(dirMap, dirPath, tarPath, tarDir)
 
 			parentDir := dirMap[dirPath]
-			totalUncompressed += header.Size
 
 			tarFile := &TarFile{
 				File: &File{
@@ -202,10 +204,6 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 		}
 		// Other types (device files, fifos, etc.) are silently skipped
 	}
-
-	// Size = total uncompressed content; Usage = compressed archive on disk
-	tarDir.Size = totalUncompressed
-	tarDir.Usage = info.Size()
 
 	return tarDir, nil
 }
@@ -239,9 +237,7 @@ func ensureTarDirExists(dirMap map[string]*TarDir, dirPath, tarPath string, root
 			File: &File{
 				Name:   path.Base(dirPath),
 				Flag:   'T',
-				Size:   4096,
-				Usage:  4096,
-				Mtime:  time.Now(),
+				Mtime:  rootDir.Mtime,
 				Parent: parent,
 			},
 			ItemCount: 1,
