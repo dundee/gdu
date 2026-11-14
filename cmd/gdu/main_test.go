@@ -266,8 +266,8 @@ func TestBrokenConfigIsReported(t *testing.T) {
 	assert.Contains(t, stderr.String(), "gdu: ignoring the config file: "+path+":")
 }
 
-// --max-cores bounds the processors of the process, when it is between one
-// and the number of processors.
+// --max-cores bounds the processors of the process, at most as many as the
+// machine has; without it, the runtime's default stays.
 func TestSetMaxProcs(t *testing.T) {
 	orig := runtime.GOMAXPROCS(0)
 	t.Cleanup(func() { runtime.GOMAXPROCS(orig) })
@@ -275,8 +275,15 @@ func TestSetMaxProcs(t *testing.T) {
 	setMaxProcs(1)
 	assert.Equal(t, 1, runtime.GOMAXPROCS(0))
 
-	for _, n := range []int{0, -100, runtime.NumCPU() + 1} {
+	for _, n := range []int{0, -100} {
 		setMaxProcs(n)
-		assert.Equal(t, 1, runtime.GOMAXPROCS(0), "%d is out of range and changes nothing", n)
+		assert.Equal(t, 1, runtime.GOMAXPROCS(0), "%d leaves GOMAXPROCS alone", n)
 	}
+
+	setMaxProcs(runtime.NumCPU() + 1)
+	assert.Equal(t, runtime.NumCPU(), runtime.GOMAXPROCS(0), "more than the machine has is bounded by it")
+}
+
+func TestMaxCoresDefaultsToTheRuntime(t *testing.T) {
+	assert.Equal(t, "0", rootCmd.Flags().Lookup("max-cores").DefValue)
 }

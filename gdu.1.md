@@ -67,7 +67,7 @@ only.
 
 **-l**, **\--log-file**=\"/dev/null\" Path to a logfile
 
-**-m**, **\--max-cores** Set max cores that Gdu will use.
+**-m**, **\--max-cores** Set max cores that Gdu will use, at most the number of processors; 0 (the default) leaves it to Go, which follows container limits.
 
 **\--sequential**\[=false\] Use sequential scanning (intended for rotating HDDs)
 

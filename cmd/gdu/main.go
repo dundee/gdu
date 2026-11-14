@@ -55,7 +55,8 @@ func init() {
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
 	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino,dev)")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
-	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
+	flags.IntVarP(&af.MaxCores, "max-cores", "m", 0,
+		fmt.Sprintf("Set max cores that Gdu will use, at most %d; 0 leaves it to Go, which follows container limits", runtime.NumCPU()))
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
 	flags.BoolVar(&af.SelfUpdate, "self-update", false,
@@ -217,13 +218,14 @@ func runE(command *cobra.Command, args []string) error {
 	return a.Run()
 }
 
-// setMaxProcs makes gdu use at most n processors, when n is between one and
-// the number of processors of the machine.
+// setMaxProcs makes gdu use at most n processors, at most as many as the
+// machine has. Below one, it leaves GOMAXPROCS to the runtime, which follows
+// the CPU limit of a container and keeps following it.
 func setMaxProcs(n int) {
-	if n < 1 || n > runtime.NumCPU() {
+	if n < 1 {
 		return
 	}
-	runtime.GOMAXPROCS(n)
+	runtime.GOMAXPROCS(min(n, runtime.NumCPU()))
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 

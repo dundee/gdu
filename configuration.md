@@ -57,7 +57,7 @@ All pattern sources combine. When `ignore-dir-patterns`, `ignore-from-file` and 
 
 #### `max-cores`
 
-Set max cores that Gdu will use.
+Set max cores that Gdu will use, at most the number of processors of the machine. 0, the default, leaves it to Go, which follows the CPU limit of a container.
 
 #### `sequential-scanning`
 
