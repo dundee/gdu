@@ -70,7 +70,9 @@ WHEN accepts RFC3339 timestamp or date only YYYY\-MM\-DD
 \f[B]\-l\f[R], \f[B]\-\-log\-file\f[R]=\(dq/dev/null\(dq Path to a
 logfile
 .PP
-\f[B]\-m\f[R], \f[B]\-\-max\-cores\f[R] Set max cores that Gdu will use.
+\f[B]\-m\f[R], \f[B]\-\-max\-cores\f[R] Set max cores that Gdu will use,
+at most the number of processors; 0 (the default) leaves it to Go, which
+follows container limits.
 .PP
 \f[B]\-\-sequential\f[R][=false] Use sequential scanning (intended for
 rotating HDDs)
@@ -204,8 +206,9 @@ browser interface for it.
 .PP
 \f[B]\-\-web\-listen\f[R]=\(dq\(dq Address for the web UI to listen on.
 By default the server binds to localhost on a random free port.
-Binding to a non\-loopback address makes scan details reachable by other
-hosts on the network.
+Reading scan details needs the token in the printed URL.
+Binding to a non\-loopback address makes them reachable, with that URL,
+by other hosts on the network, over unencrypted HTTP.
 .PP
 \f[B]\-\-web\-open\f[R][=true] Open the web UI in the default browser on
 start.
@@ -221,9 +224,12 @@ If the file is \(dq\-\(dq, write to standard output.
 \f[B]\-\-output\-attrs\f[R] Export only selected JSON attributes
 (name,asize,dsize,shsize,items,mtime,notreg,ino,dev).
 Requires \-\-output\-file.
-The \f[I]name\f[R] attribute is always included and directories always
-carry their \f[I]asize\f[R], \f[I]dsize\f[R] and \f[I]items\f[R] summary
-stats so they can be preserved on import.
+The \f[I]name\f[R] attribute is always included.
+As in ncdu\(cqs format, a directory\(cqs \f[I]dsize\f[R] is the disk
+usage of the directory itself; its totals are written as
+\f[I]gdu_asize\f[R] and \f[I]gdu_dsize\f[R] (with the \f[I]asize\f[R]
+and \f[I]dsize\f[R] attributes) and \f[I]items\f[R], so they can be
+preserved on import.
 .PP
 \f[B]\-\-config\-file\f[R]=\(dq$HOME/.gdu.yaml\(dq Read config from file
 .PP
@@ -241,6 +247,16 @@ analysis stored by an earlier scan in the database (\-\-db) instead of
 scanning
 .PP
 \f[B]\-v\f[R], \f[B]\-\-version\f[R][=false] Print version
+.PP
+\f[B]\-\-self\-update\f[R][=false] Update gdu to the latest release
+published on GitHub.
+The downloaded archive is verified against the published SHA\-256
+checksums before the binary is replaced.
+When other arguments are given, the new binary is then run with them;
+otherwise gdu exits.
+Only binaries downloaded from GitHub releases can update themselves, gdu
+installed by a package manager has to be updated with that package
+manager.
 .SH FILE FLAGS
 Files and directories may be prefixed by a one\-character flag with
 following meaning:
