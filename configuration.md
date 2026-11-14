@@ -133,7 +133,7 @@ Do not allow viewing file contents
 
 #### `no-confirm-quit`
 
-Do not ask for confirmation before quitting after a long scan. By default, pressing `q`/`Q` after a scan that took more than a few seconds shows a confirmation dialog so that results are not lost by an accidental key press.
+Do not ask for confirmation before quitting after a long scan. By default, pressing `q`/`Q` after a scan that took more than a few seconds shows a confirmation dialog so that results are not lost by an accidental key press. With a database (`db`), a scan that has ended is saved, so quitting after it does not ask; quitting while a scan is still running does.
 
 #### `ctrl-c-quits`
 
