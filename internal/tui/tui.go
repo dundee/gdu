@@ -216,8 +216,20 @@ func CreateUI(app TermApplication, screen tcell.Screen, output io.Writer, analyz
 	ui.pages.SetBackgroundColor(tcell.ColorDefault)
 
 	ui.app.SetRoot(ui.pages, true)
+	setStyles(s.Display.Colors)
 
 	return ui
+}
+
+// setStyles sets the colours tview draws its widgets with, which are global
+// to tview.
+func setStyles(colors bool) {
+	if colors {
+		tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
+	} else {
+		tview.Styles.ContrastBackgroundColor = tcell.NewRGBColor(150, 150, 150)
+	}
+	tview.Styles.BorderColor = tcell.ColorDefault
 }
 
 // createGrid creates the main grid layout

@@ -52,6 +52,14 @@ them into the behaviour of a run in many places:
   several paths, read an analysis or a database, and run.
 - A config file that cannot be read is reported on stderr, naming the file.
   gdu still runs, as before.
+- Creating a frontend changes no process-wide state:
+  - its colours and spinner are its own (no `color.NoColor`, no shared
+    progress runes);
+  - the TUI sets tview's styles, which only tview reads;
+  - the profiling server has its own mux instead of replacing
+    `http.DefaultServeMux`;
+  - `--max-cores` is applied by the gdu command, not by `App.Run`, so a
+    program embedding gdu keeps its own `GOMAXPROCS`.
 
 `Flags` and `App.Run` stay the public API of `cmd/gdu/app`. `config.Settings`
 is internal, so other programs cannot name it.
@@ -66,3 +74,5 @@ is internal, so other programs cannot name it.
   `sequential-scanning: true` with `--db` on the command line.
 - The ignore patterns, the time filter and the cleanup rules are checked
   before anything is set up.
+- Tests of the frontends no longer depend on their order through process
+  globals, except tview's styles.

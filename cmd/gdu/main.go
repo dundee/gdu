@@ -301,6 +301,8 @@ func runE(command *cobra.Command, args []string) error {
 		}
 	}
 
+	setMaxProcs(af.MaxCores)
+
 	a := app.App{
 		Flags:       af,
 		Args:        args,
@@ -312,6 +314,16 @@ func runE(command *cobra.Command, args []string) error {
 		PathChecker: os.Stat,
 	}
 	return a.Run()
+}
+
+// setMaxProcs makes gdu use at most n processors, when n is between one and
+// the number of processors of the machine.
+func setMaxProcs(n int) {
+	if n < 1 || n > runtime.NumCPU() {
+		return
+	}
+	runtime.GOMAXPROCS(n)
+	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
 // reportConfigError tells w that a config file could not be read; gdu then

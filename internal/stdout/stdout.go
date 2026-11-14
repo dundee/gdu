@@ -27,6 +27,7 @@ type UI struct {
 	orange            *color.Color
 	blue              *color.Color
 	cyan              *color.Color
+	progressRunes     []rune
 	showItemCnt       bool
 	showSymlinkTarget bool
 	top               int
@@ -39,12 +40,6 @@ type UI struct {
 	configuredSortBy  string
 	configuredOrder   string
 }
-
-var (
-	progressRunes      = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
-	progressRunesOld   = []rune(`-\\|/`)
-	progressRunesCount = len(progressRunes)
-)
 
 // CreateStdoutUI returns the UI printing the analysis to output.
 func CreateStdoutUI(output io.Writer, analyzer analyze.Analyzer, s *config.Settings) *UI {
@@ -66,18 +61,12 @@ func CreateStdoutUI(output io.Writer, analyzer analyze.Analyzer, s *config.Setti
 	} else if !s.Display.NoPrefix && !s.Display.SIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
-	if s.Display.NoUnicode {
-		ui.useOldProgressRunes()
-	}
-	ui.red = color.New(color.FgRed).Add(color.Bold)
-	ui.orange = color.New(color.FgYellow).Add(color.Bold)
-	ui.blue = color.New(color.FgBlue).Add(color.Bold)
-	ui.cyan = color.New(color.FgCyan).Add(color.Bold)
+	ui.progressRunes = common.SpinnerRunes(s.Display.NoUnicode)
+	ui.red = common.BoldColor(color.FgRed, s.Display.Colors)
+	ui.orange = common.BoldColor(color.FgYellow, s.Display.Colors)
+	ui.blue = common.BoldColor(color.FgBlue, s.Display.Colors)
+	ui.cyan = common.BoldColor(color.FgCyan, s.Display.Colors)
 	ui.session = session.New(ui.UI)
-
-	if !s.Display.Colors {
-		color.NoColor = true
-	}
 
 	return ui
 }
@@ -103,11 +92,6 @@ func (ui *UI) setFixedUnit(unitChar string) {
 		ui.fixedBase = g
 		ui.fixedSuffix = suffixMap["g"]
 	}
-}
-
-func (ui *UI) useOldProgressRunes() {
-	progressRunes = progressRunesOld
-	progressRunesCount = len(progressRunes)
 }
 
 // StartUILoop stub
@@ -446,9 +430,9 @@ func (ui *UI) showReadingProgress() (stop func()) {
 		defer close(stopped)
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
-		for i := 0; ; i = (i + 1) % progressRunesCount {
+		for i := 0; ; i = (i + 1) % len(ui.progressRunes) {
 			fmt.Fprint(ui.output, emptyRow(40))
-			fmt.Fprintf(ui.output, "\r %s Reading analysis from file...", string(progressRunes[i]))
+			fmt.Fprintf(ui.output, "\r %s Reading analysis from file...", string(ui.progressRunes[i]))
 			select {
 			case <-quit:
 				fmt.Fprint(ui.output, emptyRow(40), "\r")
@@ -472,7 +456,7 @@ func (ui *UI) scanObserver() session.Observer {
 	i := 0
 	return func(p session.Progress) {
 		fmt.Fprint(ui.output, emptyRow(100))
-		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+		fmt.Fprintf(ui.output, "\r %s ", string(ui.progressRunes[i]))
 		if p.Phase == session.Finalizing {
 			fmt.Fprint(ui.output, "Calculating disk usage...")
 		} else {
@@ -481,7 +465,7 @@ func (ui *UI) scanObserver() session.Observer {
 				" size: "+
 				ui.formatSize(p.TotalUsage))
 		}
-		i = (i + 1) % progressRunesCount
+		i = (i + 1) % len(ui.progressRunes)
 	}
 }
 

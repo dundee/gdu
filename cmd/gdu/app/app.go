@@ -8,7 +8,6 @@ import (
 	"net/http/pprof"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -43,70 +42,72 @@ type UI interface {
 
 // Flags define flags accepted by Run
 type Flags struct {
-	Style               Style     `yaml:"style"`
-	Sorting             Sorting   `yaml:"sorting"`
-	CfgFile             string    `yaml:"-"`
-	LogFile             string    `yaml:"log-file"`
-	InputFile           string    `yaml:"input-file"`
-	OutputFile          string    `yaml:"output-file"`
-	OutputAttrs         string    `yaml:"output-attrs"`
-	IgnoreFromFile      string    `yaml:"ignore-from-file"`
-	IgnoreFromGitignore string    `yaml:"ignore-from-gitignore"`
-	IgnoreDirs          []string  `yaml:"ignore-dirs"`
-	IgnoreDirPatterns   []string  `yaml:"ignore-dir-patterns"`
-	TypeFilter          []string  `yaml:"type"`
-	ExcludeTypeFilter   []string  `yaml:"exclude-type"`
-	MaxCores            int       `yaml:"max-cores"`
-	Top                 int       `yaml:"top"`
-	Depth               int       `yaml:"depth"`
-	SequentialScanning  bool      `yaml:"sequential-scanning"`
-	ShowDisks           bool      `yaml:"-"`
-	ShowApparentSize    bool      `yaml:"show-apparent-size"`
-	ShowRelativeSize    bool      `yaml:"show-relative-size"`
-	ShowAnnexedSize     bool      `yaml:"show-annexed-size"`
-	ExclusiveSize       bool      `yaml:"exclusive-size"`
-	ShowVersion         bool      `yaml:"-"`
-	SelfUpdate          bool      `yaml:"-"`
-	ShowItemCount       bool      `yaml:"show-item-count"`
-	ShowMTime           bool      `yaml:"show-mtime"`
-	NoColor             bool      `yaml:"no-color"`
-	Mouse               bool      `yaml:"mouse"`
-	NonInteractive      bool      `yaml:"non-interactive"`
-	Interactive         bool      `yaml:"interactive"`
-	NoProgress          bool      `yaml:"no-progress"`
-	NoUnicode           bool      `yaml:"no-unicode"`
-	NoCross             bool      `yaml:"no-cross"`
-	NoHidden            bool      `yaml:"no-hidden"`
-	NoDelete            bool      `yaml:"no-delete"`
-	NoViewFile          bool      `yaml:"no-view-file"`
-	NoSpawnShell        bool      `yaml:"no-spawn-shell"`
-	NoConfirmQuit       bool      `yaml:"no-confirm-quit"`
-	FollowSymlinks      bool      `yaml:"follow-symlinks"`
-	Profiling           bool      `yaml:"profiling"`
-	ReadFromStorage     bool      `yaml:"read-from-storage"`
-	DbPath              string    `yaml:"db"`
-	Summarize           bool      `yaml:"summarize"`
-	UseSIPrefix         bool      `yaml:"use-si-prefix"`
-	NoPrefix            bool      `yaml:"no-prefix"`
-	ShowInKiB           bool      `yaml:"show-in-kib"`
-	WriteConfig         bool      `yaml:"-"`
-	ReverseSort         bool      `yaml:"reverse-sort"`
-	ChangeCwd           bool      `yaml:"change-cwd"`
-	DeleteInBackground  bool      `yaml:"delete-in-background"`
-	DeleteInParallel    bool      `yaml:"delete-in-parallel"`
-	TrashCommand        string    `yaml:"trash-command"`
-	Shell               string    `yaml:"shell"`
-	Since               string    `yaml:"since"`
-	Until               string    `yaml:"until"`
-	MaxAge              string    `yaml:"max-age"`
-	MinAge              string    `yaml:"min-age"`
-	ArchiveBrowsing     bool      `yaml:"archive-browsing"`
-	CollapsePath        bool      `yaml:"collapse-path"`
-	ShowSymlinkTarget   bool      `yaml:"show-symlink-target"`
-	CtrlCQuits          bool      `yaml:"ctrl-c-quits"`
-	BrowseParentDirs    bool      `yaml:"browse-parent-dirs"`
-	Web                 bool      `yaml:"-"`
-	WebConfig           WebConfig `yaml:"web"`
+	Style               Style    `yaml:"style"`
+	Sorting             Sorting  `yaml:"sorting"`
+	CfgFile             string   `yaml:"-"`
+	LogFile             string   `yaml:"log-file"`
+	InputFile           string   `yaml:"input-file"`
+	OutputFile          string   `yaml:"output-file"`
+	OutputAttrs         string   `yaml:"output-attrs"`
+	IgnoreFromFile      string   `yaml:"ignore-from-file"`
+	IgnoreFromGitignore string   `yaml:"ignore-from-gitignore"`
+	IgnoreDirs          []string `yaml:"ignore-dirs"`
+	IgnoreDirPatterns   []string `yaml:"ignore-dir-patterns"`
+	TypeFilter          []string `yaml:"type"`
+	ExcludeTypeFilter   []string `yaml:"exclude-type"`
+	// MaxCores bounds the processors gdu uses; the gdu command sets it for
+	// the process, Run does not
+	MaxCores           int       `yaml:"max-cores"`
+	Top                int       `yaml:"top"`
+	Depth              int       `yaml:"depth"`
+	SequentialScanning bool      `yaml:"sequential-scanning"`
+	ShowDisks          bool      `yaml:"-"`
+	ShowApparentSize   bool      `yaml:"show-apparent-size"`
+	ShowRelativeSize   bool      `yaml:"show-relative-size"`
+	ShowAnnexedSize    bool      `yaml:"show-annexed-size"`
+	ExclusiveSize      bool      `yaml:"exclusive-size"`
+	ShowVersion        bool      `yaml:"-"`
+	SelfUpdate         bool      `yaml:"-"`
+	ShowItemCount      bool      `yaml:"show-item-count"`
+	ShowMTime          bool      `yaml:"show-mtime"`
+	NoColor            bool      `yaml:"no-color"`
+	Mouse              bool      `yaml:"mouse"`
+	NonInteractive     bool      `yaml:"non-interactive"`
+	Interactive        bool      `yaml:"interactive"`
+	NoProgress         bool      `yaml:"no-progress"`
+	NoUnicode          bool      `yaml:"no-unicode"`
+	NoCross            bool      `yaml:"no-cross"`
+	NoHidden           bool      `yaml:"no-hidden"`
+	NoDelete           bool      `yaml:"no-delete"`
+	NoViewFile         bool      `yaml:"no-view-file"`
+	NoSpawnShell       bool      `yaml:"no-spawn-shell"`
+	NoConfirmQuit      bool      `yaml:"no-confirm-quit"`
+	FollowSymlinks     bool      `yaml:"follow-symlinks"`
+	Profiling          bool      `yaml:"profiling"`
+	ReadFromStorage    bool      `yaml:"read-from-storage"`
+	DbPath             string    `yaml:"db"`
+	Summarize          bool      `yaml:"summarize"`
+	UseSIPrefix        bool      `yaml:"use-si-prefix"`
+	NoPrefix           bool      `yaml:"no-prefix"`
+	ShowInKiB          bool      `yaml:"show-in-kib"`
+	WriteConfig        bool      `yaml:"-"`
+	ReverseSort        bool      `yaml:"reverse-sort"`
+	ChangeCwd          bool      `yaml:"change-cwd"`
+	DeleteInBackground bool      `yaml:"delete-in-background"`
+	DeleteInParallel   bool      `yaml:"delete-in-parallel"`
+	TrashCommand       string    `yaml:"trash-command"`
+	Shell              string    `yaml:"shell"`
+	Since              string    `yaml:"since"`
+	Until              string    `yaml:"until"`
+	MaxAge             string    `yaml:"max-age"`
+	MinAge             string    `yaml:"min-age"`
+	ArchiveBrowsing    bool      `yaml:"archive-browsing"`
+	CollapsePath       bool      `yaml:"collapse-path"`
+	ShowSymlinkTarget  bool      `yaml:"show-symlink-target"`
+	CtrlCQuits         bool      `yaml:"ctrl-c-quits"`
+	BrowseParentDirs   bool      `yaml:"browse-parent-dirs"`
+	Web                bool      `yaml:"-"`
+	WebConfig          WebConfig `yaml:"web"`
 	// Cleanup holds user rules and exclusions for the web UI's cleanup
 	// projections.
 	Cleanup CleanupConfig `yaml:"cleanup"`
@@ -226,10 +227,6 @@ type App struct {
 	Istty       bool
 }
 
-func init() {
-	http.DefaultServeMux = http.NewServeMux()
-}
-
 // Run starts gdu main logic
 func (a *App) Run() error {
 	if a.Flags.ShowVersion {
@@ -263,8 +260,6 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
-
-	a.setMaxProcs()
 
 	if err := a.runAction(ui, paths); err != nil {
 		return err
@@ -334,17 +329,6 @@ func isSubPath(path, parent string) bool {
 	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
-func (a *App) setMaxProcs() {
-	if a.Flags.MaxCores < 1 || a.Flags.MaxCores > runtime.NumCPU() {
-		return
-	}
-
-	runtime.GOMAXPROCS(a.Flags.MaxCores)
-
-	// runtime.GOMAXPROCS(n) with n < 1 doesn't change current setting so we use it to check current value
-	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
-}
-
 // createUI returns the frontend front for the settings s, scanning with
 // analyzer.
 func (a *App) createUI(front frontend, analyzer analyze.Analyzer, s *config.Settings) (UI, error) {
@@ -365,26 +349,20 @@ func (a *App) createUI(front frontend, analyzer analyze.Analyzer, s *config.Sett
 		return stdout.CreateStdoutUI(a.Writer, analyzer, s), nil
 	case frontendTUI:
 	}
-
-	ui := tui.CreateUI(a.TermApp, a.Screen, os.Stdout, analyzer, s)
-	if s.Display.Colors {
-		tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
-	} else {
-		tview.Styles.ContrastBackgroundColor = tcell.NewRGBColor(150, 150, 150)
-	}
-	tview.Styles.BorderColor = tcell.ColorDefault
-	return ui, nil
+	return tui.CreateUI(a.TermApp, a.Screen, os.Stdout, analyzer, s), nil
 }
 
 func (a *App) runAction(ui UI, paths []string) error {
 	if a.Flags.Profiling {
+		// a mux of its own, rather than the process's http.DefaultServeMux
+		mux := http.NewServeMux()
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 		go func() {
-			http.HandleFunc("/debug/pprof/", pprof.Index)
-			http.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-			http.HandleFunc("/debug/pprof/profile", pprof.Profile)
-			http.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-			http.HandleFunc("/debug/pprof/trace", pprof.Trace)
-			log.Println(http.ListenAndServe("localhost:6060", nil))
+			log.Println(http.ListenAndServe("localhost:6060", mux))
 		}()
 	}
 

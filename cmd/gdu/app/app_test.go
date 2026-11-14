@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -996,50 +995,6 @@ func TestListDevicesWithGui(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Empty(t, out)
-}
-
-func TestMaxCores(t *testing.T) {
-	_, err := runApp(
-		&Flags{LogFile: "/dev/null", MaxCores: 1},
-		[]string{},
-		true,
-		testdev.DevicesInfoGetterMock{},
-	)
-
-	assert.Equal(t, 1, runtime.GOMAXPROCS(0))
-	assert.Nil(t, err)
-}
-
-func TestMaxCoresHighEdge(t *testing.T) {
-	if runtime.NumCPU() < 2 {
-		t.Skip("Skipping on a single core CPU")
-	}
-	out, err := runApp(
-		&Flags{LogFile: "/dev/null", MaxCores: runtime.NumCPU() + 1},
-		[]string{},
-		true,
-		testdev.DevicesInfoGetterMock{},
-	)
-
-	assert.NotEqual(t, runtime.NumCPU(), runtime.GOMAXPROCS(0))
-	assert.Empty(t, out)
-	assert.Nil(t, err)
-}
-
-func TestMaxCoresLowEdge(t *testing.T) {
-	if runtime.NumCPU() < 2 {
-		t.Skip("Skipping on a single core CPU")
-	}
-	out, err := runApp(
-		&Flags{LogFile: "/dev/null", MaxCores: -100},
-		[]string{},
-		true,
-		testdev.DevicesInfoGetterMock{},
-	)
-
-	assert.NotEqual(t, runtime.NumCPU(), runtime.GOMAXPROCS(0))
-	assert.Empty(t, out)
-	assert.Nil(t, err)
 }
 
 func TestSettingsRejectInvalidTimeFilter(t *testing.T) {

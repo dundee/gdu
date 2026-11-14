@@ -30,6 +30,7 @@ type UI struct {
 	exportOutput     io.Writer
 	red              *color.Color
 	orange           *color.Color
+	progressRunes    []rune
 	session          *session.Session
 	outputAttributes fs.JSONAttributes
 	top              int
@@ -52,13 +53,10 @@ func CreateExportUI(output, exportOutput io.Writer, analyzer analyze.Analyzer, s
 	if !s.Display.SIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
-	ui.red = color.New(color.FgRed).Add(color.Bold)
-	ui.orange = color.New(color.FgYellow).Add(color.Bold)
+	ui.progressRunes = common.SpinnerRunes(s.Display.NoUnicode)
+	ui.red = common.BoldColor(color.FgRed, s.Display.Colors)
+	ui.orange = common.BoldColor(color.FgYellow, s.Display.Colors)
 	ui.session = session.New(ui.UI)
-
-	if !s.Display.Colors {
-		color.NoColor = true
-	}
 
 	return ui
 }
@@ -218,8 +216,6 @@ func (ui *UI) exportDir(dir analyze.Node) error {
 	return err
 }
 
-var progressRunes = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
-
 // scanObserver returns the observer showing the progress of a scan, or nil
 // when no progress is shown.
 func (ui *UI) scanObserver() session.Observer {
@@ -229,7 +225,7 @@ func (ui *UI) scanObserver() session.Observer {
 	i := 0
 	return func(p session.Progress) {
 		fmt.Fprint(ui.output, clearTerminalLine)
-		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+		fmt.Fprintf(ui.output, "\r %s ", string(ui.progressRunes[i]))
 		if p.Phase == session.Finalizing {
 			fmt.Fprint(ui.output, "Calculating disk usage...")
 		} else {
@@ -238,7 +234,7 @@ func (ui *UI) scanObserver() session.Observer {
 				" size: "+
 				ui.formatSize(p.TotalUsage))
 		}
-		i = (i + 1) % len(progressRunes)
+		i = (i + 1) % len(ui.progressRunes)
 	}
 }
 
@@ -254,9 +250,9 @@ func (ui *UI) showWritingProgress() (stop func()) {
 		defer close(stopped)
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
-		for i := 0; ; i = (i + 1) % len(progressRunes) {
+		for i := 0; ; i = (i + 1) % len(ui.progressRunes) {
 			fmt.Fprint(ui.output, clearTerminalLine)
-			fmt.Fprintf(ui.output, "\r %s Writing output file...", string(progressRunes[i]))
+			fmt.Fprintf(ui.output, "\r %s Writing output file...", string(ui.progressRunes[i]))
 			select {
 			case <-quit:
 				fmt.Fprint(ui.output, clearTerminalLine)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
@@ -263,4 +264,19 @@ func TestBrokenConfigIsReported(t *testing.T) {
 	reportConfigError(&stderr)
 
 	assert.Contains(t, stderr.String(), "gdu: ignoring the config file: "+path+":")
+}
+
+// --max-cores bounds the processors of the process, when it is between one
+// and the number of processors.
+func TestSetMaxProcs(t *testing.T) {
+	orig := runtime.GOMAXPROCS(0)
+	t.Cleanup(func() { runtime.GOMAXPROCS(orig) })
+
+	setMaxProcs(1)
+	assert.Equal(t, 1, runtime.GOMAXPROCS(0))
+
+	for _, n := range []int{0, -100, runtime.NumCPU() + 1} {
+		setMaxProcs(n)
+		assert.Equal(t, 1, runtime.GOMAXPROCS(0), "%d is out of range and changes nothing", n)
+	}
 }

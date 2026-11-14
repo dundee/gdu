@@ -201,6 +201,9 @@ settings and not configured afterwards. The export still refuses `ListDevices` a
 
 **Strength: Worth exploring**
 
+**Status: Mostly done** (ADR 8). Colours and the spinner are per UI, and the export now
+honours `--no-unicode` too. `stdout.AnalyzePath` still calls `os.Stat` directly.
+
 - **Files:** `color.NoColor` set as a package-global side effect in `report/export.go:69`
   and `stdout/stdout.go:92`; `progressRunes`/`progressRunesCount` package vars
   `stdout/stdout.go:40-44` mutated by `UseOldProgressRunes()`; `stdout.AnalyzePath` calls
