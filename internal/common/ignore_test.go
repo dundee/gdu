@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,31 +15,31 @@ func init() {
 	slog.SetLogLoggerLevel(slog.LevelWarn)
 }
 
-func TestCreateIgnorePattern(t *testing.T) {
-	re, err := common.CreateIgnorePattern([]string{"[abc]+"})
+func TestIgnorePattern(t *testing.T) {
+	re, err := common.IgnorePattern([]string{"[abc]+"}, "", "", nil)
 
 	assert.Nil(t, err)
 	assert.True(t, re.MatchString("aa"))
 }
 
-func TestCreateIgnorePatternAnchoredSingleRelative(t *testing.T) {
-	re, err := common.CreateIgnorePattern([]string{"test_dir/abc"})
+func TestIgnorePatternAnchoredSingleRelative(t *testing.T) {
+	re, err := common.IgnorePattern([]string{"test_dir/abc"}, "", "", nil)
 
 	assert.Nil(t, err)
 	assert.True(t, re.MatchString("test_dir/abc"))
 	assert.False(t, re.MatchString("test_dir/abcdef"))
 }
 
-func TestCreateIgnorePatternAnchoredMiddleAlternative(t *testing.T) {
-	re, err := common.CreateIgnorePattern([]string{"aaa", `foo\.bak`, "ccc"})
+func TestIgnorePatternAnchoredMiddleAlternative(t *testing.T) {
+	re, err := common.IgnorePattern([]string{"aaa", `foo\.bak`, "ccc"}, "", "", nil)
 
 	assert.Nil(t, err)
 	assert.True(t, re.MatchString("foo.bak"))
 	assert.False(t, re.MatchString("xfoo.baky"))
 }
 
-func TestCreateIgnorePatternWithErr(t *testing.T) {
-	re, err := common.CreateIgnorePattern([]string{"[[["})
+func TestIgnorePatternWithErr(t *testing.T) {
+	re, err := common.IgnorePattern([]string{"[[["}, "", "", nil)
 
 	assert.NotNil(t, err)
 	assert.Nil(t, re)
@@ -524,4 +525,25 @@ func TestCreateFileTypeFilterReturnsNilWhenNoFiltering(t *testing.T) {
 	// No include or ignore types set
 	filter := ui.CreateFileTypeFilter()
 	assert.Nil(t, filter, "CreateFileTypeFilter should return nil when no filtering is configured")
+}
+
+// The mount points of other devices are left out as exact paths, next to
+// what the user left out, and a later device replaces them.
+func TestIgnoreOtherDevices(t *testing.T) {
+	ui := common.NewUI(nil, &config.Settings{Scan: config.Scan{IgnoreDirs: []string{"/user"}}})
+
+	ui.IgnoreOtherDevices([]string{"/mnt/c++", "/mnt/a.b"})
+	ignored := ui.CreateIgnoreFunc()
+
+	assert.True(t, ignored("c++", "/mnt/c++"))
+	assert.True(t, ignored("a.b", "/mnt/a.b"))
+	assert.False(t, ignored("axb", "/mnt/axb"))
+	assert.True(t, ignored("user", "/user"))
+
+	ui.IgnoreOtherDevices([]string{"/other"})
+	ignored = ui.CreateIgnoreFunc()
+
+	assert.False(t, ignored("c++", "/mnt/c++"))
+	assert.True(t, ignored("other", "/other"))
+	assert.True(t, ignored("user", "/user"))
 }
