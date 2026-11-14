@@ -2,13 +2,13 @@ package tui
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -81,9 +81,9 @@ func (ui *UI) followCurrentDirWithCwd() {
 	}
 
 	if err := ui.changeCwdFn(ui.currentDirPath); err != nil {
-		log.Printf("error setting cwd: %s", err.Error())
+		slog.Warn("changing cwd", "err", err)
 	}
-	log.Printf("changing cwd to %s", ui.currentDirPath)
+	slog.Info("changing cwd", "path", ui.currentDirPath)
 }
 
 // nolint: funlen // Why: complex function

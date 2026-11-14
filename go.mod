@@ -13,7 +13,6 @@ require (
 	github.com/maruel/natural v1.3.0
 	github.com/mattn/go-isatty v0.0.24
 	github.com/rivo/tview v0.42.0
-	github.com/sirupsen/logrus v1.10.2
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/ulikunitz/xz v0.5.17

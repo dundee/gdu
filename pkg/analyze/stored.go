@@ -4,11 +4,11 @@ import (
 	"context"
 	"io"
 	"iter"
+	"log/slog"
 	"path/filepath"
 	"sync"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
-	log "github.com/sirupsen/logrus"
 )
 
 // StoredAnalyzer scans directories into a RecordStore, keeping in memory only
@@ -54,7 +54,7 @@ func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Optio
 
 	a.storage.failed.Store(false)
 	if err := beginAnalysis(a.storage, storedFormat, path); err != nil {
-		log.Printf("Recording the analysis of %s: %v", path, err)
+		slog.Warn("recording the analysis", "path", path, "err", err)
 		a.storage.failed.Store(true)
 	}
 	root := walkTree[*StoredDir](&a.BaseAnalyzer, s, &storedSink{a: a}, path, true)
@@ -64,7 +64,7 @@ func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Optio
 	stopped := s.isCancelled()
 	root.stored = func() {
 		if err := endAnalysis(a.storage, storedFormat, path, stopped, a.storage.failed.Load()); err != nil {
-			log.Printf("Recording the analysis of %s: %v", path, err)
+			slog.Warn("recording the analysis", "path", path, "err", err)
 		}
 	}
 	return root
@@ -119,7 +119,7 @@ func (*storedSink) fileError(dir *StoredDir) {
 
 func (s *storedSink) entriesDone(dir *StoredDir) {
 	if err := s.a.storage.storeRecord(dir.GetPath(), dir.record()); err != nil {
-		log.Print(err.Error())
+		slog.Warn("storing directory", "path", dir.GetPath(), "err", err)
 	}
 	if dir != s.root {
 		// stored, and loaded again from the database when needed
@@ -147,7 +147,7 @@ func (a *StoredAnalyzer) storeArchive(dir fs.Item, path string) {
 		// names inside an archive are whatever its author chose; joined to the
 		// archive path, "..", "/" or "a/b" would name another record
 		if !isPathElement(name) {
-			log.Printf("Skipping archive entry %q in %s", name, path)
+			slog.Warn("skipping archive entry", "name", name, "archive", path)
 			continue
 		}
 		if entry.IsDir() {
@@ -158,7 +158,7 @@ func (a *StoredAnalyzer) storeArchive(dir fs.Item, path string) {
 		record.Entries = append(record.Entries, entryOf(entry))
 	}
 	if err := a.storage.storeRecord(path, record); err != nil {
-		log.Print(err.Error())
+		slog.Warn("storing archive directory", "path", path, "err", err)
 	}
 }
 
@@ -283,7 +283,7 @@ func (f *StoredDir) loadEntries(files fs.Files) {
 	for _, file := range files {
 		if dir, ok := file.(*StoredDir); ok {
 			if err := dir.load(); err != nil {
-				log.Print(err.Error())
+				slog.Warn("loading directory", "path", dir.GetPath(), "err", err)
 			}
 		}
 	}
@@ -334,7 +334,7 @@ func entryOf(file fs.Item) storedEntry {
 // store stores the directory.
 func (f *StoredDir) store() {
 	if err := f.storage.storeRecord(f.GetPath(), f.record()); err != nil {
-		log.Print(err.Error())
+		slog.Warn("storing directory", "path", f.GetPath(), "err", err)
 	}
 }
 
@@ -424,7 +424,7 @@ func (f *StoredDir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 	if !f.isLoaded() {
 		copied, err := f.detached()
 		if err != nil {
-			log.Print(err.Error())
+			slog.Warn("loading directory", "path", f.GetPath(), "err", err)
 			return
 		}
 		copied.updateStats(links, filteringFiles)

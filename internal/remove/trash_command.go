@@ -6,13 +6,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -100,7 +99,7 @@ func shellScript(command string) string {
 // command must not be interactive, because gdu keeps rendering the UI (and may
 // even run the command from a background worker) while it executes.
 func runTrashCommand(argv0 string, argv, envv []string, stderr io.Writer) error {
-	log.Printf("Running trash command: %s %v", argv0, argv)
+	slog.Info("running trash command", "command", argv0, "args", argv)
 
 	cmd := exec.Command(argv0, argv...) //nolint:gosec // Running a user supplied command is the point.
 	cmd.Env = envv

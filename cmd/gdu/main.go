@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"runtime"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-isatty"
 	"github.com/rivo/tview"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
@@ -181,7 +181,7 @@ func runE(command *cobra.Command, args []string) error {
 			}
 		}()
 	}
-	log.SetOutput(f)
+	slog.SetDefault(slog.New(slog.NewTextHandler(f, nil)))
 
 	reportConfigError(os.Stderr)
 
@@ -227,7 +227,7 @@ func setMaxProcs(n int) {
 		return
 	}
 	runtime.GOMAXPROCS(min(n, runtime.NumCPU()))
-	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
+	slog.Info("max cores", "cores", runtime.GOMAXPROCS(0))
 }
 
 // selfUpdate runs --self-update. It returns done when gdu should not continue

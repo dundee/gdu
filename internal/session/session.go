@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"runtime"
 	"slices"
 	"strings"
@@ -20,7 +21,6 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
-	log "github.com/sirupsen/logrus"
 )
 
 // Phase is the stage a running scan is in.
@@ -203,7 +203,7 @@ func (s *Session) Rescan(ctx context.Context, dir fs.Item, observe Observer) fs.
 	// replace dir itself: under the virtual top level dir, scanned roots can
 	// share a name
 	if err := analyze.ReplaceEntry(parent, dir, scanned); err != nil {
-		log.Printf("Rescanning %s: %v", dir.GetPath(), err)
+		slog.Warn("rescanning", "path", dir.GetPath(), "err", err)
 		return dir
 	}
 

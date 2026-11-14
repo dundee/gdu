@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/remove"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -335,7 +334,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		log.Printf("webui: encoding response: %s", err)
+		slog.Warn("webui: encoding response", "err", err)
 	}
 }
 

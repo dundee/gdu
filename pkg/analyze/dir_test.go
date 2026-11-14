@@ -2,11 +2,10 @@ package analyze
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"sort"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -14,7 +13,7 @@ import (
 )
 
 func init() {
-	log.SetLevel(log.WarnLevel)
+	slog.SetLogLoggerLevel(slog.LevelWarn)
 }
 
 func TestAnalyzeDir(t *testing.T) {

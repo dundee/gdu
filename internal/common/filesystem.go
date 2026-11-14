@@ -1,10 +1,9 @@
 package common
 
 import (
+	"log/slog"
 	"path/filepath"
 	"sync/atomic"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/pkg/device"
 )
@@ -68,7 +67,7 @@ func (c *filesystemIDCache) isOnOtherFilesystem(path string) bool {
 	}
 	shouldIgnore := dev != parentDev
 	if shouldIgnore {
-		log.Printf("Directory %s ignored (other filesystem)", path)
+		slog.Info("directory ignored, on another filesystem", "path", path)
 	}
 	return shouldIgnore
 }

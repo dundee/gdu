@@ -5,17 +5,17 @@ package stdout
 import (
 	"bytes"
 	"io"
+	"log/slog"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
 func init() {
-	log.SetLevel(log.WarnLevel)
+	slog.SetLogLoggerLevel(slog.LevelWarn)
 }
 
 func TestShowDevicesWithErr(t *testing.T) {

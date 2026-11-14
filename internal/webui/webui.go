@@ -8,10 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"sync"
 	"sync/atomic"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/cleanup"
 	"github.com/dundee/gdu/v5/internal/common"
@@ -213,7 +212,7 @@ func (ui *UI) treeLoaded(dir fs.Item) {
 func (ui *UI) statusJSON() string {
 	data, err := json.Marshal(ui.buildStatus())
 	if err != nil {
-		log.Printf("webui: marshaling status: %s", err)
+		slog.Warn("webui: marshaling status", "err", err)
 		return `{"state":"error"}`
 	}
 	return string(data)
