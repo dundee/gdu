@@ -7,6 +7,10 @@ on:
       - master
 
 name: run tests
+# each job asks for more when it needs it
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -17,8 +21,10 @@ jobs:
         go-version: 1.27.x
     - name: Checkout code
       uses: actions/checkout@v7
+      with:
+        persist-credentials: false
     - name: Run linters
-      uses: golangci/golangci-lint-action@v9
+      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
       with:
         version: v2.15.0
 
@@ -39,11 +45,21 @@ jobs:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
       uses: actions/checkout@v7
+      with:
+        persist-credentials: false
     - name: Run tests
       run: go test -v -covermode=count ./...
       env:
         # lets the darwin-only test move a file into the runner's real Trash
         GDU_TEST_SYSTEM_TRASH: "1"
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check for known vulnerabilities in what gdu calls
+      uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+      with:
+        go-version-input: 1.27.x
 
   cross-compile:
     runs-on: ubuntu-latest
@@ -54,6 +70,8 @@ jobs:
         go-version: 1.27.x
     - name: Checkout code
       uses: actions/checkout@v7
+      with:
+        persist-credentials: false
     - name: Build for every released platform
       # releases are built for these systems (Makefile, build-all); gox
       # skips a target that does not build, so check here that all build
@@ -77,11 +95,13 @@ jobs:
         go-version: 1.27.x
     - name: Checkout code
       uses: actions/checkout@v7
+      with:
+        persist-credentials: false
     - name: Calc coverage
       run: |
         go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
     - name: Upload coverage report
-      uses: codecov/codecov-action@v7
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
       with:
         files: ./coverage.out
         fail_ci_if_error: true

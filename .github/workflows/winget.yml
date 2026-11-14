@@ -3,11 +3,15 @@ on:
   release:
     types: [released]
 
+# each job asks for more when it needs it
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: vedantmgoyal2009/winget-releaser@v2
+      - uses: vedantmgoyal2009/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54 # v2
         with:
           identifier: dundee.gdu
           installers-regex: '_windows_[\w.]+\.zip$'

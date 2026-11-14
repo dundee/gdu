@@ -4,7 +4,25 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      actions:
+        patterns: ["*"]
   - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    groups:
+      go:
+        patterns: ["*"]
+  # the web UI, built into internal/webui/dist
+  - package-ecosystem: "npm"
+    directory: "/internal/webui/frontend"
+    schedule:
+      interval: "daily"
+    groups:
+      npm:
+        patterns: ["*"]
+  - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
