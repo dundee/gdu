@@ -59,7 +59,9 @@ Set max cores that Gdu will use.
 
 #### `sequential-scanning`
 
-Use sequential scanning (intended for rotating HDDs)
+Force sequential scanning. On Linux, gdu uses sequential scanning automatically
+when the scanned path is on a rotational disk. Set this to `true` to force it;
+use `--sequential=false` on the command line to disable the automatic choice.
 
 #### `show-apparent-size`
 

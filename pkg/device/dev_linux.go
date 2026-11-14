@@ -64,7 +64,7 @@ func readMountsFile(file io.Reader) (mounts Devices, err error) {
 		switch {
 		case separator >= 6 && len(parts) >= separator+4:
 			mount := &Device{
-				Name:         parts[separator+2],
+				Name:         unescapeString(parts[separator+2]),
 				MountPoint:   unescapeString(parts[4]),
 				Fstype:       parts[separator+1],
 				FilesystemID: parseFilesystemID(parts[2]),
@@ -74,7 +74,7 @@ func readMountsFile(file io.Reader) (mounts Devices, err error) {
 			byID[parts[0]] = mount
 		case len(parts) >= 3 && strings.HasPrefix(parts[1], "/"):
 			mounts = append(mounts, &Device{
-				Name:       parts[0],
+				Name:       unescapeString(parts[0]),
 				MountPoint: unescapeString(parts[1]),
 				Fstype:     parts[2],
 			})

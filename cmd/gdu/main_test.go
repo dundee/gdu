@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/spf13/cobra"
 )
 
 func TestNoViewFileFlagRegistered(t *testing.T) {
@@ -158,6 +159,52 @@ func TestInitConfigMalformedSystemConfig(t *testing.T) {
 
 	if configErr == nil {
 		t.Fatal("expected configErr to be set for malformed system config, got nil")
+	}
+}
+
+func TestMarkSequentialExplicit(t *testing.T) {
+	origAf := af
+	t.Cleanup(func() { af = origAf })
+
+	newCommand := func() *cobra.Command {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("sequential", false, "")
+		return cmd
+	}
+
+	af = &app.Flags{}
+	cmd := newCommand()
+	if err := cmd.Flags().Set("sequential", "false"); err != nil {
+		t.Fatalf("could not set sequential flag: %v", err)
+	}
+	markSequentialExplicit(cmd)
+	if !af.SequentialScanningExplicit {
+		t.Fatal("expected explicit flag to be recorded when --sequential is given")
+	}
+
+	af = &app.Flags{}
+	markSequentialExplicit(newCommand())
+	if af.SequentialScanningExplicit {
+		t.Fatal("expected explicit flag to stay false when --sequential is not given")
+	}
+}
+
+func TestLoadConfigSequentialScanning(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), "gdu.yaml")
+	if err := os.WriteFile(tmp, []byte("sequential-scanning: true\n"), 0o600); err != nil {
+		t.Fatalf("could not write temp config: %v", err)
+	}
+
+	origAf := af
+	t.Cleanup(func() { af = origAf })
+	af = &app.Flags{}
+
+	if err := loadConfig(tmp); err != nil {
+		t.Fatalf("could not load config: %v", err)
+	}
+
+	if !af.SequentialScanning {
+		t.Fatal("expected sequential-scanning to be true")
 	}
 }
 

@@ -3,7 +3,7 @@ version: git
 summary: Pretty fast disk usage analyzer written in Go.
 description: |
   Gdu is intended primarily for SSD disks where it can fully utilize parallel processing.
-  However HDDs work as well, but the performance gain is not so huge.
+  On Linux, rotational HDDs are detected and scanned sequentially, which is much faster there.
 confinement: strict
 base: core24
 platforms:
