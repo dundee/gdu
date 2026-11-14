@@ -73,7 +73,7 @@ func TestPreviewDuringScan(t *testing.T) {
 		name     string
 		analyzer interface {
 			Analyzer
-			GetCurrentDir() fs.Item
+			GetCurrentDir() Node
 		}
 	}{
 		{"parallel", CreateAnalyzer()},

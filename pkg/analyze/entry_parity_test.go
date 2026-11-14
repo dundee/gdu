@@ -76,11 +76,11 @@ func scanFiltered(
 	if configure != nil {
 		configure(&opts)
 	}
-	done := make(chan fs.Item, 1)
+	done := make(chan Node, 1)
 	go func() {
 		done <- analyzer.AnalyzeDir(context.Background(), root, opts)
 	}()
-	var dir fs.Item
+	var dir Node
 	select {
 	case dir = <-done:
 	case <-time.After(20 * time.Second):

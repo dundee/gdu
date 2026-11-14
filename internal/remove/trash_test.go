@@ -59,7 +59,7 @@ func TestMoveItemToTrash(t *testing.T) {
 	dir.Files = fs.Files{subdir}
 	subdir.Files = fs.Files{file}
 
-	err := MoveItemToTrash(subdir, file)
+	moved, err := MoveItemToTrash(file)
 	require.NoError(t, err)
 
 	_, err = os.Stat("test_dir/nested/file2")
@@ -78,8 +78,7 @@ func TestMoveItemToTrash(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "Path="+escapeTrashPath(wantPath))
 
-	assert.Equal(t, 0, len(subdir.Files))
-	assert.Equal(t, int64(1), subdir.ItemCount)
+	assert.True(t, moved)
 }
 
 func TestMoveItemToTrashNameConflict(t *testing.T) {
@@ -120,7 +119,7 @@ func TestMoveItemToTrashNameConflict(t *testing.T) {
 	dir.Files = fs.Files{subdir}
 	subdir.Files = fs.Files{file}
 
-	err := MoveItemToTrash(subdir, file)
+	moved, err := MoveItemToTrash(file)
 	require.NoError(t, err)
 
 	_, err = os.Stat("test_dir/nested/file2")
@@ -138,8 +137,7 @@ func TestMoveItemToTrashNameConflict(t *testing.T) {
 	_, err = os.Stat(infoPath)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 0, len(subdir.Files))
-	assert.Equal(t, int64(1), subdir.ItemCount)
+	assert.True(t, moved)
 }
 
 func TestReserveTrashInfoUsesUniqueNamesConcurrently(t *testing.T) {
@@ -361,12 +359,13 @@ func TestMoveItemToTrashRetriesWhenDestinationAppears(t *testing.T) {
 	dir.Files = fs.Files{subdir}
 	subdir.Files = fs.Files{file}
 
-	require.NoError(t, MoveItemToTrash(subdir, file))
+	moved, err := MoveItemToTrash(file)
+	require.NoError(t, err)
 	assert.GreaterOrEqual(t, attempts, 2)
 
-	_, err := os.Stat("test_dir/nested/file2")
+	_, err = os.Stat("test_dir/nested/file2")
 	assert.True(t, os.IsNotExist(err))
-	assert.Equal(t, 0, len(subdir.Files))
+	assert.True(t, moved)
 }
 
 func TestReserveTrashInfoSkipsExistingTrashinfo(t *testing.T) {
@@ -409,7 +408,7 @@ func TestMoveItemToTrashPropagatesMoveErrors(t *testing.T) {
 	dir.Files = fs.Files{subdir}
 	subdir.Files = fs.Files{file}
 
-	err := MoveItemToTrash(subdir, file)
+	_, err := MoveItemToTrash(file)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, os.ErrPermission)
 	assert.FileExists(t, "test_dir/nested/file2")

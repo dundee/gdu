@@ -2,8 +2,6 @@ package analyze
 
 import (
 	"context"
-
-	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 // SequentialAnalyzer implements Analyzer
@@ -19,6 +17,6 @@ func CreateSeqAnalyzer() *SequentialAnalyzer {
 }
 
 // AnalyzeDir analyzes given path
-func (a *SequentialAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
+func (a *SequentialAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) Node {
 	return a.analyzeTree(ctx, path, opts, false)
 }

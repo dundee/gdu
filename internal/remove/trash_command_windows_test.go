@@ -14,6 +14,6 @@ func TestTrashCommandNotSupported(t *testing.T) {
 	dir := &analyze.Dir{File: &analyze.File{Name: "test_dir"}}
 	file := &analyze.File{Name: "file", Parent: dir}
 
-	err := TrashCommand("rm -rf")(dir, file)
+	_, err := TrashCommand("rm -rf")(file)
 	assert.Error(t, err)
 }

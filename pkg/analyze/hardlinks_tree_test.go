@@ -27,9 +27,13 @@ func devicesTree() *Dir {
 
 func entryNamed(t *testing.T, dir *Dir, name string) fs.Item {
 	t.Helper()
-	idx, ok := dir.Files.FindByName(name)
-	require.True(t, ok, "no %s in %s", name, dir.GetPath())
-	return dir.Files[idx]
+	for _, entry := range dir.Files {
+		if entry.GetName() == name {
+			return entry
+		}
+	}
+	t.Fatalf("no %s in %s", name, dir.GetPath())
+	return nil
 }
 
 // Inode numbers repeat across filesystems: files on two devices sharing one

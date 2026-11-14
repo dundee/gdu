@@ -436,7 +436,7 @@ func TestSqliteItemGetItemStats(t *testing.T) {
 	item, err := storage.GetItemByID(id)
 	assert.NoError(t, err)
 
-	count, size, usage := item.GetItemStats(fs.NewHardLinks(), false)
+	count, size, usage := item.itemStats(fs.NewHardLinks(), false)
 	assert.Equal(t, int64(5), count)
 	assert.Equal(t, int64(1000), size)
 	assert.Equal(t, int64(2000), usage)
@@ -515,26 +515,6 @@ func TestSqliteItemRemoveFile(t *testing.T) {
 	// Check that file is gone from DB
 	_, err = storage.GetItemByID(fileID)
 	assert.Error(t, err)
-}
-
-func TestSqliteItemRemoveFileByName(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := openSqliteStorage(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
-
-	rootID, _ := storage.InsertItem(nil, "root", true, 100, 200, time.Now(), 2, 0, ' ')
-	storage.InsertItem(&rootID, "file.txt", false, 10, 20, time.Now(), 1, 0, ' ')
-
-	root, _ := storage.GetItemByID(rootID)
-	root.RemoveFileByName("file.txt")
-
-	assert.Equal(t, int64(90), root.GetSize())
-	assert.Equal(t, int64(180), root.GetUsage())
-	assert.Equal(t, int64(1), root.GetItemCount())
-
-	children, _ := storage.GetChildren(rootID)
-	assert.Empty(t, children)
 }
 
 func TestSqliteItemEncodeJSON(t *testing.T) {

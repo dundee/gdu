@@ -26,8 +26,8 @@ func mockTrashCommandOS(t *testing.T, configure func(*trashCommandOSOps)) {
 }
 
 // createTestTree builds the in-memory counterpart of the directory created by
-// testdir.CreateTestDir and returns the dir holding file2 together with the file.
-func createTestTree() (*analyze.Dir, *analyze.File) {
+// testdir.CreateTestDir and returns its file2.
+func createTestTree() *analyze.File {
 	dir := &analyze.Dir{
 		File: &analyze.File{
 			Name:  "test_dir",
@@ -55,23 +55,22 @@ func createTestTree() (*analyze.Dir, *analyze.File) {
 	dir.Files = fs.Files{subdir}
 	subdir.Files = fs.Files{file}
 
-	return subdir, file
+	return file
 }
 
 func TestTrashCommand(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand("rm -rf")(subdir, file)
+	moved, err := TrashCommand("rm -rf")(file)
 	require.NoError(t, err)
 
 	_, err = os.Stat("test_dir/nested/file2")
 	assert.True(t, os.IsNotExist(err))
 
-	assert.Equal(t, 0, len(subdir.Files))
-	assert.Equal(t, int64(1), subdir.ItemCount)
+	assert.True(t, moved)
 }
 
 func TestTrashCommandOnDir(t *testing.T) {
@@ -98,12 +97,12 @@ func TestTrashCommandOnDir(t *testing.T) {
 	}
 	dir.Files = fs.Files{subdir}
 
-	err := TrashCommand("rm -rf")(dir, subdir)
+	moved, err := TrashCommand("rm -rf")(subdir)
 	require.NoError(t, err)
 
 	_, err = os.Stat("test_dir/nested")
 	assert.True(t, os.IsNotExist(err))
-	assert.Equal(t, 0, len(dir.Files))
+	assert.True(t, moved)
 }
 
 func TestShellScript(t *testing.T) {
@@ -172,17 +171,17 @@ func TestTrashCommandWithArguments(t *testing.T) {
 	defer fin()
 
 	target := t.TempDir()
-	subdir, file := createTestTree()
+	file := createTestTree()
 
 	// $1 is the argument given in the command, $2 the appended item path.
 	command := writeScript(t, `mv -f "$2" "$1"`) + " " + target
 
-	err := TrashCommand(command)(subdir, file)
+	moved, err := TrashCommand(command)(file)
 	require.NoError(t, err)
 
 	assert.FileExists(t, filepath.Join(target, "file2"))
 	assert.NoFileExists(t, "test_dir/nested/file2")
-	assert.Equal(t, 0, len(subdir.Files))
+	assert.True(t, moved)
 }
 
 // TestTrashCommandWithMv covers the mv recipe from the documentation. mv takes
@@ -197,14 +196,14 @@ func TestTrashCommandWithMv(t *testing.T) {
 	t.Setenv("HOME", home)
 	require.NoError(t, os.Mkdir(filepath.Join(home, "mytrash"), 0o700))
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand(`mv -f "$1" ~/mytrash/`)(subdir, file)
+	moved, err := TrashCommand(`mv -f "$1" ~/mytrash/`)(file)
 	require.NoError(t, err)
 
 	assert.FileExists(t, filepath.Join(home, "mytrash", "file2"))
 	assert.NoFileExists(t, "test_dir/nested/file2")
-	assert.Equal(t, 0, len(subdir.Files))
+	assert.True(t, moved)
 }
 
 // TestTrashCommandWithMvToMissingDir makes sure the trailing slash in the
@@ -217,14 +216,14 @@ func TestTrashCommandWithMvToMissingDir(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand(`mv -f "$1" ~/mytrash/`)(subdir, file)
+	moved, err := TrashCommand(`mv -f "$1" ~/mytrash/`)(file)
 	require.Error(t, err)
 
 	assert.NoFileExists(t, filepath.Join(home, "mytrash"))
 	assert.FileExists(t, "test_dir/nested/file2")
-	assert.Equal(t, 1, len(subdir.Files))
+	assert.False(t, moved)
 }
 
 func TestTrashCommandPassesPathAsArgumentAndEnvVar(t *testing.T) {
@@ -232,11 +231,11 @@ func TestTrashCommandPassesPathAsArgumentAndEnvVar(t *testing.T) {
 	defer fin()
 
 	out := filepath.Join(t.TempDir(), "args")
-	subdir, file := createTestTree()
+	file := createTestTree()
 
 	command := writeScript(t, `printf '%s\n' "$#" "$1" "$GDU_TRASH_PATH" > "`+out+`"`)
 
-	err := TrashCommand(command)(subdir, file)
+	_, err := TrashCommand(command)(file)
 	require.NoError(t, err)
 
 	wantPath, err := filepath.Abs("test_dir/nested/file2")
@@ -263,40 +262,40 @@ func TestTrashCommandWithSpecialCharsInName(t *testing.T) {
 	file := &analyze.File{Name: name, Size: 1, Usage: 1, Parent: dir}
 	dir.Files = fs.Files{file}
 
-	err := TrashCommand("rm -f")(dir, file)
+	moved, err := TrashCommand("rm -f")(file)
 	require.NoError(t, err)
 
 	assert.NoFileExists(t, path)
 	assert.NoFileExists(t, filepath.Join(base, "pwned"))
 	assert.NoFileExists(t, "pwned")
-	assert.Equal(t, 0, len(dir.Files))
+	assert.True(t, moved)
 }
 
 func TestTrashCommandFailing(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand(writeScript(t, "exit 3"))(subdir, file)
+	moved, err := TrashCommand(writeScript(t, "exit 3"))(file)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "running trash command")
 	assert.Contains(t, err.Error(), "exit status 3")
 
 	assert.FileExists(t, "test_dir/nested/file2")
-	assert.Equal(t, 1, len(subdir.Files))
+	assert.False(t, moved)
 }
 
 func TestTrashCommandFailingWithStderr(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand(writeScript(t, "echo 'trash dir is missing' >&2\nexit 1"))(subdir, file)
+	moved, err := TrashCommand(writeScript(t, "echo 'trash dir is missing' >&2\nexit 1"))(file)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "trash dir is missing")
-	assert.Equal(t, 1, len(subdir.Files))
+	assert.False(t, moved)
 }
 
 // TestTrashCommandLeavingItemInPlace covers a command which succeeds without
@@ -305,14 +304,13 @@ func TestTrashCommandLeavingItemInPlace(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand("true")(subdir, file)
+	moved, err := TrashCommand("true")(file)
 	require.NoError(t, err)
 
 	assert.FileExists(t, "test_dir/nested/file2")
-	assert.Equal(t, 1, len(subdir.Files))
-	assert.Equal(t, int64(2), subdir.ItemCount)
+	assert.False(t, moved)
 }
 
 func TestTrashCommandAbsError(t *testing.T) {
@@ -321,11 +319,11 @@ func TestTrashCommandAbsError(t *testing.T) {
 		ops.abs = func(string) (string, error) { return "", sentinel }
 	})
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand("rm -rf")(subdir, file)
+	moved, err := TrashCommand("rm -rf")(file)
 	require.ErrorIs(t, err, sentinel)
-	assert.Equal(t, 1, len(subdir.Files))
+	assert.False(t, moved)
 }
 
 func TestTrashCommandStderrTruncated(t *testing.T) {
@@ -337,9 +335,9 @@ func TestTrashCommandStderrTruncated(t *testing.T) {
 		}
 	})
 
-	subdir, file := createTestTree()
+	file := createTestTree()
 
-	err := TrashCommand("rm -rf")(subdir, file)
+	_, err := TrashCommand("rm -rf")(file)
 	require.Error(t, err)
 	assert.True(t, strings.HasSuffix(err.Error(), "..."))
 	assert.Less(t, len(err.Error()), maxStderrLen+100)

@@ -299,8 +299,8 @@ func TestAnalyzersRecordSharedUsage(t *testing.T) {
 	ignoreDir := func(_, _ string) bool { return false }
 	ignoreFile := func(_ string) bool { return false }
 
-	scanners := map[string]func(exclusive bool) fs.Item{
-		"sequential": func(exclusive bool) fs.Item {
+	scanners := map[string]func(exclusive bool) Node{
+		"sequential": func(exclusive bool) Node {
 			a := CreateSeqAnalyzer()
 			r := a.AnalyzeDir(context.Background(), dir, Options{
 				IgnoreDir:     ignoreDir,
@@ -309,7 +309,7 @@ func TestAnalyzersRecordSharedUsage(t *testing.T) {
 			})
 			return r
 		},
-		"parallel": func(exclusive bool) fs.Item {
+		"parallel": func(exclusive bool) Node {
 			a := CreateAnalyzer()
 			r := a.AnalyzeDir(context.Background(), dir, Options{
 				IgnoreDir:     ignoreDir,
@@ -364,8 +364,8 @@ func TestAnalyzersMeasureHardLinkedFileOnce(t *testing.T) {
 	ignoreDir := func(_, _ string) bool { return false }
 	ignoreFile := func(_ string) bool { return false }
 
-	scanners := map[string]func(dir string) fs.Item{
-		"top-dir": func(dir string) fs.Item {
+	scanners := map[string]func(dir string) Node{
+		"top-dir": func(dir string) Node {
 			a := CreateTopDirAnalyzer()
 			r := a.AnalyzeDir(context.Background(), dir, Options{
 				IgnoreDir:     ignoreDir,
@@ -374,7 +374,7 @@ func TestAnalyzersMeasureHardLinkedFileOnce(t *testing.T) {
 			})
 			return r
 		},
-		"sqlite": func(dir string) fs.Item {
+		"sqlite": func(dir string) Node {
 			a, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = a.storage.Close() })
@@ -416,7 +416,7 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 	ignoreDir := func(_, _ string) bool { return false }
 	ignoreFile := func(_ string) bool { return false }
 
-	run := func(name string, exclusive bool, scan func() fs.Item) int64 {
+	run := func(name string, exclusive bool, scan func() Node) int64 {
 		t.Helper()
 		root := scan()
 		root.UpdateStats(false)
@@ -428,8 +428,8 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 		return usage
 	}
 
-	scanners := map[string]func(exclusive bool) fs.Item{
-		"sequential": func(exclusive bool) fs.Item {
+	scanners := map[string]func(exclusive bool) Node{
+		"sequential": func(exclusive bool) Node {
 			a := CreateSeqAnalyzer()
 			r := a.AnalyzeDir(context.Background(), dir, Options{
 				IgnoreDir:     ignoreDir,
@@ -438,7 +438,7 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 			})
 			return r
 		},
-		"parallel": func(exclusive bool) fs.Item {
+		"parallel": func(exclusive bool) Node {
 			a := CreateAnalyzer()
 			r := a.AnalyzeDir(context.Background(), dir, Options{
 				IgnoreDir:     ignoreDir,
@@ -447,7 +447,7 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 			})
 			return r
 		},
-		"top-dir": func(exclusive bool) fs.Item {
+		"top-dir": func(exclusive bool) Node {
 			a := CreateTopDirAnalyzer()
 			r := a.AnalyzeDir(context.Background(), dir, Options{
 				IgnoreDir:     ignoreDir,
@@ -456,7 +456,7 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 			})
 			return r
 		},
-		"sqlite": func(exclusive bool) fs.Item {
+		"sqlite": func(exclusive bool) Node {
 			a, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = a.storage.Close() })
@@ -470,8 +470,8 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 	}
 	for name, scan := range scanners {
 		t.Run(name, func(t *testing.T) {
-			normal := run(name, false, func() fs.Item { return scan(false) })
-			exclusive := run(name, true, func() fs.Item { return scan(true) })
+			normal := run(name, false, func() Node { return scan(false) })
+			exclusive := run(name, true, func() Node { return scan(true) })
 			assert.GreaterOrEqual(t, normal, int64(2*size), "block usage counts shared data per file")
 			assert.Equal(t, int64(0), exclusive, "everything is shared")
 		})

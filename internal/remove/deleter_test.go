@@ -87,12 +87,14 @@ func TestDeleterEmptiesFileAndDir(t *testing.T) {
 	root := makeScanRoot(t)
 	tree := scanTree(t, root, false)
 	deleter := NewDeleter([]string{root})
+	items := tree.GetItemCount()
 
 	require.NoError(t, deleter.Delete(tree, child(t, tree, "file"), ModeEmpty))
 	info, err := os.Stat(filepath.Join(root, "file"))
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), info.Size())
 	assert.Equal(t, int64(0), child(t, tree, "file").GetSize())
+	assert.Equal(t, items, tree.GetItemCount(), "the emptied file is still counted")
 
 	dir := child(t, tree, "dir")
 	require.NoError(t, deleter.Delete(tree, dir, ModeEmpty))
@@ -137,16 +139,31 @@ func TestDeleterTrashUsesTrashFunc(t *testing.T) {
 	root := makeScanRoot(t)
 	tree := scanTree(t, root, false)
 	var trashed []string
-	deleter := NewDeleter([]string{root}, WithTrash(func(dir, item fs.Item) error {
+	deleter := NewDeleter([]string{root}, WithTrash(func(item fs.Item) (bool, error) {
 		trashed = append(trashed, item.GetPath())
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}))
 
 	require.NoError(t, deleter.Delete(tree, child(t, tree, "file"), ModeTrash))
 
 	assert.Equal(t, []string{filepath.Join(root, "file")}, trashed)
 	assert.False(t, hasChild(tree, "file"))
+}
+
+// A trash command may succeed and leave the item where it was, which then
+// stays in the tree.
+func TestDeleterTrashKeepsItemNotMoved(t *testing.T) {
+	root := makeScanRoot(t)
+	tree := scanTree(t, root, false)
+	size := tree.GetSize()
+	deleter := NewDeleter([]string{root}, WithTrash(func(fs.Item) (bool, error) {
+		return false, nil
+	}))
+
+	require.NoError(t, deleter.Delete(tree, child(t, tree, "file"), ModeTrash))
+
+	assert.True(t, hasChild(tree, "file"))
+	assert.Equal(t, size, tree.GetSize())
 }
 
 func TestDeleterRefusesScannedRoots(t *testing.T) {
@@ -156,9 +173,9 @@ func TestDeleterRefusesScannedRoots(t *testing.T) {
 	treeB := scanTree(t, rootB, false)
 	top := analyze.CreateVirtualRootDir(treeA, treeB)
 	trashCalled := false
-	deleter := NewDeleter(analyze.ScannedRootPaths(top), WithTrash(func(fs.Item, fs.Item) error {
+	deleter := NewDeleter(analyze.ScannedRootPaths(top), WithTrash(func(fs.Item) (bool, error) {
 		trashCalled = true
-		return nil
+		return true, nil
 	}))
 
 	assert.ErrorIs(t, deleter.Delete(top, treeA, ModeRemove), ErrScannedRoot)
@@ -349,9 +366,9 @@ func TestDeleterRefusesSwappedAncestor(t *testing.T) {
 		}
 
 		trashCalled := false
-		deleter := NewDeleter([]string{root}, WithTrash(func(fs.Item, fs.Item) error {
+		deleter := NewDeleter([]string{root}, WithTrash(func(fs.Item) (bool, error) {
 			trashCalled = true
-			return nil
+			return true, nil
 		}))
 		for _, mode := range []Mode{ModeRemove, ModeEmpty, ModeTrash} {
 			err := deleter.Delete(parent, target, mode)

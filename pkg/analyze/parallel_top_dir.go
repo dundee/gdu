@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 var pathSep = string(os.PathSeparator)
@@ -29,7 +27,7 @@ func CreateTopDirAnalyzer() *TopDirAnalyzer {
 }
 
 // AnalyzeDir analyzes given path
-func (a *TopDirAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
+func (a *TopDirAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) Node {
 	s := a.begin(ctx, opts)
 	return walkTree[*topDirNode](&a.BaseAnalyzer, s, &topDirSink{scan: s}, path, true).dir
 }

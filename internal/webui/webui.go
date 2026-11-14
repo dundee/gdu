@@ -47,7 +47,7 @@ type UI struct {
 	scanErr      error
 	progress     analyze.Progress
 	noDelete     bool
-	trasher      func(fs.Item, fs.Item) error
+	trasher      remove.Trash
 
 	classifier *cleanup.Classifier
 	cleanup    cleanupCache

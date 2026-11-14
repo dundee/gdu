@@ -1033,10 +1033,9 @@ func TestMoveToTrash(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	var trashed fs.Item
-	ui.trasher = func(dir, item fs.Item) error {
+	ui.trasher = func(item fs.Item) (bool, error) {
 		trashed = item
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -1075,9 +1074,9 @@ func TestMoveToTrashWithNoDelete(t *testing.T) {
 	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
 	ui.done = make(chan struct{})
 	var trashed fs.Item
-	ui.trasher = func(dir, item fs.Item) error {
+	ui.trasher = func(item fs.Item) (bool, error) {
 		trashed = item
-		return nil
+		return false, nil
 	}
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -1179,10 +1178,9 @@ func TestMoveMarkedToTrash(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
 	var trashed []string
-	ui.trasher = func(dir, item fs.Item) error {
+	ui.trasher = func(item fs.Item) (bool, error) {
 		trashed = append(trashed, item.GetName())
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)

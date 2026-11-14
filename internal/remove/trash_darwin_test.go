@@ -14,7 +14,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
-func darwinTrashFixture(t *testing.T) (*analyze.Dir, *analyze.File, string) {
+func darwinTrashFixture(t *testing.T) (*analyze.File, string) {
 	t.Helper()
 	base := t.TempDir()
 	path := filepath.Join(base, "-rf file")
@@ -23,11 +23,11 @@ func darwinTrashFixture(t *testing.T) (*analyze.Dir, *analyze.File, string) {
 	dir := &analyze.Dir{File: &analyze.File{Name: filepath.Base(base)}, BasePath: filepath.Dir(base)}
 	item := &analyze.File{Name: "-rf file", Parent: dir}
 	dir.Files = append(dir.Files, item)
-	return dir, item, path
+	return item, path
 }
 
 func TestMoveItemToTrashRunsSystemTrash(t *testing.T) {
-	dir, item, path := darwinTrashFixture(t)
+	item, path := darwinTrashFixture(t)
 
 	var gotArgv0 string
 	var gotArgv []string
@@ -38,34 +38,36 @@ func TestMoveItemToTrashRunsSystemTrash(t *testing.T) {
 	}
 	defer func() { trashCommandOS.run = orig }()
 
-	require.NoError(t, MoveItemToTrash(dir, item))
+	moved, err := MoveItemToTrash(item)
+	require.NoError(t, err)
 	assert.Equal(t, macOSTrashBin, gotArgv0)
 	assert.Equal(t, []string{path}, gotArgv)
-	assert.Empty(t, dir.Files)
+	assert.True(t, moved)
 }
 
 func TestMoveItemToTrashKeepsItemThatIsStillThere(t *testing.T) {
-	dir, item, _ := darwinTrashFixture(t)
+	item, _ := darwinTrashFixture(t)
 
 	orig := trashCommandOS.run
 	trashCommandOS.run = func(string, []string, []string, io.Writer) error { return nil }
 	defer func() { trashCommandOS.run = orig }()
 
-	require.NoError(t, MoveItemToTrash(dir, item))
-	assert.Len(t, dir.Files, 1)
+	moved, err := MoveItemToTrash(item)
+	require.NoError(t, err)
+	assert.False(t, moved)
 }
 
 func TestMoveItemToTrashMissingBinary(t *testing.T) {
-	dir, item, _ := darwinTrashFixture(t)
+	item, _ := darwinTrashFixture(t)
 
 	orig := macOSTrashBin
 	macOSTrashBin = filepath.Join(t.TempDir(), "no-trash")
 	defer func() { macOSTrashBin = orig }()
 
-	err := MoveItemToTrash(dir, item)
+	moved, err := MoveItemToTrash(item)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "trash-command")
-	assert.Len(t, dir.Files, 1)
+	assert.False(t, moved)
 }
 
 // TestMoveItemToTrashWithSystemTrash runs the real /usr/bin/trash, which puts
@@ -78,10 +80,11 @@ func TestMoveItemToTrashWithSystemTrash(t *testing.T) {
 	if _, err := os.Stat(macOSTrashBin); err != nil {
 		t.Skipf("%s is not available: %s", macOSTrashBin, err)
 	}
-	dir, item, path := darwinTrashFixture(t)
+	item, path := darwinTrashFixture(t)
 
-	require.NoError(t, MoveItemToTrash(dir, item))
-	_, err := os.Lstat(path)
+	moved, err := MoveItemToTrash(item)
+	require.NoError(t, err)
+	_, err = os.Lstat(path)
 	assert.ErrorIs(t, err, os.ErrNotExist)
-	assert.Empty(t, dir.Files)
+	assert.True(t, moved)
 }

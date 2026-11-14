@@ -349,15 +349,16 @@ func TestAnalyzePathWithSummarizeAndDepth(t *testing.T) {
 	assert.NotContains(t, reportOutput.String(), `"name":"file"`)
 }
 
-func TestLimitDirByDepthWithNonDir(t *testing.T) {
+// The depth limit applies to directories; a file is exported as it is.
+func TestExportWithDepthKeepsAFile(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
 	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 1, false, nil)
-	file := &analyze.File{Name: "file"}
-	result := ui.limitDirByDepth(file, 0)
+	err := ui.exportDir(&analyze.File{Name: "file", Size: 5})
 
-	assert.Equal(t, file, result)
+	assert.NoError(t, err)
+	assert.Contains(t, reportOutput.String(), `"name":"file","asize":5`)
 }
 
 func TestAnalyzePathWithDepthZeroIsIgnored(t *testing.T) {

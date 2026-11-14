@@ -60,30 +60,30 @@ var trashOS = trashOSOps{
 	copy: io.Copy,
 }
 
-// MoveItemToTrash moves item into the XDG trash and updates the in-memory dir tree.
-func MoveItemToTrash(dir, item fs.Item) error {
+// MoveItemToTrash moves item into the XDG trash.
+func MoveItemToTrash(item fs.Item) (moved bool, err error) {
 	trashRoot, err := trashDir()
 	if err != nil {
-		return err
+		return false, err
 	}
 	filesDir := filepath.Join(trashRoot, "files")
 	infoDir := filepath.Join(trashRoot, "info")
 	if err := trashOS.mkdirAll(filesDir, 0o700); err != nil {
-		return err
+		return false, err
 	}
 	if err := trashOS.mkdirAll(infoDir, 0o700); err != nil {
-		return err
+		return false, err
 	}
 
 	absSrc, err := trashOS.abs(item.GetPath())
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	for range 10001 {
 		destName, infoPath, err := reserveTrashInfo(filesDir, infoDir, item.GetName(), absSrc)
 		if err != nil {
-			return err
+			return false, err
 		}
 		destPath := filepath.Join(filesDir, destName)
 
@@ -93,14 +93,13 @@ func MoveItemToTrash(dir, item fs.Item) error {
 				// Destination appeared after reservation; pick another name.
 				continue
 			}
-			return err
+			return false, err
 		}
 
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}
 
-	return fmt.Errorf("could not find unique trash name for %s", item.GetName())
+	return false, fmt.Errorf("could not find unique trash name for %s", item.GetName())
 }
 
 func trashDir() (string, error) {

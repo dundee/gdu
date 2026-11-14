@@ -26,7 +26,7 @@ func TestStoredHardLinkRemoval(t *testing.T) {
 	usage, count := root.GetUsage(), root.GetItemCount()
 
 	a := entry(t, root, "a")
-	a.RemoveFile(entry(t, a, "f"))
+	require.NoError(t, RemoveEntry(a, entry(t, a, "f")))
 
 	assert.Equal(t, usage, root.GetUsage(), "g is still there")
 	assert.Equal(t, count-1, root.GetItemCount())
@@ -38,7 +38,7 @@ func TestStoredHardLinkRemoval(t *testing.T) {
 	assert.Equal(t, count-1, loaded.GetItemCount())
 
 	b := entry(t, root, "b")
-	b.RemoveFile(entry(t, b, "g"))
+	require.NoError(t, RemoveEntry(b, entry(t, b, "g")))
 
 	assert.Equal(t, usage-fileUsage, root.GetUsage())
 }

@@ -163,7 +163,7 @@ func exportedFile(file, parent fs.Item) *analyze.File {
 	return copied
 }
 
-func (ui *UI) topDir(dir fs.Item) fs.Item {
+func (ui *UI) topDir(dir fs.Item) *analyze.Dir {
 	// the export UI is never told about --show-apparent-size, so its top-N
 	// ranking stays on apparent size
 	files := analyze.CollectTopFiles(dir, ui.top, fs.SortByApparentSize)
@@ -176,11 +176,9 @@ func (ui *UI) topDir(dir fs.Item) fs.Item {
 	return topDir
 }
 
-func (ui *UI) limitDirByDepth(dir fs.Item, currentDepth int) fs.Item {
-	if !dir.IsDir() {
-		return dir
-	}
-
+// limitDirByDepth returns a copy of dir, a directory, holding only the
+// entries depth levels below the top of the export at most.
+func (ui *UI) limitDirByDepth(dir fs.Item, currentDepth int) *analyze.Dir {
 	limited := exportedDir(dir)
 	if currentDepth == ui.depth {
 		return limited
@@ -197,11 +195,11 @@ func (ui *UI) limitDirByDepth(dir fs.Item, currentDepth int) fs.Item {
 	return limited
 }
 
-func (ui *UI) summarizeDir(dir fs.Item) fs.Item {
+func (ui *UI) summarizeDir(dir fs.Item) *analyze.Dir {
 	return exportedDir(dir)
 }
 
-func (ui *UI) exportDir(dir fs.Item) error {
+func (ui *UI) exportDir(dir analyze.Node) error {
 	stop := ui.showWritingProgress()
 	defer stop()
 
@@ -221,7 +219,7 @@ func (ui *UI) exportDir(dir fs.Item) error {
 		dir = ui.summarizeDir(dir)
 	case ui.top > 0:
 		dir = ui.topDir(dir)
-	case ui.depth > 0:
+	case ui.depth > 0 && dir.IsDir():
 		dir = ui.limitDirByDepth(dir, 0)
 	}
 

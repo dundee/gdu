@@ -87,28 +87,22 @@ func newGatedAnalyzer() *gatedAnalyzer {
 	}
 }
 
-func (a *gatedAnalyzer) AnalyzeDir(ctx context.Context, path string, opts analyze.Options) fs.Item {
+func (a *gatedAnalyzer) AnalyzeDir(ctx context.Context, path string, opts analyze.Options) analyze.Node {
 	a.started <- path
 	<-a.release
-	return &gatedTotals{Item: a.ParallelAnalyzer.AnalyzeDir(ctx, path, opts), gate: a.finalize}
+	return &gatedTotals{Node: a.ParallelAnalyzer.AnalyzeDir(ctx, path, opts), gate: a.finalize}
 }
 
-// gatedTotals waits for its gate before computing its totals.
+// gatedTotals waits for its gate before computing its totals, also as an
+// entry of the virtual top level dir.
 type gatedTotals struct {
-	fs.Item
+	analyze.Node
 	gate chan struct{}
 }
 
 func (g *gatedTotals) UpdateStats(filtering bool) *fs.HardLinks {
 	<-g.gate
-	return g.Item.UpdateStats(filtering)
-}
-
-// GetItemStats is how a parent, such as the virtual top level dir, computes
-// the totals of its entries.
-func (g *gatedTotals) GetItemStats(links *fs.HardLinks, filtering bool) (count, size, usage int64) {
-	<-g.gate
-	return g.Item.GetItemStats(links, filtering)
+	return g.Node.UpdateStats(filtering)
 }
 
 // recorder keeps what an observer was told.

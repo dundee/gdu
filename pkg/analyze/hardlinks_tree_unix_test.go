@@ -11,8 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 // scanLinkedTree scans root/{a/f, b/g, c/plain}, f and g being two links to
@@ -99,6 +97,6 @@ func TestRemovingEveryHardLinkRemovesUsageOnce(t *testing.T) {
 var zeroTime time.Time
 
 // updateTotals computes the totals of the tree topped by root.
-func updateTotals(root fs.Item) {
+func updateTotals(root Node) {
 	root.UpdateStats(false)
 }
