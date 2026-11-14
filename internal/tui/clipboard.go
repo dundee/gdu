@@ -1,12 +1,12 @@
 package tui
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -88,7 +88,7 @@ func copyToClipboard(text string) error {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Stdin = strings.NewReader(text)
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, "running clipboard command")
+		return fmt.Errorf("running clipboard command: %w", err)
 	}
 	return nil
 }

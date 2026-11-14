@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/h2non/filetype"
 	"github.com/h2non/filetype/matchers"
-	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"github.com/ulikunitz/xz"
 
@@ -116,24 +116,24 @@ func getScanner(f io.ReadSeeker) (scanner *bufio.Scanner, err error) {
 	// We only have to pass the file header = first 261 bytes
 	head := make([]byte, 261)
 	if _, err = f.Read(head); err != nil {
-		return nil, errors.Wrap(err, "error reading file header")
+		return nil, fmt.Errorf("error reading file header: %w", err)
 	}
 
 	if pos, err := f.Seek(0, 0); pos != 0 || err != nil {
-		return nil, errors.Wrap(err, "error seeking file")
+		return nil, fmt.Errorf("error seeking file: %w", err)
 	}
 	scanner = bufio.NewScanner(f)
 
 	typ, err := filetype.Match(head)
 	if err != nil {
-		return nil, errors.Wrap(err, "error matching file type")
+		return nil, fmt.Errorf("error matching file type: %w", err)
 	}
 
 	switch typ.MIME.Value {
 	case matchers.TypeGz.MIME.Value:
 		r, err := gzip.NewReader(f)
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating gzip reader")
+			return nil, fmt.Errorf("error creating gzip reader: %w", err)
 		}
 		scanner = bufio.NewScanner(r)
 	case matchers.TypeBz2.MIME.Value:
@@ -142,7 +142,7 @@ func getScanner(f io.ReadSeeker) (scanner *bufio.Scanner, err error) {
 	case matchers.TypeXz.MIME.Value:
 		r, err := xz.NewReader(f)
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating xz reader")
+			return nil, fmt.Errorf("error creating xz reader: %w", err)
 		}
 		scanner = bufio.NewScanner(r)
 	}
