@@ -39,6 +39,10 @@ During a scan:
              [::b]tab     [white:black:-]Preview results found so far
              [::b]esc     [white:black:-]Stop scanning and keep results
 
+During a deletion:
+          [::b]Ctrl+B     [white:black:-]Hide/show the deletion dialog and keep browsing
+          [::b]d, e, D    [white:black:-]Cancel a queued (dimmed) item
+
 Item under cursor:
                [::b]d     [white:black:-]Delete file or directory
                [::b]e     [white:black:-]Empty file or directory
@@ -125,6 +129,8 @@ func (ui *UI) showDir() {
 
 	sortBy, sortOrder := ui.getSortParams()
 
+	dimmedPaths := ui.dimmedDeletionPaths()
+
 	unlock := ui.currentDir.RLock()
 	defer unlock()
 
@@ -191,25 +197,17 @@ func (ui *UI) showDir() {
 			reference = collapsedPath.DeepestDir
 		}
 		_, marked := ui.markedItems[reference]
+		_, queued := dimmedPaths[reference.GetPath()]
 
 		var cell *tview.TableCell
 		if collapsedPath != nil {
-			cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxima, marked, ignored))
+			cell = tview.NewTableCell(ui.formatCollapsedRow(collapsedPath, maxima, marked, ignored, queued))
 		} else {
-			cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored))
+			cell = tview.NewTableCell(ui.formatFileRow(item, maxima, marked, ignored, queued))
 		}
 
 		cell.SetReference(reference)
-
-		switch {
-		case ignored:
-			cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.SecondaryTextColor))
-		case marked:
-			cell.SetStyle(tcell.Style{}.Foreground(ui.markedTextColor))
-			cell.SetBackgroundColor(ui.markedBackgroundColor)
-		default:
-			cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
-		}
+		ui.styleRowCell(cell, ignored, queued, marked)
 
 		ui.table.SetCell(rowIndex, 0, cell)
 		rowIndex++
@@ -261,6 +259,36 @@ func (ui *UI) showDir() {
 
 	if !ui.filtering && !ui.typeFiltering {
 		ui.app.SetFocus(ui.table)
+	}
+}
+
+// styleRowCell applies the row colours that depend on the row state. Queued
+// rows need a matching selected style as well, because the table's selected
+// style would otherwise paint them like any other selected row and hide that
+// they are queued.
+func (ui *UI) styleRowCell(cell *tview.TableCell, ignored, queued, marked bool) {
+	switch {
+	case ignored:
+		cell.SetStyle(tcell.Style{}.Foreground(tview.Styles.SecondaryTextColor))
+	case queued:
+		cell.SetStyle(tcell.Style{}.Foreground(ui.queuedTextColor))
+		selectedStyle := tcell.Style{}.
+			Foreground(tcell.ColorWhite).
+			Background(tcell.ColorGray).
+			Bold(true).
+			Dim(true)
+		if ui.UseColors {
+			selectedStyle = tcell.Style{}.
+				Foreground(ui.queuedTextColor).
+				Background(ui.selectedBackgroundColor).
+				Bold(true)
+		}
+		cell.SetSelectedStyle(selectedStyle)
+	case marked:
+		cell.SetStyle(tcell.Style{}.Foreground(ui.markedTextColor))
+		cell.SetBackgroundColor(ui.markedBackgroundColor)
+	default:
+		cell.SetStyle(tcell.Style{}.Foreground(tcell.ColorDefault))
 	}
 }
 

@@ -52,6 +52,10 @@ func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if key == nil {
 		return nil
 	}
+	key = ui.handleDeletionToggle(key)
+	if key == nil {
+		return nil
+	}
 
 	if ui.previewing {
 		return ui.handlePreviewKeys(key)
@@ -112,6 +116,31 @@ func (ui *UI) handleCtrlC(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 	return key
+}
+
+// handleDeletionToggle hides or shows the running deletion dialog on Ctrl+B.
+// It works both while the dialog is in front and while browsing with the
+// dialog hidden. Returns nil when the event has been consumed.
+func (ui *UI) handleDeletionToggle(key *tcell.EventKey) *tcell.EventKey {
+	if !isDeletionToggleKey(key) {
+		return key
+	}
+	// Consume Ctrl+B even when nothing is being deleted. Some terminals report
+	// the rune alongside the control modifier, and letting it through would
+	// spawn a shell (b) instead of doing nothing.
+	if ui.activeDeletionJob() != nil {
+		ui.toggleDeletionProgress()
+	}
+	return nil
+}
+
+// isDeletionToggleKey reports whether the event is Ctrl+B. Terminals differ in
+// whether they set the virtual key, the rune, or both for control keys.
+func isDeletionToggleKey(key *tcell.EventKey) bool {
+	if key.Key() == tcell.KeyCtrlB {
+		return true
+	}
+	return key.Rune() == 'b' && key.Modifiers()&tcell.ModCtrl != 0
 }
 
 // handleBlockingModalKeys handles the few keys that stay available while a
@@ -608,6 +637,29 @@ func (ui *UI) handleDelete(action DeleteAction) {
 	if len(targets) == 0 {
 		return
 	}
+
+	// Pressing a delete key on an item that is still waiting in the queue
+	// cancels that deletion instead of asking to delete it again.
+	if job := ui.activeDeletionJob(); job != nil {
+		remaining, removed, inProgress := job.unqueue(targets)
+		switch {
+		case removed > 0 && inProgress > 0:
+			ui.showMessage(" Removed queued items, one is already being deleted")
+		case removed > 0:
+			ui.showMessage(" Removed from the deletion queue")
+		case inProgress > 0:
+			ui.showMessage(" This item is already being deleted")
+		}
+		if removed > 0 {
+			ui.refreshListing()
+			ui.updateDeletionStatus()
+		}
+		targets = remaining
+		if len(targets) == 0 {
+			return
+		}
+	}
+
 	disabled := ui.noDelete || ui.noDeleteWithFilter
 	if !disabled && !ui.checkTargets(ui.deleter(), targets, action) {
 		return

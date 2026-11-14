@@ -92,7 +92,7 @@ func TestEscapeName(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "Aaa [red[] bbb")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false, false), "Aaa [red[] bbb")
 }
 
 func TestMarked(t *testing.T) {
@@ -116,8 +116,8 @@ func TestMarked(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, true, false), "✓ Aaa")
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "[##########]   Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, true, false, false), "✓ Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false, false), "[##########]   Aaa")
 }
 
 func TestIgnored(t *testing.T) {
@@ -141,8 +141,8 @@ func TestIgnored(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, true), "[          ] Aaa")
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "[##########] Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, true, false), "[          ] Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false, false), "[##########] Aaa")
 }
 
 func TestSizeBar(t *testing.T) {
@@ -164,7 +164,7 @@ func TestSizeBar(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "██████████▏Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false, false), "██████████▏Aaa")
 }
 
 func TestOldSizeBar(t *testing.T) {
@@ -188,7 +188,7 @@ func TestOldSizeBar(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: dir.GetUsage(), size: dir.GetSize()}, false, false), "[#####     ]   Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: dir.GetUsage(), size: dir.GetSize()}, false, false, false), "[#####     ]   Aaa")
 }
 
 func TestSizeBarWithPercentage(t *testing.T) {
@@ -211,7 +211,7 @@ func TestSizeBarWithPercentage(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false), "100.0% ██████████▏Aaa")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: file.GetUsage(), size: file.GetSize()}, false, false, false), "100.0% ██████████▏Aaa")
 }
 
 func TestSizeBarWithPercentagePartial(t *testing.T) {
@@ -235,7 +235,7 @@ func TestSizeBarWithPercentagePartial(t *testing.T) {
 		Usage:  10,
 	}
 
-	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: dir.GetUsage(), size: dir.GetSize()}, false, false), "50.0% [#####     ]")
+	assert.Contains(t, ui.formatFileRow(file, rowMaxima{usage: dir.GetUsage(), size: dir.GetSize()}, false, false, false), "50.0% [#####     ]")
 }
 
 func TestItemCountBar(t *testing.T) {
@@ -256,10 +256,33 @@ func TestItemCountBar(t *testing.T) {
 		ItemCount: 4,
 	}
 
-	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, false)
+	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, false, false)
 
 	assert.Contains(t, row, "3")
 	assert.Contains(t, row, "[#######   ]")
+}
+
+func TestFormatQueuedRowUsesCellColorInsteadOfTags(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
+	ui.SetResultRowDirectoryColor("#3498db")
+	ui.SetResultRowNumberColor("#e67100")
+
+	parent := &analyze.Dir{File: &analyze.File{Name: "parent"}}
+	dir := &analyze.Dir{File: &analyze.File{Name: "Aaa", Parent: parent}}
+
+	normal := ui.formatFileRow(dir, rowMaxima{}, false, false, false)
+	assert.Contains(t, normal, "#3498db")
+	assert.Contains(t, normal, "#e67100")
+
+	// A queued row is coloured by the cell style, so its text must not carry
+	// colour tags that would override it.
+	queued := ui.formatFileRow(dir, rowMaxima{}, false, false, true)
+	assert.NotContains(t, queued, "#3498db")
+	assert.NotContains(t, queued, "#e67100")
 }
 
 func TestItemCountBarHiddenWithoutItemCount(t *testing.T) {
@@ -278,7 +301,7 @@ func TestItemCountBarHiddenWithoutItemCount(t *testing.T) {
 	}
 
 	// The count column is hidden, so only the size bar is drawn.
-	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, false)
+	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, false, false)
 
 	assert.Equal(t, 1, strings.Count(row, "["+"          ]"))
 }
@@ -299,7 +322,7 @@ func TestItemCountBarIgnoredRowIsEmpty(t *testing.T) {
 		ItemCount: 4,
 	}
 
-	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, true)
+	row := ui.formatFileRow(dir, rowMaxima{count: 4}, false, true, false)
 
 	// Both bars are empty for an ignored row.
 	assert.Equal(t, 2, strings.Count(row, "[          ]"))

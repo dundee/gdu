@@ -95,9 +95,10 @@ func findCollapsiblePath(item fs.Item) *CollapsedPath {
 	current := item
 
 	for {
-		// Collect files to check count and types
+		// Collect files to check count and types. The locked iterator keeps the
+		// listing safe to render while a deletion is changing this directory.
 		var files []fs.Item
-		for file := range current.GetFiles(fs.SortByName, fs.SortAsc) {
+		for file := range current.GetFilesLocked(fs.SortByName, fs.SortAsc) {
 			files = append(files, file)
 		}
 
@@ -161,9 +162,10 @@ func findCollapsedParent(currentDir fs.Item) fs.Item {
 	for current.GetParent() != nil {
 		parent := current.GetParent()
 
-		// Count files in parent
+		// Count files in parent. Use the locked iterator so a concurrent
+		// deletion in the chain cannot race with rendering.
 		fileCount := 0
-		for range parent.GetFiles(fs.SortByName, fs.SortAsc) {
+		for range parent.GetFilesLocked(fs.SortByName, fs.SortAsc) {
 			fileCount++
 			if fileCount > 1 {
 				break

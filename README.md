@@ -113,6 +113,7 @@ Basic list of actions in interactive mode (show help modal for more):
   d                                   Delete the selected file or directory
   D                                   Move the selected file or directory to trash
   e                                   Empty the selected directory
+  Ctrl+B                              Hide/show a running deletion dialog
   n                                   Sort by name
   s                                   Sort by size
   c                                   Show/hide item count
@@ -429,6 +430,14 @@ To enable:
 ```
 echo "delete-in-background: true" >> ~/.gdu.yaml
 ```
+
+A deletion started from the dialog can also be hidden on demand: press `Ctrl+B`
+while the deletion dialog is shown to keep browsing, and press `Ctrl+B` again to
+bring the dialog back. The deletion keeps running meanwhile. Deletions started
+while the dialog is hidden are queued behind the running one; the item being
+deleted and the queued items are dimmed, and pressing `d`, `e` or `D` on a
+queued one cancels its queued deletion. Active background deletions are shown
+in the bottom right corner.
 
 Directory items can be also deleted in parallel, which might increase the speed of deletion.
 To enable:

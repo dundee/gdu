@@ -159,7 +159,7 @@ func TestColumnsWidthMatchesRenderedRow(t *testing.T) {
 				ui.markedItems[&analyze.File{Name: "marked"}] = struct{}{}
 			}
 
-			rendered := ui.formatColumns(sub, maxima, false, false)
+			rendered := ui.formatColumns(sub, maxima, false, false, false)
 
 			assert.Equal(t, ui.columnsWidth(), tview.TaggedStringWidth(rendered))
 		})

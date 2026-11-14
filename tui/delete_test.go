@@ -3,6 +3,7 @@ package tui
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/dundee/gdu/v5/pkg/remove"
+	"github.com/gdamore/tcell/v2"
 )
 
 // markRow marks the item listed on row.
@@ -256,4 +258,410 @@ func TestDeletionIsDisabledWithoutAskingToo(t *testing.T) {
 
 	assert.True(t, ui.pages.HasPage("confirm"))
 	assert.DirExists(t, "test_dir/nested")
+}
+
+// startPausedDeletion begins deleting the selected item and waits until the
+// deleter is inside Delete, so the test can inspect the progress dialog while
+// the deletion is still running.
+func startPausedDeletion(t *testing.T, ui *UI, action DeleteAction) func() {
+	t.Helper()
+	return startPausedDeletionAt(t, ui, 0, action)
+}
+
+func startPausedDeletionAt(t *testing.T, ui *UI, row int, action DeleteAction) func() {
+	t.Helper()
+
+	started := make(chan struct{})
+	proceed := make(chan struct{})
+	var once sync.Once
+	ui.newDeleter = fakeDeleter(func(dir, item fs.Item) error {
+		once.Do(func() { close(started) })
+		<-proceed
+		if err := os.RemoveAll(item.GetPath()); err != nil {
+			return err
+		}
+		dir.RemoveFile(item)
+		return nil
+	})
+
+	ui.table.Select(row, 0)
+	deleteNow(ui, action)
+	<-started
+
+	return sync.OnceFunc(func() { close(proceed) })
+}
+
+func TestDeletionDialogCanBeHiddenAndShownAgain(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	n := drawsQueued(ui)
+	release := startPausedDeletion(t, ui, ActionDelete)
+
+	require.NotNil(t, ui.activeDeletion)
+	assert.True(t, ui.pages.HasPage("deleting"))
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+	assert.False(t, ui.pages.HasPage("deleting"))
+	assert.True(t, ui.activeDeletion.progress.hidden)
+
+	key = ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+	assert.True(t, ui.pages.HasPage("deleting"))
+	assert.False(t, ui.activeDeletion.progress.hidden)
+
+	release()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
+
+	assert.Nil(t, ui.activeDeletion)
+	assert.False(t, ui.pages.HasPage("deleting"))
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestHiddenDeletionFinishesAndClearsItsDialog(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	n := drawsQueued(ui)
+	release := startPausedDeletion(t, ui, ActionDelete)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+	require.NotNil(t, ui.activeDeletion)
+	assert.False(t, ui.pages.HasPage("deleting"))
+
+	release()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
+
+	assert.Nil(t, ui.activeDeletion)
+	assert.False(t, ui.pages.HasPage("deleting"))
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestAdditionalDeletionIsQueuedBehindHiddenDeletion(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	require.NoError(t, os.MkdirAll("test_dir/other", 0o755))
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	n := drawsQueued(ui)
+	release := startPausedDeletionAt(t, ui, rowOf(t, ui, "nested"), ActionDelete)
+	job := ui.activeDeletion
+	require.NotNil(t, job)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+	assert.False(t, ui.pages.HasPage("deleting"))
+
+	// the confirmation is unchanged, but accepting it queues the new deletion
+	ui.table.Select(rowOf(t, ui, "other"), 0)
+	ui.handleDelete(ActionDelete)
+	require.True(t, ui.pages.HasPage("confirm"))
+	selectConfirmationYes(t, ui)
+	assert.Same(t, job, ui.activeDeletion)
+	job.mut.Lock()
+	queued := len(job.pending)
+	job.mut.Unlock()
+	assert.Equal(t, 1, queued)
+
+	release()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
+
+	assert.Nil(t, ui.activeDeletion)
+	assert.False(t, ui.pages.HasPage("deleting"))
+	assert.NoDirExists(t, "test_dir/nested")
+	assert.NoDirExists(t, "test_dir/other")
+}
+
+// cellForeground returns the text colour a row is drawn with.
+func cellForeground(ui *UI, row int) tcell.Color {
+	foreground, _, _ := ui.table.GetCell(row, 0).Style.Decompose()
+	return foreground
+}
+
+func TestQueuedDeletionIsDimmedAndCanBeCancelled(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	require.NoError(t, os.MkdirAll("test_dir/other", 0o755))
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	n := drawsQueued(ui)
+	release := startPausedDeletionAt(t, ui, rowOf(t, ui, "nested"), ActionDelete)
+	job := ui.activeDeletion
+	require.NotNil(t, job)
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+
+	// queue another deletion while the dialog is hidden
+	ui.table.Select(rowOf(t, ui, "other"), 0)
+	ui.handleDelete(ActionDelete)
+	require.True(t, ui.pages.HasPage("confirm"))
+	selectConfirmationYes(t, ui)
+	runDrawsSince(ui, n)
+
+	otherRow := rowOf(t, ui, "other")
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, otherRow))
+	// the queued colour must survive the selected-row style too, because the
+	// cursor usually stays on the item the user just queued
+	selectedFg, _, selectedAttrs := ui.table.GetCell(otherRow, 0).SelectedStyle.Decompose()
+	if ui.UseColors {
+		assert.Equal(t, ui.queuedTextColor, selectedFg)
+	} else {
+		assert.NotZero(t, selectedAttrs&tcell.AttrDim)
+	}
+
+	// pressing a delete key on the queued item cancels it
+	ui.table.Select(otherRow, 0)
+	ui.handleDelete(ActionDelete)
+
+	assert.False(t, ui.pages.HasPage("confirm"))
+	job.mut.Lock()
+	pending := len(job.pending)
+	job.mut.Unlock()
+	assert.Equal(t, 0, pending)
+	assert.Equal(t, tcell.ColorDefault, cellForeground(ui, otherRow))
+
+	release()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
+
+	assert.NoDirExists(t, "test_dir/nested")
+	assert.DirExists(t, "test_dir/other")
+}
+
+// The item that is currently being deleted must be dimmed too, and redrawing
+// the tree while the deletion runs must keep both it and the queued items
+// dimmed.
+func TestDeletionDimmingSurvivesRedraw(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	require.NoError(t, os.MkdirAll("test_dir/other", 0o755))
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	n := drawsQueued(ui)
+	release := startPausedDeletionAt(t, ui, rowOf(t, ui, "nested"), ActionDelete)
+	defer release()
+
+	nestedRow := rowOf(t, ui, "nested")
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, nestedRow))
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	require.Nil(t, key)
+
+	ui.table.Select(rowOf(t, ui, "other"), 0)
+	ui.handleDelete(ActionDelete)
+	require.True(t, ui.pages.HasPage("confirm"))
+	selectConfirmationYes(t, ui)
+	runDrawsSince(ui, n)
+
+	// A redraw happens for example when another deletion is queued.
+	ui.refreshListing()
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, nestedRow))
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, rowOf(t, ui, "other")))
+
+	release()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
+}
+
+// Queueing while the dialog is hidden must refresh the listing synchronously.
+// deleteTargets runs on the event loop, so a draw queued from there would wait
+// for the very loop running it and freeze the UI.
+func TestQueueingWhileDialogHiddenRefreshesListingImmediately(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	require.NoError(t, os.MkdirAll("test_dir/other", 0o755))
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	n := drawsQueued(ui)
+	release := startPausedDeletionAt(t, ui, rowOf(t, ui, "nested"), ActionDelete)
+	defer release()
+	require.NotNil(t, ui.activeDeletionJob())
+
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	require.Nil(t, key)
+
+	ui.table.Select(rowOf(t, ui, "other"), 0)
+	ui.handleDelete(ActionDelete)
+	require.True(t, ui.pages.HasPage("confirm"))
+	selectConfirmationYes(t, ui)
+
+	// No queued draw has been run, so the row is dimmed only if deleteTargets
+	// refreshed the listing itself.
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, rowOf(t, ui, "other")))
+
+	release()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
+}
+
+func TestDeletionStatusPopupShowsOnlyHiddenForegroundDeletion(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	require.NoError(t, os.MkdirAll("test_dir/other", 0o755))
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	n := drawsQueued(ui)
+	release := startPausedDeletionAt(t, ui, rowOf(t, ui, "nested"), ActionDelete)
+	require.NotNil(t, ui.statusOverlay)
+	require.NotNil(t, ui.activeDeletionJob())
+
+	// while the dialog is visible it is the progress display
+	ui.updateDeletionStatus()
+	assert.False(t, ui.statusOverlay.visible)
+
+	// hiding the dialog turns the deletion into background activity
+	key := ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+	assert.True(t, ui.statusOverlay.visible)
+	assert.Contains(t, ui.statusOverlay.status.GetText(true), "Deleting:")
+
+	// showing the dialog again hides the popup
+	key = ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+	assert.False(t, ui.statusOverlay.visible)
+
+	// hide it once more and let the deletion finish while hidden
+	key = ui.keyPressed(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
+	assert.Nil(t, key)
+	assert.True(t, ui.statusOverlay.visible)
+
+	release()
+	waitDone(t, ui)
+	runDrawsSince(ui, n)
+
+	// the popup lingers briefly even though the deletion already finished
+	assert.True(t, ui.statusOverlay.visible)
+	ui.updateDeletionStatus()
+	assert.False(t, ui.statusOverlay.visible)
+	assert.NoDirExists(t, "test_dir/nested")
+}
+
+func TestDeletionStatusPopupShowsBackgroundWorkers(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	require.NotNil(t, ui.statusOverlay)
+
+	// starting a worker updates the popup without waiting for the status poll
+	n := drawsQueued(ui)
+	ui.increaseActiveWorkers()
+	runDrawsSince(ui, n)
+	require.True(t, ui.statusOverlay.visible)
+	assert.Contains(t, ui.statusOverlay.status.GetText(true), "Background deletions: 1")
+
+	n = drawsQueued(ui)
+	ui.decreaseActiveWorkers()
+	runDrawsSince(ui, n)
+	// the popup lingers briefly so a short deletion is still visible
+	assert.True(t, ui.statusOverlay.visible)
+
+	// the delayed update hides it once the linger has passed
+	ui.updateDeletionStatus()
+	assert.False(t, ui.statusOverlay.visible)
+}
+
+func TestQueuedBackgroundDeletionIsDimmed(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	require.NoError(t, os.MkdirAll("test_dir/other", 0o755))
+
+	ui := getAnalyzedPathMockedApp(t, true, true, false)
+	ui.SetResultRowDirectoryColor("#3498db")
+	ui.done = make(chan struct{})
+	ui.deleteWorkersCount = 1
+
+	started := make(chan struct{})
+	proceed := make(chan struct{})
+	var once sync.Once
+	ui.newDeleter = fakeDeleter(func(dir, item fs.Item) error {
+		once.Do(func() { close(started) })
+		<-proceed
+		return nil
+	})
+	ui.SetDeleteInBackground()
+
+	ui.table.Select(rowOf(t, ui, "nested"), 0)
+	deleteNow(ui, ActionDelete)
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the first deletion did not start")
+	}
+
+	// the only worker is busy, so this one stays queued
+	ui.table.Select(rowOf(t, ui, "other"), 0)
+	deleteNow(ui, ActionDelete)
+
+	nestedRow := rowOf(t, ui, "nested")
+	otherRow := rowOf(t, ui, "other")
+	// the item being deleted is dimmed as well
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, nestedRow))
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, otherRow))
+	// the directory colour tag must not override the queued cell colour
+	assert.NotContains(t, ui.table.GetCell(otherRow, 0).Text, "#3498db")
+	selectedFg, _, _ := ui.table.GetCell(otherRow, 0).SelectedStyle.Decompose()
+	assert.Equal(t, ui.queuedTextColor, selectedFg)
+
+	// a redraw must keep the active and the queued item dimmed
+	ui.refreshListing()
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, nestedRow))
+	assert.Equal(t, ui.queuedTextColor, cellForeground(ui, otherRow))
+
+	close(proceed)
+	waitDone(t, ui)
+	waitDone(t, ui)
+}
+
+func TestBackgroundDeletionShowsStatusPopup(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+
+	ui := getAnalyzedPathMockedApp(t, false, true, false)
+	ui.done = make(chan struct{})
+	started := make(chan struct{})
+	proceed := make(chan struct{})
+	ui.newDeleter = fakeDeleter(func(dir, item fs.Item) error {
+		close(started)
+		<-proceed
+		return nil
+	})
+	ui.SetDeleteInBackground()
+
+	waitForDraw := func(after int) {
+		t.Helper()
+		require.Eventually(t, func() bool {
+			return drawsQueued(ui) > after
+		}, 5*time.Second, 10*time.Millisecond)
+		runDrawsSince(ui, after)
+	}
+
+	n := drawsQueued(ui)
+	ui.table.Select(0, 0)
+	deleteNow(ui, ActionDelete)
+
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the deletion did not start")
+	}
+
+	waitForDraw(n)
+	require.True(t, ui.statusOverlay.visible)
+	assert.Contains(t, ui.statusOverlay.status.GetText(true), "Background deletions: 1")
+
+	close(proceed)
+	waitDone(t, ui)
+
+	require.Eventually(t, func() bool {
+		runDrawsSince(ui, n)
+		return !ui.statusOverlay.visible
+	}, 5*time.Second, 10*time.Millisecond)
 }
