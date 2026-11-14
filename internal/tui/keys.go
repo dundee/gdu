@@ -241,6 +241,10 @@ func (ui *UI) handleQuit(key *tcell.EventKey) *tcell.EventKey {
 // quit asks for confirmation when there are scan results worth protecting,
 // otherwise it quits immediately.
 func (ui *UI) quit(printCurrentDirPath bool) {
+	if n := ui.pendingDeletionCount(); n > 0 {
+		ui.confirmQuitWithDeletions(n, printCurrentDirPath)
+		return
+	}
 	if ui.shouldConfirmQuit() {
 		ui.confirmQuitDialog(printCurrentDirPath)
 		return
@@ -267,6 +271,31 @@ func (ui *UI) doQuit(printCurrentDirPath bool) {
 	if printCurrentDirPath {
 		fmt.Fprintf(ui.output, "%s\n", sanitizePathForDisplay(ui.currentDirPath))
 	}
+}
+
+// confirmQuitWithDeletions asks what to do with the n deletions left:
+// quitting now leaves them undone, and an item being deleted half removed.
+func (ui *UI) confirmQuitWithDeletions(n int, printCurrentDirPath bool) {
+	text := fmt.Sprintf("%d deletions are still running.\n\n"+
+		"Quitting now leaves them undone, and an item being deleted half removed.", n)
+	if n == 1 {
+		text = "A deletion is still running.\n\nQuitting now leaves it undone, half removed."
+	}
+	modal := tview.NewModal().
+		SetText(text).
+		AddButtons([]string{quitWhenDone, quitNowLabel, cancelLabel}).
+		SetDoneFunc(func(buttonIndex int, _ string) {
+			ui.pages.RemovePage("confirm")
+			ui.app.SetFocus(ui.table)
+			switch buttonIndex {
+			case 0:
+				ui.showMessage(" Quitting once the deletions are done")
+				ui.quitAfterDeleting(func() { ui.doQuit(printCurrentDirPath) })
+			case 1:
+				ui.doQuit(printCurrentDirPath)
+			}
+		})
+	ui.pages.AddPage("confirm", modal, true, true)
 }
 
 func (ui *UI) confirmQuitDialog(printCurrentDirPath bool) {
