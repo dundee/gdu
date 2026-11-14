@@ -6,18 +6,18 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestScanObserverPrintsTheProgress(t *testing.T) {
 	output := bytes.Buffer{}
-	ui := CreateStdoutUI(&output, false, true, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(&output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	observe := ui.scanObserver()
 
 	observe(session.Progress{Progress: analyze.Progress{ItemCount: 1234, TotalUsage: 2048}})
@@ -32,7 +32,7 @@ func TestScanObserverPrintsTheProgress(t *testing.T) {
 }
 
 func TestScanObserverIsNilWithoutProgress(t *testing.T) {
-	ui := CreateStdoutUI(&bytes.Buffer{}, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(&bytes.Buffer{}, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 
 	assert.Nil(t, ui.scanObserver())
 }
@@ -45,19 +45,19 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 	db := filepath.Join(t.TempDir(), "gdu.sqlite")
 
 	scanned := bytes.Buffer{}
-	ui := CreateStdoutUI(&scanned, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(&scanned, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	analyzer, err := sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
-	ui.SetAnalyzer(analyzer)
+	ui.Analyzer = (analyzer)
 	require.NoError(t, ui.AnalyzePath("test_dir", nil))
 
 	require.NoError(t, os.WriteFile("test_dir/nested/added", make([]byte, 100000), 0o600))
 
 	stored := bytes.Buffer{}
-	ui = CreateStdoutUI(&stored, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui = CreateStdoutUI(&stored, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	analyzer, err = sqlite.CreateAnalyzer(db)
 	require.NoError(t, err)
-	ui.SetAnalyzer(analyzer)
+	ui.Analyzer = (analyzer)
 	require.NoError(t, ui.ReadFromStorage("test_dir"))
 	assert.Equal(t, scanned.String(), stored.String())
 
@@ -65,7 +65,7 @@ func TestReadFromStoragePrintsTheStoredAnalysis(t *testing.T) {
 }
 
 func TestReadFromStorageNeedsDatabase(t *testing.T) {
-	ui := CreateStdoutUI(&bytes.Buffer{}, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(&bytes.Buffer{}, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 
 	assert.ErrorIs(t, ui.ReadFromStorage("test_dir"), session.ErrNoDatabase)
 }

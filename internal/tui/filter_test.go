@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -21,7 +22,7 @@ func TestFiltering(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -61,7 +62,7 @@ func TestFilteringWithoutCurrentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 
@@ -77,7 +78,7 @@ func TestSwitchToTable(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -120,7 +121,7 @@ func TestExitFiltering(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -203,7 +204,7 @@ func TestTypeFiltering(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -262,7 +263,7 @@ func TestTypeFilteringWithoutCurrentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	ui.showTypeFilterInput()
 
@@ -274,7 +275,7 @@ func TestTypeFilteringKeyBinding(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -297,7 +298,7 @@ func TestExitTypeFiltering(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -328,7 +329,7 @@ func TestTypeFilterTabSwitch(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -359,7 +360,7 @@ func TestBothFiltersCoexist(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -393,7 +394,7 @@ func TestMatchesTypeFilter(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	ui.typeFilterValue = "go"
 	assert.True(t, ui.matchesTypeFilter("main.go", false))
@@ -420,7 +421,7 @@ func TestTypeFilterInputNoColorAndChangedCallback(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(80, 30)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	dir := createDirWithExtensions()
 	ui.currentDir = dir
 	ui.session.SetRoot(dir)
@@ -443,7 +444,7 @@ func TestTypeFilterShowAgainKeepsExistingInput(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(80, 30)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	dir := createDirWithExtensions()
 	ui.currentDir = dir
 	ui.session.SetRoot(dir)

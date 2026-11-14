@@ -20,9 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -30,10 +28,25 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze/badger"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestUI() *UI {
-	return CreateUI(io.Discard, "127.0.0.1:0", false, "", false, false, false, false)
+	return newTestUIWith(&config.Settings{})
+}
+
+// newTestUIWith returns a web UI for the settings s, listening on a free
+// port of the loopback unless s says otherwise.
+func newTestUIWith(s *config.Settings) *UI {
+	if s.Web.Listen == "" {
+		s.Web.Listen = "127.0.0.1:0"
+	}
+	ui, err := CreateUI(io.Discard, analyze.CreateAnalyzer(), s)
+	if err != nil {
+		panic(err)
+	}
+	return ui
 }
 
 // makeTree creates a temporary directory tree and returns its root path.
@@ -512,8 +525,7 @@ func makeNestedZip(t *testing.T, path string) {
 }
 
 func TestRevealEndpointOpensArchiveParentDirectoryForDeeplyNestedEntry(t *testing.T) {
-	ui := newTestUI()
-	ui.SetArchiveBrowsing(true)
+	ui := newTestUIWith(&config.Settings{Scan: config.Scan{ArchiveBrowsing: true}})
 	root := t.TempDir()
 	zipPath := filepath.Join(root, "archive.zip")
 	makeNestedZip(t, zipPath)
@@ -544,8 +556,7 @@ func TestRevealEndpointOpensArchiveParentDirectoryForDeeplyNestedEntry(t *testin
 }
 
 func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
-	ui := newTestUI()
-	ui.SetArchiveBrowsing(true)
+	ui := newTestUIWith(&config.Settings{Scan: config.Scan{ArchiveBrowsing: true}})
 	root := t.TempDir()
 	zipPath := filepath.Join(root, "archive.zip")
 	makeZip(t, zipPath)
@@ -572,21 +583,19 @@ func TestRevealEndpointOpensArchiveParentDirectoryForNestedEntry(t *testing.T) {
 	assert.Equal(t, root, revealed, "revealed path should be the archive's containing directory, not the archive file itself")
 }
 
-func TestSetTrashCommandReplacesDefaultTrasher(t *testing.T) {
-	ui := newTestUI()
-	before := reflect.ValueOf(ui.trasher).Pointer()
+func TestTrashCommandReplacesDefaultTrasher(t *testing.T) {
+	before := reflect.ValueOf(newTestUI().trasher).Pointer()
 
-	ui.SetTrashCommand("true")
+	ui := newTestUIWith(&config.Settings{Delete: config.Delete{TrashCommand: "true"}})
 
 	after := reflect.ValueOf(ui.trasher).Pointer()
-	assert.NotEqual(t, before, after, "SetTrashCommand should replace the default trasher")
+	assert.NotEqual(t, before, after, "a trash command should replace the default trasher")
 }
 
 func TestDeleteEndpointHonorsNoDelete(t *testing.T) {
-	ui := newTestUI()
+	ui := newTestUIWith(&config.Settings{Delete: config.Delete{Disabled: true}})
 	root := makeTree(t)
 	scan(t, ui, root)
-	ui.SetNoDelete()
 
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
@@ -824,15 +833,11 @@ func TestBrowserCommand(t *testing.T) {
 	}
 }
 
-func TestSetCollapsePath(t *testing.T) {
-	ui := newTestUI()
-	require.False(t, ui.collapsePath, "collapsePath should default to false")
-	ui.SetCollapsePath(true)
-	assert.True(t, ui.collapsePath, "SetCollapsePath(true) did not set the field")
-}
-
 func TestCreateUIDefaultListenAddr(t *testing.T) {
-	ui := CreateUI(io.Discard, "", false, "", true, true, true, true)
+	ui, err := CreateUI(io.Discard, analyze.CreateAnalyzer(), &config.Settings{
+		Display: config.Display{Colors: true, ApparentSize: true, RelativeSize: true, SIPrefix: true},
+	})
+	require.NoError(t, err)
 	assert.Equal(t, "localhost:0", ui.listenAddr)
 	assert.True(t, ui.UseColors && ui.ShowApparentSize && ui.ShowRelativeSize && ui.UseSIPrefix,
 		"display options not propagated to embedded common.UI")
@@ -937,7 +942,7 @@ func TestReadFromStorage(t *testing.T) {
 	dir.UpdateStats(false)
 
 	ui := newTestUI()
-	ui.SetAnalyzer(badger.CreateAnalyzer(storagePath))
+	ui.Analyzer = (badger.CreateAnalyzer(storagePath))
 	require.NoError(t, ui.ReadFromStorage("test_dir"))
 	// the classification reads the stored tree in the background, so it has
 	// to be over before the test removes the database
@@ -955,7 +960,7 @@ func TestReadFromStorage(t *testing.T) {
 func TestReadFromStorageError(t *testing.T) {
 	ui := newTestUI()
 	storagePath := t.TempDir() + "/badger"
-	ui.SetAnalyzer(badger.CreateAnalyzer(storagePath))
+	ui.Analyzer = (badger.CreateAnalyzer(storagePath))
 	// A non-existent path yields a badger read error.
 	err := ui.ReadFromStorage("missing_dir")
 	assert.ErrorContains(t, err, "holds no analysis of missing_dir")
@@ -1357,8 +1362,7 @@ func TestDeleteNodeEndpointNotFound(t *testing.T) {
 }
 
 func TestDeleteNodeEndpointRejectsArchiveDescendant(t *testing.T) {
-	ui := newTestUI()
-	ui.SetArchiveBrowsing(true)
+	ui := newTestUIWith(&config.Settings{Scan: config.Scan{ArchiveBrowsing: true}})
 	root := t.TempDir()
 	zipPath := filepath.Join(root, "archive.zip")
 	makeZip(t, zipPath)

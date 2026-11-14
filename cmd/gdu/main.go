@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -160,7 +161,7 @@ func initConfig() {
 	// Load system-wide config first (ignored on Windows/Plan9 and when absent).
 	if runtime.GOOS != osWindows && runtime.GOOS != osPlan9 {
 		if err := loadConfig(systemConfigPath); err != nil && !os.IsNotExist(err) {
-			configErr = err
+			configErr = fmt.Errorf("%s: %w", systemConfigPath, err)
 			return
 		}
 	}
@@ -169,7 +170,7 @@ func initConfig() {
 	setConfigFilePath()
 	if err := loadConfig(af.CfgFile); err != nil {
 		if !os.IsNotExist(err) {
-			configErr = err
+			configErr = fmt.Errorf("%s: %w", af.CfgFile, err)
 		}
 		return
 	}
@@ -280,17 +281,9 @@ func runE(command *cobra.Command, args []string) error {
 	}
 	log.SetOutput(f)
 
-	if configErr != nil {
-		log.Printf("Error reading config file: %s", configErr.Error())
-	}
+	reportConfigError(os.Stderr)
 
 	istty := isatty.IsTerminal(os.Stdout.Fd())
-
-	// disk usage is only partially available on Windows (compressed, sparse
-	// and OneDrive files) and not at all on Plan9, so show apparent size
-	if runtime.GOOS == osWindows || runtime.GOOS == osPlan9 {
-		af.ShowApparentSize = true
-	}
 
 	if !af.Web && !af.ShouldRunInNonInteractiveMode(istty) {
 		screen, err = tcell.NewScreen()
@@ -319,6 +312,17 @@ func runE(command *cobra.Command, args []string) error {
 		PathChecker: os.Stat,
 	}
 	return a.Run()
+}
+
+// reportConfigError tells w that a config file could not be read; gdu then
+// runs with the settings read before the failure. It used to go to the log
+// only, which by default is /dev/null.
+func reportConfigError(w io.Writer) {
+	if configErr == nil {
+		return
+	}
+	log.Printf("Error reading config file: %s", configErr)
+	fmt.Fprintf(w, "gdu: ignoring the config file: %s\n", configErr)
 }
 
 // selfUpdate runs --self-update. It returns done when gdu should not continue

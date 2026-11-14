@@ -6,6 +6,7 @@ package webui
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/cleanup"
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/remove"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -39,15 +41,14 @@ type UI struct {
 
 	session *session.Session
 
-	mu           sync.RWMutex
-	actionMu     sync.Mutex
-	topDirPath   string
-	collapsePath bool
-	scanning     bool
-	scanErr      error
-	progress     analyze.Progress
-	noDelete     bool
-	trasher      remove.Trash
+	mu         sync.RWMutex
+	actionMu   sync.Mutex
+	topDirPath string
+	scanning   bool
+	scanErr    error
+	progress   analyze.Progress
+	noDelete   bool
+	trasher    remove.Trash
 
 	classifier *cleanup.Classifier
 	cleanup    cleanupCache
@@ -61,13 +62,6 @@ type UI struct {
 	classifying atomic.Bool
 
 	hub *hub
-}
-
-// SetNoDelete disables destructive actions in the web UI.
-func (ui *UI) SetNoDelete() {
-	ui.mu.Lock()
-	ui.noDelete = true
-	ui.mu.Unlock()
 }
 
 // readTree holds the lock of the session's tree for reading until the
@@ -84,58 +78,37 @@ func (ui *UI) scannedRoots() []string {
 	return ui.session.RootPaths()
 }
 
-// SetTrashCommand replaces the built-in trash with an external command, as
-// used by --trash-command. See remove.TrashCommand for the command contract.
-func (ui *UI) SetTrashCommand(command string) {
-	ui.trasher = remove.TrashCommand(command)
-}
-
-// CreateUI creates a new web UI.
-func CreateUI(
-	output io.Writer,
-	listenAddr string,
-	openBrowser bool,
-	browserCmd string,
-	useColors bool,
-	showApparentSize bool,
-	showRelativeSize bool,
-	useSIPrefix bool,
-) *UI {
+// CreateUI returns the web UI for the settings s, scanning with analyzer. It
+// fails when the cleanup rules of the settings are invalid.
+func CreateUI(output io.Writer, analyzer analyze.Analyzer, s *config.Settings) (*UI, error) {
+	classifier, err := cleanup.NewClassifier(s.Web.Cleanup, userHomeDir())
+	if err != nil {
+		return nil, fmt.Errorf("cleanup config: %w", err)
+	}
 	ui := &UI{
-		UI: &common.UI{
-			UseColors:        useColors,
-			ShowApparentSize: showApparentSize,
-			ShowRelativeSize: showRelativeSize,
-			UseSIPrefix:      useSIPrefix,
-			Analyzer:         analyze.CreateAnalyzer(),
-		},
+		UI:          common.NewUI(analyzer, s),
 		output:      output,
-		listenAddr:  listenAddr,
-		openBrowser: openBrowser,
-		browserCmd:  browserCmd,
+		listenAddr:  s.Web.Listen,
+		openBrowser: s.Web.OpenBrowser,
+		browserCmd:  s.Web.Browser,
+		noDelete:    s.Delete.Disabled,
 		revealPath:  revealInFileManager,
 		trasher:     remove.MoveItemToTrash,
+		classifier:  classifier,
 		actionToken: generateActionToken(),
 		hub:         newHub(),
 	}
+	if s.Delete.TrashCommand != "" {
+		ui.trasher = remove.TrashCommand(s.Delete.TrashCommand)
+	}
 	ui.session = session.New(ui.UI)
-	ui.classifier = cleanup.NewDefaultClassifier(userHomeDir())
-	if listenAddr == "" {
+	if ui.listenAddr == "" {
 		ui.listenAddr = "localhost:0"
 	}
-	if !useSIPrefix {
+	if !s.Display.SIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
-	return ui
-}
-
-// SetCollapsePath sets whether single-child directory chains are collapsed.
-func (ui *UI) SetCollapsePath(value bool) {
-	ui.collapsePath = value
-}
-
-// SetShowSymlinkTarget is a no-op for the web UI (rendering is browser-side).
-func (ui *UI) SetShowSymlinkTarget(value bool) {
+	return ui, nil
 }
 
 // ListDevices loads mounted devices so they can be served to the browser.

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -11,26 +10,23 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/report"
 	"github.com/dundee/gdu/v5/internal/stdout"
-	"github.com/dundee/gdu/v5/internal/timefilter"
 	"github.com/dundee/gdu/v5/internal/tui"
 	"github.com/dundee/gdu/v5/internal/webui"
 	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/analyze/badger"
-	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
 	"github.com/dundee/gdu/v5/pkg/device"
 	gfs "github.com/dundee/gdu/v5/pkg/fs"
 )
 
-// UI is common interface for both terminal UI and text output
+// UI is what every frontend does; it is configured when it is created.
 type UI interface {
 	ListDevices(getter device.DevicesInfoGetter) error
 	AnalyzePath(path string, parentDir gfs.Item) error
@@ -42,22 +38,6 @@ type UI interface {
 	// ReadFromStorage presents the analysis of path stored by an earlier scan
 	// in the database of the analyzer (--db).
 	ReadFromStorage(path string) error
-	SetIgnoreTypes(types []string)
-	SetIgnoreDirPaths(paths []string)
-	SetIgnoreDirPatterns(paths []string) error
-	SetIgnoreFromFile(ignoreFile string) error
-	SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error
-	SetIgnoreHidden(value bool)
-	SetIgnoreOtherFilesystems(value bool)
-	SetIncludeTypes(types []string)
-	SetFollowSymlinks(value bool)
-	SetShowAnnexedSize(value bool)
-	SetExclusiveSize(value bool)
-	SetAnalyzer(analyzer analyze.Analyzer)
-	SetTimeFilter(timeFilter analyze.TimeFilter)
-	SetArchiveBrowsing(value bool)
-	SetCollapsePath(value bool)
-	SetShowSymlinkTarget(value bool)
 	StartUILoop() error
 }
 
@@ -251,11 +231,7 @@ func init() {
 }
 
 // Run starts gdu main logic
-//
-//nolint:gocyclo,funlen // App function is a suite of if statements
 func (a *App) Run() error {
-	var ui UI
-
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
 		fmt.Fprintln(a.Writer, "Built time:\t", build.Time)
@@ -265,125 +241,27 @@ func (a *App) Run() error {
 
 	log.Printf("Runtime flags: %+v", *a.Flags)
 
-	if a.Flags.NoPrefix && a.Flags.UseSIPrefix {
-		return fmt.Errorf("--no-prefix and --si cannot be used at once")
-	}
-
-	if a.Flags.NonInteractive && a.Flags.Interactive {
-		return fmt.Errorf("--interactive and --non-interactive cannot be used at once")
-	}
-
-	outputAttributes, err := parseJSONAttributes(a.Flags.OutputAttrs)
-	if err != nil {
-		return err
-	}
-	if a.Flags.OutputAttrs != "" && a.Flags.OutputFile == "" {
-		return errors.New("--output-attrs requires --output-file")
-	}
-	if err := a.checkReadFromStorage(); err != nil {
-		return err
-	}
-
 	paths, err := a.resolvePaths()
 	if err != nil {
 		return err
 	}
-	if len(paths) > 1 {
-		if err := a.checkMultiPathSupport(); err != nil {
-			return err
-		}
+	if err := a.validate(paths); err != nil {
+		return err
 	}
-
-	ui, err = a.createUI(outputAttributes)
+	settings, err := a.settings(paths)
 	if err != nil {
 		return err
 	}
+	log.Printf("Settings: %+v", settings)
 
-	if a.Flags.DbPath != "" {
-		if err := checkDatabase(a.Flags.DbPath); err != nil {
-			return err
-		}
-		if a.replacesDatabase() {
-			if err := removeDatabase(a.Flags.DbPath); err != nil {
-				return err
-			}
-		}
-		if isBadgerPath(a.Flags.DbPath) {
-			ui.SetAnalyzer(badger.CreateAnalyzer(a.Flags.DbPath))
-		} else {
-			sqliteAnalyzer, err := sqlite.CreateAnalyzer(a.Flags.DbPath)
-			if err != nil {
-				return fmt.Errorf("creating sqlite analyzer: %w", err)
-			}
-			ui.SetAnalyzer(sqliteAnalyzer)
-		}
+	front := a.frontend()
+	analyzer, err := a.analyzer(front, &settings)
+	if err != nil {
+		return err
 	}
-	if a.Flags.SequentialScanning {
-		ui.SetAnalyzer(analyze.CreateSeqAnalyzer())
-	}
-	if a.Flags.FollowSymlinks {
-		ui.SetFollowSymlinks(true)
-	}
-	if a.Flags.ShowAnnexedSize {
-		ui.SetShowAnnexedSize(true)
-	}
-	if a.Flags.ExclusiveSize {
-		ui.SetExclusiveSize(true)
-	}
-	if a.Flags.ArchiveBrowsing {
-		ui.SetArchiveBrowsing(true)
-	}
-	if a.Flags.CollapsePath {
-		ui.SetCollapsePath(true)
-	}
-
-	// Set up time filter if any time flags are provided
-	if a.Flags.Since != "" || a.Flags.Until != "" || a.Flags.MaxAge != "" || a.Flags.MinAge != "" {
-		if err := a.setTimeFilters(ui); err != nil {
-			return err
-		}
-	}
-	for _, path := range paths {
-		if err := a.setNoCross(path); err != nil {
-			return err
-		}
-	}
-
-	// Process type filters
-	if len(a.Flags.TypeFilter) > 0 {
-		ui.SetIncludeTypes(a.Flags.TypeFilter)
-	}
-	if len(a.Flags.ExcludeTypeFilter) > 0 {
-		ui.SetIgnoreTypes(a.Flags.ExcludeTypeFilter)
-	}
-
-	ui.SetIgnoreDirPaths(a.Flags.IgnoreDirs)
-
-	if len(a.Flags.IgnoreDirPatterns) > 0 {
-		if err := ui.SetIgnoreDirPatterns(a.Flags.IgnoreDirPatterns); err != nil {
-			return err
-		}
-	}
-
-	if a.Flags.IgnoreFromFile != "" {
-		if err := ui.SetIgnoreFromFile(a.Flags.IgnoreFromFile); err != nil {
-			return err
-		}
-	}
-
-	if a.Flags.IgnoreFromGitignore != "" {
-		// the scanned roots are needed so that patterns anchored with a
-		// leading / can be matched against the absolute paths gdu scans
-		if err := ui.SetIgnoreFromGitignoreFile(a.Flags.IgnoreFromGitignore, paths); err != nil {
-			return err
-		}
-	}
-
-	if a.Flags.NoHidden {
-		ui.SetIgnoreHidden(true)
-	}
-	if a.Flags.NoCross {
-		ui.SetIgnoreOtherFilesystems(true)
+	ui, err := a.createUI(front, analyzer, &settings)
+	if err != nil {
+		return err
 	}
 
 	a.setMaxProcs()
@@ -441,34 +319,6 @@ func (a *App) resolvePaths() ([]string, error) {
 	return paths, nil
 }
 
-// checkMultiPathSupport rejects the modes that cannot represent more than one
-// scanned root. Both the JSON export format and the on-disk storage are keyed
-// by a single root, so there is nowhere to put a virtual top level dir.
-func (a *App) checkMultiPathSupport() error {
-	switch {
-	case a.Flags.OutputFile != "":
-		return errors.New("--output-file accepts only one directory to scan")
-	case a.Flags.DbPath != "":
-		return errors.New("--db accepts only one directory to scan")
-	}
-	return nil
-}
-
-// checkReadFromStorage rejects --read-from-storage without a database to read
-// from, rather than letting the analyzer create an empty one.
-func (a *App) checkReadFromStorage() error {
-	if !a.Flags.ReadFromStorage {
-		return nil
-	}
-	if a.Flags.DbPath == "" {
-		return errors.New("--read-from-storage requires --db")
-	}
-	if _, err := os.Stat(a.Flags.DbPath); err != nil {
-		return fmt.Errorf("reading the database: %w", err)
-	}
-	return nil
-}
-
 // isSubPath reports whether path lies inside parent. Both must be absolute and
 // cleaned, as returned by filepath.Abs.
 func isSubPath(path, parent string) bool {
@@ -495,315 +345,35 @@ func (a *App) setMaxProcs() {
 	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
-func (a *App) setTimeFilters(ui UI) error {
-	loc := time.Local
-	now := time.Now()
-
-	timeFilter, err := timefilter.NewTimeFilter(
-		a.Flags.Since,
-		a.Flags.Until,
-		a.Flags.MaxAge,
-		a.Flags.MinAge,
-		now,
-		loc,
-	)
-	if err != nil {
-		return fmt.Errorf("invalid time filter: %w", err)
-	}
-
-	if !timeFilter.IsEmpty() {
-		timeFilterFunc := func(mtime time.Time) bool {
-			return timeFilter.IncludeByTimeFilter(mtime, loc)
-		}
-		ui.SetTimeFilter(timeFilterFunc)
-
-		// If this is a TUI, also set the filter info for display
-		if tuiUI, ok := ui.(*tui.UI); ok {
-			tuiUI.SetTimeFilterWithInfo(timeFilter, loc)
-		}
-	}
-	return nil
-}
-
-func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
-	var ui UI
-	var err error
-
-	switch {
-	case a.Flags.Web:
-		webUI := webui.CreateUI(
-			a.Writer,
-			a.Flags.WebConfig.Listen,
-			a.Flags.WebConfig.OpenBrowser,
-			a.Flags.WebConfig.Browser,
-			!a.Flags.NoColor,
-			a.Flags.ShowApparentSize,
-			a.Flags.ShowRelativeSize,
-			a.Flags.UseSIPrefix,
-		)
-		if a.Flags.NoDelete {
-			webUI.SetNoDelete()
-		}
-		if a.Flags.TrashCommand != "" {
-			webUI.SetTrashCommand(a.Flags.TrashCommand)
-		}
-		if err := webUI.SetCleanupConfig(a.Flags.Cleanup.config()); err != nil {
-			return nil, fmt.Errorf("cleanup config: %w", err)
-		}
-		ui = webUI
-	case a.Flags.OutputFile != "":
-		var output io.Writer
-		if a.Flags.OutputFile == "-" {
-			output = os.Stdout
-		} else {
-			output, err = newOutputFile(a.Flags.OutputFile)
+// createUI returns the frontend front for the settings s, scanning with
+// analyzer.
+func (a *App) createUI(front frontend, analyzer analyze.Analyzer, s *config.Settings) (UI, error) {
+	switch front {
+	case frontendWeb:
+		return webui.CreateUI(a.Writer, analyzer, s)
+	case frontendExport:
+		var output io.Writer = os.Stdout
+		if a.Flags.OutputFile != "-" {
+			file, err := newOutputFile(a.Flags.OutputFile)
 			if err != nil {
 				return nil, err
 			}
+			output = file
 		}
-		ui = report.CreateExportUI(
-			a.Writer,
-			output,
-			!a.Flags.NoColor && a.Istty,
-			!a.Flags.NoProgress && a.Istty,
-			a.Flags.UseSIPrefix,
-			a.Flags.Top,
-			a.Flags.Depth,
-			a.Flags.Summarize,
-			outputAttributes,
-		)
-	case a.Flags.ShouldRunInNonInteractiveMode(a.Istty):
-		fixedUnit := ""
-		if a.Flags.ShowInKiB {
-			fixedUnit = "k"
-		}
-		stdoutUI := stdout.CreateStdoutUI(
-			a.Writer,
-			!a.Flags.NoColor && a.Istty,
-			!a.Flags.NoProgress && a.Istty,
-			a.Flags.ShowApparentSize,
-			a.Flags.ShowRelativeSize,
-			a.Flags.Summarize,
-			a.Flags.UseSIPrefix,
-			a.Flags.NoPrefix,
-			fixedUnit,
-			a.Flags.Top,
-			a.Flags.ReverseSort,
-			a.Flags.Depth,
-		)
-		stdoutUI.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
-
-		if a.Flags.NoUnicode {
-			stdoutUI.UseOldProgressRunes()
-		}
-		if a.Flags.ShowItemCount {
-			stdoutUI.SetShowItemCount()
-		}
-		if a.Flags.ShowSymlinkTarget {
-			stdoutUI.SetShowSymlinkTarget(true)
-		}
-		ui = stdoutUI
-	default:
-		opts := a.getOptions()
-
-		ui = tui.CreateUI(
-			a.TermApp,
-			a.Screen,
-			os.Stdout,
-			!a.Flags.NoColor,
-			a.Flags.ShowApparentSize,
-			a.Flags.ShowRelativeSize,
-			a.Flags.UseSIPrefix,
-			opts...,
-		)
-
-		if !a.Flags.NoColor {
-			tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
-		} else {
-			tview.Styles.ContrastBackgroundColor = tcell.NewRGBColor(150, 150, 150)
-		}
-		tview.Styles.BorderColor = tcell.ColorDefault
+		return report.CreateExportUI(a.Writer, output, analyzer, s), nil
+	case frontendStdout:
+		return stdout.CreateStdoutUI(a.Writer, analyzer, s), nil
+	case frontendTUI:
 	}
 
+	ui := tui.CreateUI(a.TermApp, a.Screen, os.Stdout, analyzer, s)
+	if s.Display.Colors {
+		tview.Styles.TitleColor = tcell.NewRGBColor(27, 161, 227)
+	} else {
+		tview.Styles.ContrastBackgroundColor = tcell.NewRGBColor(150, 150, 150)
+	}
+	tview.Styles.BorderColor = tcell.ColorDefault
 	return ui, nil
-}
-
-// nolint:gocyclo,funlen // This function is a suite of if statements
-func (a *App) getOptions() []tui.Option {
-	var opts []tui.Option
-
-	if a.Flags.Style.SelectedRow.TextColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetSelectedTextColor(tcell.GetColor(a.Flags.Style.SelectedRow.TextColor))
-		})
-	}
-	if a.Flags.Style.SelectedRow.BackgroundColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetSelectedBackgroundColor(tcell.GetColor(a.Flags.Style.SelectedRow.BackgroundColor))
-		})
-	}
-	if a.Flags.Style.Marked.TextColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetMarkedTextColor(tcell.GetColor(a.Flags.Style.Marked.TextColor))
-		})
-	}
-	if a.Flags.Style.Marked.BackgroundColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetMarkedBackgroundColor(tcell.GetColor(a.Flags.Style.Marked.BackgroundColor))
-		})
-	}
-	if a.Flags.Style.Footer.TextColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetFooterTextColor(a.Flags.Style.Footer.TextColor)
-		})
-	}
-	if a.Flags.Style.Footer.BackgroundColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetFooterBackgroundColor(a.Flags.Style.Footer.BackgroundColor)
-		})
-	}
-	if a.Flags.Style.Footer.NumberColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetFooterNumberColor(a.Flags.Style.Footer.NumberColor)
-		})
-	}
-	if a.Flags.Style.Header.TextColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetHeaderTextColor(a.Flags.Style.Header.TextColor)
-		})
-	}
-	if a.Flags.Style.Header.BackgroundColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetHeaderBackgroundColor(a.Flags.Style.Header.BackgroundColor)
-		})
-	}
-	if a.Flags.Style.Header.Hidden {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetHeaderHidden()
-		})
-	}
-	if a.Flags.Style.ResultRow.NumberColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetResultRowNumberColor(a.Flags.Style.ResultRow.NumberColor)
-		})
-	}
-	if a.Flags.Style.ResultRow.DirectoryColor != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetResultRowDirectoryColor(a.Flags.Style.ResultRow.DirectoryColor)
-		})
-	}
-	if a.Flags.Style.ProgressModal.CurrentItemNameMaxLen > 0 {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetCurrentItemNameMaxLen(a.Flags.Style.ProgressModal.CurrentItemNameMaxLen)
-		})
-	}
-	if a.Flags.Style.UseOldSizeBar || a.Flags.NoUnicode {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.UseOldSizeBar()
-		})
-	}
-	if a.Flags.Style.ShowBarPercentage {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetShowBarPercentage()
-		})
-	}
-	if a.Flags.Style.ShowItemCountBar {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetShowItemCountBar()
-		})
-	}
-	if a.Flags.Sorting.Order != "" || a.Flags.Sorting.By != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetDefaultSorting(a.Flags.Sorting.By, a.Flags.Sorting.Order)
-		})
-	}
-	if a.Flags.ChangeCwd {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetChangeCwdFn(os.Chdir)
-		})
-	}
-	if a.Flags.ShowItemCount {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetShowItemCount()
-		})
-	}
-	if a.Flags.ShowMTime {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetShowMTime()
-		})
-	}
-	if a.Flags.ShowSymlinkTarget {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetShowSymlinkTarget(true)
-		})
-	}
-	if a.Flags.NoDelete {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetNoDelete()
-		})
-	}
-	if a.Flags.NoViewFile {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetNoViewFile()
-		})
-	}
-	if a.Flags.NoSpawnShell {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetNoSpawnShell()
-		})
-	}
-	if a.Flags.NoConfirmQuit {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetConfirmQuit(false)
-		})
-	}
-	if a.Flags.CtrlCQuits {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetCtrlCQuits()
-		})
-	}
-	if a.Flags.DeleteInBackground {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetDeleteInBackground()
-		})
-	}
-	if a.Flags.DeleteInParallel {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetDeleteInParallel()
-		})
-	}
-	if a.Flags.TrashCommand != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetTrashCommand(a.Flags.TrashCommand)
-		})
-	}
-	if a.Flags.Shell != "" {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetShellBin(a.Flags.Shell)
-		})
-	}
-	if a.Flags.BrowseParentDirs {
-		opts = append(opts, func(ui *tui.UI) {
-			ui.SetBrowseParentDirs()
-		})
-	}
-	opts = append(opts, func(ui *tui.UI) {
-		ui.SetShowDiskProgressBar(a.Flags.Style.ProgressModal.ShowDiskProgressBar)
-	})
-	return opts
-}
-
-func (a *App) setNoCross(path string) error {
-	if a.Flags.NoCross {
-		mounts, err := a.Getter.GetMounts()
-		if err != nil {
-			return fmt.Errorf("loading mount points: %w", err)
-		}
-		paths := device.GetNestedMountpointsPaths(path, mounts)
-		log.Printf("Ignoring mount points: %s", strings.Join(paths, ", "))
-		a.Flags.IgnoreDirs = append(a.Flags.IgnoreDirs, paths...)
-	}
-	return nil
 }
 
 func (a *App) runAction(ui UI, paths []string) error {

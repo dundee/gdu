@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -31,7 +32,7 @@ func TestConfirmExport(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 
@@ -63,7 +64,7 @@ func TestExportAnalysis(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -88,7 +89,7 @@ func TestExportAnalysisHandlesEncodeError(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.exportName = filepath.Join(t.TempDir(), "export.json")
 	ui.session.SetRoot(errorExportItem{err: errors.New("encode failed")})
@@ -120,7 +121,7 @@ func TestExportAnalysisEsc(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -154,7 +155,7 @@ func TestExportAnalysisWithName(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -215,7 +216,7 @@ func TestExportAnalysisWithoutRights(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir

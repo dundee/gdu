@@ -13,6 +13,7 @@ import (
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -36,39 +37,26 @@ type UI struct {
 	summarize        bool
 }
 
-// CreateExportUI creates UI for stdout
-func CreateExportUI(
-	output io.Writer,
-	exportOutput io.Writer,
-	useColors bool,
-	showProgress bool,
-	useSIPrefix bool,
-	top int,
-	depth int,
-	summarize bool,
-	outputAttributes fs.JSONAttributes,
-) *UI {
+// CreateExportUI returns the UI exporting the analysis to exportOutput as
+// JSON, telling the progress on output.
+func CreateExportUI(output, exportOutput io.Writer, analyzer analyze.Analyzer, s *config.Settings) *UI {
 	ui := &UI{
-		UI: &common.UI{
-			ShowProgress: showProgress,
-			Analyzer:     analyze.CreateAnalyzer(),
-			UseSIPrefix:  useSIPrefix,
-		},
+		UI:               common.NewUI(analyzer, s),
 		output:           output,
 		exportOutput:     exportOutput,
-		outputAttributes: outputAttributes,
-		top:              top,
-		depth:            depth,
-		summarize:        summarize,
+		outputAttributes: s.Export.Attributes,
+		top:              s.Display.Top,
+		depth:            s.Display.Depth,
+		summarize:        s.Display.Summarize,
 	}
-	if !useSIPrefix {
+	if !s.Display.SIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
 	ui.red = color.New(color.FgRed).Add(color.Bold)
 	ui.orange = color.New(color.FgYellow).Add(color.Bold)
 	ui.session = session.New(ui.UI)
 
-	if !useColors {
+	if !s.Display.Colors {
 		color.NoColor = true
 	}
 
@@ -78,14 +66,6 @@ func CreateExportUI(
 // StartUILoop stub
 func (ui *UI) StartUILoop() error {
 	return nil
-}
-
-// SetCollapsePath sets the flag to collapse paths
-func (ui *UI) SetCollapsePath(value bool) {
-}
-
-// SetShowSymlinkTarget is a no-op for the export UI (no rendered file list)
-func (ui *UI) SetShowSymlinkTarget(value bool) {
 }
 
 // ListDevices lists mounted devices and shows their disk usage

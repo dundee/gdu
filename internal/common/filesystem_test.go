@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,8 +33,7 @@ func TestIgnoreOtherFilesystemsLooksUpEachDirOnce(t *testing.T) {
 		"/data/other": 2,
 	})
 
-	ui := &UI{}
-	ui.SetIgnoreOtherFilesystems(true)
+	ui := NewUI(nil, &config.Settings{Scan: config.Scan{IgnoreOtherFilesystems: true}})
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
 	assert.False(t, shouldBeIgnored("a", "/data/a"))
@@ -77,8 +77,7 @@ func TestIgnoreOtherFilesystemsIgnoresDirOnOtherFilesystem(t *testing.T) {
 		"/data/.snapshots/2024-01": 2, // e.g. btrfs snapshot, not a mount point
 	})
 
-	ui := &UI{}
-	ui.SetIgnoreOtherFilesystems(true)
+	ui := NewUI(nil, &config.Settings{Scan: config.Scan{IgnoreOtherFilesystems: true}})
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
 	assert.False(t, shouldBeIgnored("sub", "/data/sub"))
@@ -89,8 +88,7 @@ func TestIgnoreOtherFilesystemsIgnoresDirOnOtherFilesystem(t *testing.T) {
 func TestIgnoreOtherFilesystemsDoesNotIgnoreWhenFilesystemUnknown(t *testing.T) {
 	mockFilesystemIDs(t, map[string]uint64{"/data": 1})
 
-	ui := &UI{}
-	ui.SetIgnoreOtherFilesystems(true)
+	ui := NewUI(nil, &config.Settings{Scan: config.Scan{IgnoreOtherFilesystems: true}})
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
 	assert.False(t, shouldBeIgnored("missing", "/data/missing"))
@@ -106,10 +104,11 @@ func TestIgnoreOtherFilesystemsCombinedWithOtherIgnores(t *testing.T) {
 		"/data/xxx":   1,
 	})
 
-	ui := &UI{}
-	ui.SetIgnoreDirPaths([]string{"/data/abc"})
-	ui.SetIgnoreHidden(true)
-	ui.SetIgnoreOtherFilesystems(true)
+	ui := NewUI(nil, &config.Settings{Scan: config.Scan{
+		IgnoreDirs:             []string{"/data/abc"},
+		IgnoreHidden:           true,
+		IgnoreOtherFilesystems: true,
+	}})
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
 	assert.True(t, shouldBeIgnored("abc", "/data/abc"))

@@ -40,17 +40,6 @@ func userHomeDir() string {
 	return home
 }
 
-// SetCleanupConfig replaces the default classification with one that also
-// applies the user's rules and exclusions.
-func (ui *UI) SetCleanupConfig(cfg cleanup.Config) error {
-	classifier, err := cleanup.NewClassifier(cfg, userHomeDir())
-	if err != nil {
-		return err
-	}
-	ui.classifier = classifier
-	return nil
-}
-
 // currentTree returns the tree to classify and its generation; ok is false
 // while there is none or a scan runs.
 func (ui *UI) currentTree() (root fs.Item, gen uint64, ok bool) {

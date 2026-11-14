@@ -3,13 +3,13 @@ package tui
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestProgressBarSetGetProgress(t *testing.T) {
@@ -70,7 +70,7 @@ func scanWithDeviceSize(t *testing.T, showBar bool) *UI {
 	t.Cleanup(simScreen.Fini)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, nil, false, false, false, false)
+	ui := CreateUI(app, simScreen, nil, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.currentDeviceSize = 1000
 	ui.showDiskProgressBar = showBar
 	ui.done = make(chan struct{})
@@ -106,7 +106,7 @@ func TestProgressObserverUpdatesBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, nil, false, false, false, false)
+	ui := CreateUI(app, simScreen, nil, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.progressBar = NewProgressBar()
 	ui.showScanProgressModal(" Scanning... ")
 
@@ -125,7 +125,7 @@ func TestProgressObserverShowsTheScannedRoot(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, nil, false, false, false, false)
+	ui := CreateUI(app, simScreen, nil, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.showScanProgressModal(scanProgressTitle(1, 2))
 
 	observe := ui.progressObserver(0, false)

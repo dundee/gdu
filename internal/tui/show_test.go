@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -16,7 +17,7 @@ func TestHelpMoveToTrash(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	helpText := ui.formatHelpTextFor()
 
@@ -28,7 +29,7 @@ func TestHelpListsCopyPath(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	helpText := ui.formatHelpTextFor()
 
@@ -39,10 +40,10 @@ func TestHelpNoSpawnShell(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
-	ui.SetNoDelete()
-	ui.SetNoSpawnShell()
-	ui.SetNoViewFile()
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
+	ui.setNoDelete()
+	ui.setNoSpawnShell()
+	ui.setNoViewFile()
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -61,7 +62,7 @@ func TestCollapsePathFlag(t *testing.T) {
 	app := testapp.CreateMockedApp(true)
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	// Create a collapsible structure
 	deepestDir := &analyze.Dir{
@@ -100,7 +101,7 @@ func TestCollapsePathFlag(t *testing.T) {
 	assert.NotContains(t, cell.Text, "deepest")
 
 	// Enable flag -> Should collapse
-	ui.SetCollapsePath(true)
+	ui.setCollapsePath(true)
 	ui.showDir()
 	cell = ui.table.GetCell(0, 0)
 	assert.Contains(t, cell.Text, "middle/deepest")
@@ -115,7 +116,7 @@ func TestColumnsWidthMatchesRenderedRow(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	root := &analyze.Dir{
 		File:      &analyze.File{Name: "root", Usage: 1000, Size: 1000},
@@ -173,7 +174,7 @@ func TestParentRowIsPaddedToColumnsWidth(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.showItemCount = true
 	ui.showItemCountBar = true
 

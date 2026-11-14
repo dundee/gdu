@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNoViewFileFlagRegistered(t *testing.T) {
@@ -237,4 +240,27 @@ func TestInitConfigNullConfigs(t *testing.T) {
 			}
 		}
 	}
+}
+
+// A config file that cannot be read is reported on stderr, naming the file,
+// rather than only in the log, which is /dev/null by default.
+func TestBrokenConfigIsReported(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "gdu.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(":\tinvalid: yaml: {"), 0o600))
+
+	origArgs, origPath, origErr, origAf := os.Args, systemConfigPath, configErr, af
+	t.Cleanup(func() {
+		os.Args, systemConfigPath, configErr, af = origArgs, origPath, origErr, origAf
+	})
+	systemConfigPath = filepath.Join(dir, "missing.yaml")
+	os.Args = []string{"gdu", "--config-file=" + path}
+	af = &app.Flags{}
+	configErr = nil
+
+	initConfig()
+	var stderr bytes.Buffer
+	reportConfigError(&stderr)
+
+	assert.Contains(t, stderr.String(), "gdu: ignoring the config file: "+path+":")
 }

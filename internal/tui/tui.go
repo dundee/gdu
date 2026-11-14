@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/remove"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/timefilter"
@@ -131,28 +132,11 @@ type ResultRow struct {
 	DirectoryColor string
 }
 
-// Option is optional function customizing the behaviour of UI
-type Option func(ui *UI)
-
-// CreateUI creates the whole UI app
-func CreateUI(
-	app TermApplication,
-	screen tcell.Screen,
-	output io.Writer,
-	useColors bool,
-	showApparentSize bool,
-	showRelativeSize bool,
-	useSIPrefix bool,
-	opts ...Option,
-) *UI {
+// CreateUI returns the terminal UI for the settings s, running in app on
+// screen and scanning with analyzer. output receives what is printed on quit.
+func CreateUI(app TermApplication, screen tcell.Screen, output io.Writer, analyzer analyze.Analyzer, s *config.Settings) *UI {
 	ui := &UI{
-		UI: &common.UI{
-			UseColors:        useColors,
-			ShowApparentSize: showApparentSize,
-			ShowRelativeSize: showRelativeSize,
-			Analyzer:         analyze.CreateAnalyzer(),
-			UseSIPrefix:      useSIPrefix,
-		},
+		UI:                      common.NewUI(analyzer, s),
 		app:                     app,
 		screen:                  screen,
 		output:                  output,
@@ -179,12 +163,10 @@ func CreateUI(
 	}
 	ui.newDeleter = ui.defaultDeleter
 	ui.session = session.New(ui.UI)
-	if !useSIPrefix {
+	if !s.Display.SIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
-	for _, o := range opts {
-		o(ui)
-	}
+	ui.apply(s)
 
 	ui.resetSorting()
 
@@ -254,102 +236,164 @@ func (ui *UI) createGrid() {
 	}
 }
 
-// SetSelectedTextColor sets the color for the highlighted selected text
-func (ui *UI) SetSelectedTextColor(color tcell.Color) {
+// apply configures the UI with the settings s.
+//
+//nolint:gocyclo // a suite of if statements
+func (ui *UI) apply(s *config.Settings) {
+	style := s.TUI.Style
+	for _, c := range []struct {
+		value string
+		set   func(string)
+	}{
+		{style.SelectedRowText, func(c string) { ui.setSelectedTextColor(tcell.GetColor(c)) }},
+		{style.SelectedRowBackground, func(c string) { ui.setSelectedBackgroundColor(tcell.GetColor(c)) }},
+		{style.MarkedText, func(c string) { ui.setMarkedTextColor(tcell.GetColor(c)) }},
+		{style.MarkedBackground, func(c string) { ui.setMarkedBackgroundColor(tcell.GetColor(c)) }},
+		{style.FooterText, ui.setFooterTextColor},
+		{style.FooterBackground, ui.setFooterBackgroundColor},
+		{style.FooterNumber, ui.setFooterNumberColor},
+		{style.HeaderText, ui.setHeaderTextColor},
+		{style.HeaderBackground, ui.setHeaderBackgroundColor},
+		{style.ResultRowNumber, ui.setResultRowNumberColor},
+		{style.ResultRowDirectory, ui.setResultRowDirectoryColor},
+	} {
+		if c.value != "" {
+			c.set(c.value)
+		}
+	}
+	if style.HeaderHidden {
+		ui.setHeaderHidden()
+	}
+	if style.CurrentItemNameMaxLen > 0 {
+		ui.setCurrentItemNameMaxLen(style.CurrentItemNameMaxLen)
+	}
+	ui.useOldSizeBar = style.OldSizeBar
+	ui.showBarPercentage = style.ShowBarPercentage
+	ui.showItemCountBar = style.ShowItemCountBar
+	ui.showDiskProgressBar = style.ShowDiskProgressBar
+
+	ui.setDefaultSorting(s.Display.SortBy, s.Display.SortOrder)
+	ui.showItemCount = s.Display.ItemCount
+	ui.showMtime = s.Display.MTime
+	ui.showSymlinkTarget = s.Display.SymlinkTarget
+	ui.collapsePath = s.Display.CollapsePath
+
+	if s.TUI.ChangeCwd {
+		ui.setChangeCwdFn(os.Chdir)
+	}
+	ui.noDelete = s.Delete.Disabled
+	ui.noViewFile = s.TUI.NoViewFile
+	ui.noSpawnShell = s.TUI.NoSpawnShell
+	ui.confirmQuit = !s.TUI.NoConfirmQuit
+	ui.ctrlCQuits = s.TUI.CtrlCQuits
+	ui.deleteInParallel = s.Delete.InParallel
+	if s.Delete.TrashCommand != "" {
+		ui.setTrashCommand(s.Delete.TrashCommand)
+	}
+	ui.shellBin = s.TUI.Shell
+	ui.browseParentDirs = s.TUI.BrowseParentDirs
+	ui.setTimeFilterWithInfo(s.Scan.TimeFilter, s.Scan.TimeLocation)
+	if s.Delete.InBackground {
+		ui.setDeleteInBackground()
+	}
+}
+
+// setSelectedTextColor sets the color for the highlighted selected text
+func (ui *UI) setSelectedTextColor(color tcell.Color) {
 	ui.selectedTextColor = color
 }
 
-// SetSelectedBackgroundColor sets the color for the highlighted selected text
-func (ui *UI) SetSelectedBackgroundColor(color tcell.Color) {
+// setSelectedBackgroundColor sets the color for the highlighted selected text
+func (ui *UI) setSelectedBackgroundColor(color tcell.Color) {
 	ui.selectedBackgroundColor = color
 }
 
-// SetMarkedTextColor sets the text color for marked items
-func (ui *UI) SetMarkedTextColor(color tcell.Color) {
+// setMarkedTextColor sets the text color for marked items
+func (ui *UI) setMarkedTextColor(color tcell.Color) {
 	ui.markedTextColor = color
 }
 
-// SetMarkedBackgroundColor sets the background color for marked items
-func (ui *UI) SetMarkedBackgroundColor(color tcell.Color) {
+// setMarkedBackgroundColor sets the background color for marked items
+func (ui *UI) setMarkedBackgroundColor(color tcell.Color) {
 	ui.markedBackgroundColor = color
 }
 
-// SetFooterTextColor sets the color for the footer text
-func (ui *UI) SetFooterTextColor(color string) {
+// setFooterTextColor sets the color for the footer text
+func (ui *UI) setFooterTextColor(color string) {
 	ui.footerTextColor = color
 }
 
-// SetFooterBackgroundColor sets the color for the footer background
-func (ui *UI) SetFooterBackgroundColor(color string) {
+// setFooterBackgroundColor sets the color for the footer background
+func (ui *UI) setFooterBackgroundColor(color string) {
 	ui.footerBackgroundColor = color
 }
 
-// SetFooterNumberColor sets the color for the footer number
-func (ui *UI) SetFooterNumberColor(color string) {
+// setFooterNumberColor sets the color for the footer number
+func (ui *UI) setFooterNumberColor(color string) {
 	ui.footerNumberColor = color
 }
 
-// SetHeaderTextColor sets the color for the header text
-func (ui *UI) SetHeaderTextColor(color string) {
+// setHeaderTextColor sets the color for the header text
+func (ui *UI) setHeaderTextColor(color string) {
 	ui.headerTextColor = color
 }
 
-// SetHeaderBackgroundColor sets the color for the header background
-func (ui *UI) SetHeaderBackgroundColor(color string) {
+// setHeaderBackgroundColor sets the color for the header background
+func (ui *UI) setHeaderBackgroundColor(color string) {
 	ui.headerBackgroundColor = color
 }
 
-// SetHeaderHidden sets the flag to hide the header
-func (ui *UI) SetHeaderHidden() {
+// setHeaderHidden sets the flag to hide the header
+func (ui *UI) setHeaderHidden() {
 	ui.headerHidden = true
 }
 
-// SetResultRowDirectoryColor sets the color for the result row directory
-func (ui *UI) SetResultRowDirectoryColor(color string) {
+// setResultRowDirectoryColor sets the color for the result row directory
+func (ui *UI) setResultRowDirectoryColor(color string) {
 	ui.resultRow.DirectoryColor = color
 }
 
-// SetResultRowNumberColor sets the color for the result row number
-func (ui *UI) SetResultRowNumberColor(color string) {
+// setResultRowNumberColor sets the color for the result row number
+func (ui *UI) setResultRowNumberColor(color string) {
 	ui.resultRow.NumberColor = color
 }
 
-// SetCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item
+// setCurrentItemNameMaxLen sets the maximum length of the path of the currently processed item
 // to be shown in the progress modal
-func (ui *UI) SetCurrentItemNameMaxLen(maxLen int) {
+func (ui *UI) setCurrentItemNameMaxLen(maxLen int) {
 	ui.currentItemNameMaxLen = maxLen
 }
 
-// UseOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)
-func (ui *UI) UseOldSizeBar() {
+// setOldSizeBar uses the old size bar (# chars) instead of the new one (unicode block elements)
+func (ui *UI) setOldSizeBar() {
 	ui.useOldSizeBar = true
 }
 
-// SetShowBarPercentage shows the numeric usage percentage next to the size bar
-func (ui *UI) SetShowBarPercentage() {
+// setShowBarPercentage shows the numeric usage percentage next to the size bar
+func (ui *UI) setShowBarPercentage() {
 	ui.showBarPercentage = true
 }
 
-// SetShowItemCountBar shows a bar next to the item count column, drawn in
+// setShowItemCountBar shows a bar next to the item count column, drawn in
 // proportion to the item counts of the sibling items. It only takes effect
 // while the item count column itself is visible (the "c" key).
-func (ui *UI) SetShowItemCountBar() {
+func (ui *UI) setShowItemCountBar() {
 	ui.showItemCountBar = true
 }
 
-// SetChangeCwdFn sets function that can be used to change current working dir
+// setChangeCwdFn sets function that can be used to change current working dir
 // during dir browsing
-func (ui *UI) SetChangeCwdFn(fn func(string) error) {
+func (ui *UI) setChangeCwdFn(fn func(string) error) {
 	ui.changeCwdFn = fn
 }
 
-// SetDeleteInParallel sets the flag to delete files in parallel
-func (ui *UI) SetDeleteInParallel() {
+// setDeleteInParallel sets the flag to delete files in parallel
+func (ui *UI) setDeleteInParallel() {
 	ui.deleteInParallel = true
 }
 
-// SetTrashCommand replaces the built-in trash with an external command
-func (ui *UI) SetTrashCommand(command string) {
+// setTrashCommand replaces the built-in trash with an external command
+func (ui *UI) setTrashCommand(command string) {
 	ui.trasher = remove.TrashCommand(command)
 }
 
@@ -450,75 +494,75 @@ func (ui *UI) cancelScan() bool {
 	return true
 }
 
-// SetConfirmQuit sets whether gdu asks for confirmation before quitting
+// setConfirmQuit sets whether gdu asks for confirmation before quitting
 // after a scan that took a noticeable amount of time
-func (ui *UI) SetConfirmQuit(value bool) {
+func (ui *UI) setConfirmQuit(value bool) {
 	ui.confirmQuit = value
 }
 
-// SetCtrlCQuits makes Ctrl+C quit gdu during a scan instead of stopping the
+// setCtrlCQuits makes Ctrl+C quit gdu during a scan instead of stopping the
 // scan and keeping the results found so far. Esc always stops the scan,
 // regardless of this setting.
-func (ui *UI) SetCtrlCQuits() {
+func (ui *UI) setCtrlCQuits() {
 	ui.ctrlCQuits = true
 }
 
-// SetShowItemCount sets the flag to show number of items in directory
-func (ui *UI) SetShowItemCount() {
+// setShowItemCount sets the flag to show number of items in directory
+func (ui *UI) setShowItemCount() {
 	ui.showItemCount = true
 }
 
-// SetShowMTime sets the flag to show last modification time of items in directory
-func (ui *UI) SetShowMTime() {
+// setShowMTime sets the flag to show last modification time of items in directory
+func (ui *UI) setShowMTime() {
 	ui.showMtime = true
 }
 
-// SetShowSymlinkTarget enables displaying the symlink target (name -> target)
-func (ui *UI) SetShowSymlinkTarget(value bool) {
+// setShowSymlinkTarget enables displaying the symlink target (name -> target)
+func (ui *UI) setShowSymlinkTarget(value bool) {
 	ui.showSymlinkTarget = value
 }
 
-// SetNoDelete disables all write operations
-func (ui *UI) SetNoDelete() {
+// setNoDelete disables all write operations
+func (ui *UI) setNoDelete() {
 	ui.noDelete = true
 }
 
-// SetNoSpawnShell disables shell spawning
-func (ui *UI) SetNoSpawnShell() {
+// setNoSpawnShell disables shell spawning
+func (ui *UI) setNoSpawnShell() {
 	ui.noSpawnShell = true
 }
 
-// SetShellBin sets the shell binary spawned by the b key.
-func (ui *UI) SetShellBin(path string) {
+// setShellBin sets the shell binary spawned by the b key.
+func (ui *UI) setShellBin(path string) {
 	ui.shellBin = path
 }
 
-func (ui *UI) SetNoViewFile() {
+func (ui *UI) setNoViewFile() {
 	ui.noViewFile = true
 }
 
-// SetNoDelete disables delete when time filters are active
-func (ui *UI) SetNoDeleteWithFilter() {
+// setNoDelete disables delete when time filters are active
+func (ui *UI) setNoDeleteWithFilter() {
 	ui.noDeleteWithFilter = true
 }
 
-// SetBrowseParentDirs enables navigating above the launch directory
-func (ui *UI) SetBrowseParentDirs() {
+// setBrowseParentDirs enables navigating above the launch directory
+func (ui *UI) setBrowseParentDirs() {
 	ui.browseParentDirs = true
 }
 
-// SetCollapsePath sets the flag to collapse paths
-func (ui *UI) SetCollapsePath(value bool) {
+// setCollapsePath sets the flag to collapse paths
+func (ui *UI) setCollapsePath(value bool) {
 	ui.collapsePath = value
 }
 
-// SetShowDiskProgressBar sets whether to show a progress bar when scanning a whole disk
-func (ui *UI) SetShowDiskProgressBar(value bool) {
+// setShowDiskProgressBar sets whether to show a progress bar when scanning a whole disk
+func (ui *UI) setShowDiskProgressBar(value bool) {
 	ui.showDiskProgressBar = value
 }
 
-// SetDeleteInBackground sets the flag to delete files in background
-func (ui *UI) SetDeleteInBackground() {
+// setDeleteInBackground sets the flag to delete files in background
+func (ui *UI) setDeleteInBackground() {
 	ui.deleteInBackground = true
 
 	for i := 0; i < ui.deleteWorkersCount; i++ {
@@ -708,19 +752,14 @@ func (ui *UI) confirmDeletionSelected(targets []deleteTarget, action DeleteActio
 	ui.pages.AddPage("confirm", modal, true, true)
 }
 
-// SetTimeFilterWithInfo sets both the time filter function and stores the filter info for display
-func (ui *UI) SetTimeFilterWithInfo(tf *timefilter.TimeFilter, loc *time.Location) {
+// setTimeFilterWithInfo keeps the time filter of the scan for display, and
+// disables deleting while it is active, unless that is allowed.
+func (ui *UI) setTimeFilterWithInfo(tf *timefilter.TimeFilter, loc *time.Location) {
 	ui.timeFilter = tf
 	ui.timeFilterLoc = loc
 
-	if tf != nil && !tf.IsEmpty() {
-		timeFilterFunc := func(mtime time.Time) bool {
-			return tf.IncludeByTimeFilter(mtime, loc)
-		}
-		ui.SetTimeFilter(timeFilterFunc)
-		if !ui.isDeleteAllowedWithFilter() {
-			ui.SetNoDeleteWithFilter()
-		}
+	if tf != nil && !tf.IsEmpty() && !ui.isDeleteAllowedWithFilter() {
+		ui.setNoDeleteWithFilter()
 	}
 }
 

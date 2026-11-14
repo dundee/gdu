@@ -17,8 +17,8 @@ const (
 	descOrder = "desc"
 )
 
-// SetDefaultSorting sets the default sorting
-func (ui *UI) SetDefaultSorting(by, order string) {
+// setDefaultSorting sets the default sorting
+func (ui *UI) setDefaultSorting(by, order string) {
 	if by != "" {
 		ui.defaultSortBy = by
 	}

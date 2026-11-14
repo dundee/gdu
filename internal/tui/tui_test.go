@@ -9,8 +9,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
@@ -22,6 +21,7 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +34,7 @@ func TestFooter(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(15, 15)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -79,7 +79,7 @@ func TestProgressObserverShowsCancellationHint(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.progress = ui.header
 
 	ui.progressObserver(0, false)(session.Progress{Root: 1, Roots: 1})
@@ -95,12 +95,12 @@ func TestStopScanHint(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	assert.Equal(t, "Press Esc or Ctrl+C to stop scanning and keep results", ui.stopScanHint())
 
 	// Ctrl+C quits, so it must not be advertised as the way to keep results
-	ui.SetCtrlCQuits()
+	ui.setCtrlCQuits()
 	assert.Equal(t, "Press Esc to stop scanning and keep results", ui.stopScanHint())
 }
 
@@ -109,12 +109,12 @@ func TestSetShowDiskProgressBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
-	ui.SetShowDiskProgressBar(true)
+	ui.setShowDiskProgressBar(true)
 	assert.True(t, ui.showDiskProgressBar)
 
-	ui.SetShowDiskProgressBar(false)
+	ui.setShowDiskProgressBar(false)
 	assert.False(t, ui.showDiskProgressBar)
 }
 
@@ -123,10 +123,10 @@ func TestDeviceSelectedSetsCurrentDeviceSize(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true, RelativeSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
 	err := ui.ListDevices(getDevicesInfoMock())
 	assert.Nil(t, err)
 
@@ -145,7 +145,7 @@ func TestHelp(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.showHelp()
 
 	assert.True(t, ui.pages.HasPage("help"))
@@ -160,7 +160,7 @@ func TestHelpBw(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.showHelp()
 	ui.help.Draw(simScreen)
 	simScreen.Show()
@@ -172,7 +172,7 @@ func TestHelpShowsScanKeys(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	text := ui.formatHelpTextFor()
 	assert.Contains(t, text, "Preview results found so far")
@@ -184,7 +184,7 @@ func TestAppRun(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	err := ui.StartUILoop()
 
@@ -204,7 +204,7 @@ func TestUILoopReturnsWithPendingSignal(t *testing.T) {
 		MockedApp:       testapp.CreateMockedApp(false),
 		signalAttempted: screen.attempted,
 	}
-	ui := CreateUI(app, screen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	signals := make(chan os.Signal, 1)
 	signals <- os.Interrupt
 
@@ -226,7 +226,7 @@ func TestAppRunWithErr(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	err := ui.StartUILoop()
 
@@ -250,7 +250,7 @@ func TestRescanDir(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.currentDir = currentDir
@@ -299,7 +299,7 @@ func TestSelectedWithoutCurrentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	ui.fileItemSelected(1, 0)
 
@@ -313,7 +313,7 @@ func TestBeforeDraw(t *testing.T) {
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, screen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	for _, f := range ui.app.(*testapp.MockedApp).BeforeDraws {
 		assert.False(t, f(screen))
@@ -325,9 +325,8 @@ func TestIgnorePaths(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
-
-	ui.SetIgnoreDirPaths([]string{"/aaa", "/bbb"})
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{ApparentSize: true}, Scan: config.Scan{IgnoreDirs: []string{"/aaa", "/bbb"}}})
 
 	assert.True(t, ui.ShouldDirBeIgnored("aaa", "/aaa"))
 	assert.True(t, ui.ShouldDirBeIgnored("bbb", "/bbb"))
@@ -419,7 +418,7 @@ func TestDeleteSelectedInParallel(t *testing.T) {
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
 	ui.done = make(chan struct{})
-	ui.SetDeleteInParallel()
+	ui.setDeleteInParallel()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -443,7 +442,7 @@ func TestDeleteSelectedInBackground(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.newDeleter = fakeDeleter(testanalyze.ItemFromDirWithSleep)
 	ui.done = make(chan struct{})
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -466,7 +465,7 @@ func TestMoveToTrashSelectedInBackground(t *testing.T) {
 
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.done = make(chan struct{})
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 	var trashed string
 	ui.trasher = func(item fs.Item) (bool, error) {
 		trashed = item.GetName()
@@ -494,8 +493,8 @@ func TestDeleteSelectedInBackgroundAndParallel(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.newDeleter = fakeDeleter(testanalyze.ItemFromDirWithSleep)
 	ui.done = make(chan struct{})
-	ui.SetDeleteInBackground()
-	ui.SetDeleteInParallel()
+	ui.setDeleteInBackground()
+	ui.setDeleteInParallel()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -518,7 +517,7 @@ func TestDeleteSelectedInBackgroundBW(t *testing.T) {
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
 	ui.done = make(chan struct{})
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -541,7 +540,7 @@ func TestEmptyDirInBackground(t *testing.T) {
 
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.done = make(chan struct{})
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -565,7 +564,7 @@ func TestEmptyFileInBackground(t *testing.T) {
 
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.done = make(chan struct{})
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -618,7 +617,7 @@ func TestDeleteSelectedInBackgroundWithErr(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 	ui.newDeleter = fakeDeleter(testanalyze.ItemFromDirWithSleepAndErr)
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
@@ -674,7 +673,7 @@ func TestDeleteMarkedInBackground(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -702,8 +701,8 @@ func TestDeleteMarkedInBackgroundWithStorage(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.SetAnalyzer(badger.CreateAnalyzer("/tmp/badger"))
-	ui.SetDeleteInBackground()
+	ui.Analyzer = (badger.CreateAnalyzer("/tmp/badger"))
+	ui.setDeleteInBackground()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -731,9 +730,9 @@ func TestDeleteMarkedInBackgroundWithStorageAndParallel(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.SetAnalyzer(badger.CreateAnalyzer("/tmp/badger"))
-	ui.SetDeleteInBackground()
-	ui.SetDeleteInParallel()
+	ui.Analyzer = (badger.CreateAnalyzer("/tmp/badger"))
+	ui.setDeleteInBackground()
+	ui.setDeleteInParallel()
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
 
@@ -761,7 +760,7 @@ func TestDeleteMarkedInBackgroundWithErr(t *testing.T) {
 	defer fin()
 
 	ui := getAnalyzedPathMockedApp(t, false, true, false)
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 	ui.newDeleter = fakeDeleter(testanalyze.ItemFromDirWithErr)
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
@@ -786,7 +785,7 @@ func TestShowErr(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	ui.showErr("Something went wrong", errors.New("error"))
 
@@ -798,7 +797,7 @@ func TestShowErrBW(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	ui.showErr("Something went wrong", errors.New("error"))
 
@@ -814,25 +813,23 @@ func TestSetStyles(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
-	opts := []Option{}
-	opts = append(opts, func(ui *UI) {
-		ui.SetHeaderHidden()
+	app := testapp.CreateMockedApp(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{
+		Display: config.Display{ApparentSize: true},
+		TUI:     config.TUI{Style: config.Style{HeaderHidden: true}},
 	})
 
-	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, opts...)
-
-	ui.SetSelectedBackgroundColor(tcell.ColorRed)
-	ui.SetSelectedTextColor(tcell.ColorRed)
-	ui.SetMarkedTextColor(tcell.ColorRed)
-	ui.SetMarkedBackgroundColor(tcell.ColorRed)
-	ui.SetFooterTextColor("red")
-	ui.SetFooterBackgroundColor("red")
-	ui.SetFooterNumberColor("red")
-	ui.SetHeaderTextColor("red")
-	ui.SetHeaderBackgroundColor("red")
-	ui.SetResultRowDirectoryColor("red")
-	ui.SetResultRowNumberColor("red")
+	ui.setSelectedBackgroundColor(tcell.ColorRed)
+	ui.setSelectedTextColor(tcell.ColorRed)
+	ui.setMarkedTextColor(tcell.ColorRed)
+	ui.setMarkedBackgroundColor(tcell.ColorRed)
+	ui.setFooterTextColor("red")
+	ui.setFooterBackgroundColor("red")
+	ui.setFooterNumberColor("red")
+	ui.setHeaderTextColor("red")
+	ui.setHeaderBackgroundColor("red")
+	ui.setResultRowDirectoryColor("red")
+	ui.setResultRowNumberColor("red")
 
 	assert.Equal(t, ui.selectedBackgroundColor, tcell.ColorRed)
 	assert.Equal(t, ui.selectedTextColor, tcell.ColorRed)
@@ -853,9 +850,9 @@ func TestSetCurrentItemNameMaxLen(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.SetCurrentItemNameMaxLen(5)
+	ui.setCurrentItemNameMaxLen(5)
 
 	assert.Equal(t, ui.currentItemNameMaxLen, 5)
 }
@@ -865,9 +862,9 @@ func TestUseOldSizeBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.UseOldSizeBar()
+	ui.setOldSizeBar()
 
 	assert.Equal(t, ui.useOldSizeBar, true)
 }
@@ -877,9 +874,9 @@ func TestSetShowBarPercentage(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.SetShowBarPercentage()
+	ui.setShowBarPercentage()
 
 	assert.Equal(t, ui.showBarPercentage, true)
 }
@@ -889,9 +886,9 @@ func TestSetShowItemCount(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.SetShowItemCount()
+	ui.setShowItemCount()
 
 	assert.Equal(t, ui.showItemCount, true)
 }
@@ -901,11 +898,11 @@ func TestSetShowItemCountBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
 	assert.Equal(t, ui.showItemCountBar, false)
 
-	ui.SetShowItemCountBar()
+	ui.setShowItemCountBar()
 
 	assert.Equal(t, ui.showItemCountBar, true)
 }
@@ -915,9 +912,9 @@ func TestSetShowMTime(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.SetShowMTime()
+	ui.setShowMTime()
 
 	assert.Equal(t, ui.showMtime, true)
 }
@@ -927,9 +924,9 @@ func TestNoDelete(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.SetNoDelete()
+	ui.setNoDelete()
 
 	assert.Equal(t, ui.noDelete, true)
 }
@@ -939,9 +936,9 @@ func TestNoSpawnShell(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.SetNoSpawnShell()
+	ui.setNoSpawnShell()
 
 	assert.Equal(t, ui.noSpawnShell, true)
 }
@@ -951,9 +948,9 @@ func TestNoViewFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 
-	ui.SetNoViewFile()
+	ui.setNoViewFile()
 
 	assert.Equal(t, ui.noViewFile, true)
 }
@@ -1008,7 +1005,8 @@ func getAnalyzedPathMockedApp(t *testing.T, useColors, apparentSize, mockedAnaly
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, useColors, apparentSize, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: useColors, ApparentSize: apparentSize}})
 
 	if mockedAnalyzer {
 		ui.Analyzer = &testanalyze.MockedAnalyzer{}
@@ -1228,4 +1226,36 @@ func TestConfirmDeletionMarkedCase1(t *testing.T) {
 	}
 
 	assert.NoDirExists(t, "test_dir/nested/subnested")
+}
+
+// The UI is configured from its settings when it is created.
+func TestCreateUIAppliesSettings(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+
+	ui := CreateUI(testapp.CreateMockedApp(true), simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{
+		Display: config.Display{ItemCount: true, MTime: true, SymlinkTarget: true, CollapsePath: true, SortBy: "name", SortOrder: "asc"},
+		Delete:  config.Delete{Disabled: true, InParallel: true},
+		TUI: config.TUI{
+			Shell: "/bin/zsh", NoViewFile: true, NoSpawnShell: true, NoConfirmQuit: true, CtrlCQuits: true, BrowseParentDirs: true,
+			Style: config.Style{
+				SelectedRowText: "red", FooterText: "blue", HeaderHidden: true, ResultRowNumber: "green",
+				CurrentItemNameMaxLen: 30, OldSizeBar: true, ShowBarPercentage: true, ShowItemCountBar: true, ShowDiskProgressBar: true,
+			},
+		},
+	})
+
+	assert.True(t, ui.showItemCount && ui.showMtime && ui.showSymlinkTarget && ui.collapsePath)
+	assert.Equal(t, "name", ui.sortBy)
+	assert.Equal(t, "asc", ui.sortOrder)
+	assert.True(t, ui.noDelete && ui.deleteInParallel)
+	assert.Equal(t, "/bin/zsh", ui.shellBin)
+	assert.True(t, ui.noViewFile && ui.noSpawnShell && ui.ctrlCQuits && ui.browseParentDirs)
+	assert.False(t, ui.confirmQuit)
+	assert.Equal(t, tcell.GetColor("red"), ui.selectedTextColor)
+	assert.Equal(t, "blue", ui.footerTextColor)
+	assert.True(t, ui.headerHidden)
+	assert.Equal(t, "green", ui.resultRow.NumberColor)
+	assert.Equal(t, 30, ui.currentItemNameMaxLen)
+	assert.True(t, ui.useOldSizeBar && ui.showBarPercentage && ui.showItemCountBar && ui.showDiskProgressBar)
 }

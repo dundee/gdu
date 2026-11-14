@@ -23,7 +23,7 @@ func TestOutputFileKeptWhenTheRunFails(t *testing.T) {
 
 	_, err := runApp(&Flags{LogFile: "/dev/null", InputFile: report, OutputFile: report},
 		[]string{}, false, testdev.DevicesInfoGetterMock{})
-	assert.ErrorContains(t, err, "reading analysis is not possible while exporting")
+	assert.ErrorContains(t, err, "--output-file and --input-file cannot be used at once")
 
 	_, err = runApp(&Flags{LogFile: "/dev/null", OutputFile: filepath.Join(dir, "new.json"), ShowDisks: true},
 		[]string{}, false, testdev.DevicesInfoGetterMock{})

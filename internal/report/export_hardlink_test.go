@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -19,8 +20,7 @@ func TestAnalyzePathWithDepthKeepsHardLinkAttrs(t *testing.T) {
 	assert.Nil(t, os.Link("test_dir/nested/file2", "test_dir/nested/file3"))
 
 	var output, reportOutput bytes.Buffer
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 2, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 2}})
 	assert.Nil(t, ui.AnalyzePath("test_dir", nil))
 
 	// the depth filter copies leaves through the fs.Item interface; Flag and
@@ -35,14 +35,13 @@ func TestAnalyzePathWithSelectedAttributesIncludingIno(t *testing.T) {
 	assert.Nil(t, os.Link("test_dir/nested/file2", "test_dir/nested/file3"))
 
 	var output, reportOutput bytes.Buffer
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 0, false, fs.JSONAttributes{
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Export: config.Export{Attributes: fs.JSONAttributes{
 		"name":  {},
 		"asize": {},
 		"dsize": {},
 		"items": {},
 		"ino":   {},
-	})
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	}}})
 	assert.Nil(t, ui.AnalyzePath("test_dir", nil))
 
 	assert.Contains(t, reportOutput.String(), `"hlnkc":true`)
@@ -72,13 +71,12 @@ func TestAnalyzePathWithSelectedAttributesExcludingIno(t *testing.T) {
 	assert.Nil(t, os.Link("test_dir/nested/file2", "test_dir/nested/file3"))
 
 	var output, reportOutput bytes.Buffer
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 0, false, fs.JSONAttributes{
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Export: config.Export{Attributes: fs.JSONAttributes{
 		"name":  {},
 		"asize": {},
 		"dsize": {},
 		"items": {},
-	})
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	}}})
 	assert.Nil(t, ui.AnalyzePath("test_dir", nil))
 
 	assert.NotContains(t, reportOutput.String(), `"hlnkc"`)

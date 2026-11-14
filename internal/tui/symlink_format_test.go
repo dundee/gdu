@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
@@ -30,8 +31,8 @@ func TestFormatSymlinkRow(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
-	ui.SetShowSymlinkTarget(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
+	ui.setShowSymlinkTarget(true)
 
 	symlinkRow := ui.formatFileRow(newSymlinkTestFile(), rowMaxima{usage: 100, size: 100}, false, false)
 
@@ -48,7 +49,7 @@ func TestFormatSymlinkRowDisabledByDefault(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
 
 	symlinkRow := ui.formatFileRow(newSymlinkTestFile(), rowMaxima{usage: 100, size: 100}, false, false)
 
@@ -65,8 +66,8 @@ func TestSymlinkTargetInfoLine(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
-	ui.SetShowSymlinkTarget(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
+	ui.setShowSymlinkTarget(true)
 
 	line := ui.symlinkTargetInfoLine(newSymlinkTestFile())
 	if !bytes.Contains([]byte(line), []byte("Target:")) {
@@ -82,7 +83,7 @@ func TestSymlinkTargetInfoLineDisabledByDefault(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
 
 	if line := ui.symlinkTargetInfoLine(newSymlinkTestFile()); line != "" {
 		t.Errorf("info line should be empty when the option is disabled, got %q", line)
@@ -94,8 +95,8 @@ func TestSymlinkTargetInfoLineForNonSymlink(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
-	ui.SetShowSymlinkTarget(true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
+	ui.setShowSymlinkTarget(true)
 
 	regular := &analyze.File{Name: "file", Size: 5}
 	if line := ui.symlinkTargetInfoLine(regular); line != "" {

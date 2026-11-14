@@ -5,9 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -21,7 +23,7 @@ func TestDoubleClick(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -57,7 +59,7 @@ func TestDoubleClickNoViewFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -70,7 +72,7 @@ func TestDoubleClickNoViewFile(t *testing.T) {
 
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRight, 'l', 0))
 	ui.table.Select(2, 0)
-	ui.SetNoViewFile()
+	ui.setNoViewFile()
 	previousHeaderText := ui.header.GetText(false)
 
 	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseLeftDoubleClick)
@@ -90,7 +92,7 @@ func TestScroll(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -116,7 +118,7 @@ func TestScrollWhenPageOpened(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -142,7 +144,7 @@ func TestEmptyEvent(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	event, action := ui.onMouse(nil, tview.MouseMove)
 	assert.True(t, event == nil)
@@ -154,7 +156,7 @@ func TestMouseMove(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	event, action := ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseMove)
 	assert.True(t, event != nil)

@@ -2,6 +2,7 @@ package webui
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,10 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/cleanup"
+	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dundee/gdu/v5/internal/cleanup"
 )
 
 // makeCleanupTree creates a project with build artifacts and a model file:
@@ -205,10 +207,9 @@ func TestClassificationUpdatedAfterDelete(t *testing.T) {
 	assert.Same(t, cached, ui.cleanupResult(), "a deletion updates the classification instead of recomputing it")
 }
 
-func TestSetCleanupConfigAppliesExclusions(t *testing.T) {
-	ui := newTestUI()
+func TestCleanupConfigAppliesExclusions(t *testing.T) {
 	root := makeCleanupTree(t)
-	require.NoError(t, ui.SetCleanupConfig(cleanup.Config{Exclude: []string{filepath.Join(root, "app")}}))
+	ui := newTestUIWith(&config.Settings{Web: config.Web{Cleanup: cleanup.Config{Exclude: []string{filepath.Join(root, "app")}}}})
 	scan(t, ui, root)
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
@@ -217,7 +218,9 @@ func TestSetCleanupConfigAppliesExclusions(t *testing.T) {
 	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", &resp))
 	assert.Zero(t, categoryAmounts(resp)[cleanup.BuildArtifact].Size)
 
-	assert.Error(t, ui.SetCleanupConfig(cleanup.Config{Rules: []cleanup.Rule{{Category: "junk", Dir: "x"}}}))
+	_, err := CreateUI(io.Discard, analyze.CreateAnalyzer(),
+		&config.Settings{Web: config.Web{Cleanup: cleanup.Config{Rules: []cleanup.Rule{{Category: "junk", Dir: "x"}}}}})
+	assert.ErrorContains(t, err, "cleanup config")
 }
 
 func TestClassificationRunsInBackground(t *testing.T) {

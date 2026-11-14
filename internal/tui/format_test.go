@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,7 @@ func TestFormatSize(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	assert.Equal(t, "1[white:black:-] B", ui.formatSize(1, false, false))
 	assert.Equal(t, "1.0[white:black:-] KiB", ui.formatSize(1<<10, false, false))
@@ -39,7 +40,7 @@ func TestFormatSizeWithBlockSizeEnvironment(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
-	ui := CreateUI(testapp.CreateMockedApp(true), simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(testapp.CreateMockedApp(true), simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	assert.Equal(t, "2[white:black:-]", ui.formatSize(1025, false, false))
 }
 
@@ -48,7 +49,7 @@ func TestFormatSizeDec(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, true)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{SIPrefix: true}})
 
 	assert.Equal(t, "1[white:black:-] B", ui.formatSize(1, false, false))
 	assert.Equal(t, "1.0[white:black:-] kB", ui.formatSize(1<<10, false, false))
@@ -65,7 +66,7 @@ func TestFormatCount(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	assert.Equal(t, "1[-::]", ui.formatCount(1))
 	assert.Equal(t, "1.0[-::]k", ui.formatCount(1<<10))
@@ -78,7 +79,7 @@ func TestEscapeName(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -100,7 +101,7 @@ func TestMarked(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.markedItems[&analyze.File{Name: "marked"}] = struct{}{}
 	ui.useOldSizeBar = true
 
@@ -125,7 +126,7 @@ func TestIgnored(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.ignoredRows[0] = struct{}{}
 	ui.useOldSizeBar = true
 
@@ -150,7 +151,7 @@ func TestSizeBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -172,7 +173,7 @@ func TestOldSizeBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.markedItems[&analyze.File{Name: "marked"}] = struct{}{}
 	ui.useOldSizeBar = true
 
@@ -196,8 +197,8 @@ func TestSizeBarWithPercentage(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
-	ui.SetShowBarPercentage()
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
+	ui.setShowBarPercentage()
 
 	dir := &analyze.Dir{
 		File: &analyze.File{
@@ -219,8 +220,8 @@ func TestSizeBarWithPercentagePartial(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
-	ui.SetShowBarPercentage()
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
+	ui.setShowBarPercentage()
 	ui.useOldSizeBar = true
 
 	dir := &analyze.Dir{
@@ -243,7 +244,7 @@ func TestItemCountBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.useOldSizeBar = true
 	ui.showItemCount = true
 	ui.showItemCountBar = true
@@ -267,7 +268,7 @@ func TestItemCountBarHiddenWithoutItemCount(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.useOldSizeBar = true
 	ui.showItemCountBar = true
 
@@ -288,7 +289,7 @@ func TestItemCountBarIgnoredRowIsEmpty(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	ui.useOldSizeBar = true
 	ui.showItemCount = true
 	ui.showItemCountBar = true
@@ -310,7 +311,7 @@ func TestColumnsWidth(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	// flag + size + unicode bar
 	assert.Equal(t, 23, ui.columnsWidth())

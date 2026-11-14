@@ -181,7 +181,7 @@ func TestSetIgnoreFromGitignoreFile(t *testing.T) {
 	err := os.WriteFile(path, []byte(content), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromGitignoreFile(path, []string{"/scan/root"})
 	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
@@ -202,7 +202,7 @@ func TestSetIgnoreFromGitignoreNegatedPattern(t *testing.T) {
 	err := os.WriteFile(path, []byte(content), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromGitignoreFile(path, nil)
 
 	// skipping the negation would silently prune build/keep as well, so gdu
@@ -221,7 +221,7 @@ func TestSetIgnoreFromGitignoreMatchEverythingPattern(t *testing.T) {
 			err := os.WriteFile(path, []byte("node_modules\n"+pattern+"\n"), 0o600)
 			assert.Nil(t, err)
 
-			ui := &common.UI{}
+			ui := newTestUI()
 			err = ui.SetIgnoreFromGitignoreFile(path, nil)
 
 			assert.NotNil(t, err)
@@ -237,7 +237,7 @@ func TestSetIgnoreFromGitignoreEmptyPattern(t *testing.T) {
 	err := os.WriteFile(path, []byte("/\n"), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromGitignoreFile(path, nil)
 
 	assert.NotNil(t, err)
@@ -251,7 +251,7 @@ func TestSetIgnoreFromGitignoreInvalidPattern(t *testing.T) {
 	err := os.WriteFile(path, []byte(content), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromGitignoreFile(path, nil)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "line 2")
@@ -260,13 +260,13 @@ func TestSetIgnoreFromGitignoreInvalidPattern(t *testing.T) {
 }
 
 func TestSetIgnoreFromNotExistingGitignoreFile(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	err := ui.SetIgnoreFromGitignoreFile(filepath.Join("xxx", "yyy"), nil)
 	assert.NotNil(t, err)
 }
 
 func TestSetIgnoreFromGitignoreDirectory(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	err := ui.SetIgnoreFromGitignoreFile(t.TempDir(), nil)
 	assert.NotNil(t, err)
 }
@@ -277,7 +277,7 @@ func TestSetIgnoreFromEmptyGitignoreFile(t *testing.T) {
 	err := os.WriteFile(path, []byte("# nothing but a comment\n"), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromGitignoreFile(path, nil)
 	assert.Nil(t, err)
 
@@ -296,7 +296,7 @@ func TestGitignoreCombinesWithOtherPatternSources(t *testing.T) {
 	err := os.WriteFile(path, []byte("node_modules\n"), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	assert.Nil(t, ui.SetIgnoreDirPatterns([]string{"/from-pattern"}))
 	assert.Nil(t, ui.SetIgnoreFromGitignoreFile(path, nil))
 	shouldBeIgnored := ui.CreateIgnoreFunc()
