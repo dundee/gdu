@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -11,6 +12,11 @@ import (
 
 // ReadAnalysis reads an analysis exported as JSON (the ncdu format EncodeJSON
 // writes) and returns its top directory.
+//
+// An export may come from anywhere, so it is refused when the name of an
+// entry is no single name, such as "..", "" or "a/b": its path would lie
+// elsewhere than in its directory. Only the top directory is named by its
+// path.
 func ReadAnalysis(input io.Reader) (dir *Dir, err error) {
 	var data any
 
@@ -35,25 +41,31 @@ func ReadAnalysis(input io.Reader) (dir *Dir, err error) {
 		return nil, errors.New("array of maps not found in the top level array on 4th position")
 	}
 
-	return decodeDir(items, 0)
+	return decodeDir(items, nil)
 }
 
-// decodeDir decodes a directory lying on the device parentDev, unless the
-// export tells another.
-func decodeDir(items []any, parentDev uint64) (dir *Dir, err error) {
+// decodeDir decodes a directory of parent, or the top directory when parent
+// is nil. It lies on the device of parent, unless the export tells another.
+func decodeDir(items []any, parent *Dir) (dir *Dir, err error) {
 	if len(items) == 0 {
 		return nil, errors.New("directory array is empty")
 	}
 
 	var hasSize, hasUsage, hasItemCount bool
-	dir, hasSize, hasUsage, hasItemCount, err = parseDirectoryMetadata(items[0])
+	dir, hasSize, hasUsage, hasItemCount, err = parseDirectoryMetadata(items[0], parent == nil)
 	if err != nil {
+		if parent != nil {
+			return nil, fmt.Errorf("%s: %w", parent.GetPath(), err)
+		}
 		return nil, err
 	}
 	if dev, ok := items[0].(map[string]any)["dev"].(float64); ok {
 		dir.Dev = uint64(dev)
-	} else {
-		dir.Dev = parentDev
+	} else if parent != nil {
+		dir.Dev = parent.Dev
+	}
+	if parent != nil {
+		dir.Parent = parent
 	}
 
 	for _, v := range items[1:] {
@@ -63,6 +75,9 @@ func decodeDir(items []any, parentDev uint64) (dir *Dir, err error) {
 			name, ok := item["name"].(string)
 			if !ok {
 				return nil, errors.New("file name is not a string")
+			}
+			if !isPathElement(name) {
+				return nil, fmt.Errorf("%s: invalid file name %q", dir.GetPath(), name)
 			}
 			file.Name = name
 
@@ -94,11 +109,10 @@ func decodeDir(items []any, parentDev uint64) (dir *Dir, err error) {
 
 			dir.AddFile(file)
 		case []any:
-			subdir, err := decodeDir(item, dir.Dev)
+			subdir, err := decodeDir(item, dir)
 			if err != nil {
 				return nil, err
 			}
-			subdir.Parent = dir
 			dir.AddFile(subdir)
 		}
 	}
@@ -122,7 +136,9 @@ func exportedOwnUsage(dir *Dir) int64 {
 	return max(own, 0)
 }
 
-func parseDirectoryMetadata(item any) (
+// parseDirectoryMetadata decodes the directory item; the top directory is
+// named by its path, any other by its name.
+func parseDirectoryMetadata(item any, top bool) (
 	dir *Dir,
 	hasSize bool,
 	hasUsage bool,
@@ -156,6 +172,14 @@ func parseDirectoryMetadata(item any) (
 	if itemCount, ok := dirMap["items"].(float64); ok {
 		dir.ItemCount = int64(itemCount)
 		hasItemCount = true
+	}
+
+	if !top {
+		if !isPathElement(name) {
+			return nil, false, false, false, fmt.Errorf("invalid directory name %q", name)
+		}
+		dir.Name = name
+		return dir, hasSize, hasUsage, hasItemCount, nil
 	}
 
 	slashPos := strings.LastIndex(name, "/")

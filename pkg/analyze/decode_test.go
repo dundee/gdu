@@ -2,12 +2,17 @@ package analyze
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 func init() {
@@ -206,7 +211,37 @@ func TestReadAnalysisWithWrongSubdirItem(t *testing.T) {
 
 	_, err := ReadAnalysis(buff)
 
-	assert.Equal(t, "directory item is not a map", err.Error())
+	assert.Equal(t, "xxx: directory item is not a map", err.Error())
+}
+
+// An export may come from anywhere: a name that is no single name would give
+// its item the path of another, which deleting it would remove.
+func TestReadAnalysisRefusesNamesThatAreNoSingleName(t *testing.T) {
+	for _, name := range []string{"..", ".", "", "../../etc/passwd", "a/b", "/etc"} {
+		quoted, err := json.Marshal(name)
+		require.NoError(t, err)
+
+		for _, doc := range []string{
+			`[1,2,3,[{"name":"/home/user"},[{"name":"sub"},{"name":` + string(quoted) + `}]]]`,
+			`[1,2,3,[{"name":"/home/user"},[{"name":"sub"},[{"name":` + string(quoted) + `}]]]]`,
+		} {
+			_, err := ReadAnalysis(bytes.NewBufferString(doc))
+
+			require.Error(t, err, doc)
+			assert.Contains(t, err.Error(), "/home/user/sub: invalid", doc)
+		}
+	}
+}
+
+// The top directory is named by its path, as gdu and ncdu export it.
+func TestReadAnalysisNamesTheTopDirectoryByItsPath(t *testing.T) {
+	dir, err := ReadAnalysis(bytes.NewBufferString(`[1,2,3,[{"name":"/home/user"},[{"name":"sub"},{"name":"f"}]]]`))
+
+	require.NoError(t, err)
+	assert.Equal(t, "/home/user", dir.GetPath())
+	sub := dir.Files[0]
+	assert.Equal(t, "/home/user/sub", sub.GetPath())
+	assert.Equal(t, "/home/user/sub/f", slices.Collect(sub.GetFiles(fs.SortByName, fs.SortAsc))[0].GetPath())
 }
 
 type BrokenInput struct{}
