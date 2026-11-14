@@ -162,3 +162,74 @@ func TestMouseMove(t *testing.T) {
 	assert.True(t, event != nil)
 	assert.Equal(t, action, tview.MouseMove)
 }
+
+// A double-click in the list of devices chooses the device; it used to panic.
+func TestDoubleClickChoosesDevice(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
+	ui.Analyzer = &testanalyze.MockedAnalyzer{}
+	ui.done = make(chan struct{})
+	assert.NoError(t, ui.ListDevices(getDevicesInfoMock()))
+	ui.table.Select(1, 0)
+
+	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseLeftDoubleClick)
+
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+	assert.Equal(t, "test_dir", ui.currentDir.GetName())
+}
+
+// A double-click in an empty directory does nothing; it used to panic.
+func TestDoubleClickInEmptyDirectory(t *testing.T) {
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
+	ui.done = make(chan struct{})
+	assert.NoError(t, ui.AnalyzePath(t.TempDir(), nil))
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+
+	assert.NotPanics(t, func() {
+		ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseLeftDoubleClick)
+	})
+}
+
+// While the file viewer is open, the mouse does not reach the listing behind
+// it, which used to open another viewer.
+func TestMouseIgnoredUnderFileViewer(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	simScreen := testapp.CreateSimScreen()
+	defer simScreen.Fini()
+	app := testapp.CreateMockedApp(false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
+	ui.done = make(chan struct{})
+	assert.NoError(t, ui.AnalyzePath("test_dir/nested", nil))
+	<-ui.done
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+	for row := range ui.table.GetRowCount() {
+		if item, ok := ui.table.GetCell(row, 0).GetReference().(fs.Item); ok && item.GetName() == "file2" {
+			ui.table.Select(row, 0)
+		}
+	}
+	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseLeftDoubleClick)
+	assert.True(t, ui.pages.HasPage("file"))
+	row, _ := ui.table.GetSelection()
+
+	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseScrollUp)
+	ui.onMouse(tcell.NewEventMouse(0, 0, 0, 0), tview.MouseLeftDoubleClick)
+
+	after, _ := ui.table.GetSelection()
+	assert.Equal(t, row, after)
+}
