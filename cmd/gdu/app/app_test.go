@@ -668,7 +668,8 @@ func assertOutputAttributes(t *testing.T, value any) {
 	case map[string]any:
 		assert.Contains(t, value, "name")
 		for attribute := range value {
-			assert.Contains(t, []string{"name", "asize", "dsize"}, attribute)
+			// a directory's totals go under gdu_asize and gdu_dsize
+			assert.Contains(t, []string{"name", "asize", "dsize", "gdu_asize", "gdu_dsize"}, attribute)
 		}
 	default:
 		t.Fatalf("unexpected JSON value %T", value)
@@ -744,7 +745,7 @@ func TestAnalyzePathWithExportAndDepth(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Contains(t, string(content), `"name":"nested"`)
 	assert.NotContains(t, string(content), `"name":"subnested"`)
-	assert.Contains(t, string(content), `"name":"nested","asize":`)
+	assert.Regexp(t, `"name":"nested",("dsize":\d+,)?"gdu_asize":`, string(content))
 	assert.Contains(t, string(content), `"items":`)
 }
 

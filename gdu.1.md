@@ -169,8 +169,10 @@ reachable, with that URL, by other hosts on the network, over unencrypted HTTP.
 **-o**, **\--output-file** Export all info into file as JSON. If the file is \"-\", write to standard output.
 
 **\--output-attrs** Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino,dev).
-Requires \--output-file. The *name* attribute is always included and directories always
-carry their *asize*, *dsize* and *items* summary stats so they can be preserved on import.
+Requires \--output-file. The *name* attribute is always included. As in ncdu's format, a
+directory's *dsize* is the disk usage of the directory itself; its totals are written as
+*gdu_asize* and *gdu_dsize* (with the *asize* and *dsize* attributes) and *items*, so they
+can be preserved on import.
 
 **\--config-file**=\"$HOME/.gdu.yaml\"             Read config from file
 

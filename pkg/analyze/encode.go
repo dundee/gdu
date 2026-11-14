@@ -25,21 +25,7 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttr
 		}
 	}
 
-	// Directory summary stats (asize, dsize, items) are written by default so
-	// they can be preserved on import. When --output-attrs is supplied, each is
-	// emitted only if explicitly selected.
-	if attributes.Includes("asize") {
-		buff = append(buff, []byte(`,"asize":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(f.GetSize(), 10))...)
-	}
-	if attributes.Includes("dsize") {
-		buff = append(buff, []byte(`,"dsize":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(f.GetUsage(), 10))...)
-	}
-	if attributes.Includes("items") {
-		buff = append(buff, []byte(`,"items":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(f.GetItemCount(), 10))...)
-	}
+	buff = appendDirSizes(buff, attributes, f.OwnUsage, f.GetSize(), f.GetUsage(), f.GetItemCount())
 	if attributes.Includes("mtime") && !f.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(f.GetMtime().Unix(), 10))...)
@@ -128,6 +114,42 @@ func (f *File) EncodeJSON(writer io.Writer, _ bool, attributes fs.JSONAttributes
 	}
 	return nil
 }
+
+// appendDirSizes appends the sizes of a directory as ncdu reads them, and its
+// totals as gdu reads them back.
+//
+// ncdu takes asize and dsize for what the directory itself takes, and adds up
+// the entries for the totals. dsize is so the disk usage of the directory
+// itself, ownUsage; asize is left out, as gdu does not count an apparent size
+// of a directory. The totals, which keep a directory without its entries (a
+// depth-limited export) whole on import, go under keys ncdu ignores:
+// gdu_asize, gdu_dsize and items. Each is written when its attribute is
+// selected: asize, dsize and items.
+func appendDirSizes(buff []byte, attributes fs.JSONAttributes, ownUsage, size, usage, itemCount int64) []byte {
+	if attributes.Includes("dsize") && ownUsage > 0 {
+		buff = append(buff, `,"dsize":`...)
+		buff = strconv.AppendInt(buff, ownUsage, 10)
+	}
+	if attributes.Includes("asize") {
+		buff = append(buff, `,"`+totalSizeKey+`":`...)
+		buff = strconv.AppendInt(buff, size, 10)
+	}
+	if attributes.Includes("dsize") {
+		buff = append(buff, `,"`+totalUsageKey+`":`...)
+		buff = strconv.AppendInt(buff, usage, 10)
+	}
+	if attributes.Includes("items") {
+		buff = append(buff, `,"items":`...)
+		buff = strconv.AppendInt(buff, itemCount, 10)
+	}
+	return buff
+}
+
+// The keys of the totals of a directory in an export, see appendDirSizes.
+const (
+	totalSizeKey  = "gdu_asize"
+	totalUsageKey = "gdu_dsize"
+)
 
 func addString(buff *[]byte, val string) error {
 	b, err := json.Marshal(val)
