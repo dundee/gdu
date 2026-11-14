@@ -4,10 +4,10 @@
 package config
 
 import (
-	"regexp"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/cleanup"
+	"github.com/dundee/gdu/v5/internal/ignore"
 	"github.com/dundee/gdu/v5/internal/timefilter"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -30,7 +30,7 @@ type Scan struct {
 	// IgnoreDirPattern matches the paths of the directories left out, from
 	// --ignore-dirs-pattern, --ignore-from and --ignore-from-gitignore; nil
 	// matches none
-	IgnoreDirPattern *regexp.Regexp
+	IgnoreDirPattern *ignore.Pattern
 	IgnoreHidden     bool
 	// IgnoreOtherFilesystems leaves out what lies on another filesystem than
 	// its scanned root

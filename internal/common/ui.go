@@ -4,11 +4,11 @@ package common
 
 import (
 	"os"
-	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v5/internal/ignore"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
@@ -17,7 +17,7 @@ import (
 type UI struct {
 	Analyzer               analyze.Analyzer
 	IgnoreDirPaths         map[string]struct{}
-	IgnoreDirPathPatterns  *regexp.Regexp
+	IgnoreDirPathPatterns  *ignore.Pattern
 	IgnoreHidden           bool
 	IgnoreOtherFilesystems bool
 	IgnoreTypes            []string

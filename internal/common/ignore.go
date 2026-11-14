@@ -12,6 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dundee/gdu/v5/internal/ignore"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
@@ -132,11 +133,12 @@ func readIgnoreFile(ignoreFile string) ([]string, error) {
 // of them (ignoreFile) and a file in .gitignore syntax (gitignoreFile), whose
 // leading / anchors a pattern at the scanned roots. It returns nil when there
 // is none.
-func IgnorePattern(patterns []string, ignoreFile, gitignoreFile string, roots []string) (*regexp.Regexp, error) {
+func IgnorePattern(patterns []string, ignoreFile, gitignoreFile string, roots []string) (*ignore.Pattern, error) {
 	fragments, err := regexPatternFragments(patterns)
 	if err != nil {
 		return nil, err
 	}
+	var tails [][]string
 	if ignoreFile != "" {
 		fromFile, err := readIgnoreFile(ignoreFile)
 		if err != nil {
@@ -149,9 +151,14 @@ func IgnorePattern(patterns []string, ignoreFile, gitignoreFile string, roots []
 		if err != nil {
 			return nil, err
 		}
-		fragments = append(fragments, fromGitignore...)
+		tails = fromGitignore.tails
+		fragments = append(fragments, fromGitignore.fragments...)
 	}
-	return compileIgnoreFragments(fragments)
+	regex, err := compileIgnoreFragments(fragments)
+	if err != nil {
+		return nil, err
+	}
+	return ignore.New(tails, regex), nil
 }
 
 // ShouldDirBeIgnored returns true if given path should be ignored
@@ -234,13 +241,13 @@ func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
 
 // CreateIgnoreFunc returns function for detecting if dir should be ignored
 func (ui *UI) CreateIgnoreFunc() analyze.ShouldDirBeIgnored {
-	ignore := ui.createPathIgnoreFunc()
+	ignoreDir := ui.createPathIgnoreFunc()
 	if !ui.IgnoreOtherFilesystems {
-		return ignore
+		return ignoreDir
 	}
 	filesystems := newFilesystemIDCache()
 	return func(name, path string) bool {
-		return ignore(name, path) || filesystems.isOnOtherFilesystem(path)
+		return ignoreDir(name, path) || filesystems.isOnOtherFilesystem(path)
 	}
 }
 
