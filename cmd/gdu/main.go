@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -14,7 +12,6 @@ import (
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
 	"github.com/dundee/gdu/v5/internal/selfupdate"
@@ -58,7 +55,8 @@ func init() {
 	flags.StringVarP(&af.OutputFile, "output-file", "o", "", "Export all info into file as JSON")
 	flags.StringVar(&af.OutputAttrs, "output-attrs", "", "Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino,dev)")
 	flags.StringVarP(&af.InputFile, "input-file", "f", "", "Import analysis from JSON file")
-	flags.IntVarP(&af.MaxCores, "max-cores", "m", runtime.NumCPU(), fmt.Sprintf("Set max cores that Gdu will use. %d cores available", runtime.NumCPU()))
+	flags.IntVarP(&af.MaxCores, "max-cores", "m", 0,
+		fmt.Sprintf("Set max cores that Gdu will use, at most %d; 0 leaves it to Go, which follows container limits", runtime.NumCPU()))
 	flags.BoolVar(&af.SequentialScanning, "sequential", false, "Use sequential scanning (intended for rotating HDDs)")
 	flags.BoolVarP(&af.ShowVersion, "version", "v", false, "Print version")
 	flags.BoolVar(&af.SelfUpdate, "self-update", false,
@@ -144,93 +142,6 @@ func init() {
 	setDefaults()
 }
 
-var systemConfigPath = "/etc/gdu.yaml"
-
-func loadConfig(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	// into the struct, not the pointer: a document that is just null would
-	// set the pointer to nil
-	return yaml.Unmarshal(data, af)
-}
-
-func initConfig() {
-	// Load system-wide config first (ignored on Windows/Plan9 and when absent).
-	if runtime.GOOS != osWindows && runtime.GOOS != osPlan9 {
-		if err := loadConfig(systemConfigPath); err != nil && !os.IsNotExist(err) {
-			configErr = err
-			return
-		}
-	}
-
-	// Load user config; its values overwrite whatever the system config set.
-	setConfigFilePath()
-	if err := loadConfig(af.CfgFile); err != nil {
-		if !os.IsNotExist(err) {
-			configErr = err
-		}
-		return
-	}
-}
-
-func setDefaults() {
-	if af.Style.Footer.BackgroundColor == "" {
-		af.Style.Footer.BackgroundColor = "#2479D0"
-	}
-	if af.Style.Footer.TextColor == "" {
-		af.Style.Footer.TextColor = "#000000"
-	}
-	if af.Style.Footer.NumberColor == "" {
-		af.Style.Footer.NumberColor = "#FFFFFF"
-	}
-	if af.Style.Header.BackgroundColor == "" {
-		af.Style.Header.BackgroundColor = "#2479D0"
-	}
-	if af.Style.Header.TextColor == "" {
-		af.Style.Header.TextColor = "#000000"
-	}
-	if af.Style.ResultRow.NumberColor == "" {
-		af.Style.ResultRow.NumberColor = "#e67100"
-	}
-	if af.Style.ResultRow.DirectoryColor == "" {
-		af.Style.ResultRow.DirectoryColor = "#3498db"
-	}
-}
-
-func setConfigFilePath() {
-	// Read the arguments one by one instead of joining them, so that paths
-	// containing spaces are not truncated.
-	for i, arg := range os.Args {
-		if value, found := strings.CutPrefix(arg, "--config-file="); found {
-			af.CfgFile = value
-			return
-		}
-		if arg == "--config-file" && i+1 < len(os.Args) {
-			af.CfgFile = os.Args[i+1]
-			return
-		}
-	}
-	setDefaultConfigFilePath()
-}
-
-func setDefaultConfigFilePath() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		configErr = err
-		return
-	}
-
-	path := filepath.Join(home, ".config", "gdu", "gdu.yaml")
-	if _, err := os.Stat(path); err == nil {
-		af.CfgFile = path
-		return
-	}
-
-	af.CfgFile = filepath.Join(home, ".gdu.yaml")
-}
-
 func runE(command *cobra.Command, args []string) error {
 	var (
 		termApp *tview.Application
@@ -246,16 +157,8 @@ func runE(command *cobra.Command, args []string) error {
 	}
 
 	if af.WriteConfig {
-		data, err := yaml.Marshal(af)
-		if err != nil {
-			return fmt.Errorf("error marshaling config file: %w", err)
-		}
-		if af.CfgFile == "" {
-			setDefaultConfigFilePath()
-		}
-		err = os.WriteFile(af.CfgFile, data, 0o600)
-		if err != nil {
-			return fmt.Errorf("error writing config file %s: %w", af.CfgFile, err)
+		if err := writeConfig(); err != nil {
+			return err
 		}
 	}
 
@@ -280,17 +183,9 @@ func runE(command *cobra.Command, args []string) error {
 	}
 	log.SetOutput(f)
 
-	if configErr != nil {
-		log.Printf("Error reading config file: %s", configErr.Error())
-	}
+	reportConfigError(os.Stderr)
 
 	istty := isatty.IsTerminal(os.Stdout.Fd())
-
-	// disk usage is only partially available on Windows (compressed, sparse
-	// and OneDrive files) and not at all on Plan9, so show apparent size
-	if runtime.GOOS == osWindows || runtime.GOOS == osPlan9 {
-		af.ShowApparentSize = true
-	}
 
 	if !af.Web && !af.ShouldRunInNonInteractiveMode(istty) {
 		screen, err = tcell.NewScreen()
@@ -308,6 +203,8 @@ func runE(command *cobra.Command, args []string) error {
 		}
 	}
 
+	setMaxProcs(af.MaxCores)
+
 	a := app.App{
 		Flags:       af,
 		Args:        args,
@@ -319,6 +216,17 @@ func runE(command *cobra.Command, args []string) error {
 		PathChecker: os.Stat,
 	}
 	return a.Run()
+}
+
+// setMaxProcs makes gdu use at most n processors, at most as many as the
+// machine has. Below one, it leaves GOMAXPROCS to the runtime, which follows
+// the CPU limit of a container and keeps following it.
+func setMaxProcs(n int) {
+	if n < 1 {
+		return
+	}
+	runtime.GOMAXPROCS(min(n, runtime.NumCPU()))
+	log.Printf("Max cores set to %d", runtime.GOMAXPROCS(0))
 }
 
 // selfUpdate runs --self-update. It returns done when gdu should not continue

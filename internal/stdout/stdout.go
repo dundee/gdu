@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -26,6 +27,7 @@ type UI struct {
 	orange            *color.Color
 	blue              *color.Color
 	cyan              *color.Color
+	progressRunes     []rune
 	showItemCnt       bool
 	showSymlinkTarget bool
 	top               int
@@ -39,65 +41,38 @@ type UI struct {
 	configuredOrder   string
 }
 
-var (
-	progressRunes      = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
-	progressRunesOld   = []rune(`-\\|/`)
-	progressRunesCount = len(progressRunes)
-)
-
-// CreateStdoutUI creates UI for stdout
-func CreateStdoutUI(
-	output io.Writer,
-	useColors bool,
-	showProgress bool,
-	showApparentSize bool,
-	showRelativeSize bool,
-	summarize bool,
-	useSIPrefix bool,
-	noPrefix bool,
-	fixedUnit string,
-	top int,
-	reverseSort bool,
-	depth int,
-) *UI {
+// CreateStdoutUI returns the UI printing the analysis to output.
+func CreateStdoutUI(output io.Writer, analyzer analyze.Analyzer, s *config.Settings) *UI {
 	ui := &UI{
-		UI: &common.UI{
-			UseColors:        useColors,
-			ShowProgress:     showProgress,
-			ShowApparentSize: showApparentSize,
-			ShowRelativeSize: showRelativeSize,
-			Analyzer:         analyze.CreateTopDirAnalyzer(),
-			UseSIPrefix:      useSIPrefix,
-		},
-		output:      output,
-		summarize:   summarize,
-		noPrefix:    noPrefix,
-		top:         top,
-		reverseSort: reverseSort,
-		depth:       depth,
+		UI:                common.NewUI(analyzer, s),
+		output:            output,
+		summarize:         s.Display.Summarize,
+		noPrefix:          s.Display.NoPrefix,
+		top:               s.Display.Top,
+		reverseSort:       s.Display.ReverseSort,
+		depth:             s.Display.Depth,
+		showItemCnt:       s.Display.ItemCount,
+		showSymlinkTarget: s.Display.SymlinkTarget,
+		configuredSortBy:  s.Display.SortBy,
+		configuredOrder:   s.Display.SortOrder,
 	}
-	if fixedUnit != "" {
-		ui.SetFixedUnit(fixedUnit)
-	} else if !noPrefix && !useSIPrefix {
+	if s.Display.FixedUnit != "" {
+		ui.setFixedUnit(s.Display.FixedUnit)
+	} else if !s.Display.NoPrefix && !s.Display.SIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
-	ui.red = color.New(color.FgRed).Add(color.Bold)
-	ui.orange = color.New(color.FgYellow).Add(color.Bold)
-	ui.blue = color.New(color.FgBlue).Add(color.Bold)
-	ui.cyan = color.New(color.FgCyan).Add(color.Bold)
-
-	if ui.top > 0 || ui.depth > 0 {
-		ui.Analyzer = analyze.CreateAnalyzer()
-	}
+	ui.progressRunes = common.SpinnerRunes(s.Display.NoUnicode)
+	ui.red = common.BoldColor(color.FgRed, s.Display.Colors)
+	ui.orange = common.BoldColor(color.FgYellow, s.Display.Colors)
+	ui.blue = common.BoldColor(color.FgBlue, s.Display.Colors)
+	ui.cyan = common.BoldColor(color.FgCyan, s.Display.Colors)
 	ui.session = session.New(ui.UI)
-
-	if !useColors {
-		color.NoColor = true
-	}
 
 	return ui
 }
-func (ui *UI) SetFixedUnit(unitChar string) {
+
+// setFixedUnit shows every size in the unit unitChar: "k", "m" or "g".
+func (ui *UI) setFixedUnit(unitChar string) {
 	k, m, g := common.Ki, common.Mi, common.Gi
 	suffixMap := map[string]string{"k": " KiB", "m": " MiB", "g": " GiB"}
 
@@ -119,27 +94,9 @@ func (ui *UI) SetFixedUnit(unitChar string) {
 	}
 }
 
-func (ui *UI) SetShowItemCount() {
-	ui.showItemCnt = true
-}
-
-// SetShowSymlinkTarget enables displaying the symlink target (name -> target).
-func (ui *UI) SetShowSymlinkTarget(value bool) {
-	ui.showSymlinkTarget = value
-}
-
-func (ui *UI) UseOldProgressRunes() {
-	progressRunes = progressRunesOld
-	progressRunesCount = len(progressRunes)
-}
-
 // StartUILoop stub
 func (ui *UI) StartUILoop() error {
 	return nil
-}
-
-// SetCollapsePath sets the flag to collapse paths
-func (ui *UI) SetCollapsePath(value bool) {
 }
 
 // ListDevices lists mounted devices and shows their disk usage
@@ -269,12 +226,6 @@ func (ui *UI) ReadFromStorage(path string) error {
 	}
 	ui.printAnalyzedDir(dir)
 	return nil
-}
-
-// SetDefaultSorting applies the configured directory-listing order.
-func (ui *UI) SetDefaultSorting(by, order string) {
-	ui.configuredSortBy = by
-	ui.configuredOrder = order
 }
 
 // sortSettings honors the config, the displayed size metric and --reverse-sort.
@@ -479,9 +430,9 @@ func (ui *UI) showReadingProgress() (stop func()) {
 		defer close(stopped)
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
-		for i := 0; ; i = (i + 1) % progressRunesCount {
+		for i := 0; ; i = (i + 1) % len(ui.progressRunes) {
 			fmt.Fprint(ui.output, emptyRow(40))
-			fmt.Fprintf(ui.output, "\r %s Reading analysis from file...", string(progressRunes[i]))
+			fmt.Fprintf(ui.output, "\r %s Reading analysis from file...", string(ui.progressRunes[i]))
 			select {
 			case <-quit:
 				fmt.Fprint(ui.output, emptyRow(40), "\r")
@@ -505,7 +456,7 @@ func (ui *UI) scanObserver() session.Observer {
 	i := 0
 	return func(p session.Progress) {
 		fmt.Fprint(ui.output, emptyRow(100))
-		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+		fmt.Fprintf(ui.output, "\r %s ", string(ui.progressRunes[i]))
 		if p.Phase == session.Finalizing {
 			fmt.Fprint(ui.output, "Calculating disk usage...")
 		} else {
@@ -514,7 +465,7 @@ func (ui *UI) scanObserver() session.Observer {
 				" size: "+
 				ui.formatSize(p.TotalUsage))
 		}
-		i = (i + 1) % progressRunesCount
+		i = (i + 1) % len(ui.progressRunes)
 	}
 }
 

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v5/internal/timefilter"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +34,7 @@ func TestAnalyzePathsListsEveryRoot(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 
 	assert.Contains(t, output.String(), first)
@@ -54,7 +56,7 @@ func TestAnalyzePathsLabelsRootsWithTheirPath(t *testing.T) {
 	})
 
 	output := &bytes.Buffer{}
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 
 	assert.Contains(t, output.String(), first)
@@ -67,7 +69,7 @@ func TestAnalyzePathsSummarizeReportsCombinedTotal(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Summarize: true}})
 	require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 
 	assert.NotEmpty(t, output.String())
@@ -77,7 +79,7 @@ func TestAnalyzePathsSwapsTopDirAnalyzerForFullTree(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	// the default stdout analyzer produces SimpleDir, which cannot be re-parented
 	_, isTopDirAnalyzer := ui.Analyzer.(*analyze.TopDirAnalyzer)
 	require.True(t, isTopDirAnalyzer)
@@ -92,10 +94,14 @@ func TestAnalyzePathsKeepsAnalyzerSettings(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	scan := func(filtered bool) string {
 		output := &bytes.Buffer{}
-		ui := CreateStdoutUI(output, false, false, true, false, true, false, true, "", 0, false, 0)
+		s := &config.Settings{Display: config.Display{ApparentSize: true, Summarize: true, NoPrefix: true}}
 		if filtered {
-			ui.SetTimeFilter(func(time.Time) bool { return false })
+			// only files modified after 2999, so none
+			filter, err := timefilter.NewTimeFilter("2999-01-01", "", "", "", time.Now(), time.UTC)
+			require.NoError(t, err)
+			s.Scan.TimeFilter, s.Scan.TimeLocation = filter, time.UTC
 		}
+		ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), s)
 		require.NoError(t, ui.AnalyzePaths([]string{first, second}))
 		return output.String()
 	}
@@ -108,7 +114,7 @@ func TestAnalyzePathsWithSinglePathBehavesLikeAnalyzePath(t *testing.T) {
 	first, _ := createMultiTestDirs(t)
 	output := &bytes.Buffer{}
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	require.NoError(t, ui.AnalyzePaths([]string{first}))
 
 	// contents of the single root are listed, not the root itself

@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNoViewFileFlagRegistered(t *testing.T) {
@@ -237,4 +241,49 @@ func TestInitConfigNullConfigs(t *testing.T) {
 			}
 		}
 	}
+}
+
+// A config file that cannot be read is reported on stderr, naming the file,
+// rather than only in the log, which is /dev/null by default.
+func TestBrokenConfigIsReported(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "gdu.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(":\tinvalid: yaml: {"), 0o600))
+
+	origArgs, origPath, origErr, origAf := os.Args, systemConfigPath, configErr, af
+	t.Cleanup(func() {
+		os.Args, systemConfigPath, configErr, af = origArgs, origPath, origErr, origAf
+	})
+	systemConfigPath = filepath.Join(dir, "missing.yaml")
+	os.Args = []string{"gdu", "--config-file=" + path}
+	af = &app.Flags{}
+	configErr = nil
+
+	initConfig()
+	var stderr bytes.Buffer
+	reportConfigError(&stderr)
+
+	assert.Contains(t, stderr.String(), "gdu: ignoring the config file: "+path+":")
+}
+
+// --max-cores bounds the processors of the process, at most as many as the
+// machine has; without it, the runtime's default stays.
+func TestSetMaxProcs(t *testing.T) {
+	orig := runtime.GOMAXPROCS(0)
+	t.Cleanup(func() { runtime.GOMAXPROCS(orig) })
+
+	setMaxProcs(1)
+	assert.Equal(t, 1, runtime.GOMAXPROCS(0))
+
+	for _, n := range []int{0, -100} {
+		setMaxProcs(n)
+		assert.Equal(t, 1, runtime.GOMAXPROCS(0), "%d leaves GOMAXPROCS alone", n)
+	}
+
+	setMaxProcs(runtime.NumCPU() + 1)
+	assert.Equal(t, runtime.NumCPU(), runtime.GOMAXPROCS(0), "more than the machine has is bounded by it")
+}
+
+func TestMaxCoresDefaultsToTheRuntime(t *testing.T) {
+	assert.Equal(t, "0", rootCmd.Flags().Lookup("max-cores").DefValue)
 }

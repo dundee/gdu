@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +14,7 @@ func TestSetIgnoreFromEmptyFile(t *testing.T) {
 	err := os.WriteFile(path, []byte(""), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromFile(path)
 	assert.Nil(t, err)
 
@@ -30,7 +29,7 @@ func TestSetIgnoreFromFileWithBlankLines(t *testing.T) {
 	err := os.WriteFile(path, []byte(content), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromFile(path)
 	assert.Nil(t, err)
 

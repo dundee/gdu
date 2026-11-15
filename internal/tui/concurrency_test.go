@@ -9,10 +9,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/stretchr/testify/require"
 )
 
 // Deletion in the background changes the tree while the user goes on
@@ -30,14 +31,14 @@ func TestBackgroundDeletionWhileBrowsingAndExporting(t *testing.T) {
 	screen := testapp.CreateSimScreen()
 	defer screen.Fini()
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, screen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.done = make(chan struct{})
 	require.NoError(t, ui.AnalyzePath(root, nil))
 	<-ui.done
 	for _, draw := range app.GetUpdateDraws() {
 		draw()
 	}
-	ui.SetDeleteInBackground()
+	ui.setDeleteInBackground()
 
 	top := ui.currentDir
 	var targets []deleteTarget

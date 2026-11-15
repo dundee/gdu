@@ -46,7 +46,7 @@ func TestCreateIgnorePatternWithErr(t *testing.T) {
 }
 
 func TestEmptyIgnore(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
 	assert.False(t, shouldBeIgnored("abc", "/abc"))
@@ -54,7 +54,7 @@ func TestEmptyIgnore(t *testing.T) {
 }
 
 func TestIgnoreByAbsPath(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	ui.SetIgnoreDirPaths([]string{"/abc"})
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
@@ -63,7 +63,7 @@ func TestIgnoreByAbsPath(t *testing.T) {
 }
 
 func TestIgnoreByPattern(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
 	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
@@ -90,7 +90,7 @@ func TestIgnoreFromFile(t *testing.T) {
 		panic(err)
 	}
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromFile("ignore")
 	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
@@ -102,7 +102,7 @@ func TestIgnoreFromFile(t *testing.T) {
 }
 
 func TestIgnoreFromNotExistingFile(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	err := ui.SetIgnoreFromFile("xxx")
 	assert.NotNil(t, err)
 }
@@ -114,7 +114,7 @@ func TestIgnoreFromFileSkipsBlankLinesAndComments(t *testing.T) {
 	err := os.WriteFile(path, []byte(content), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromFile(path)
 	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
@@ -131,7 +131,7 @@ func TestIgnoreFromFileInvalidPatternError(t *testing.T) {
 	err := os.WriteFile(path, []byte(content), 0o600)
 	assert.Nil(t, err)
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromFile(path)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "line 2")
@@ -140,7 +140,7 @@ func TestIgnoreFromFileInvalidPatternError(t *testing.T) {
 }
 
 func TestIgnoreHidden(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	ui.SetIgnoreHidden(true)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
@@ -150,7 +150,7 @@ func TestIgnoreHidden(t *testing.T) {
 }
 
 func TestIgnoreByAbsPathAndHidden(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	ui.SetIgnoreDirPaths([]string{"/abc"})
 	ui.SetIgnoreHidden(true)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
@@ -162,7 +162,7 @@ func TestIgnoreByAbsPathAndHidden(t *testing.T) {
 }
 
 func TestIgnoreByAbsPathAndPattern(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	ui.SetIgnoreDirPaths([]string{"/abc"})
 	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
 	assert.Nil(t, err)
@@ -175,7 +175,7 @@ func TestIgnoreByAbsPathAndPattern(t *testing.T) {
 }
 
 func TestIgnoreByPatternAndHidden(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
 	assert.Nil(t, err)
 	ui.SetIgnoreHidden(true)
@@ -188,7 +188,7 @@ func TestIgnoreByPatternAndHidden(t *testing.T) {
 }
 
 func TestIgnoreByAll(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	ui.SetIgnoreDirPaths([]string{"/abc"})
 	err := ui.SetIgnoreDirPatterns([]string{"/[abc]+"})
 	assert.Nil(t, err)
@@ -203,7 +203,7 @@ func TestIgnoreByAll(t *testing.T) {
 }
 
 func TestIgnoreByRelativePath(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	ui.SetIgnoreDirPaths([]string{"test_dir/abc"})
 	shouldBeIgnored := ui.CreateIgnoreFunc()
 
@@ -215,7 +215,7 @@ func TestIgnoreByRelativePath(t *testing.T) {
 }
 
 func TestIgnoreByRelativePattern(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	err := ui.SetIgnoreDirPatterns([]string{"test_dir/[abc]+"})
 	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
@@ -242,7 +242,7 @@ func TestIgnoreFromFileWithRelativePaths(t *testing.T) {
 		panic(err)
 	}
 
-	ui := &common.UI{}
+	ui := newTestUI()
 	err = ui.SetIgnoreFromFile("ignore")
 	assert.Nil(t, err)
 	shouldBeIgnored := ui.CreateIgnoreFunc()
@@ -314,7 +314,7 @@ func TestShouldFileBeIgnoredByType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ui := &common.UI{}
+			ui := newTestUI()
 			ui.SetIgnoreTypes(tt.ignoreTypes)
 			if len(tt.ignoreTypes) > 0 {
 				assert.True(t, ui.IsFilteringFiles())
@@ -388,7 +388,7 @@ func TestShouldFileBeIncludedByType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ui := &common.UI{}
+			ui := newTestUI()
 			ui.SetIncludeTypes(tt.includeTypes)
 			if len(tt.includeTypes) > 0 {
 				assert.True(t, ui.IsFilteringFiles())
@@ -456,7 +456,7 @@ func TestCreateFileTypeFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ui := &common.UI{}
+			ui := newTestUI()
 			ui.SetIncludeTypes(tt.includeTypes)
 			ui.SetIgnoreTypes(tt.ignoreTypes)
 
@@ -497,7 +497,7 @@ func TestFileTypeFilterWithRealFiles(t *testing.T) {
 	}
 
 	// Test include filter
-	ui := &common.UI{}
+	ui := newTestUI()
 	ui.SetIncludeTypes([]string{"yaml", "json"})
 	filter := ui.CreateFileTypeFilter()
 
@@ -508,7 +508,7 @@ func TestFileTypeFilterWithRealFiles(t *testing.T) {
 	}
 
 	// Test ignore filter
-	ui2 := &common.UI{}
+	ui2 := newTestUI()
 	ui2.SetIgnoreTypes([]string{"txt", "go"})
 	filter2 := ui2.CreateFileTypeFilter()
 
@@ -521,7 +521,7 @@ func TestFileTypeFilterWithRealFiles(t *testing.T) {
 }
 
 func TestCreateFileTypeFilterReturnsNilWhenNoFiltering(t *testing.T) {
-	ui := &common.UI{}
+	ui := newTestUI()
 	// No include or ignore types set
 	filter := ui.CreateFileTypeFilter()
 	assert.Nil(t, filter, "CreateFileTypeFilter should return nil when no filtering is configured")

@@ -80,12 +80,12 @@ func TestDatabaseOfGduIsReplacedOnlyByAScan(t *testing.T) {
 			require.NoError(t, scan(Flags{}))
 			require.NoError(t, os.MkdirAll("test_dir/added", 0o755))
 
-			// neither reading a report nor a sequential scan touches it
+			// neither reading a report nor a refused sequential scan touches it
 			report := filepath.Join(t.TempDir(), "report.json")
 			require.NoError(t, os.WriteFile(report,
 				[]byte(`[1,2,{"progname":"gdu","progver":"development","timestamp":1626806293},[{"name":"/other"}]]`), 0o600))
 			require.NoError(t, scan(Flags{InputFile: report}))
-			require.NoError(t, scan(Flags{SequentialScanning: true}))
+			require.ErrorContains(t, scan(Flags{SequentialScanning: true}), "--sequential and --db cannot be used at once")
 			out, err := runApp(&Flags{LogFile: "/dev/null", DbPath: dbPath, ReadFromStorage: true},
 				[]string{"test_dir"}, false, testdev.DevicesInfoGetterMock{})
 			require.NoError(t, err)

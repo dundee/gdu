@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -130,7 +131,7 @@ func (a *cancelRaceAnalyzer) cancelCount() int {
 
 func newCancelRaceUI(app *cancelRaceApp, analyzer *cancelRaceAnalyzer) *UI {
 	screen := testapp.CreateSimScreen()
-	ui := CreateUI(app, screen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = analyzer
 	ui.done = make(chan struct{})
 	return ui
@@ -244,7 +245,7 @@ func TestSignalLoopQueuesScanCancellation(t *testing.T) {
 	screen := testapp.CreateSimScreen()
 	require.NoError(t, screen.Init())
 	defer screen.Fini()
-	ui := CreateUI(app, screen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = analyzer
 	ui.progress = tview.NewTextView()
 	scan := fakeRunningScan(ui)
@@ -274,7 +275,7 @@ func TestSignalLoopRetriesFullEventQueue(t *testing.T) {
 		attempted: make(chan struct{}),
 		fail:      true,
 	}
-	ui := CreateUI(app, screen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, screen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = analyzer
 	ui.progress = tview.NewTextView()
 	scan := fakeRunningScan(ui)

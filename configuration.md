@@ -2,15 +2,17 @@
 
 Gdu provides an additional set of configuration options to the usual command line options.
 
-You can get the full list of all possible options by running:
+To save the options of the current command line to the config file, run:
 
 ```
-gdu --write-config
+gdu --write-config ...
 ```
 
-This will create file `$HOME/.gdu.yaml` with all the options set to default values.
+This writes `$HOME/.gdu.yaml` (or the file given with `--config-file`) with what you configured: the settings already in that file, and those the command line changes. Defaults, the system config `/etc/gdu.yaml` and options that only make sense for one run (`input-file`, `output-file`, `output-attrs`, `read-from-storage`, `db`, `since`, `until`, `max-age`, `min-age`) given on the command line are left out.
 
-Let's go through them one by one:
+gdu tells on stderr about a config file it cannot read, about a `--config-file` that does not exist, and about keys it does not know, such as a misspelt option.
+
+The options are:
 
 #### `log-file`
 
@@ -55,7 +57,7 @@ All pattern sources combine. When `ignore-dir-patterns`, `ignore-from-file` and 
 
 #### `max-cores`
 
-Set max cores that Gdu will use.
+Set max cores that Gdu will use, at most the number of processors of the machine. 0, the default, leaves it to Go, which follows the CPU limit of a container.
 
 #### `sequential-scanning`
 

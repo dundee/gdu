@@ -6,11 +6,12 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
-	"github.com/stretchr/testify/assert"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/gdamore/tcell/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetTrashCommand(t *testing.T) {
@@ -20,10 +21,10 @@ func TestSetTrashCommand(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.SetTrashCommand("rm -rf")
+	ui.setTrashCommand("rm -rf")
 
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -56,10 +57,10 @@ func TestSetTrashCommandFailing(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	ui.askBeforeDelete = false
-	ui.SetTrashCommand("false")
+	ui.setTrashCommand("false")
 
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)

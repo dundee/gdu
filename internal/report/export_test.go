@@ -10,13 +10,13 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,8 +46,7 @@ func TestAnalyzePath(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false, false, false, 0, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(output, reportOutput, analyze.CreateAnalyzer(), &config.Settings{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -58,7 +57,7 @@ func TestAnalyzePath(t *testing.T) {
 
 func TestExportDirReturnsEncodeError(t *testing.T) {
 	sentinel := errors.New("encode failed")
-	ui := CreateExportUI(&bytes.Buffer{}, &bytes.Buffer{}, false, false, false, 0, 0, false, nil)
+	ui := CreateExportUI(&bytes.Buffer{}, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	err := ui.exportDir(errorExportItem{err: sentinel})
 
@@ -72,8 +71,7 @@ func TestAnalyzePathWithTop(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false, false, false, 2, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(output, reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -92,9 +90,8 @@ func TestAnalyzePathWithTopAndTypeFilter(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false, false, false, 10, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.SetIncludeTypes([]string{"none"})
+	ui := CreateExportUI(output, reportOutput, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Top: 10}, Scan: config.Scan{IncludeTypes: []string{"none"}}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -126,9 +123,8 @@ func TestAnalyzePathWithTopAndArchiveBrowsing(t *testing.T) {
 
 	var output, reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 5, 0, false, nil)
-	ui.SetArchiveBrowsing(true)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Top: 5}, Scan: config.Scan{ArchiveBrowsing: true}})
 
 	// Files inside an archive are not *analyze.File, so collecting the top
 	// items used to panic instead of exporting them.
@@ -146,9 +142,8 @@ func TestAnalyzePathWithDepthAndArchiveBrowsing(t *testing.T) {
 
 	var output, reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 2, false, nil)
-	ui.SetArchiveBrowsing(true)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Depth: 2}, Scan: config.Scan{ArchiveBrowsing: true}})
 
 	var err error
 	assert.NotPanics(t, func() {
@@ -165,9 +160,8 @@ func TestAnalyzePathWithDepthCutsInsideArchive(t *testing.T) {
 
 	var output, reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 1, false, nil)
-	ui.SetArchiveBrowsing(true)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Depth: 1}, Scan: config.Scan{ArchiveBrowsing: true}})
 	assert.Nil(t, ui.AnalyzePath(dir, nil))
 
 	assert.Contains(t, reportOutput.String(), `"name":"archive.tar"`)
@@ -181,8 +175,7 @@ func TestAnalyzePathWithDepth(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 2, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -200,8 +193,7 @@ func TestAnalyzePathWithDepthOne(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 1, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 1}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -233,8 +225,7 @@ func TestAnalyzePathWithSummarize(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 0, true, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Summarize: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -252,8 +243,7 @@ func TestAnalyzePathWithTopRoundTrip(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 2, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -281,8 +271,7 @@ func TestAnalyzePathWithTopLargerThanFileCount(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 100, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 100}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -299,8 +288,7 @@ func TestAnalyzePathWithDepthLargerThanTreeDepth(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 100, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 100}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -318,8 +306,7 @@ func TestAnalyzePathWithSummarizeAndTop(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 2, 0, true, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 2, Summarize: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -337,8 +324,7 @@ func TestAnalyzePathWithSummarizeAndDepth(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 1, true, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 1, Summarize: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -354,7 +340,7 @@ func TestExportWithDepthKeepsAFile(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 1, false, nil)
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 1}})
 	err := ui.exportDir(&analyze.File{Name: "file", Size: 5})
 
 	assert.NoError(t, err)
@@ -368,8 +354,7 @@ func TestAnalyzePathWithDepthZeroIsIgnored(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -387,8 +372,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, true, true, true, 0, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, Progress: true, SIPrefix: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -399,7 +383,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 
 func TestExportProgressClearsLineWithoutPadding(t *testing.T) {
 	var output bytes.Buffer
-	ui := CreateExportUI(&output, io.Discard, false, true, false, 0, 0, false, nil)
+	ui := CreateExportUI(&output, io.Discard, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 
 	ui.scanObserver()(session.Progress{Progress: analyze.Progress{ItemCount: 1234}})
 	assert.Contains(t, output.String(), "Scanning... Total items: 1,234")
@@ -417,7 +401,7 @@ func TestExportProgressClearsLineWithoutPadding(t *testing.T) {
 // A failed export stops the spinner too.
 func TestExportProgressStopsWhenWritingFails(t *testing.T) {
 	var output bytes.Buffer
-	ui := CreateExportUI(&output, io.Discard, false, true, false, 0, 0, false, nil)
+	ui := CreateExportUI(&output, io.Discard, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 
 	err := ui.exportDir(errorExportItem{err: errors.New("encode failed")})
 
@@ -429,7 +413,7 @@ func TestShowDevices(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, true, false, 0, 0, false, nil)
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	err := ui.ListDevices(device.Getter)
 
 	assert.Contains(t, err.Error(), "not supported")
@@ -439,7 +423,7 @@ func TestReadAnalysisWhileExporting(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, true, false, 0, 0, false, nil)
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	err := ui.ReadAnalysis(&output)
 
 	assert.Contains(t, err.Error(), "not possible while exporting")
@@ -457,8 +441,7 @@ func TestExportToFile(t *testing.T) {
 
 	var output bytes.Buffer
 
-	ui := CreateExportUI(&output, reportOutput, false, true, false, 0, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	err = ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -487,8 +470,7 @@ func TestExportToFileWithTop(t *testing.T) {
 
 	var output bytes.Buffer
 
-	ui := CreateExportUI(&output, reportOutput, false, true, false, 2, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true, Top: 2}})
 	err = ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -514,8 +496,7 @@ func TestExportToFileWithDepth(t *testing.T) {
 
 	var output bytes.Buffer
 
-	ui := CreateExportUI(&output, reportOutput, false, true, false, 0, 2, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateExportUI(&output, reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true, Depth: 2}})
 	err = ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -544,7 +525,7 @@ func TestFormatSize(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, true, false, 0, 0, false, nil)
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 
 	assert.Contains(t, ui.formatSize(1), "B")
 	assert.Contains(t, ui.formatSize(1<<10+1), "KiB")
@@ -561,7 +542,7 @@ func TestFormatSizeWithBlockSizeEnvironment(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, true, false, 0, 0, false, nil)
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	assert.Equal(t, "2", ui.formatSize(1025))
 }
 
@@ -569,7 +550,7 @@ func TestFormatSizeDec(t *testing.T) {
 	var output bytes.Buffer
 	var reportOutput bytes.Buffer
 
-	ui := CreateExportUI(&output, &reportOutput, false, true, true, 0, 0, false, nil)
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true, SIPrefix: true}})
 
 	assert.Contains(t, ui.formatSize(1), "B")
 	assert.Contains(t, ui.formatSize(1<<10+1), "kB")
@@ -583,7 +564,7 @@ func TestFormatSizeDec(t *testing.T) {
 
 func TestAnalyzePathsRejectsMultipleDirs(t *testing.T) {
 	buff := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateExportUI(buff, buff, false, false, false, 0, 0, false, nil)
+	ui := CreateExportUI(buff, buff, analyze.CreateAnalyzer(), &config.Settings{})
 
 	err := ui.AnalyzePaths([]string{"test_dir", "other_dir"})
 

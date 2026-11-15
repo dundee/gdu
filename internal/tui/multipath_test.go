@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/gdamore/tcell/v2"
@@ -58,7 +59,7 @@ func analyzeMultiplePaths(t *testing.T, paths []string) *UI {
 	t.Cleanup(simScreen.Fini)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.done = make(chan struct{})
 
 	require.NoError(t, ui.AnalyzePaths(paths))
@@ -173,7 +174,7 @@ func TestEnteringAndLeavingARootUnderTheVirtualDir(t *testing.T) {
 func TestHandleLeftAtVirtualRootDoesNotBrowseParent(t *testing.T) {
 	first, second := createMultiTestDirs(t)
 	ui := analyzeMultiplePaths(t, []string{first, second})
-	ui.SetBrowseParentDirs()
+	ui.setBrowseParentDirs()
 
 	ui.handleLeft()
 

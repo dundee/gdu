@@ -6,9 +6,10 @@ import (
 	"bytes"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ func TestShowDevicesWithErr(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
-	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	err := ui.ListDevices(getter)
 
 	assert.Contains(t, err.Error(), "no such file")

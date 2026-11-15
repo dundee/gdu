@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -127,13 +129,9 @@ func TestSetDEfaultSorting(t *testing.T) {
 	simScreen := testapp.CreateSimScreen()
 	defer simScreen.Fini()
 
-	var opts []Option
-	opts = append(opts, func(ui *UI) {
-		ui.SetDefaultSorting("name", "asc")
-	})
-
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false, opts...)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{SortBy: "name", SortOrder: "asc"}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 
@@ -155,7 +153,8 @@ func TestSortDevicesByName(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true, RelativeSize: true}})
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -171,7 +170,8 @@ func TestSortDevicesByUsedSize(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true, RelativeSize: true}})
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -188,7 +188,7 @@ func getAnalyzedPathWithSorting(sortBy string, sortOrder string, apparentSize bo
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, apparentSize, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: apparentSize}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.sortBy = sortBy

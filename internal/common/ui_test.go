@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v5/internal/timefilter"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFormatNumber(t *testing.T) {
@@ -18,15 +21,19 @@ func TestFormatNumber(t *testing.T) {
 }
 
 // The scan settings are kept by the UI and passed to each scan, whichever
-// analyzer is set, before or after them.
+// analyzer is set.
 func TestScanSettingsAreScanOptions(t *testing.T) {
-	ui := UI{}
-	ui.SetFollowSymlinks(true)
-	ui.SetShowAnnexedSize(true)
-	ui.SetExclusiveSize(true)
-	ui.SetArchiveBrowsing(true)
-	ui.SetTimeFilter(func(time.Time) bool { return true })
-	ui.SetAnalyzer(&MockedAnalyzer{})
+	filter, err := timefilter.NewTimeFilter("2000-01-01", "", "", "", time.Now(), time.UTC)
+	require.NoError(t, err)
+	ui := NewUI(nil, &config.Settings{Scan: config.Scan{
+		FollowSymlinks:  true,
+		AnnexedSize:     true,
+		ExclusiveSize:   true,
+		ArchiveBrowsing: true,
+		TimeFilter:      filter,
+		TimeLocation:    time.UTC,
+	}})
+	ui.Analyzer = &MockedAnalyzer{}
 
 	opts := ui.ScanOptions()
 
@@ -48,11 +55,21 @@ func TestScanOptionsByDefault(t *testing.T) {
 	assert.False(t, opts.FilteringFiles())
 }
 
-func TestSetAnalyzer(t *testing.T) {
-	ui := UI{}
+func TestNewUI(t *testing.T) {
 	a := &MockedAnalyzer{}
-	ui.SetAnalyzer(a)
+	ui := NewUI(a, &config.Settings{
+		Scan: config.Scan{IgnoreDirs: []string{"/data/abc"}, IncludeTypes: []string{"go"}, ExcludeTypes: []string{"txt"}},
+		Display: config.Display{
+			Colors: true, Progress: true, ApparentSize: true, RelativeSize: true, SIPrefix: true,
+		},
+	})
+
 	assert.Equal(t, a, ui.Analyzer)
+	assert.Contains(t, ui.IgnoreDirPaths, "/data/abc")
+	assert.Equal(t, []string{"go"}, ui.IncludeTypes)
+	assert.Equal(t, []string{"txt"}, ui.IgnoreTypes)
+	assert.True(t, ui.UseColors && ui.ShowProgress && ui.ShowApparentSize && ui.ShowRelativeSize && ui.UseSIPrefix)
+	assert.True(t, ui.IsFilteringFiles())
 }
 
 type MockedAnalyzer struct{}

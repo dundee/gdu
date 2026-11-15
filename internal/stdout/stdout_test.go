@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testdev"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,8 +35,7 @@ func TestAnalyzePath(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -61,8 +60,8 @@ func TestShowItemCountInNonInteractiveMode(t *testing.T) {
 	}
 
 	output := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
-	ui.SetShowItemCount()
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+	ui.showItemCnt = true
 
 	err := ui.AnalyzePath(tmpDir, nil)
 	assert.Nil(t, err)
@@ -88,9 +87,9 @@ func TestShowItemCountIsTheSameForEveryAnalyzer(t *testing.T) {
 	for name, createAnalyzer := range analyzers {
 		t.Run(name, func(t *testing.T) {
 			output := bytes.NewBuffer(make([]byte, 10))
-			ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
-			ui.SetAnalyzer(createAnalyzer())
-			ui.SetShowItemCount()
+			ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
+			ui.Analyzer = (createAnalyzer())
+			ui.showItemCnt = true
 
 			err := ui.AnalyzePath(tmpDir, nil)
 			assert.Nil(t, err)
@@ -109,8 +108,8 @@ func TestShowItemCountInNonInteractiveModeWithColorsAndFile(t *testing.T) {
 	assert.Nil(t, err)
 
 	output := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateStdoutUI(output, true, false, false, false, false, false, false, "", 0, false, 0)
-	ui.SetShowItemCount()
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
+	ui.showItemCnt = true
 
 	err = ui.AnalyzePath(tmpDir, nil)
 	assert.Nil(t, err)
@@ -128,7 +127,7 @@ func TestShowSummaryApparentSizeForFilePath(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	// showApparentSize=true, summarize=true
-	ui := CreateStdoutUI(output, false, false, true, false, true, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true, Summarize: true}})
 	err = ui.AnalyzePath(filePath, nil)
 	assert.Nil(t, err)
 
@@ -150,8 +149,8 @@ func TestFilePathIsMeasuredWithExclusiveSize(t *testing.T) {
 	for _, exclusive := range []bool{false, true} {
 		output := bytes.NewBuffer(make([]byte, 10))
 		// summarize=true, noPrefix=true
-		ui := CreateStdoutUI(output, false, false, false, false, true, false, true, "", 0, false, 0)
-		ui.SetExclusiveSize(exclusive)
+		ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(),
+			&config.Settings{Display: config.Display{Summarize: true, NoPrefix: true}, Scan: config.Scan{ExclusiveSize: exclusive}})
 		assert.Nil(t, ui.AnalyzePath(filePath, nil))
 
 		if exclusive {
@@ -171,7 +170,7 @@ func TestShowSummaryDiskUsageForFilePath(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	// showApparentSize=false, summarize=true
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Summarize: true}})
 	err = ui.AnalyzePath(filePath, nil)
 	assert.Nil(t, err)
 
@@ -188,8 +187,7 @@ func TestShowSummary(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, "", 0, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true, Summarize: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -205,8 +203,7 @@ func TestShowSummaryBw(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Summarize: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -222,8 +219,7 @@ func TestShowTop(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, "", 2, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true, Summarize: true, Top: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -240,8 +236,7 @@ func TestShowTopBw(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 2, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Summarize: true, Top: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -264,7 +259,7 @@ func TestShowTopWithApparentSize(t *testing.T) {
 	root.AddFile(&analyze.File{Name: "dense", Parent: root, Size: 5 << 20, Usage: 5 << 20})
 
 	output := bytes.NewBuffer(nil)
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 2}})
 	ui.printTopFiles(root)
 
 	out := output.String()
@@ -272,7 +267,7 @@ func TestShowTopWithApparentSize(t *testing.T) {
 		"largest disk usage should be printed first, got:\n"+out)
 
 	output = bytes.NewBuffer(nil)
-	ui = CreateStdoutUI(output, false, false, true, false, false, false, false, "", 2, false, 0)
+	ui = CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true, Top: 2}})
 	ui.printTopFiles(root)
 
 	out = output.String()
@@ -291,8 +286,7 @@ func TestShowTopIgnoresConfiguredSorting(t *testing.T) {
 	root.AddFile(&analyze.File{Name: "c", Parent: root, Usage: 2 << 20})
 
 	output := bytes.NewBuffer(nil)
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
-	ui.SetDefaultSorting("name", "asc")
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 2, SortBy: "name", SortOrder: "asc"}})
 	ui.printTopFiles(root)
 
 	out := output.String()
@@ -308,8 +302,7 @@ func TestShowDepth(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 2)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -327,8 +320,7 @@ func TestShowDepthWithColors(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, false, false, false, false, false, "", 0, false, 2)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, Depth: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -345,8 +337,7 @@ func TestShowDepthWithReverseSort(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, true, 2)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ReverseSort: true, Depth: 2}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -378,7 +369,7 @@ func TestShowDepthWithApparentSize(t *testing.T) {
 	root.AddFile(dense)
 
 	output := bytes.NewBuffer(nil)
-	ui := CreateStdoutUI(output, false, false, true, false, false, false, false, "", 0, false, 1)
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true, Depth: 1}})
 	ui.printDirWithDepth(root, 0)
 
 	out := output.String()
@@ -393,8 +384,7 @@ func TestAnalyzeSubdir(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -410,9 +400,7 @@ func TestAnalyzePathWithTypeFiltering(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
-	ui.SetIncludeTypes([]string{"go"})
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Scan: config.Scan{IncludeTypes: []string{"go"}}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -428,9 +416,8 @@ func TestAnalyzePathWithColors(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, "", 0, false, 0)
-	ui.SetIgnoreTypes([]string{"go"})
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true}, Scan: config.Scan{ExcludeTypes: []string{"go"}}})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 
 	assert.Nil(t, err)
@@ -444,8 +431,7 @@ func TestAnalyzePathWoUnicode(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, "", 0, false, 0)
-	ui.UseOldProgressRunes()
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true, ApparentSize: true, NoUnicode: true}})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 
 	assert.Nil(t, err)
@@ -455,7 +441,7 @@ func TestAnalyzePathWoUnicode(t *testing.T) {
 func TestItemRows(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	err := ui.AnalyzePath("test_dir", nil)
 
@@ -469,8 +455,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, true, true, false, false, false, false, "", 0, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true, ApparentSize: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 
 	assert.Nil(t, err)
@@ -480,7 +465,7 @@ func TestAnalyzePathWithProgress(t *testing.T) {
 func TestShowDevices(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, true, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -491,7 +476,7 @@ func TestShowDevices(t *testing.T) {
 func TestShowDevicesWithColor(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true}})
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -505,7 +490,7 @@ func TestReadAnalysisWithColor(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true}})
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -518,7 +503,7 @@ func TestReadAnalysisBw(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -531,7 +516,7 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true}})
 	err = ui.ReadAnalysis(input)
 
 	assert.NotNil(t, err)
@@ -543,7 +528,7 @@ func TestReadAnalysisWithSummarize(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Summarize: true}})
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -556,7 +541,7 @@ func TestReadAnalysisWithSummarizeAndTop(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 2, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Summarize: true, Top: 2}})
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -573,7 +558,7 @@ func TestReadAnalysisWithTop(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 2, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 2}})
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -593,7 +578,7 @@ func TestReadAnalysisWithDepth(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 1)
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 1}})
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -614,7 +599,7 @@ func TestMaxInt(t *testing.T) {
 func TestFormatSize(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true}})
 
 	assert.Contains(t, ui.formatSize(1), "B")
 	assert.Contains(t, ui.formatSize(1<<10+1), "KiB")
@@ -628,7 +613,8 @@ func TestFormatSize(t *testing.T) {
 func TestFormatSizeDec(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, true, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true, SIPrefix: true}})
 
 	assert.Contains(t, ui.formatSize(1), "B")
 	assert.Contains(t, ui.formatSize(1<<10+1), "kB")
@@ -641,7 +627,8 @@ func TestFormatSizeDec(t *testing.T) {
 
 func TestFormatCount(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateStdoutUI(output, true, true, true, false, false, true, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true, SIPrefix: true}})
 
 	assert.Equal(t, "42", ui.formatCount(42))
 	assert.Equal(t, "1.5k", ui.formatCount(1500))
@@ -652,7 +639,8 @@ func TestFormatCount(t *testing.T) {
 func TestFormatSizeRaw(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, true, true, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true, SIPrefix: true, NoPrefix: true}})
 
 	assert.Equal(t, ui.formatSize(1), "1")
 	assert.Equal(t, ui.formatSize(1<<10+1), "1025")
@@ -665,15 +653,15 @@ func TestFormatSizeRaw(t *testing.T) {
 func TestFormatSizeFixedUnitBinary(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "k", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{FixedUnit: "k"}})
 	assert.Equal(t, "0.1 KiB", ui.formatSize(100))
 	assert.Equal(t, "1500.0 KiB", ui.formatSize(1536000))
 
-	ui = CreateStdoutUI(output, false, false, false, false, false, false, false, "m", 0, false, 0)
+	ui = CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{FixedUnit: "m"}})
 	assert.Equal(t, "0.1 MiB", ui.formatSize(100*1024))
 	assert.Equal(t, "1500.0 MiB", ui.formatSize(1536000*1024))
 
-	ui = CreateStdoutUI(output, false, false, false, false, false, false, false, "g", 0, false, 0)
+	ui = CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{FixedUnit: "g"}})
 	assert.Equal(t, "0.1 GiB", ui.formatSize(100*1024*1024))
 	assert.Equal(t, "1500.0 GiB", ui.formatSize(1536000*1024*1024))
 }
@@ -681,15 +669,15 @@ func TestFormatSizeFixedUnitSI(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	// -k --si
-	ui := CreateStdoutUI(output, false, false, false, false, false, true, false, "k", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{SIPrefix: true, FixedUnit: "k"}})
 	assert.Equal(t, "0.1 kB", ui.formatSize(100))
 	assert.Equal(t, "1500.0 kB", ui.formatSize(15e+5))
 
-	ui = CreateStdoutUI(output, false, false, false, false, false, true, false, "m", 0, false, 0)
+	ui = CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{SIPrefix: true, FixedUnit: "m"}})
 	assert.Equal(t, "0.1 MB", ui.formatSize(1e+5))
 	assert.Equal(t, "1500.0 MB", ui.formatSize(1.5e+9))
 
-	ui = CreateStdoutUI(output, false, false, false, false, false, true, false, "g", 0, false, 0)
+	ui = CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{SIPrefix: true, FixedUnit: "g"}})
 	assert.Equal(t, "0.1 GB", ui.formatSize(1e+8))
 	assert.Equal(t, "1500.0 GB", ui.formatSize(1.5e+12))
 }
@@ -718,8 +706,7 @@ func TestAnalyzePathWithReverseSort(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, true, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{ReverseSort: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -750,8 +737,7 @@ func TestAnalyzePathWithoutReverseSort(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -767,8 +753,7 @@ func TestReverseSortWithColors(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, false, false, false, "", 0, true, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true, ReverseSort: true}})
 	err := ui.AnalyzePath("test_dir/nested", nil)
 
 	assert.Nil(t, err)
@@ -782,8 +767,7 @@ func TestReverseSortWithSummarize(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, false, false, false, false, true, false, false, "", 0, true, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Summarize: true, ReverseSort: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -799,8 +783,8 @@ func TestReverseSortWithTop(t *testing.T) {
 	buff := make([]byte, 10)
 	output := bytes.NewBuffer(buff)
 
-	ui := CreateStdoutUI(output, true, false, true, false, true, false, false, "", 2, true, 0)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true, Summarize: true, Top: 2, ReverseSort: true}})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -816,7 +800,8 @@ func TestReverseSortFromAnalysisFile(t *testing.T) {
 
 	output := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateStdoutUI(output, true, true, true, false, false, false, false, "", 0, true, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, Progress: true, ApparentSize: true, ReverseSort: true}})
 	err = ui.ReadAnalysis(input)
 
 	assert.Nil(t, err)
@@ -825,7 +810,7 @@ func TestReverseSortFromAnalysisFile(t *testing.T) {
 
 func TestDefaultAnalyzerIsTopDir(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 
 	_, ok := ui.Analyzer.(*analyze.TopDirAnalyzer)
 	assert.True(t, ok, "default analyzer should be TopDirAnalyzer")
@@ -833,7 +818,7 @@ func TestDefaultAnalyzerIsTopDir(t *testing.T) {
 
 func TestAnalyzerWithTopIsParallel(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 5, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Top: 5}})
 
 	_, ok := ui.Analyzer.(*analyze.ParallelAnalyzer)
 	assert.True(t, ok, "analyzer with top > 0 should be ParallelAnalyzer")
@@ -841,7 +826,7 @@ func TestAnalyzerWithTopIsParallel(t *testing.T) {
 
 func TestAnalyzerWithDepthIsParallel(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 3)
+	ui := CreateStdoutUI(output, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: 3}})
 
 	_, ok := ui.Analyzer.(*analyze.ParallelAnalyzer)
 	assert.True(t, ok, "analyzer with depth > 0 should be ParallelAnalyzer")
@@ -852,7 +837,7 @@ func TestAnalyzePathWithTopDirAnalyzer(t *testing.T) {
 	defer fin()
 
 	output := bytes.NewBuffer(make([]byte, 10))
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.StartUILoop()
@@ -863,7 +848,7 @@ func TestAnalyzePathWithTopDirAnalyzer(t *testing.T) {
 func TestBlockSizeEnvironment(t *testing.T) {
 	t.Setenv("BLOCK_SIZE", "1K")
 	t.Setenv("BLOCKSIZE", "1MB")
-	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), analyze.CreateTopDirAnalyzer(), &config.Settings{})
 	assert.Equal(t, "2", ui.formatSize(1025))
 }
 
@@ -882,7 +867,7 @@ func TestBlockSizeEnvironmentFormats(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Setenv("BLOCK_SIZE", test.blockSize)
 			t.Setenv("BLOCKSIZE", "")
-			ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+			ui := CreateStdoutUI(bytes.NewBuffer(nil), analyze.CreateTopDirAnalyzer(), &config.Settings{})
 			assert.Equal(t, test.expected, ui.formatSize(test.size))
 		})
 	}
@@ -891,25 +876,25 @@ func TestBlockSizeEnvironmentFormats(t *testing.T) {
 func TestBlockSizeEnvironmentHumanReadableModes(t *testing.T) {
 	t.Run("binary", func(t *testing.T) {
 		t.Setenv("BLOCK_SIZE", "human-readable")
-		ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+		ui := CreateStdoutUI(bytes.NewBuffer(nil), analyze.CreateTopDirAnalyzer(), &config.Settings{})
 		assert.Equal(t, "1.0 KiB", ui.formatSize(1025))
 	})
 	t.Run("si", func(t *testing.T) {
 		t.Setenv("BLOCK_SIZE", "si")
-		ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, false, "", 0, false, 0)
+		ui := CreateStdoutUI(bytes.NewBuffer(nil), analyze.CreateTopDirAnalyzer(), &config.Settings{})
 		assert.Equal(t, "1.0 kB", ui.formatSize(1025))
 	})
 }
 
 func TestBlockSizeEnvironmentIsOverriddenByFlags(t *testing.T) {
 	t.Setenv("BLOCK_SIZE", "1K")
-	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, false, true, "", 0, false, 0)
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{NoPrefix: true}})
 	assert.Equal(t, "1025", ui.formatSize(1025))
 }
 
 func TestBlockSizeEnvironmentSIFlagOverridesEnvironment(t *testing.T) {
 	t.Setenv("BLOCK_SIZE", "1K")
-	ui := CreateStdoutUI(bytes.NewBuffer(nil), false, false, false, false, false, true, false, "", 0, false, 0)
+	ui := CreateStdoutUI(bytes.NewBuffer(nil), analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{SIPrefix: true}})
 	assert.Equal(t, "1.0 kB", ui.formatSize(1025))
 }
 
@@ -926,8 +911,7 @@ func newStdoutSymlinkFile() *analyze.File {
 
 func TestPrintItemShowsSymlinkTarget(t *testing.T) {
 	output := bytes.NewBuffer(nil)
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
-	ui.SetShowSymlinkTarget(true)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{SymlinkTarget: true}})
 
 	ui.printItem(nil, newStdoutSymlinkFile())
 
@@ -936,7 +920,7 @@ func TestPrintItemShowsSymlinkTarget(t *testing.T) {
 
 func TestPrintItemHidesSymlinkTargetByDefault(t *testing.T) {
 	output := bytes.NewBuffer(nil)
-	ui := CreateStdoutUI(output, false, false, false, false, false, false, false, "", 0, false, 0)
+	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{})
 
 	ui.printItem(nil, newStdoutSymlinkFile())
 

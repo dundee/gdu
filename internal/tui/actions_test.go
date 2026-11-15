@@ -8,6 +8,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -22,7 +23,7 @@ func TestShowDevices(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -42,7 +43,7 @@ func TestShowDevicesBW(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -63,11 +64,11 @@ func TestDeviceSelected(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true, RelativeSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
-	ui.UseOldSizeBar()
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui.setOldSizeBar()
 	err := ui.ListDevices(getDevicesInfoMock())
 
 	assert.Nil(t, err)
@@ -93,11 +94,11 @@ func TestNilDeviceSelected(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true, RelativeSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
-	ui.UseOldSizeBar()
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
+	ui.setOldSizeBar()
 
 	ui.deviceItemSelected(1, 0)
 
@@ -123,7 +124,7 @@ func TestCtrlCDuringScanShowsPartialResults(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	analyzer := &blockingAnalyzer{started: make(chan struct{})}
 	ui.Analyzer = analyzer
 	ui.done = make(chan struct{})
@@ -149,9 +150,9 @@ func TestEscDuringScanShowsPartialResults(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(false)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	// Ctrl+C is configured to quit, so Esc is the only way to keep results
-	ui.SetCtrlCQuits()
+	ui.setCtrlCQuits()
 	analyzer := &blockingAnalyzer{started: make(chan struct{})}
 	ui.Analyzer = analyzer
 	ui.done = make(chan struct{})
@@ -218,7 +219,8 @@ func TestReadAnalysis(t *testing.T) {
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, true, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(),
+		&config.Settings{Display: config.Display{Colors: true, ApparentSize: true, RelativeSize: true}})
 	ui.done = make(chan struct{})
 
 	err = ui.ReadAnalysis(input)
@@ -241,7 +243,7 @@ func TestReadAnalysisWithWrongFile(t *testing.T) {
 	assert.Nil(t, err)
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.done = make(chan struct{})
 
 	err = ui.ReadAnalysis(input)
@@ -261,7 +263,7 @@ func TestViewDirContents(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -284,7 +286,7 @@ func TestViewFileWithoutCurrentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 
@@ -297,7 +299,7 @@ func TestViewContentsOfNotExistingFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
@@ -327,7 +329,7 @@ func TestViewFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -359,13 +361,14 @@ func TestChangeCwd(t *testing.T) {
 	cwd := ""
 
 	opt := func(ui *UI) {
-		ui.SetChangeCwdFn(func(p string) error {
+		ui.setChangeCwdFn(func(p string) error {
 			cwd = p
 			return nil
 		})
 	}
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, opt)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
+	opt(ui)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -394,13 +397,14 @@ func TestChangeCwdWithErr(t *testing.T) {
 	cwd := ""
 
 	opt := func(ui *UI) {
-		ui.SetChangeCwdFn(func(p string) error {
+		ui.setChangeCwdFn(func(p string) error {
 			cwd = p
 			return errors.New("failed")
 		})
 	}
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false, opt)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
+	opt(ui)
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -428,7 +432,7 @@ func TestShowInfo(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -458,7 +462,7 @@ func TestShowInfoBW(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -488,7 +492,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -531,7 +535,7 @@ func TestShowInfoWithoutCurrentDir(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 
 	// pressing `i` will do nothing
@@ -546,7 +550,7 @@ func TestExitViewFile(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, false, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{ApparentSize: true}})
 	ui.done = make(chan struct{})
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
@@ -577,7 +581,7 @@ func TestAnalyzePathCreatesProgressBar(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.currentDeviceSize = 1e6
@@ -598,7 +602,7 @@ func TestAnalyzePathNoProgressBarWhenDisabled(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.currentDeviceSize = 1e6
@@ -619,7 +623,7 @@ func TestAnalyzePathNoProgressBarWhenNoDeviceSize(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 	ui.Analyzer = &testanalyze.MockedAnalyzer{}
 	ui.done = make(chan struct{})
 	ui.currentDeviceSize = 0

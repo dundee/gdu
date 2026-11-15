@@ -183,6 +183,10 @@ is gone.
 
 **Strength: Worth exploring**
 
+**Status: Mostly done** (ADR 8). `app.UI` has six methods: frontends are created from the
+settings and not configured afterwards. The export still refuses `ListDevices` and
+`ReadAnalysis`, which the flag validation now keeps it from being asked.
+
 - **Files:** `cmd/gdu/app/app.go:33-52` (19-method `UI`); `report/export.go:76-96`
   (five no-op stub methods only present to satisfy it: `StartUILoop`, `SetCollapsePath`,
   `SetShowSymlinkTarget`, `ListDevices`, `ReadAnalysis`).
@@ -196,6 +200,9 @@ is gone.
 ## P8 — Remove global mutable state in output modules
 
 **Strength: Worth exploring**
+
+**Status: Mostly done** (ADR 8). Colours and the spinner are per UI, and the export now
+honours `--no-unicode` too. `stdout.AnalyzePath` still calls `os.Stat` directly.
 
 - **Files:** `color.NoColor` set as a package-global side effect in `report/export.go:69`
   and `stdout/stdout.go:92`; `progressRunes`/`progressRunesCount` package vars

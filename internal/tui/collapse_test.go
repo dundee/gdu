@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -186,7 +187,7 @@ func TestFormatCollapsedRow(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
 
 	// Create a test collapsed path
 	deepDir := &analyze.Dir{
@@ -234,7 +235,7 @@ func TestFormatCollapsedRow(t *testing.T) {
 	assert.Contains(t, result, "level1/level2/deep")
 
 	// Test without colors
-	ui2 := CreateUI(app, simScreen, &bytes.Buffer{}, false, false, false, false)
+	ui2 := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 	result = ui2.formatCollapsedRow(collapsedPath, rowMaxima{usage: 1000, size: 1000}, false, false)
 	assert.Contains(t, result, "level1/level2/deep")
 }
@@ -244,7 +245,7 @@ func TestCollapsedPathIntegration(t *testing.T) {
 	defer simScreen.Fini()
 
 	app := testapp.CreateMockedApp(true)
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, false, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true}})
 
 	// Create a directory structure that should be collapsed
 	deepestDir := &analyze.Dir{
@@ -287,7 +288,7 @@ func TestCollapsedPathIntegration(t *testing.T) {
 	ui.session.SetRoot(topDir)
 	ui.topDirPath = "/test"
 	ui.currentDirPath = "/test"
-	ui.SetCollapsePath(true)
+	ui.setCollapsePath(true)
 
 	// Test that showDir properly handles collapsed paths
 	ui.showDir()

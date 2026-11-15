@@ -13,6 +13,7 @@ import (
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/device"
@@ -29,6 +30,7 @@ type UI struct {
 	exportOutput     io.Writer
 	red              *color.Color
 	orange           *color.Color
+	progressRunes    []rune
 	session          *session.Session
 	outputAttributes fs.JSONAttributes
 	top              int
@@ -36,41 +38,25 @@ type UI struct {
 	summarize        bool
 }
 
-// CreateExportUI creates UI for stdout
-func CreateExportUI(
-	output io.Writer,
-	exportOutput io.Writer,
-	useColors bool,
-	showProgress bool,
-	useSIPrefix bool,
-	top int,
-	depth int,
-	summarize bool,
-	outputAttributes fs.JSONAttributes,
-) *UI {
+// CreateExportUI returns the UI exporting the analysis to exportOutput as
+// JSON, telling the progress on output.
+func CreateExportUI(output, exportOutput io.Writer, analyzer analyze.Analyzer, s *config.Settings) *UI {
 	ui := &UI{
-		UI: &common.UI{
-			ShowProgress: showProgress,
-			Analyzer:     analyze.CreateAnalyzer(),
-			UseSIPrefix:  useSIPrefix,
-		},
+		UI:               common.NewUI(analyzer, s),
 		output:           output,
 		exportOutput:     exportOutput,
-		outputAttributes: outputAttributes,
-		top:              top,
-		depth:            depth,
-		summarize:        summarize,
+		outputAttributes: s.Export.Attributes,
+		top:              s.Display.Top,
+		depth:            s.Display.Depth,
+		summarize:        s.Display.Summarize,
 	}
-	if !useSIPrefix {
+	if !s.Display.SIPrefix {
 		ui.SetBlockSizeFromEnvironment()
 	}
-	ui.red = color.New(color.FgRed).Add(color.Bold)
-	ui.orange = color.New(color.FgYellow).Add(color.Bold)
+	ui.progressRunes = common.SpinnerRunes(s.Display.NoUnicode)
+	ui.red = common.BoldColor(color.FgRed, s.Display.Colors)
+	ui.orange = common.BoldColor(color.FgYellow, s.Display.Colors)
 	ui.session = session.New(ui.UI)
-
-	if !useColors {
-		color.NoColor = true
-	}
 
 	return ui
 }
@@ -78,14 +64,6 @@ func CreateExportUI(
 // StartUILoop stub
 func (ui *UI) StartUILoop() error {
 	return nil
-}
-
-// SetCollapsePath sets the flag to collapse paths
-func (ui *UI) SetCollapsePath(value bool) {
-}
-
-// SetShowSymlinkTarget is a no-op for the export UI (no rendered file list)
-func (ui *UI) SetShowSymlinkTarget(value bool) {
 }
 
 // ListDevices lists mounted devices and shows their disk usage
@@ -238,8 +216,6 @@ func (ui *UI) exportDir(dir analyze.Node) error {
 	return err
 }
 
-var progressRunes = []rune(`⠇⠏⠋⠙⠹⠸⠼⠴⠦⠧`)
-
 // scanObserver returns the observer showing the progress of a scan, or nil
 // when no progress is shown.
 func (ui *UI) scanObserver() session.Observer {
@@ -249,7 +225,7 @@ func (ui *UI) scanObserver() session.Observer {
 	i := 0
 	return func(p session.Progress) {
 		fmt.Fprint(ui.output, clearTerminalLine)
-		fmt.Fprintf(ui.output, "\r %s ", string(progressRunes[i]))
+		fmt.Fprintf(ui.output, "\r %s ", string(ui.progressRunes[i]))
 		if p.Phase == session.Finalizing {
 			fmt.Fprint(ui.output, "Calculating disk usage...")
 		} else {
@@ -258,7 +234,7 @@ func (ui *UI) scanObserver() session.Observer {
 				" size: "+
 				ui.formatSize(p.TotalUsage))
 		}
-		i = (i + 1) % len(progressRunes)
+		i = (i + 1) % len(ui.progressRunes)
 	}
 }
 
@@ -274,9 +250,9 @@ func (ui *UI) showWritingProgress() (stop func()) {
 		defer close(stopped)
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
-		for i := 0; ; i = (i + 1) % len(progressRunes) {
+		for i := 0; ; i = (i + 1) % len(ui.progressRunes) {
 			fmt.Fprint(ui.output, clearTerminalLine)
-			fmt.Fprintf(ui.output, "\r %s Writing output file...", string(progressRunes[i]))
+			fmt.Fprintf(ui.output, "\r %s Writing output file...", string(ui.progressRunes[i]))
 			select {
 			case <-quit:
 				fmt.Fprint(ui.output, clearTerminalLine)

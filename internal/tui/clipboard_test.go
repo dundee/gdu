@@ -7,9 +7,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testapp"
+	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/stretchr/testify/assert"
 )
 
 func lookPathFor(names ...string) func(string) (string, error) {
@@ -108,7 +109,7 @@ func TestCopySelectedPathWithoutCurrentDir(t *testing.T) {
 	app, simScreen := testapp.CreateTestAppWithSimScreen(50, 50)
 	defer simScreen.Fini()
 
-	ui := CreateUI(app, simScreen, &bytes.Buffer{}, true, true, false, false)
+	ui := CreateUI(app, simScreen, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Colors: true, ApparentSize: true}})
 
 	// No directory analyzed yet: copying must be a safe no-op.
 	assert.NotPanics(t, ui.copySelectedPath)

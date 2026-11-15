@@ -9,28 +9,20 @@ import (
 	"os"
 	"regexp"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
-// SetIgnoreFromGitignoreFile sets dirs to ignore from a file with
-// .gitignore-style patterns.
-//
-// scanRoots are the resolved directories being scanned; patterns anchored with
-// a leading / are matched relative to them. Blank lines and # comments are
-// skipped. Negated (!) and match-everything patterns are rejected with an
-// error rather than skipped, because both would silently make gdu report less
-// than is really on disk.
-//
-// The resulting patterns are added to whatever --ignore-dirs-pattern and
-// --ignore-from already contributed; the sources combine.
-func (ui *UI) SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) error {
+// readGitignoreFile returns the patterns of the .gitignore-style file
+// ignoreFile as regex fragments. Patterns with a leading / are matched
+// relative to scanRoots. Blank lines and # comments are skipped. Negated (!)
+// and match-everything patterns are rejected with an error rather than
+// skipped, because both would silently make gdu report less than is really
+// on disk.
+func readGitignoreFile(ignoreFile string, scanRoots []string) ([]string, error) {
 	var fragments []string
-	log.Printf("Reading ignoring dirs in gitignore syntax from file '%s'", ignoreFile)
 
 	file, err := os.Open(ignoreFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -41,7 +33,7 @@ func (ui *UI) SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) 
 			continue
 		}
 		if strings.HasPrefix(pattern, "!") {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"negated pattern %q on line %d of %s is not supported: gdu prunes whole "+
 					"directories, so an already ignored directory cannot be un-ignored; "+
 					"remove the line or drop the pattern it negates",
@@ -49,17 +41,16 @@ func (ui *UI) SetIgnoreFromGitignoreFile(ignoreFile string, scanRoots []string) 
 		}
 		fragment, err := TranslateGitignorePattern(pattern, scanRoots)
 		if err != nil {
-			return fmt.Errorf("invalid pattern %q on line %d of %s: %w",
+			return nil, fmt.Errorf("invalid pattern %q on line %d of %s: %w",
 				pattern, lineNo, ignoreFile, err)
 		}
 		fragments = append(fragments, fragment)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
+		return nil, err
 	}
-
-	return ui.addIgnoreDirPatterns(fragments)
+	return fragments, nil
 }
 
 // TranslateGitignorePattern converts one .gitignore-style pattern into a

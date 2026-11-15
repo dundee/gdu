@@ -7,8 +7,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/analyze/badger"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,9 +30,8 @@ func TestReadFromStorage(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false, true, false, 0, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.SetAnalyzer(badger.CreateAnalyzer(storagePath))
+	ui := CreateExportUI(output, reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
+	ui.Analyzer = (badger.CreateAnalyzer(storagePath))
 	err := ui.AnalyzePath("test_dir", nil)
 	assert.Nil(t, err)
 	err = ui.ReadFromStorage("test_dir")
@@ -48,16 +49,15 @@ func TestReadFromStorageWithErr(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 	reportOutput := bytes.NewBuffer(make([]byte, 10))
 
-	ui := CreateExportUI(output, reportOutput, false, false, false, 0, 0, false, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.SetAnalyzer(badger.CreateAnalyzer(storagePath))
+	ui := CreateExportUI(output, reportOutput, analyze.CreateAnalyzer(), &config.Settings{})
+	ui.Analyzer = (badger.CreateAnalyzer(storagePath))
 	err := ui.ReadFromStorage("test_dir")
 
 	assert.ErrorContains(t, err, "holds no analysis of test_dir")
 }
 
 func TestReadFromStorageNeedsDatabase(t *testing.T) {
-	ui := CreateExportUI(&bytes.Buffer{}, &bytes.Buffer{}, false, false, false, 0, 0, false, nil)
+	ui := CreateExportUI(&bytes.Buffer{}, &bytes.Buffer{}, analyze.CreateAnalyzer(), &config.Settings{})
 
 	err := ui.ReadFromStorage("test_dir")
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/config"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/analyze/badger"
@@ -36,14 +37,12 @@ func assertStorageExportMatchesPlain(
 	assert.Nil(t, err)
 
 	var plain, plainReport bytes.Buffer
-	plainUI := CreateExportUI(&plain, &plainReport, false, false, false, 0, depth, summarize, nil)
-	plainUI.SetIgnoreDirPaths([]string{"/xxx"})
+	plainUI := CreateExportUI(&plain, &plainReport, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: depth, Summarize: summarize}})
 	assert.Nil(t, plainUI.AnalyzePath(path, nil))
 
 	var output, reportOutput bytes.Buffer
-	ui := CreateExportUI(&output, &reportOutput, false, false, false, 0, depth, summarize, nil)
-	ui.SetIgnoreDirPaths([]string{"/xxx"})
-	ui.SetAnalyzer(analyzer)
+	ui := CreateExportUI(&output, &reportOutput, analyze.CreateAnalyzer(), &config.Settings{Display: config.Display{Depth: depth, Summarize: summarize}})
+	ui.Analyzer = (analyzer)
 	assert.Nil(t, ui.AnalyzePath(path, nil))
 
 	rootName, err := json.Marshal(path)
