@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/badgerstore"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -26,9 +27,6 @@ func TestStoredTreeConcurrentReaders(t *testing.T) {
 	dir, err := analyzer.LoadAnalysis("test_dir")
 	require.NoError(t, err)
 
-	closeFn := analyzer.storage.Open()
-	defer closeFn()
-
 	var wg sync.WaitGroup
 	got := make([]map[string]storedStats, 4)
 	for i := range got {
@@ -44,11 +42,11 @@ func TestStoredTreeConcurrentReaders(t *testing.T) {
 	}
 }
 
-// TestStoredDirOpensStorageOnDemandConcurrently drives the same workload with
-// no pinned database handle, so every operation has to open storage itself.
-// Reference counting must let those overlapping opens share one badger
-// instance instead of tripping its exclusive directory lock.
-func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
+// TestStoredDirUsesOneDatabaseConcurrently drives the same workload from a
+// fresh analyzer, whose first operations, run concurrently, all open the
+// database: they must share one badger instance instead of tripping its
+// exclusive directory lock.
+func TestStoredDirUsesOneDatabaseConcurrently(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
@@ -57,7 +55,15 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 
-	assert.False(t, storageIsOpen(analyzer), "the analyzer should have closed storage on the way out")
+	dir.UpdateStats(false)
+	db := analyzer.storage.RecordStore.(*badgerstore.Store)
+	require.NoError(t, analyzer.Close())
+	// a later run, whose readers all open the database at once
+	analyzer = NewStoredAnalyzer(badgerstore.New(db.Path()))
+	t.Cleanup(func() { _ = analyzer.Close() })
+	loaded, err := analyzer.LoadAnalysis("test_dir")
+	require.NoError(t, err)
+	dir = loaded.(*StoredDir)
 
 	// as the session does: computing the totals changes the tree, reading
 	// it does not, and readers open the storage at once
@@ -80,8 +86,10 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 	}
 	wg.Wait()
 
-	assert.False(t, storageIsOpen(analyzer), "every reference must be released again")
+	assert.True(t, storageIsOpen(analyzer), "the database stays open until Close")
 	assert.Positive(t, dir.GetSize())
+	require.NoError(t, analyzer.Close())
+	assert.False(t, storageIsOpen(analyzer))
 }
 
 // readLockedStoredDir mirrors a UI traversal: every scalar accessor plus the

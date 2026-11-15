@@ -27,12 +27,14 @@ func NewStoredAnalyzer(store RecordStore) *StoredAnalyzer {
 	return a
 }
 
+// Close closes the database, as Database says.
+func (a *StoredAnalyzer) Close() error {
+	return a.storage.Close()
+}
+
 // LoadAnalysis returns the analysis of path stored in the database by an
 // earlier scan, as Database says.
 func (a *StoredAnalyzer) LoadAnalysis(path string) (Node, error) {
-	closeFn := a.storage.Open()
-	defer closeFn()
-
 	if err := checkAnalysis(a.storage, storedFormat, path); err != nil {
 		return nil, err
 	}
@@ -48,9 +50,6 @@ func (a *StoredAnalyzer) LoadAnalysis(path string) (Node, error) {
 // stored the totals of the returned tree.
 func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) Node {
 	s := a.begin(ctx, opts)
-
-	closeFn := a.storage.Open()
-	defer closeFn()
 
 	a.storage.failed.Store(false)
 	if err := beginAnalysis(a.storage, storedFormat, path); err != nil {
@@ -220,8 +219,6 @@ func (f *StoredDir) load() error {
 		return nil
 	}
 
-	closeFn := f.storage.Open()
-	defer closeFn()
 	record, err := f.storage.loadRecord(f.GetPath())
 	if err != nil {
 		return err
@@ -278,8 +275,6 @@ func (f *StoredDir) detached() (*StoredDir, error) {
 
 // loadEntries loads the directories among files, whose totals a listing shows.
 func (f *StoredDir) loadEntries(files fs.Files) {
-	closeFn := f.storage.Open()
-	defer closeFn()
 	for _, file := range files {
 		if dir, ok := file.(*StoredDir); ok {
 			if err := dir.load(); err != nil {
@@ -348,8 +343,6 @@ func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 // EncodeJSON writes JSON representation of the directory and everything in
 // it, reading from the database the directories nobody has loaded.
 func (f *StoredDir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
-	closeFn := f.storage.Open()
-	defer closeFn()
 	if f.isLoaded() {
 		return f.Dir.EncodeJSON(writer, topLevel, attributes)
 	}
@@ -369,9 +362,6 @@ func copyFiles(files fs.Files) fs.Files {
 
 // AddFile adds item to the directory and stores the directory.
 func (f *StoredDir) AddFile(item fs.Item) {
-	closeFn := f.storage.Open()
-	defer closeFn()
-
 	f.Files = append(f.Files, item)
 	f.store()
 }
@@ -379,9 +369,6 @@ func (f *StoredDir) AddFile(item fs.Item) {
 // RemoveFile removes file from stored directory
 // It also updates size and item count of parent directories
 func (f *StoredDir) RemoveFile(item fs.Item) {
-	closeFn := f.storage.Open()
-	defer closeFn()
-
 	f.Files = f.Files.Remove(item)
 
 	removeFromTotals(f, item)
@@ -389,9 +376,6 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 
 // adjustStats adds the deltas to the totals of the directory and stores it.
 func (f *StoredDir) adjustStats(itemCount, size, usage int64) {
-	closeFn := f.storage.Open()
-	defer closeFn()
-
 	f.ItemCount += itemCount
 	f.Size += size
 	f.Usage += usage
@@ -418,9 +402,6 @@ func (f *StoredDir) UpdateStats(filteringFiles bool) *fs.HardLinks {
 // detached copy and only the totals are kept, so computing the totals of a
 // tree does not keep the whole tree in memory.
 func (f *StoredDir) updateStats(links *fs.HardLinks, filteringFiles bool) {
-	closeFn := f.storage.Open()
-	defer closeFn()
-
 	if !f.isLoaded() {
 		copied, err := f.detached()
 		if err != nil {

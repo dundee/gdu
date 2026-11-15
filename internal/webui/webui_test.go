@@ -1022,9 +1022,12 @@ func TestReadFromStorage(t *testing.T) {
 	a := badger.CreateAnalyzer(storagePath)
 	dir := a.AnalyzeDir(context.Background(), "test_dir", analyze.Options{})
 	dir.UpdateStats(false)
+	require.NoError(t, a.Close())
 
 	ui := newTestUI()
-	ui.Analyzer = (badger.CreateAnalyzer(storagePath))
+	stored := badger.CreateAnalyzer(storagePath)
+	t.Cleanup(func() { _ = stored.Close() })
+	ui.Analyzer = stored
 	require.NoError(t, ui.ReadFromStorage("test_dir"))
 	// the classification reads the stored tree in the background, so it has
 	// to be over before the test removes the database

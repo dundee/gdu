@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/dgraph-io/badger/v4"
 )
@@ -14,28 +13,33 @@ import (
 // is64Bit is true on 64-bit systems.
 const is64Bit = (^uint(0) >> 63) == 1
 
-// reopenEvery is the number of operations after which the database is closed
-// and opened again, which releases the memory badger holds on to.
-const reopenEvery = 10000
+// ErrClosed is returned when the store is used after Close.
+var ErrClosed = errors.New("the badger database is closed")
 
 // Store is a badger database of records, keyed by bytes.
 //
-// All access to db is serialized by m. Open is reference counted: badger takes
-// an exclusive lock on the storage directory, so a second concurrent
-// badger.Open on the same path would panic, and an inner caller's closer must
-// not tear the database out from under an outer caller that is still using it.
+// The database is opened on first use and stays open until Close: opening
+// it costs about 11 ms on a database of a million items, which browsing paid
+// for every directory when the database was opened per operation. Badger
+// locks the storage directory, so a second Store of the same directory, in
+// this process or another one, cannot open it while this one is open.
 type Store struct {
-	db          *badger.DB
 	storagePath string
-	m           sync.RWMutex
-	counter     atomic.Int64
-	openCount   int
+	// m guards db and closed
+	m      sync.RWMutex
+	db     *badger.DB
+	closed bool
 }
 
 // New returns a store of the badger database in the directory storagePath.
-// The database is opened by Open.
+// The database is opened on first use.
 func New(storagePath string) *Store {
 	return &Store{storagePath: storagePath}
+}
+
+// Path returns the directory of the database.
+func (s *Store) Path() string {
+	return s.storagePath
 }
 
 // IsOpen returns true if badger DB is open
@@ -45,41 +49,53 @@ func (s *Store) IsOpen() bool {
 	return s.db != nil
 }
 
-// Open opens badger DB and returns a function closing it again.
-//
-// Opening is reference counted, so nested and concurrent callers all get a
-// usable database and only the last returned closer actually closes it. Each
-// closer is idempotent; calling it more than once is a no-op.
-func (s *Store) Open() func() {
+// Close closes the database. The store cannot be used afterwards.
+func (s *Store) Close() error {
 	s.m.Lock()
 	defer s.m.Unlock()
-
+	s.closed = true
 	if s.db == nil {
-		s.openLocked()
+		return nil
 	}
-	s.openCount++
-
-	var once sync.Once
-	return func() {
-		once.Do(s.release)
-	}
+	err := s.db.Close()
+	s.db = nil
+	return err
 }
 
-// release drops one reference taken by Open, closing the database once the
-// last one is gone.
-func (s *Store) release() {
+// use calls f with the database, opening it on first use. Close waits for
+// the calls running.
+func (s *Store) use(f func(db *badger.DB) error) error {
+	s.m.RLock()
+	if s.db == nil {
+		s.m.RUnlock()
+		if err := s.open(); err != nil {
+			return err
+		}
+		s.m.RLock()
+	}
+	defer s.m.RUnlock()
+	if s.db == nil {
+		return ErrClosed
+	}
+	return f(s.db)
+}
+
+// open opens the database, unless it is open already or closed.
+func (s *Store) open() error {
 	s.m.Lock()
 	defer s.m.Unlock()
-
-	if s.openCount == 0 {
-		return
+	if s.closed {
+		return ErrClosed
 	}
-	s.openCount--
-	if s.openCount > 0 || s.db == nil {
-		return
+	if s.db != nil {
+		return nil
 	}
-	s.db.Close()
-	s.db = nil
+	db, err := openBadger(s.storagePath)
+	if err != nil {
+		return fmt.Errorf("opening the badger database %s: %w", s.storagePath, err)
+	}
+	s.db = db
+	return nil
 }
 
 // Sizes of badger's in-memory structures. Its defaults (five 64 MiB memtables
@@ -95,9 +111,9 @@ const (
 	badgerBlockCacheSize = 16 << 20
 )
 
-// openLocked opens the badger DB. The caller must hold m for writing.
-func (s *Store) openLocked() {
-	options := badger.DefaultOptions(s.storagePath)
+// openBadger opens the badger database in the directory storagePath.
+func openBadger(storagePath string) (*badger.DB, error) {
+	options := badger.DefaultOptions(storagePath)
 	options.Logger = nil
 	options.MemTableSize = badgerMemTableSize
 	options.NumMemtables = badgerNumMemtables
@@ -109,59 +125,34 @@ func (s *Store) openLocked() {
 		options.ValueLogFileSize = (1<<30 - 1) / 2
 	}
 
-	db, err := badger.Open(options)
-	if err != nil {
-		panic(err)
-	}
-	s.db = db
+	return badger.Open(options)
 }
 
-// Put stores value under key. The database must be open.
+// Put stores value under key.
 func (s *Store) Put(key, value []byte) error {
-	s.checkCount()
-	s.m.RLock()
-	defer s.m.RUnlock()
-	return s.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
+	return s.use(func(db *badger.DB) error {
+		return db.Update(func(txn *badger.Txn) error {
+			return txn.Set(key, value)
+		})
 	})
 }
 
 // Get returns the value stored under key; found is false when there is
-// none. The database must be open.
+// none.
 func (s *Store) Get(key []byte) (value []byte, found bool, err error) {
-	s.checkCount()
-	s.m.RLock()
-	defer s.m.RUnlock()
-
-	err = s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("reading stored value for path %s: %w", key, err)
-		}
-		found = true
-		value, err = item.ValueCopy(nil)
-		return err
+	err = s.use(func(db *badger.DB) error {
+		return db.View(func(txn *badger.Txn) error {
+			item, err := txn.Get(key)
+			if errors.Is(err, badger.ErrKeyNotFound) {
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("reading stored value for path %s: %w", key, err)
+			}
+			found = true
+			value, err = item.ValueCopy(nil)
+			return err
+		})
 	})
 	return value, found, err
-}
-
-// checkCount reopens the database every reopenEvery operations.
-func (s *Store) checkCount() {
-	if s.counter.Add(1) < reopenEvery {
-		return
-	}
-	s.m.Lock()
-	defer s.m.Unlock()
-	if s.counter.Load() < reopenEvery {
-		// another goroutine already recycled the database
-		return
-	}
-	s.counter.Store(0)
-	if s.db != nil {
-		s.db.Close()
-	}
-	s.openLocked()
 }

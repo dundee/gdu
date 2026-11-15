@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/dundee/gdu/v5/internal/badgerstore"
 )
@@ -11,8 +12,19 @@ import (
 // The constructors of packages analyze/badger and analyze/sqlite, which
 // import this package and so cannot be used by its tests.
 
+// storedAnalyzers are the analyzers createStoredAnalyzer made, by path.
+var storedAnalyzers sync.Map
+
+// createStoredAnalyzer returns an analyzer of the badger database at path,
+// as a later run of gdu would open it: the analyzer made for path before is
+// closed, as only one can open a badger database at a time.
 func createStoredAnalyzer(path string) *StoredAnalyzer {
-	return NewStoredAnalyzer(badgerstore.New(path))
+	if previous, ok := storedAnalyzers.Load(path); ok {
+		_ = previous.(*StoredAnalyzer).Close()
+	}
+	a := NewStoredAnalyzer(badgerstore.New(path))
+	storedAnalyzers.Store(path, a)
+	return a
 }
 
 func createSqliteAnalyzer(path string) (*SqliteAnalyzer, error) {

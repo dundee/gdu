@@ -20,8 +20,9 @@
 //
 // The analyzers of packages analyze/badger and analyze/sqlite keep their
 // results in a database, from which a later run can load them again: both are
-// a Database. They are packages of their own, so that a program not using
-// them does not link the databases.
+// a Database, which the program closes once it is done with it. They are
+// packages of their own, so that a program not using them does not link the
+// databases.
 //
 // The entries of a tree are fs.Item, which only read it. A Node can also
 // compute the totals of its tree and export it (EncodeJSON). RemoveEntry and

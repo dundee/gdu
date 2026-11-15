@@ -172,7 +172,9 @@ func TestStoredArchiveEntriesCannotOverwriteOtherRecords(t *testing.T) {
 func TestStoredParentsAreTheDirectoriesListingThem(t *testing.T) {
 	root := makeStoredFixture(t)
 	stored, db := scanStored(t, root, false)
-	loaded, err := createStoredAnalyzer(db).LoadAnalysis(root)
+	// by the scanning analyzer, which keeps the database open
+	scanner, _ := storedAnalyzers.Load(db)
+	loaded, err := scanner.(*StoredAnalyzer).LoadAnalysis(root)
 	require.NoError(t, err)
 
 	for _, tree := range []fs.Item{stored, loaded} {
@@ -231,10 +233,10 @@ func TestStoredReplaceFileThenRemoveAnother(t *testing.T) {
 func TestStoredDatabaseOfOlderFormatIsRefused(t *testing.T) {
 	root := makeStoredFixture(t)
 	_, db := scanStored(t, root, false)
+	_ = createStoredAnalyzer(db).Close() // the scan's
 	storage := badgerstore.New(db)
-	closeFn := storage.Open()
 	require.NoError(t, storage.Put([]byte(root), []byte("not a record")))
-	closeFn()
+	require.NoError(t, storage.Close())
 
 	_, err := createStoredAnalyzer(db).LoadAnalysis(root)
 
@@ -246,8 +248,6 @@ func TestStoredDatabaseOfOlderFormatIsRefused(t *testing.T) {
 func TestStoredHugeDirectory(t *testing.T) {
 	const entries = 300_000
 	storage := newRecords(badgerstore.New(filepath.Join(t.TempDir(), "gdu.badger")))
-	closeFn := storage.Open()
-	defer closeFn()
 	record := &storedRecord{Entries: make([]storedEntry, entries)}
 	for i := range record.Entries {
 		record.Entries[i] = storedEntry{Name: fmt.Sprintf("file-with-a-longish-name-%07d", i), Size: int64(i)}

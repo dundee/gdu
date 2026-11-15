@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -231,7 +232,7 @@ type App struct {
 }
 
 // Run starts gdu main logic
-func (a *App) Run() error {
+func (a *App) Run() (err error) {
 	if a.Flags.ShowVersion {
 		fmt.Fprintln(a.Writer, "Version:\t", build.Version)
 		fmt.Fprintln(a.Writer, "Built time:\t", build.Time)
@@ -258,6 +259,15 @@ func (a *App) Run() error {
 	analyzer, err := a.analyzer(front, &settings)
 	if err != nil {
 		return err
+	}
+	if db, ok := analyzer.(analyze.Database); ok {
+		// a database stays open for the run, and closing it writes out what
+		// it holds in memory
+		defer func() {
+			if closeErr := db.Close(); closeErr != nil {
+				err = errors.Join(err, fmt.Errorf("closing the database: %w", closeErr))
+			}
+		}()
 	}
 	ui, err := a.createUI(front, analyzer, &settings)
 	if err != nil {
