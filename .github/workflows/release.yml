@@ -4,9 +4,16 @@ on:
     tags:
       - 'v*'
 
+# each job asks for more when it needs it
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      # the draft release and its assets
+      contents: write
     steps:
       - name: Install Go
         uses: actions/setup-go@v7
@@ -14,10 +21,12 @@ jobs:
           go-version: 1.27.x
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Run tests
         run: go test -v -covermode=count ./...
       - name: Install tooling
-        run: go install github.com/mitchellh/gox@latest
+        run: go install github.com/mitchellh/gox@v1.0.1
       - name: Import GPG key
         run: |
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
@@ -38,7 +47,7 @@ jobs:
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       - name: Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           files: |
