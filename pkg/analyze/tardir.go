@@ -4,12 +4,14 @@ import (
 	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
+	"context"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/dundee/gdu/v5/internal/xzcheck"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/ulikunitz/xz"
 )
@@ -121,6 +123,10 @@ func openTarReader(tarPath string) (*tar.Reader, io.Closer, error) {
 		return tar.NewReader(br), f, nil
 
 	case strings.HasSuffix(lower, ".tar.xz") || strings.HasSuffix(lower, ".txz"):
+		if err := checkXZ(f); err != nil {
+			f.Close()
+			return nil, nil, err
+		}
 		xr, err := xz.NewReader(f)
 		if err != nil {
 			f.Close()
@@ -133,9 +139,25 @@ func openTarReader(tarPath string) (*tar.Reader, io.Closer, error) {
 	}
 }
 
+// checkXZ fails for an xz file asking the decoder for more memory than
+// xzcheck.MaxDict.
+func checkXZ(f *os.File) error {
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	return xzcheck.CheckDicts(f, info.Size(), xzcheck.MaxDict)
+}
+
 // processTarFile reads a tar archive and returns a TarDir representing its
 // contents, whose totals finishArchive computes.
 func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
+	return readTarFile(context.Background(), tarPath, info)
+}
+
+// readTarFile is processTarFile, stopping when ctx is cancelled: reading
+// the headers of a compressed tar decompresses all of it.
+func readTarFile(ctx context.Context, tarPath string, info os.FileInfo) (*TarDir, error) {
 	tr, closer, err := openTarReader(tarPath)
 	if err != nil {
 		return nil, err
@@ -160,13 +182,19 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 	dirMap := make(map[string]*TarDir)
 	dirMap[""] = tarDir
 
-	for {
+	for entries := 0; ; entries++ {
+		if entries%1000 == 0 && ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		header, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return nil, err
+		}
+		if entries == maxArchiveEntries {
+			return nil, errTooManyEntries
 		}
 
 		name, ok := archiveEntryPath(header.Name)

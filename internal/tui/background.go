@@ -31,6 +31,7 @@ func (ui *UI) deleteWorker() {
 func (ui *UI) deleteItem(job deleteQueueItem) {
 	ui.increaseActiveWorkers()
 	defer ui.decreaseActiveWorkers()
+	defer ui.deletionsDone(1)
 
 	target, action := job.target, job.action
 	if err := job.deleter.Delete(target.dir, target.item, action.mode()); err != nil {
@@ -71,4 +72,47 @@ func (ui *UI) decreaseActiveWorkers() {
 	ui.workersMut.Lock()
 	defer ui.workersMut.Unlock()
 	ui.activeWorkers--
+}
+
+// addPendingDeletions counts n more items to delete.
+func (ui *UI) addPendingDeletions(n int) {
+	ui.workersMut.Lock()
+	defer ui.workersMut.Unlock()
+	ui.pendingDeletions += n
+}
+
+// deletionsDone counts n items as deleted, or given up, and quits when gdu
+// is to quit once no deletion is left.
+func (ui *UI) deletionsDone(n int) {
+	ui.workersMut.Lock()
+	ui.pendingDeletions -= n
+	quit := ui.quitAfterDeletions
+	if ui.pendingDeletions > 0 {
+		quit = nil
+	}
+	ui.workersMut.Unlock()
+	if quit != nil {
+		ui.app.QueueUpdateDraw(quit)
+	}
+}
+
+// pendingDeletionCount returns how many items are queued or being deleted.
+func (ui *UI) pendingDeletionCount() int {
+	ui.workersMut.Lock()
+	defer ui.workersMut.Unlock()
+	return ui.pendingDeletions
+}
+
+// quitAfterDeleting quits with quit once no deletion is left, at once when
+// none is.
+func (ui *UI) quitAfterDeleting(quit func()) {
+	ui.workersMut.Lock()
+	pending := ui.pendingDeletions
+	if pending > 0 {
+		ui.quitAfterDeletions = quit
+	}
+	ui.workersMut.Unlock()
+	if pending == 0 {
+		quit()
+	}
 }

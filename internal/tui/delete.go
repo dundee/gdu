@@ -147,6 +147,7 @@ func (ui *UI) deleteTargets(targets []deleteTarget, action DeleteAction) {
 		return
 	}
 	deleter := ui.deleter()
+	ui.addPendingDeletions(len(targets))
 
 	if ui.deleteInBackground {
 		ui.queueForDeletion(targets, action, deleter)
@@ -169,7 +170,14 @@ func (ui *UI) deleteTargets(targets []deleteTarget, action DeleteAction) {
 				})
 			}
 
-			if err := deleter.Delete(target.dir, target.item, action.mode()); err != nil {
+			err := deleter.Delete(target.dir, target.item, action.mode())
+			if err != nil {
+				// the rest is not deleted either
+				ui.deletionsDone(len(targets) - i)
+			} else {
+				ui.deletionsDone(1)
+			}
+			if err != nil {
 				msg := "Can't " + action.Verb() + " " + name
 				ui.app.QueueUpdateDraw(func() {
 					ui.pages.RemovePage(acting)

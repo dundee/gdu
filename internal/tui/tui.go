@@ -81,35 +81,40 @@ type UI struct {
 	markedBackgroundColor   tcell.Color
 	currentItemNameMaxLen   int
 	activeWorkers           int
-	deleteWorkersCount      int
-	statusMut               sync.RWMutex
-	workersMut              sync.Mutex
-	askBeforeDelete         bool
-	showItemCount           bool
-	showSymlinkTarget       bool
-	showMtime               bool
-	filtering               bool
-	typeFiltering           bool
-	headerHidden            bool
-	useOldSizeBar           bool
-	showBarPercentage       bool
-	showItemCountBar        bool
-	noDelete                bool
-	noViewFile              bool
-	noSpawnShell            bool
-	shellBin                string
-	deleteInBackground      bool
-	timeFilter              *timefilter.TimeFilter
-	timeFilterLoc           *time.Location
-	noDeleteWithFilter      bool
-	collapsePath            bool
-	browseParentDirs        bool
-	showDiskProgressBar     bool
-	currentDeviceSize       int64
-	confirmQuit             bool
-	ctrlCQuits              bool
-	scanning                bool
-	scanCancelled           bool
+	// pendingDeletions counts the items queued or being deleted, and
+	// quitAfterDeletions quits once there are none; both guarded by
+	// workersMut
+	pendingDeletions    int
+	quitAfterDeletions  func()
+	deleteWorkersCount  int
+	statusMut           sync.RWMutex
+	workersMut          sync.Mutex
+	askBeforeDelete     bool
+	showItemCount       bool
+	showSymlinkTarget   bool
+	showMtime           bool
+	filtering           bool
+	typeFiltering       bool
+	headerHidden        bool
+	useOldSizeBar       bool
+	showBarPercentage   bool
+	showItemCountBar    bool
+	noDelete            bool
+	noViewFile          bool
+	noSpawnShell        bool
+	shellBin            string
+	deleteInBackground  bool
+	timeFilter          *timefilter.TimeFilter
+	timeFilterLoc       *time.Location
+	noDeleteWithFilter  bool
+	collapsePath        bool
+	browseParentDirs    bool
+	showDiskProgressBar bool
+	currentDeviceSize   int64
+	confirmQuit         bool
+	ctrlCQuits          bool
+	scanning            bool
+	scanCancelled       bool
 	// stopScan cancels the running scan
 	stopScan        context.CancelFunc
 	scanStart       time.Time

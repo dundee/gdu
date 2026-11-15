@@ -3,6 +3,7 @@ package analyze
 import (
 	"archive/zip"
 	"io"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -70,6 +71,12 @@ func (zd *ZipDir) GetPath() string {
 	return zd.zipPath
 }
 
+// clampSize returns the size an archive tells as an int64; a crafted one may
+// not fit.
+func clampSize(size uint64) int64 {
+	return int64(min(size, math.MaxInt64))
+}
+
 // isZipFile checks if a file is a zip or jar file
 func isZipFile(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
@@ -83,6 +90,9 @@ func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error
 		return nil, err
 	}
 	defer reader.Close()
+	if len(reader.File) > maxArchiveEntries {
+		return nil, errTooManyEntries
+	}
 
 	// Create root directory
 	zipDir = &ZipDir{
@@ -126,8 +136,8 @@ func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error
 			File: &File{
 				Name:   path.Base(name),
 				Flag:   ' ',
-				Size:   int64(f.UncompressedSize64),
-				Usage:  int64(f.CompressedSize64),
+				Size:   clampSize(f.UncompressedSize64),
+				Usage:  clampSize(f.CompressedSize64),
 				Mtime:  f.FileInfo().ModTime(),
 				Parent: parentDir,
 			},

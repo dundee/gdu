@@ -6,13 +6,42 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/ulikunitz/xz"
 )
 
+// An empty file is viewed, empty; it used to fail with EOF.
 func TestGetScannerForEmptyString(t *testing.T) {
 	r := bytes.NewReader([]byte{})
-	_, err := getScanner(r)
-	assert.ErrorContains(t, err, "EOF")
+	s, err := getScanner(r)
+	assert.NoError(t, err)
+	assert.False(t, s.Scan())
+	assert.NoError(t, s.Err())
+}
+
+// A line longer than a bufio.Scanner takes is cut instead of ending the view.
+func TestGetScannerCutsLongLines(t *testing.T) {
+	long := bytes.Repeat([]byte("x"), 100_000)
+	r := bytes.NewReader(append(append(long, '\n'), []byte("next")...))
+	s, err := getScanner(r)
+	require.NoError(t, err)
+
+	var lines []string
+	for s.Scan() {
+		lines = append(lines, s.Text())
+	}
+	require.NoError(t, s.Err())
+	require.Len(t, lines, 26)
+	assert.Len(t, lines[0], maxViewedLine)
+	assert.Equal(t, "next", lines[25])
+}
+
+// A small file is shown, though shorter than the header gdu reads.
+func TestGetScannerForShortFile(t *testing.T) {
+	s, err := getScanner(bytes.NewReader([]byte("hi\n")))
+	require.NoError(t, err)
+	require.True(t, s.Scan())
+	assert.Equal(t, "hi", s.Text())
 }
 
 func TestGetScannerForPlainString(t *testing.T) {

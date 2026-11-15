@@ -1968,3 +1968,39 @@ func TestModifiedLetterKeysRunNoCommand(t *testing.T) {
 	ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
 	assert.True(t, ui.pages.HasPage("confirm"))
 }
+
+// Quitting with deletions left asks first; quitting when they are done waits
+// for the last of them.
+func TestQuitWithDeletionsPending(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	var out bytes.Buffer
+	ui := analyzedUI(t, &out)
+	ui.scanDuration = time.Second
+	ui.addPendingDeletions(2)
+
+	assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'Q', 0)))
+	assert.True(t, ui.pages.HasPage("confirm"), "it asks")
+	assert.Empty(t, out.String(), "and does not quit")
+
+	ui.pages.RemovePage("confirm")
+	ui.quitAfterDeleting(func() { ui.doQuit(true) })
+	ui.deletionsDone(1)
+	assert.Empty(t, out.String(), "one deletion is left")
+	ui.deletionsDone(1)
+	for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+		f()
+	}
+	assert.Contains(t, out.String(), "test_dir", "it quits after the last one")
+}
+
+func TestQuitAfterDeletingQuitsAtOnceWithoutDeletions(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	ui := analyzedUI(t, &bytes.Buffer{})
+	quit := false
+
+	ui.quitAfterDeleting(func() { quit = true })
+
+	assert.True(t, quit)
+}
