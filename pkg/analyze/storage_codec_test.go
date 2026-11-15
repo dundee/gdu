@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/badgerstore"
+	"github.com/dundee/gdu/v6/internal/badgerstore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protowire"

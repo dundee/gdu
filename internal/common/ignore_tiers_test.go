@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/common"
+	"github.com/dundee/gdu/v6/internal/common"
 )
 
 // nodeGitignore is GitHub's .gitignore template for Node, without its

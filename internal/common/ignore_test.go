@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v6/internal/common"
+	"github.com/dundee/gdu/v6/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 

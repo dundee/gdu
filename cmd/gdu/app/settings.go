@@ -8,10 +8,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/internal/config"
-	"github.com/dundee/gdu/v5/internal/timefilter"
-	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v6/internal/common"
+	"github.com/dundee/gdu/v6/internal/config"
+	"github.com/dundee/gdu/v6/internal/timefilter"
+	"github.com/dundee/gdu/v6/pkg/device"
 )
 
 // frontend is the kind of UI a run presents its result in.

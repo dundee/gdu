@@ -15,7 +15,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/dundee/gdu/v6/cmd/gdu/app"
 )
 
 var systemConfigPath = "/etc/gdu.yaml"

@@ -1,6 +1,6 @@
 package app
 
-import "github.com/dundee/gdu/v5/internal/cleanup"
+import "github.com/dundee/gdu/v6/internal/cleanup"
 
 // CleanupConfig is the cleanup section of the configuration file: the user's
 // rules and exclusions for the web UI's cleanup candidates.

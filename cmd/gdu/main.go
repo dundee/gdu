@@ -13,9 +13,9 @@ import (
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 
-	"github.com/dundee/gdu/v5/cmd/gdu/app"
-	"github.com/dundee/gdu/v5/internal/selfupdate"
-	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v6/cmd/gdu/app"
+	"github.com/dundee/gdu/v6/internal/selfupdate"
+	"github.com/dundee/gdu/v6/pkg/device"
 )
 
 const (

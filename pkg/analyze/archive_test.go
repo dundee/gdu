@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // hostileEntryNames are archive entry names climbing out of the archive or

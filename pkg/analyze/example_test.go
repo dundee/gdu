@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // The largest entries of a directory, as another program would list them

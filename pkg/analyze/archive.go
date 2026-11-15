@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // IsArchiveDir reports whether item is a directory made up from the contents

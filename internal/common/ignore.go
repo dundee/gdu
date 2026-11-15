@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dundee/gdu/v5/internal/ignore"
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v6/internal/ignore"
+	"github.com/dundee/gdu/v6/pkg/analyze"
 )
 
 // regexPatternFragments validates the given regular path patterns and returns

@@ -6,10 +6,10 @@ package config
 import (
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/cleanup"
-	"github.com/dundee/gdu/v5/internal/ignore"
-	"github.com/dundee/gdu/v5/internal/timefilter"
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/internal/cleanup"
+	"github.com/dundee/gdu/v6/internal/ignore"
+	"github.com/dundee/gdu/v6/internal/timefilter"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // Settings are the settings of one run.

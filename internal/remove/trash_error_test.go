@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/analyze"
 )
 
 type stubTrashInfoFile struct {

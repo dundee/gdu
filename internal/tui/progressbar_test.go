@@ -3,11 +3,11 @@ package tui
 import (
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/config"
-	"github.com/dundee/gdu/v5/internal/session"
-	"github.com/dundee/gdu/v5/internal/testapp"
-	"github.com/dundee/gdu/v5/internal/testdir"
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v6/internal/config"
+	"github.com/dundee/gdu/v6/internal/session"
+	"github.com/dundee/gdu/v6/internal/testapp"
+	"github.com/dundee/gdu/v6/internal/testdir"
+	"github.com/dundee/gdu/v6/pkg/analyze"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

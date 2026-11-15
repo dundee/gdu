@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/testdev"
+	"github.com/dundee/gdu/v6/internal/testdev"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )

@@ -31,10 +31,10 @@ GO111MODULE=on CGO_ENABLED=0 go build \
 -modcacherw \
 -ldflags \
 "-s -w \
--X 'github.com/dundee/gdu/v5/build.Version=v%{version}' \
--X 'github.com/dundee/gdu/v5/build.User=$(id -u -n)' \
--X 'github.com/dundee/gdu/v5/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
--o %{name} github.com/dundee/gdu/v5/cmd/gdu
+-X 'github.com/dundee/gdu/v6/build.Version=v%{version}' \
+-X 'github.com/dundee/gdu/v6/build.User=$(id -u -n)' \
+-X 'github.com/dundee/gdu/v6/build.Time=$(LC_ALL=en_US.UTF-8 date)'" \
+-o %{name} github.com/dundee/gdu/v6/cmd/gdu
 
 %install
 rm -rf $RPM_BUILD_ROOT

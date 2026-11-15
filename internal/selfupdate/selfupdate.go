@@ -22,7 +22,7 @@ import (
 
 	"github.com/fynelabs/selfupdate"
 
-	"github.com/dundee/gdu/v5/build"
+	"github.com/dundee/gdu/v6/build"
 )
 
 // DefaultAPIURL is the GitHub API endpoint of the gdu repository.

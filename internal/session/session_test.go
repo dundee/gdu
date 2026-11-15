@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/internal/common"
+	"github.com/dundee/gdu/v6/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/analyze/sqlite"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // ctx is the context of the scans that are not cancelled.

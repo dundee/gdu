@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/remove"
-	"github.com/dundee/gdu/v5/internal/testapp"
-	"github.com/dundee/gdu/v5/internal/testdir"
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/internal/remove"
+	"github.com/dundee/gdu/v6/internal/testapp"
+	"github.com/dundee/gdu/v6/internal/testdir"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // markRow marks the item listed on row.

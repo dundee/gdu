@@ -15,15 +15,15 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
-	"github.com/dundee/gdu/v5/build"
-	"github.com/dundee/gdu/v5/internal/config"
-	"github.com/dundee/gdu/v5/internal/report"
-	"github.com/dundee/gdu/v5/internal/stdout"
-	"github.com/dundee/gdu/v5/internal/tui"
-	"github.com/dundee/gdu/v5/internal/webui"
-	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/device"
-	gfs "github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/build"
+	"github.com/dundee/gdu/v6/internal/config"
+	"github.com/dundee/gdu/v6/internal/report"
+	"github.com/dundee/gdu/v6/internal/stdout"
+	"github.com/dundee/gdu/v6/internal/tui"
+	"github.com/dundee/gdu/v6/internal/webui"
+	"github.com/dundee/gdu/v6/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/device"
+	gfs "github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // UI is what every frontend does; it is configured when it is created.

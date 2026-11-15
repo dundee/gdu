@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/dundee/gdu/v5/internal/badgerstore"
+	"github.com/dundee/gdu/v6/internal/badgerstore"
 )
 
 // The constructors of packages analyze/badger and analyze/sqlite, which

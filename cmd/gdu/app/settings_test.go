@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/testdev"
-	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v6/internal/testdev"
+	"github.com/dundee/gdu/v6/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/device"
 )
 
 // Flags which contradict each other are refused before anything is set up,

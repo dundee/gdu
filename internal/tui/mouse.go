@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

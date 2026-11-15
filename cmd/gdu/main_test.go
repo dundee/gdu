@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/dundee/gdu/v6/cmd/gdu/app"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

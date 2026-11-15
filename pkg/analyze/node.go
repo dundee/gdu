@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // Node is the top of a tree an analyzer built, or any item of such a tree:

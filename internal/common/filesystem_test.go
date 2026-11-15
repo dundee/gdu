@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v6/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 

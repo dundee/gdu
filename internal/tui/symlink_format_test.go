@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/config"
-	"github.com/dundee/gdu/v5/internal/testapp"
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v6/internal/config"
+	"github.com/dundee/gdu/v6/internal/testapp"
+	"github.com/dundee/gdu/v6/pkg/analyze"
 )
 
 func newSymlinkTestFile() *analyze.File {

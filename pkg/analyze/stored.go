@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // StoredAnalyzer scans directories into a RecordStore, keeping in memory only
@@ -19,7 +19,7 @@ type StoredAnalyzer struct {
 }
 
 // NewStoredAnalyzer returns an analyzer storing its results in store.
-// Package github.com/dundee/gdu/v5/pkg/analyze/badger creates one storing
+// Package github.com/dundee/gdu/v6/pkg/analyze/badger creates one storing
 // them in a badger database.
 func NewStoredAnalyzer(store RecordStore) *StoredAnalyzer {
 	a := &StoredAnalyzer{storage: newRecords(store)}
