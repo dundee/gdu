@@ -13,8 +13,26 @@ async function responseError(res: Response): Promise<Error & { status: number }>
   return Object.assign(new Error(message), { status: res.status });
 }
 
+// The tab-scoped session storage key index.html keeps the per-process token
+// in, taken from the URL gdu printed (see actionTokenParam in
+// webui/action_token.go).
+const actionTokenStorageKey = 'gdu.actionToken';
+
+// storedActionToken returns the token of this tab, or '' when it has none.
+// Every API request needs it: the server refuses to list the tree to anyone
+// who has not seen the URL gdu printed. sessionStorage can throw rather than
+// return null (private-mode browsers, storage disabled by policy); losing
+// the token then costs the data, which the page says.
+export function storedActionToken(): string {
+  try {
+    return window.sessionStorage.getItem(actionTokenStorageKey) ?? '';
+  } catch {
+    return '';
+  }
+}
+
 async function getJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: { 'X-GDU-Action': storedActionToken() } });
   if (!res.ok) {
     throw await responseError(res);
   }
@@ -92,9 +110,17 @@ export function deleteNode(path: string, token: string, mode: DeleteMode): Promi
 }
 
 // subscribeStatus opens an SSE connection that yields status updates. Returns
-// an unsubscribe function.
+// an unsubscribe function. EventSource cannot send headers, so the token goes
+// in the query, which the server accepts on this route only. Without a token
+// nothing is opened: the server would refuse it, and EventSource retry it
+// forever.
 export function subscribeStatus(onStatus: (status: Status) => void): () => void {
-  const source = new EventSource('api/v1/events');
+  const token = storedActionToken();
+  if (!token) {
+    return () => undefined;
+  }
+  const params = new URLSearchParams({ token });
+  const source = new EventSource(`api/v1/events?${params.toString()}`);
   source.onmessage = (event: MessageEvent<string>) => {
     try {
       onStatus(JSON.parse(event.data) as Status);

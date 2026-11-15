@@ -9,14 +9,13 @@ import {
   type ReactNode,
 } from 'react';
 import type { Node, NodeResponse, SortKey, SortOrder, Status, TreeNode } from './types';
-import { fetchNode, fetchStatus, subscribeStatus, type DeleteMode } from './api';
+import { fetchNode, fetchStatus, storedActionToken, subscribeStatus, type DeleteMode } from './api';
 import { colorMapFor, computeSlices } from './slices';
 import { useLatest } from './useLatest';
 import { amountValue, type Projection } from './cleanup';
 
 export type ChartView = 'donut' | 'treemap';
 
-const actionTokenStorageKey = 'gdu.actionToken';
 const deleteModeStorageKey = 'gdu.skipDeleteConfirm';
 
 // sessionStorage can throw rather than return null (private-mode browsers,
@@ -50,8 +49,8 @@ export interface GduModel {
   status: Status;
   // Per-process secret the server prints/opens the page with (see
   // actionTokenParam in webui/action_token.go), read from this page's own URL
-  // and retained in tab-scoped session storage. Required on every
-  // delete/reveal request; see api.ts.
+  // and retained in tab-scoped session storage. Every API request carries
+  // it; see api.ts.
   actionToken: string;
   currentPath: string;
   nodeResp: NodeResponse | null;
@@ -176,8 +175,10 @@ export function GduModelProvider({ model, children }: { model: GduModel; childre
 export function useGduModelState() {
   // index.html strips a fresh token from the URL before loading the application
   // bundle and retains it in tab-scoped storage so reloads keep actions working.
-  const [actionToken] = useState(() => readSessionStorage(actionTokenStorageKey) ?? '');
+  const [actionToken] = useState(storedActionToken);
   const [status, setStatus] = useState<Status | null>(null);
+  // Why the first status could not be loaded, such as a missing token.
+  const [connectError, setConnectError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [nodeResp, setNodeResp] = useState<NodeResponse | null>(null);
   const [sort, setSort] = useState<SortKey>('size');
@@ -212,7 +213,9 @@ export function useGduModelState() {
 
   // Initial status + live updates over SSE.
   useEffect(() => {
-    fetchStatus().then(setStatus).catch(() => undefined);
+    fetchStatus()
+      .then(setStatus)
+      .catch((err: unknown) => setConnectError(err instanceof Error ? err.message : String(err)));
     return subscribeStatus(setStatus);
   }, []);
 
@@ -403,6 +406,7 @@ export function useGduModelState() {
 
   return {
     status,
+    connectError,
     actionToken,
     currentPath,
     nodeResp,

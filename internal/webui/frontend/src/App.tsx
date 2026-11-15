@@ -8,9 +8,17 @@ import { ProgressBar } from './components/ProgressBar';
 
 export function App() {
   const model = useGduModelState();
-  const { status, currentPath, nodeResp, useSIPrefix, loadError, view } = model;
+  const { status, connectError, currentPath, nodeResp, useSIPrefix, loadError, view } = model;
 
   if (!status) {
+    if (connectError) {
+      return (
+        <div className="error-screen">
+          <h2>Cannot load the analysis</h2>
+          <p>{connectError}</p>
+        </div>
+      );
+    }
     return <div className="loading">Connecting…</div>;
   }
 

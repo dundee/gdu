@@ -270,19 +270,20 @@ By default the server binds to `localhost` on a random free port. Use
 The compiled web assets are embedded in the binary, so no extra files or network
 access are required.
 
-**Security:** browsing is read-only and requires no authentication, so anyone
-who can reach the port sees file names and sizes - keep it bound to
-`localhost` (the default). Reveal and delete actions need more: a request
-that both originates from a loopback address and carries a random token,
-generated fresh for each server run and never served over the API. The URL is
-printed to this process's terminal and passed to the configured browser
-launcher. On Linux, a cold-started browser may retain that URL in its
-world-readable command line; custom browser commands may do the same on any
-platform. On a multi-user machine, use `--web-open=false` and open the printed
-URL from an already-running browser. Pages on another origin or browser tab
-are rejected even if they can reach the port. Binding to a non-loopback address
-makes scan details reachable by other hosts on the network and prints a
-warning.
+**Security:** the URL gdu prints carries a random token, generated fresh for
+each server run and never served over the API. Every request for scan data
+needs it, so other users of the machine cannot list the scanned tree even
+though they can find the port; this matters when gdu runs as root. Reveal and
+delete actions need more: the request must also originate from a loopback
+address. The URL is printed to this process's terminal and passed to the
+configured browser launcher. On Linux, a cold-started browser may retain that
+URL in its world-readable command line; custom browser commands may do the
+same on any platform. On a multi-user machine, use `--web-open=false` and open
+the printed URL from an already-running browser. A page opened without the
+token shows an error; open the printed URL again. Pages on another origin or
+browser tab are rejected even if they can reach the port. Binding to a
+non-loopback address lets anyone on the network with the URL read the scan
+details, over unencrypted HTTP, and prints a warning.
 
 ## File flags
 

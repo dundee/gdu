@@ -39,9 +39,9 @@ func makeCleanupTree(t *testing.T) string {
 	return root
 }
 
-func getJSON(t *testing.T, srv *httptest.Server, path string, out any) int {
+func getJSON(t *testing.T, ui *UI, srv *httptest.Server, path string, out any) int {
 	t.Helper()
-	resp, err := http.Get(srv.URL + path)
+	resp, err := getAPI(ui, srv.URL+path)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	if out != nil && resp.StatusCode == http.StatusOK {
@@ -66,7 +66,7 @@ func TestCategoriesEndpointScopesToPath(t *testing.T) {
 	defer srv.Close()
 
 	var all categoriesResponse
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", &all))
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/categories", &all))
 	amounts := categoryAmounts(all)
 	assert.Len(t, all.Categories, len(cleanup.Categories))
 	assert.Equal(t, int64(8192), amounts[cleanup.BuildArtifact].Size)
@@ -75,13 +75,13 @@ func TestCategoriesEndpointScopesToPath(t *testing.T) {
 
 	var models categoriesResponse
 	require.Equal(t, http.StatusOK,
-		getJSON(t, srv, "/api/v1/categories?path="+url.QueryEscape(filepath.Join(root, "models")), &models))
+		getJSON(t, ui, srv, "/api/v1/categories?path="+url.QueryEscape(filepath.Join(root, "models")), &models))
 	amounts = categoryAmounts(models)
 	assert.Equal(t, int64(16384), amounts[cleanup.MLModel].Size)
 	assert.Zero(t, amounts[cleanup.BuildArtifact].Size)
 
 	assert.Equal(t, http.StatusNotFound,
-		getJSON(t, srv, "/api/v1/categories?path="+url.QueryEscape(filepath.Join(root, "missing")), nil))
+		getJSON(t, ui, srv, "/api/v1/categories?path="+url.QueryEscape(filepath.Join(root, "missing")), nil))
 }
 
 func TestCategoriesEndpointUnavailableWhileScanning(t *testing.T) {
@@ -93,8 +93,8 @@ func TestCategoriesEndpointUnavailableWhileScanning(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 
-	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, srv, "/api/v1/categories", nil))
-	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, srv, "/api/v1/tree?projection=category", nil))
+	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, ui, srv, "/api/v1/categories", nil))
+	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, ui, srv, "/api/v1/tree?projection=category", nil))
 }
 
 func TestTreeEndpointAnnotatesCandidates(t *testing.T) {
@@ -105,7 +105,7 @@ func TestTreeEndpointAnnotatesCandidates(t *testing.T) {
 	defer srv.Close()
 
 	var tree treeJSON
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/tree", &tree))
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/tree", &tree))
 	assert.Equal(t, int64(16384), tree.CategoryTotals[cleanup.MLModel].Size)
 
 	byName := func(n *treeJSON, name string) *treeJSON {
@@ -140,7 +140,7 @@ func TestTreeByCategoryGroupsCandidates(t *testing.T) {
 	defer srv.Close()
 
 	var tree treeJSON
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/tree?projection=category", &tree))
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/tree?projection=category", &tree))
 	assert.Equal(t, root, tree.Path)
 	require.Len(t, tree.Children, 2)
 
@@ -158,7 +158,7 @@ func TestTreeByCategoryGroupsCandidates(t *testing.T) {
 	// scoped to a subdirectory, only its candidates remain
 	var scoped treeJSON
 	require.Equal(t, http.StatusOK,
-		getJSON(t, srv, "/api/v1/tree?projection=category&path="+url.QueryEscape(filepath.Join(root, "app")), &scoped))
+		getJSON(t, ui, srv, "/api/v1/tree?projection=category&path="+url.QueryEscape(filepath.Join(root, "app")), &scoped))
 	require.Len(t, scoped.Children, 1)
 	assert.Equal(t, cleanup.BuildArtifact, scoped.Children[0].Category)
 }
@@ -187,7 +187,7 @@ func TestClassificationUpdatedAfterDelete(t *testing.T) {
 	defer srv.Close()
 
 	var before categoriesResponse
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", &before))
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/categories", &before))
 	require.NotZero(t, categoryAmounts(before)[cleanup.MLModel].Size)
 	cached := ui.cleanupResult()
 
@@ -201,7 +201,7 @@ func TestClassificationUpdatedAfterDelete(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
 	var after categoriesResponse
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", &after))
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/categories", &after))
 	assert.Zero(t, categoryAmounts(after)[cleanup.MLModel].Size)
 	assert.NotZero(t, categoryAmounts(after)[cleanup.BuildArtifact].Size)
 	assert.Same(t, cached, ui.cleanupResult(), "a deletion updates the classification instead of recomputing it")
@@ -215,7 +215,7 @@ func TestCleanupConfigAppliesExclusions(t *testing.T) {
 	defer srv.Close()
 
 	var resp categoriesResponse
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", &resp))
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/categories", &resp))
 	assert.Zero(t, categoryAmounts(resp)[cleanup.BuildArtifact].Size)
 
 	_, err := CreateUI(io.Discard, analyze.CreateAnalyzer(),
@@ -229,7 +229,7 @@ func TestClassificationRunsInBackground(t *testing.T) {
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()
 	assert.False(t, ui.buildStatus().Classifying)
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", nil))
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/categories", nil))
 
 	// while a deletion runs, a walk may see the tree before or after it, so
 	// classification waits for the deletion to end
@@ -237,13 +237,13 @@ func TestClassificationRunsInBackground(t *testing.T) {
 	ui.treeChanged()
 	require.Eventually(t, func() bool { return !ui.buildStatus().Classifying }, 5*time.Second, 10*time.Millisecond)
 	assert.Nil(t, ui.cleanupResult())
-	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, srv, "/api/v1/categories", nil))
+	assert.Equal(t, http.StatusServiceUnavailable, getJSON(t, ui, srv, "/api/v1/categories", nil))
 	var node nodeResponse
-	require.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/nodes", &node), "browsing does not wait for it")
+	require.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/nodes", &node), "browsing does not wait for it")
 	assert.Empty(t, node.Node.CategoryTotals)
 
 	ui.removalSeq.Add(1)
 	ui.classify()
 	waitClassified(t, ui)
-	assert.Equal(t, http.StatusOK, getJSON(t, srv, "/api/v1/categories", nil))
+	assert.Equal(t, http.StatusOK, getJSON(t, ui, srv, "/api/v1/categories", nil))
 }

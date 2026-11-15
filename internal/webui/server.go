@@ -64,25 +64,53 @@ func (ui *UI) StartUILoop() error {
 
 // routes builds a dedicated mux (never the shared http.DefaultServeMux, which
 // is deliberately reset elsewhere to keep pprof handlers isolated).
+//
+// Every API route needs the token: the tree names files that whoever runs gdu
+// can read, often root, and other users cannot. Only the page itself, which
+// holds no data, is served without it.
 func (ui *UI) routes() http.Handler {
+	api := http.NewServeMux()
+	api.HandleFunc("/api/v1/status", ui.handleStatus)
+	api.HandleFunc("GET /api/v1/nodes", ui.handleNodes)
+	api.HandleFunc("GET /api/v1/tree", ui.handleTree)
+	api.HandleFunc("GET /api/v1/categories", ui.handleCategories)
+	api.HandleFunc("DELETE /api/v1/nodes", ui.requireLocalAction(ui.handleDeleteNode))
+	api.HandleFunc("POST /api/v1/reveal", ui.requireLocalAction(ui.handleReveal))
+	api.HandleFunc("/api/v1/devices", ui.handleDevices)
+	api.HandleFunc("/api/v1/events", ui.handleEvents)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/status", ui.handleStatus)
-	mux.HandleFunc("GET /api/v1/nodes", ui.handleNodes)
-	mux.HandleFunc("GET /api/v1/tree", ui.handleTree)
-	mux.HandleFunc("GET /api/v1/categories", ui.handleCategories)
-	mux.HandleFunc("DELETE /api/v1/nodes", ui.requireLocalAction(ui.handleDeleteNode))
-	mux.HandleFunc("POST /api/v1/reveal", ui.requireLocalAction(ui.handleReveal))
-	mux.HandleFunc("/api/v1/devices", ui.handleDevices)
-	mux.HandleFunc("/api/v1/events", ui.handleEvents)
+	mux.Handle("/api/", ui.requireToken(api))
 	mux.Handle("/", staticHandler())
 	return requireSafeHost(mux, ui.listenAddr)
 }
 
+// eventsPath is the one route taking the token as a query parameter
+// (actionTokenParam): the browser's EventSource cannot send headers.
+const eventsPath = "/api/v1/events"
+
+// requireToken lets through only the requests carrying this server's token,
+// in actionHeader, or as actionTokenParam for eventsPath.
+func (ui *UI) requireToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get(actionHeader)
+		if token == "" && r.URL.Path == eventsPath {
+			token = r.URL.Query().Get(actionTokenParam)
+		}
+		if !ui.validActionToken(token) {
+			writeError(w, http.StatusUnauthorized, "this page has no valid access token: open the URL gdu printed")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // requireSafeHost rejects DNS names other than localhost or the exact hostname
 // configured by --web-listen. A browser page on an attacker-controlled DNS
-// name can otherwise rebind that name to 127.0.0.1 and read the unauthenticated
-// API with its attacker-controlled Host header. Literal IP hosts remain
-// allowed so non-loopback read-only access continues to work.
+// name can otherwise rebind that name to 127.0.0.1 and reach the API with its
+// attacker-controlled Host header; it lacks the token too, so this is defence
+// in depth. Literal IP hosts remain allowed so non-loopback read-only access
+// continues to work.
 func requireSafeHost(next http.Handler, listenAddr string) http.Handler {
 	configuredHost := hostOnly(listenAddr)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +140,8 @@ func warnIfRemote(w io.Writer, addr net.Addr) {
 		return
 	}
 	fmt.Fprintln(w, "WARNING: the web UI is reachable from other hosts on the network.")
-	fmt.Fprintln(w, "         It exposes file names and sizes with no authentication.")
+	fmt.Fprintln(w, "         Anyone with the URL above can read file names and sizes;")
+	fmt.Fprintln(w, "         it is sent unencrypted over HTTP.")
 }
 
 // isLoopbackHost reports whether the host component of a "host:port" string

@@ -6,6 +6,8 @@ import type { NodeResponse, Status, TreeNode } from './types';
 import { CATEGORY_COLORS } from './cleanup';
 
 vi.mock('./api');
+// the token is read for real, from the session storage the tests set
+const actualApi = await vi.importActual<typeof import('./api')>('./api');
 
 const root = '/tmp/root';
 const status: Status = {
@@ -81,6 +83,7 @@ beforeEach(() => {
   vi.mocked(api.fetchNode).mockResolvedValue(nodeResponse);
   vi.mocked(api.fetchTree).mockResolvedValue(treeResponse);
   vi.mocked(api.subscribeStatus).mockReturnValue(() => undefined);
+  vi.mocked(api.storedActionToken).mockImplementation(actualApi.storedActionToken);
 });
 
 afterEach(() => {
@@ -88,6 +91,19 @@ afterEach(() => {
   vi.clearAllMocks();
   window.history.pushState({}, '', '/');
   window.sessionStorage.clear();
+});
+
+describe('connecting', () => {
+  it('tells why the analysis cannot be loaded', async () => {
+    vi.mocked(api.fetchStatus).mockRejectedValue(
+      new Error('this page has no valid access token: open the URL gdu printed'),
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText('Cannot load the analysis')).toBeTruthy();
+    expect(screen.getByText(/open the URL gdu printed/)).toBeTruthy();
+  });
 });
 
 describe('chart view', () => {

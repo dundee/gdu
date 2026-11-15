@@ -30,7 +30,7 @@ func TestRequestsWhileDeletingAndClassifying(t *testing.T) {
 	defer srv.Close()
 
 	get := func(endpoint string) {
-		resp, err := http.Get(srv.URL + endpoint + "?path=" + url.QueryEscape(root))
+		resp, err := getAPI(ui, srv.URL+endpoint+"?path="+url.QueryEscape(root))
 		if err == nil {
 			_, _ = io.Copy(io.Discard, resp.Body)
 			_ = resp.Body.Close()
