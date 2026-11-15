@@ -34,12 +34,12 @@ func TestAnalyzersCancelKeepsPartialResults(t *testing.T) {
 func TestStorageBackedAnalyzersCancelKeepsPartialResults(t *testing.T) {
 	root := createCancellationTree(t)
 
-	stored := CreateStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))
+	stored := createStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))
 	dir := scanUntilCancelled(t, stored, root)
 	assert.Contains(t, itemNames(dir), "a-file")
 	assert.NotContains(t, itemNames(dir), "b-dir")
 
-	sqliteAnalyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "results.sqlite"))
+	sqliteAnalyzer, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "results.sqlite"))
 	assert.NoError(t, err)
 	defer sqliteAnalyzer.storage.Close()
 	dir = scanUntilCancelled(t, sqliteAnalyzer, root)

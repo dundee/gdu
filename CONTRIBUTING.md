@@ -20,8 +20,9 @@ make install-dev-dependencies
 
 - `cmd/gdu` — CLI entrypoint; `cmd/gdu/app` wires the flags to a frontend.
 - `pkg/` — the public Go API (see [ADR 6](docs/adr/0006-a-small-public-go-api.md)):
-  `analyze` scans a directory into a tree, `fs` is the tree, `device` lists
-  mounted devices. Their exported signatures must not use types from `internal/`.
+  `analyze` scans a directory into a tree (`analyze/badger` and `analyze/sqlite`
+  keep it in a database), `fs` is the tree, `device` lists mounted devices.
+  Their exported signatures must not use types from `internal/`.
 - `internal/stdout`, `internal/report`, `internal/tui`, `internal/webui` —
   frontends (non-interactive stdout, JSON export/import, the interactive terminal
   UI, and the optional React web UI, whose compiled output is committed).

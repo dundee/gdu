@@ -375,7 +375,7 @@ func TestAnalyzersMeasureHardLinkedFileOnce(t *testing.T) {
 			return r
 		},
 		"sqlite": func(dir string) fs.Item {
-			a, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+			a, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = a.storage.Close() })
 			r := a.AnalyzeDir(context.Background(), dir, Options{
@@ -457,7 +457,7 @@ func TestAnalyzersReportExclusiveSize(t *testing.T) {
 			return r
 		},
 		"sqlite": func(exclusive bool) fs.Item {
-			a, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+			a, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = a.storage.Close() })
 			r := a.AnalyzeDir(context.Background(), dir, Options{

@@ -7,49 +7,32 @@ import (
 	"fmt"
 	"io"
 	"iter"
-	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 // SqliteStorage represents SQLite database storage
 type SqliteStorage struct {
 	db         *sql.DB
-	dbPath     string
 	m          sync.RWMutex
 	tx         *sql.Tx
 	insertStmt *sql.Stmt
 	updateStmt *sql.Stmt
 }
 
-// NewSqliteStorage creates a new SQLite storage and initializes the schema
-func NewSqliteStorage(dbPath string) (*SqliteStorage, error) {
-	parentDir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(parentDir, 0o755); err != nil {
-		return nil, errors.Wrap(err, "failed to create parent directory for SQLite database")
-	}
-
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, err
-	}
-
-	storage := &SqliteStorage{
-		db:     db,
-		dbPath: dbPath,
-	}
-
+// newSqliteStorage returns the storage in the SQLite database db, creating
+// its tables when missing. It closes db when that fails.
+func newSqliteStorage(db *sql.DB) (*SqliteStorage, error) {
+	storage := &SqliteStorage{db: db}
 	if err := storage.createTables(); err != nil {
 		db.Close()
 		return nil, err
 	}
-
 	return storage, nil
 }
 
@@ -821,13 +804,14 @@ func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, mtime
 	return a.storage.UpdateItem(id, size, usage, itemCount, mtime, flag)
 }
 
-// CreateSqliteAnalyzer creates a new SQLite analyzer
-func CreateSqliteAnalyzer(dbPath string) (*SqliteAnalyzer, error) {
-	if err := checkAvailable(); err != nil {
-		return nil, err
-	}
-
-	storage, err := NewSqliteStorage(dbPath)
+// NewSqliteAnalyzer returns an analyzer storing its results in the SQLite
+// database db, and creates its tables there when missing. The analyzer owns
+// db: it closes it when creating the tables fails.
+//
+// Package github.com/dundee/gdu/v5/pkg/analyze/sqlite opens the database
+// with an SQLite driver and creates the analyzer.
+func NewSqliteAnalyzer(db *sql.DB) (*SqliteAnalyzer, error) {
+	storage, err := newSqliteStorage(db)
 	if err != nil {
 		return nil, err
 	}

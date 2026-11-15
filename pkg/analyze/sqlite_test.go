@@ -21,19 +21,7 @@ import (
 
 func TestNewSqliteStorage(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
-	assert.NoError(t, err)
-	assert.NotNil(t, storage)
-	defer storage.Close()
-
-	// Test that the database is created
-	_, err = os.Stat(dbPath)
-	assert.NoError(t, err)
-}
-
-func TestNewSqliteStorageNestedDir(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "nested", "dir", "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	assert.NotNil(t, storage)
 	defer storage.Close()
@@ -45,7 +33,7 @@ func TestNewSqliteStorageNestedDir(t *testing.T) {
 
 func TestSqliteStorageClose(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 
 	err = storage.Close()
@@ -58,7 +46,7 @@ func TestSqliteStorageClose(t *testing.T) {
 
 func TestSqliteStorageHasData(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -75,7 +63,7 @@ func TestSqliteStorageHasData(t *testing.T) {
 
 func TestSqliteStorageClearItems(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -92,7 +80,7 @@ func TestSqliteStorageClearItems(t *testing.T) {
 
 func TestSqliteStorageMetadata(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -120,7 +108,7 @@ func TestSqliteStorageMetadata(t *testing.T) {
 
 func TestSqliteStorageInsertAndGetItem(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -145,7 +133,7 @@ func TestSqliteStorageInsertAndGetItem(t *testing.T) {
 
 func TestSqliteStorageInsertAndGetChildren(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -180,7 +168,7 @@ func TestSqliteStorageInsertAndGetChildren(t *testing.T) {
 
 func TestSqliteStorageUpdateItem(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -202,7 +190,7 @@ func TestSqliteStorageUpdateItem(t *testing.T) {
 
 func TestSqliteStorageBulkInsert(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -235,7 +223,7 @@ func TestSqliteStorageBulkInsert(t *testing.T) {
 
 func TestSqliteItemGetPath(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -265,7 +253,7 @@ func TestSqliteItemGetPath(t *testing.T) {
 
 func TestSqliteItemGetPathLazy(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -291,7 +279,7 @@ func TestSqliteItemGetPathLazy(t *testing.T) {
 
 func TestSqliteItemGetType(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -316,7 +304,7 @@ func TestSqliteItemGetType(t *testing.T) {
 
 func TestSqliteItemGetParent(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -347,7 +335,7 @@ func TestSqliteItemGetParent(t *testing.T) {
 
 func TestSqliteItemGetMultiLinkedInode(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -362,7 +350,7 @@ func TestSqliteItemGetMultiLinkedInode(t *testing.T) {
 
 func TestSqliteItemGetFiles(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -396,7 +384,7 @@ func TestSqliteItemGetFiles(t *testing.T) {
 
 func TestSnapshotSqliteItemTree(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, storage.Close()) })
 
@@ -416,7 +404,7 @@ func TestSnapshotSqliteItemTree(t *testing.T) {
 }
 
 func TestSqliteAnalyzerCancellationStopsArchivePersistence(t *testing.T) {
-	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	analyzer, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, analyzer.storage.Close()) })
 
@@ -438,7 +426,7 @@ func TestSqliteAnalyzerCancellationStopsArchivePersistence(t *testing.T) {
 
 func TestSqliteItemGetItemStats(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -456,7 +444,7 @@ func TestSqliteItemGetItemStats(t *testing.T) {
 
 func TestSqliteItemUpdateStats(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -473,7 +461,7 @@ func TestSqliteItemUpdateStats(t *testing.T) {
 
 func TestSqliteItemAddFile(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -490,7 +478,7 @@ func TestSqliteItemAddFile(t *testing.T) {
 
 func TestSqliteItemRemoveFile(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -531,7 +519,7 @@ func TestSqliteItemRemoveFile(t *testing.T) {
 
 func TestSqliteItemRemoveFileByName(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -551,7 +539,7 @@ func TestSqliteItemRemoveFileByName(t *testing.T) {
 
 func TestSqliteItemEncodeJSON(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -572,7 +560,7 @@ func TestSqliteItemEncodeJSON(t *testing.T) {
 
 func TestSqliteItemEncodeEmptyDirJSON(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -587,7 +575,7 @@ func TestSqliteItemEncodeEmptyDirJSON(t *testing.T) {
 
 func TestSqliteItemEncodeJSONWithSelectedAttributes(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -606,7 +594,7 @@ func TestSqliteItemEncodeJSONWithSelectedAttributes(t *testing.T) {
 
 func TestSqliteItemEncodeJSONWithSpecialAttributes(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	storage, err := NewSqliteStorage(dbPath)
+	storage, err := openSqliteStorage(dbPath)
 	assert.NoError(t, err)
 	defer storage.Close()
 
@@ -639,7 +627,7 @@ func TestSqliteItemEncodeJSONWithSpecialAttributes(t *testing.T) {
 
 func TestCreateSqliteAnalyzer(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	assert.NotNil(t, analyzer)
 	defer analyzer.storage.Close()
@@ -647,7 +635,7 @@ func TestCreateSqliteAnalyzer(t *testing.T) {
 
 func TestSqliteAnalyzerGetProgress(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -666,7 +654,7 @@ func TestSqliteAnalyzerArchiveBrowsing(t *testing.T) {
 	}
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -703,7 +691,7 @@ func TestSqliteAnalyzerAnalyzeDir(t *testing.T) {
 	defer fin()
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -762,7 +750,7 @@ func TestSqliteAnalyzerPropagatesChildPermissionError(t *testing.T) {
 	}
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -787,7 +775,7 @@ func TestSqliteAnalyzerIgnoreDir(t *testing.T) {
 	defer fin()
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -805,7 +793,7 @@ func TestSqliteAnalyzerIgnoreFileType(t *testing.T) {
 	defer fin()
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -840,7 +828,7 @@ func TestSqliteAnalyzerHardlinks(t *testing.T) {
 	assert.NoError(t, err)
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -876,7 +864,7 @@ func TestSqliteAnalyzerSymlink(t *testing.T) {
 	assert.NoError(t, err)
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -908,7 +896,7 @@ func TestSqliteAnalyzerFollowSymlink(t *testing.T) {
 	assert.NoError(t, err)
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -938,7 +926,7 @@ func TestSqliteAnalyzerTimeFilter(t *testing.T) {
 	defer fin()
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -961,7 +949,7 @@ func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 
 	// First analysis
-	analyzer1, err := CreateSqliteAnalyzer(dbPath)
+	analyzer1, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 
 	dir1 := analyzer1.AnalyzeDir(context.Background(), "test_dir", Options{
@@ -976,7 +964,7 @@ func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
 	// changes made since the scan are not in the stored analysis
 	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("new"), 0o600))
 
-	analyzer2, err := CreateSqliteAnalyzer(dbPath)
+	analyzer2, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer2.storage.Close()
 
@@ -990,7 +978,7 @@ func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
 }
 
 func TestSqliteAnalyzerLoadAnalysisFromEmptyDatabase(t *testing.T) {
-	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	analyzer, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 	require.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -1006,7 +994,7 @@ func TestSqliteAnalyzerScansEvenWithStoredAnalysis(t *testing.T) {
 	defer fin()
 	noIgnore := func(_, _ string) bool { return false }
 
-	analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+	analyzer, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 	require.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -1027,7 +1015,7 @@ func TestSqliteAnalyzerProgress(t *testing.T) {
 	defer fin()
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	analyzer, err := CreateSqliteAnalyzer(dbPath)
+	analyzer, err := createSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
@@ -1053,7 +1041,7 @@ func BenchmarkSqliteAnalyzeDir(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		dbPath := filepath.Join(b.TempDir(), "test.db")
-		analyzer, _ := CreateSqliteAnalyzer(dbPath)
+		analyzer, _ := createSqliteAnalyzer(dbPath)
 		analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 		analyzer.storage.Close()
 	}

@@ -21,7 +21,7 @@ func TestStoredHardLinkRemoval(t *testing.T) {
 	require.NoError(t, os.Link(filepath.Join(path, "a", "f"), filepath.Join(path, "b", "g")))
 	fileUsage := usageOf(t, filepath.Join(path, "a", "f"))
 	db := filepath.Join(t.TempDir(), "gdu.badger")
-	root := CreateStoredAnalyzer(db).AnalyzeDir(context.Background(), path, Options{})
+	root := createStoredAnalyzer(db).AnalyzeDir(context.Background(), path, Options{})
 	root.UpdateStats(false)
 	usage, count := root.GetUsage(), root.GetItemCount()
 
@@ -32,7 +32,7 @@ func TestStoredHardLinkRemoval(t *testing.T) {
 	assert.Equal(t, count-1, root.GetItemCount())
 	assert.GreaterOrEqual(t, entry(t, root, "b").GetUsage(), fileUsage, "g is counted now")
 
-	loaded, err := CreateStoredAnalyzer(db).LoadAnalysis(path)
+	loaded, err := createStoredAnalyzer(db).LoadAnalysis(path)
 	require.NoError(t, err)
 	assert.Equal(t, usage, loaded.GetUsage())
 	assert.Equal(t, count-1, loaded.GetItemCount())

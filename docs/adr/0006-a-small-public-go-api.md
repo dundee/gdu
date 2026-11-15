@@ -38,6 +38,8 @@ its options were a type of `internal/common`.
 The public Go API is these packages, and every other one lives in `internal/`:
 
 - `pkg/analyze` — scanning a directory into a tree, and its options;
+- `pkg/analyze/badger` and `pkg/analyze/sqlite` — the analyzers storing their
+  results in a database (`--db`);
 - `pkg/fs` — the tree;
 - `pkg/device` — mounted devices, which `cmd/gdu/app` takes;
 - `cmd/gdu/app` — running gdu inside another program;
@@ -54,9 +56,15 @@ identifier of a listed package uses a type of an internal package.
 
 - Moving the frontends, deletion, cleanup classification, self-update and the
   helpers to `internal/` lets them change freely.
-- `pkg/analyze` no longer depends on the terminal UI libraries; a program using
-  it links badger and SQLite still, as the analyzers storing their results in a
-  database live there.
+- `pkg/analyze` depends on neither the terminal UI libraries nor a database. A
+  database driver registers itself when its package is initialised, so the
+  linker keeps all of it once it is imported, called or not; importing badger
+  and SQLite from `pkg/analyze` made a program that only scans a directory
+  19.2 MB instead of 4.2 MB. The analyzers storing their results in a database
+  stay in `pkg/analyze`, as they share its internals: the stored one takes a
+  `RecordStore` and the SQLite one a `*sql.DB`. `pkg/analyze/badger` and
+  `pkg/analyze/sqlite` create them with the drivers, so only a program
+  importing those links the databases.
 - The public packages still change while the architecture review is carried
   out (the `fs.Item` interface is due to be split), so changes to them are
   called out in the release notes, with how to migrate.

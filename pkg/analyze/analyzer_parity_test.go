@@ -211,13 +211,13 @@ func parityAnalyzers() []parityAnalyzer {
 		{
 			name: "stored (badger)",
 			analyzer: func(t *testing.T) Analyzer {
-				return CreateStoredAnalyzer(filepath.Join(t.TempDir(), "badger"))
+				return createStoredAnalyzer(filepath.Join(t.TempDir(), "badger"))
 			},
 		},
 		{
 			name: "sqlite",
 			analyzer: func(t *testing.T) Analyzer {
-				analyzer, err := CreateSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
+				analyzer, err := createSqliteAnalyzer(filepath.Join(t.TempDir(), "test.db"))
 				assert.NoError(t, err)
 				t.Cleanup(func() { _ = analyzer.storage.Close() })
 				return analyzer

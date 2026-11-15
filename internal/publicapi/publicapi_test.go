@@ -58,6 +58,23 @@ func TestEveryPackageOutsideInternalIsListed(t *testing.T) {
 	}
 }
 
+// A program scanning directories with pkg/analyze links neither the
+// databases, which pkg/analyze/badger and pkg/analyze/sqlite bring in, nor
+// the terminal UI.
+func TestAnalyzeLinksNoDatabaseNorUI(t *testing.T) {
+	out, err := exec.Command("go", "list", "-deps", "github.com/dundee/gdu/v5/pkg/analyze").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range strings.Fields(string(out)) {
+		for _, heavy := range []string{"github.com/dgraph-io/", "modernc.org/", "github.com/rivo/tview", "github.com/gdamore/tcell"} {
+			if strings.HasPrefix(path, heavy) {
+				t.Errorf("pkg/analyze depends on %s", path)
+			}
+		}
+	}
+}
+
 // exportData returns the files holding the compiled export data of the
 // public packages and their dependencies, by import path.
 func exportData(t *testing.T) map[string]string {
