@@ -45,6 +45,28 @@ jobs:
         # lets the darwin-only test move a file into the runner's real Trash
         GDU_TEST_SYSTEM_TRASH: "1"
 
+  cross-compile:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: 1.27.x
+    - name: Checkout code
+      uses: actions/checkout@v7
+    - name: Build for every released platform
+      # releases are built for these systems (Makefile, build-all); gox
+      # skips a target that does not build, so check here that all build
+      run: |
+        failed=0
+        for target in $(go tool dist list | grep -E '^(darwin|freebsd|linux|netbsd|openbsd|windows)/') android/arm64; do
+          if ! GOOS=${target%/*} GOARCH=${target#*/} CGO_ENABLED=0 go build -o /dev/null ./cmd/gdu; then
+            echo "::error::gdu does not build for $target"
+            failed=1
+          fi
+        done
+        exit $failed
+
   coverage:
     runs-on: ubuntu-latest
     steps:

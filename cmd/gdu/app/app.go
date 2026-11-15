@@ -300,15 +300,15 @@ func (a *App) Run() error {
 	}
 
 	if a.Flags.DbPath != "" {
-		if !a.Flags.ReadFromStorage {
-			// Remove existing db before re-scan
-			if strings.HasSuffix(a.Flags.DbPath, ".badger") {
-				os.RemoveAll(a.Flags.DbPath)
-			} else {
-				os.Remove(a.Flags.DbPath)
+		if err := checkDatabase(a.Flags.DbPath); err != nil {
+			return err
+		}
+		if a.replacesDatabase() {
+			if err := removeDatabase(a.Flags.DbPath); err != nil {
+				return err
 			}
 		}
-		if strings.HasSuffix(a.Flags.DbPath, ".badger") {
+		if isBadgerPath(a.Flags.DbPath) {
 			ui.SetAnalyzer(badger.CreateAnalyzer(a.Flags.DbPath))
 		} else {
 			sqliteAnalyzer, err := sqlite.CreateAnalyzer(a.Flags.DbPath)
@@ -556,9 +556,9 @@ func (a *App) createUI(outputAttributes gfs.JSONAttributes) (UI, error) {
 		if a.Flags.OutputFile == "-" {
 			output = os.Stdout
 		} else {
-			output, err = os.OpenFile(a.Flags.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+			output, err = newOutputFile(a.Flags.OutputFile)
 			if err != nil {
-				return nil, fmt.Errorf("opening output file: %w", err)
+				return nil, err
 			}
 		}
 		ui = report.CreateExportUI(

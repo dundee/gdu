@@ -14,6 +14,16 @@ var analyzeParentPath = func(ui *UI, path string, parentDir fs.Item) error {
 	return ui.AnalyzePath(path, parentDir)
 }
 
+// typedRune returns the character of a key typed without Ctrl, Alt or Meta,
+// and 0 for any other key. Commands are bound to plain characters: tcell
+// reports Ctrl+D with the rune 'd', which must not delete as 'd' does.
+func typedRune(key *tcell.EventKey) rune {
+	if key.Key() != tcell.KeyRune || key.Modifiers()&(tcell.ModCtrl|tcell.ModAlt|tcell.ModMeta) != 0 {
+		return 0
+	}
+	return key.Rune()
+}
+
 func (ui *UI) keyPressed(key *tcell.EventKey) *tcell.EventKey {
 	if key.Key() == tcell.KeyExit {
 		ui.handleSignalEvent(key)
@@ -132,7 +142,7 @@ func (ui *UI) handleBlockingModalKeys(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleClosingModals(key *tcell.EventKey) *tcell.EventKey {
-	if key.Key() == tcell.KeyEsc || key.Rune() == 'q' {
+	if key.Key() == tcell.KeyEsc || typedRune(key) == 'q' {
 		if ui.pages.HasPage("help") {
 			ui.pages.RemovePage("help")
 			ui.app.SetFocus(ui.table)
@@ -148,10 +158,10 @@ func (ui *UI) handleClosingModals(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleConfirmation(key *tcell.EventKey) *tcell.EventKey {
-	if key.Rune() == 'h' {
+	if typedRune(key) == 'h' {
 		return tcell.NewEventKey(tcell.KeyLeft, 0, 0)
 	}
-	if key.Rune() == 'l' {
+	if typedRune(key) == 'l' {
 		return tcell.NewEventKey(tcell.KeyRight, 0, 0)
 	}
 	return key
@@ -159,7 +169,7 @@ func (ui *UI) handleConfirmation(key *tcell.EventKey) *tcell.EventKey {
 
 func (ui *UI) handleInfoPageEvents(key *tcell.EventKey) *tcell.EventKey {
 	if ui.pages.HasPage("info") {
-		switch key.Rune() {
+		switch typedRune(key) {
 		case 'i':
 			ui.pages.RemovePage("info")
 			ui.app.SetFocus(ui.table)
@@ -170,12 +180,12 @@ func (ui *UI) handleInfoPageEvents(key *tcell.EventKey) *tcell.EventKey {
 
 		if key.Key() == tcell.KeyUp ||
 			key.Key() == tcell.KeyDown ||
-			key.Rune() == 'j' ||
-			key.Rune() == 'k' {
+			typedRune(key) == 'j' ||
+			typedRune(key) == 'k' {
 			row, column := ui.table.GetSelection()
-			if (key.Key() == tcell.KeyUp || key.Rune() == 'k') && row > 0 {
+			if (key.Key() == tcell.KeyUp || typedRune(key) == 'k') && row > 0 {
 				row--
-			} else if (key.Key() == tcell.KeyDown || key.Rune() == 'j') &&
+			} else if (key.Key() == tcell.KeyDown || typedRune(key) == 'j') &&
 				row+1 < ui.table.GetRowCount() {
 				row++
 			}
@@ -217,7 +227,7 @@ func (ui *UI) handleQuit(key *tcell.EventKey) *tcell.EventKey {
 		return key
 	}
 
-	switch key.Rune() {
+	switch typedRune(key) {
 	case 'Q':
 		ui.quit(true)
 		return nil
@@ -353,7 +363,7 @@ func (ui *UI) handlePreviewKeys(key *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 
-	switch key.Rune() {
+	switch typedRune(key) {
 	case '?':
 		ui.showHelp()
 		return nil
@@ -386,7 +396,7 @@ func (ui *UI) previewLeft() {
 }
 
 func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {
-	if key.Rune() == '?' {
+	if typedRune(key) == '?' {
 		if ui.pages.HasPage("help") {
 			ui.pages.RemovePage("help")
 			ui.app.SetFocus(ui.table)
@@ -399,7 +409,7 @@ func (ui *UI) handleHelp(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleShell(key *tcell.EventKey) *tcell.EventKey {
-	if key.Rune() == 'b' {
+	if typedRune(key) == 'b' {
 		if ui.isInArchive() {
 			ui.showErr("Spawning shell is not supported in archives", nil)
 			return nil
@@ -415,12 +425,12 @@ func (ui *UI) handleShell(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleLeftRight(key *tcell.EventKey) *tcell.EventKey {
-	if key.Rune() == 'h' || key.Key() == tcell.KeyLeft {
+	if typedRune(key) == 'h' || key.Key() == tcell.KeyLeft {
 		ui.handleLeft()
 		return nil
 	}
 
-	if key.Rune() == 'l' || key.Key() == tcell.KeyRight {
+	if typedRune(key) == 'l' || key.Key() == tcell.KeyRight {
 		ui.handleRight()
 		return nil
 	}
@@ -446,7 +456,7 @@ func (ui *UI) handleFiltering(key *tcell.EventKey) *tcell.EventKey {
 
 // nolint: funlen // Why: there's a lot of options to handle
 func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
-	switch key.Rune() {
+	switch typedRune(key) {
 	case 'd':
 		if ui.isInArchive() {
 			ui.showErr("Deletion is not supported in archives", nil)
@@ -515,7 +525,7 @@ func (ui *UI) handleMainActions(key *tcell.EventKey) *tcell.EventKey {
 }
 
 func (ui *UI) handleToggles(key *tcell.EventKey) {
-	switch key.Rune() {
+	switch typedRune(key) {
 	case 'a':
 		ui.ShowApparentSize = !ui.ShowApparentSize
 	case 'B':
@@ -533,7 +543,7 @@ func (ui *UI) handleToggles(key *tcell.EventKey) {
 }
 
 func (ui *UI) handleSorting(key *tcell.EventKey) {
-	switch key.Rune() {
+	switch typedRune(key) {
 	case 's':
 		ui.setSorting("size")
 	case 'C':

@@ -451,7 +451,10 @@ gdu -r --db analysis.sqlite /     # reads saved data, does not run analysis agai
 
 Reading saved data (`-r`) needs the database and the directory the analysis was
 saved for; gdu reports an error for a missing database or another directory.
-Without `-r`, `--db` always scans and replaces what the database held.
+Without `-r`, `--db` always scans and replaces what the database held. gdu only
+replaces a database it created: it refuses a `--db` path holding any other file
+or directory, and leaves the database alone when a run does not scan into it
+(`-f`, `--sequential`).
 
 ## Running tests
 

@@ -148,10 +148,15 @@ export function TreeMapView() {
       if (deleteCandidate) {
         return;
       }
+      // Ctrl+D and Cmd+D bookmark the page, Ctrl+O and Cmd+O open a file:
+      // they belong to the browser and must not delete or reveal anything
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
       if (event.key === 'Escape' && categoryFilter) {
         event.preventDefault();
         setCategoryFilter(null);
-      } else if (event.code === 'KeyP' && !event.metaKey && !event.ctrlKey) {
+      } else if (event.code === 'KeyP') {
         event.preventDefault();
         const index = PROJECTIONS.findIndex((p) => p.id === projection);
         setProjection(PROJECTIONS[(index + 1) % PROJECTIONS.length].id);
