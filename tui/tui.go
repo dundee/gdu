@@ -583,16 +583,7 @@ func (ui *UI) fileItemSelected(row, column int) {
 		nestedDir := origDir
 		for nestedDir.GetParent() != nil {
 			if selectedDir.GetName() == nestedDir.GetParent().GetName() {
-				sortBy, sortOrder := ui.getSortParams()
-				index := -1
-				i := 0
-				for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
-					if item.GetName() == nestedDir.GetName() {
-						index = i
-						break
-					}
-					i++
-				}
+				index := ui.indexOf(nestedDir.GetName())
 				if index >= 0 {
 					if ui.currentDir.GetPath() != ui.topDirPath {
 						index++
@@ -604,6 +595,29 @@ func (ui *UI) fileItemSelected(row, column int) {
 			nestedDir = nestedDir.GetParent()
 		}
 	}
+}
+
+// indexOf returns the position of the entry of the current directory named
+// name, as listed, or -1.
+func (ui *UI) indexOf(name string) int {
+	defer ui.readTree()()
+	sortBy, sortOrder := ui.getSortParams()
+	i := 0
+	for item := range ui.currentDir.GetFiles(sortBy, sortOrder) {
+		if item.GetName() == name {
+			return i
+		}
+		i++
+	}
+	return -1
+}
+
+// readTree holds the lock of the session's tree for reading until the
+// returned function is called. Whoever holds it must not take it again.
+func (ui *UI) readTree() func() {
+	lock := ui.session.TreeLock()
+	lock.RLock()
+	return lock.RUnlock
 }
 
 func (ui *UI) deviceItemSelected(row, column int) {

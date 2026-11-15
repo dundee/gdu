@@ -75,7 +75,7 @@ func TestMarkerRequired(t *testing.T) {
 		dir("app", file("package.json", 1), dir("node_modules", file("x.js", 100))),
 		dir("loose", dir("node_modules", file("y.js", 50))),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	m, ok := res.Match(child(t, root, "app", "node_modules"))
 	require.True(t, ok)
@@ -90,7 +90,7 @@ func TestUnitMatchIsInheritedByDescendants(t *testing.T) {
 	root := build("/home", dir("u",
 		dir("app", file("package.json", 1), dir("node_modules", dir("pkg", file("model.gguf", 10)))),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	// the model inside node_modules is part of the build artifact, not a
 	// model of its own, and is not counted twice
@@ -115,7 +115,7 @@ func TestPathRulesAndPrecedence(t *testing.T) {
 		dir("Downloads", file("a.zip", 7), file("setup.dmg", 9)),
 		dir("src", file("b.zip", 3)),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	tests := []struct {
 		path     []string
@@ -143,7 +143,7 @@ func TestTotalsAggregateMixedDirectory(t *testing.T) {
 		dir("m", file("a.gguf", 40), file("b.safetensors", 60)),
 		file("doc.txt", 5),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	assert.Equal(t, Totals{
 		BuildArtifact: {Usage: 100, Size: 100},
@@ -161,7 +161,7 @@ func TestExclusionsAndUserRules(t *testing.T) {
 	res := newClassifier(t, Config{
 		Exclude: []string{"~/work"},
 		Rules:   []Rule{{Category: MLModel, Dir: "weights", Hint: "mine"}},
-	}).Analyze(root)
+	}).Analyze(root, nil)
 
 	_, ok := res.Match(child(t, root, "work", "node_modules"))
 	assert.False(t, ok)
@@ -191,7 +191,7 @@ func TestVirtualRootChildrenUseOwnPaths(t *testing.T) {
 	a := build("/home/u", dir("a", file("package.json", 1), dir("node_modules", file("x", 4))))
 	b := build("/home/u", dir("b", file("big.iso", 8)))
 	root := analyze.CreateVirtualRootDir(a, b)
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	assert.Equal(t, Totals{
 		BuildArtifact: {Usage: 4, Size: 4},
@@ -220,7 +220,7 @@ func TestGitIgnoreSignal(t *testing.T) {
 		dir("sub", file(".gitignore", 1), dir("local", file("l", 5))),
 		dir("src", file("main.go", 6)),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	tests := []struct {
 		path       []string
@@ -255,7 +255,7 @@ func TestNoRepoNoGitIgnoreSignal(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(base, "plain", ".gitignore"), []byte("out/\n"), 0o644))
 
 	root := build(base, dir("plain", file(".gitignore", 1), dir("out", file("o", 10))))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	_, ok := res.Match(child(t, root, "out"))
 	assert.False(t, ok)
@@ -272,7 +272,7 @@ func TestForgetSubtractsFromAncestors(t *testing.T) {
 		dir("p", file("package.json", 1), dir("node_modules", file("x", 100)), file("a.gguf", 40), file("notes.txt", 2)),
 		file("b.gguf", 60),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 	before := res.Totals(root)
 
 	modules := child(t, root, "p", "node_modules")
@@ -297,7 +297,7 @@ func TestForgetMarkerReclassifiesSiblings(t *testing.T) {
 	root := build("/home", dir("u",
 		dir("p", file("package.json", 1), dir("node_modules", file("x", 100)), file("a.gguf", 40)),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 	before := res.Totals(root)
 
 	remove(res, child(t, root, "p", "package.json"))
@@ -321,7 +321,7 @@ func TestForgetGitignoreReclassifiesBelowIt(t *testing.T) {
 		file(".gitignore", 1),
 		dir("sub", file(".gitignore", 1), dir("out", dir("o", file("x", 10))), file("a.log", 2)),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 	require.Equal(t, Totals{GitIgnored: {Usage: 12, Size: 12}}, res.Totals(root))
 
 	gitignore := child(t, root, "sub", ".gitignore")
@@ -340,7 +340,7 @@ func TestForgetInsideUnitKeepsClassification(t *testing.T) {
 	root := build("/home", dir("u",
 		dir("p", file("package.json", 1), dir("node_modules", dir("dep", file("package.json", 1), file("i", 9)))),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	remove(res, child(t, root, "p", "node_modules", "dep", "package.json"))
 
@@ -357,7 +357,7 @@ func TestForgetMarkerInsideSplitDirectory(t *testing.T) {
 			dir("app", file("package.json", 1), dir("node_modules", file("n", 7))),
 		)),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 	require.Equal(t, Totals{MLModel: {Usage: 50, Size: 50}, AppCache: {Usage: 8, Size: 8}}, res.Totals(root))
 
 	// app is a unit carried from the split lm-studio directory, so nothing in
@@ -372,7 +372,7 @@ func TestPathRulesUnderVirtualRoot(t *testing.T) {
 	goDir := build(home, dir("go", dir("pkg", dir("mod", file("m", 30)))))
 	gradle := build(home, dir(".gradle", dir("caches", file("c", 20))))
 	root := analyze.CreateVirtualRootDir(goDir, gradle)
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	assert.Equal(t, Totals{PackageCache: {Usage: 50, Size: 50}}, res.Totals(root))
 	m, ok := res.Match(child(t, goDir, "pkg", "mod"))
@@ -389,7 +389,7 @@ func TestDefaultCacheAndToolchainRules(t *testing.T) {
 		dir("Library", dir("Caches", dir("go-build", file("g", 1)))),
 		dir("app", dir("App.xcodeproj", file("p", 1)), dir("DerivedData", file("d", 1))),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	tests := []struct {
 		path     []string
@@ -417,7 +417,7 @@ func TestForgetInsideMatchedDirectory(t *testing.T) {
 	root := build("/home", dir("u",
 		dir(".cache", dir("uv", dir("archive", file("a", 30), file("b", 20)))),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 	require.Equal(t, Totals{PackageCache: {Usage: 50, Size: 50}}, res.Totals(root))
 
 	archive := child(t, root, ".cache", "uv", "archive").(*analyze.Dir)
@@ -437,7 +437,7 @@ func TestMoreSpecificPathRuleSplitsUnit(t *testing.T) {
 			file("state.json", 2),
 		)),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 
 	_, ok := res.Match(child(t, root, ".cache", "lm-studio"))
 	assert.False(t, ok, "a directory holding a more specific rule's path is not a unit")
@@ -466,7 +466,7 @@ func TestExclusionSplitsUnit(t *testing.T) {
 			dir("tmp", dir("deep", file("t", 6))),
 		))),
 	))
-	res := newClassifier(t, Config{Exclude: []string{"~/Library/Caches/foo/keep"}}).Analyze(root)
+	res := newClassifier(t, Config{Exclude: []string{"~/Library/Caches/foo/keep"}}).Analyze(root, nil)
 
 	_, ok := res.Match(child(t, root, "Library", "Caches", "foo"))
 	assert.False(t, ok)
@@ -494,7 +494,7 @@ func TestGlobPathRuleSplitsUnit(t *testing.T) {
 	))
 	res := newClassifier(t, Config{
 		Rules: []Rule{{Category: MLModel, Path: "~/projects/*/node_modules/models"}},
-	}).Analyze(root)
+	}).Analyze(root, nil)
 
 	modules := child(t, root, "projects", "a", "node_modules")
 	_, ok := res.Match(modules)
@@ -517,7 +517,7 @@ func TestForgetMarkerInSplitDirectoryCarriesItsMatch(t *testing.T) {
 			dir("node_modules", file("n", 7)),
 		)),
 	))
-	res := newClassifier(t, Config{}).Analyze(root)
+	res := newClassifier(t, Config{}).Analyze(root, nil)
 	modules := child(t, root, ".cache", "lm-studio", "node_modules")
 	m, _ := res.Match(modules)
 	require.Equal(t, BuildArtifact, m.Category)

@@ -91,7 +91,7 @@ func flatten(item fs.Item) map[string]storedStats {
 	walk = func(it fs.Item) {
 		out[it.GetPath()] = storedStats{it.IsDir(), it.GetSize(), it.GetUsage(), it.GetItemCount()}
 		if it.IsDir() {
-			for child := range it.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+			for child := range it.GetFiles(fs.SortByName, fs.SortAsc) {
 				walk(child)
 			}
 		}
@@ -104,8 +104,6 @@ func flatten(item fs.Item) map[string]storedStats {
 // items: listing dir under its read lock.
 func entry(t *testing.T, dir fs.Item, name string) fs.Item {
 	t.Helper()
-	unlock := dir.RLock()
-	defer unlock()
 	for child := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if child.GetName() == name {
 			return child
@@ -116,7 +114,7 @@ func entry(t *testing.T, dir fs.Item, name string) fs.Item {
 }
 
 func hasEntry(dir fs.Item, name string) bool {
-	for child := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for child := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if child.GetName() == name {
 			return true
 		}

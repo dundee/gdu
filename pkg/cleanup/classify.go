@@ -110,6 +110,19 @@ func (t Totals) add(other Totals) Totals {
 	return t
 }
 
+// TreeReadLock guards a tree shared with other goroutines, which the
+// classifier reads holding RLock.
+type TreeReadLock interface {
+	RLock()
+	RUnlock()
+}
+
+// unshared is the lock of a tree no one else uses.
+type unshared struct{}
+
+func (unshared) RLock()   {}
+func (unshared) RUnlock() {}
+
 // Result holds the classification of one tree. Items are keyed by identity, so
 // a Result goes stale once the tree changes, except for removals reported via
 // Forget. It is safe for concurrent use.
@@ -159,7 +172,8 @@ func (r *Result) Totals(it fs.Item) Totals {
 // classifying the whole tree again. When it was a project marker, a .gitignore
 // or a .git directory, the classification of its siblings may depend on it, so
 // they are classified again. Ancestors are found through GetParent, so the
-// removed item must keep its parent link.
+// removed item must keep its parent link. The caller holds the tree's read
+// lock, if it is shared.
 func (r *Result) Forget(it fs.Item) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -214,19 +228,20 @@ func (r *Result) reclassifyChildren(dir fs.Item) {
 		return
 	}
 	old := r.totals[dir]
-	for child := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for _, child := range entries(dir, unshared{}) {
 		r.clear(child)
 	}
 	delete(r.totals, dir)
 
-	w := &walker{c: r.c, result: r}
+	// the caller holds the tree's read lock
+	w := &walker{c: r.c, result: r, tree: unshared{}}
 	// rebuild the .gitignore context the walk had when it reached dir
 	var ancestors []fs.Item
 	for p := dir.GetParent(); p != nil && !analyze.IsVirtualRootDir(p); p = p.GetParent() {
 		ancestors = append(ancestors, p)
 	}
 	for _, a := range slices.Backward(ancestors) {
-		w.enterDir(a.GetPath(), childNames(a))
+		w.enterDir(a.GetPath(), w.childNames(a))
 	}
 	var carried *Match
 	if m, ok := r.splits[dir]; ok {
@@ -249,9 +264,20 @@ func (r *Result) clear(it fs.Item) {
 	if !hasTotals && !split {
 		return
 	}
-	for child := range it.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for _, child := range entries(it, unshared{}) {
 		r.clear(child)
 	}
+}
+
+// entries returns the entries of dir, read holding lock.
+func entries(dir fs.Item, lock TreeReadLock) fs.Files {
+	lock.RLock()
+	defer lock.RUnlock()
+	var files fs.Files
+	for child := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
+		files = append(files, child)
+	}
+	return files
 }
 
 func (r *Result) totalsLocked(it fs.Item) Totals {
@@ -269,9 +295,18 @@ func (r *Result) totalsLocked(it fs.Item) Totals {
 // Analyze classifies the whole tree under root and aggregates the space of
 // every category per directory, including items too small for a frontend to
 // show.
-func (c *Classifier) Analyze(root fs.Item) *Result {
+//
+// The tree is read a directory at a time holding lock, which may be nil when
+// no one else uses it, so the tree can change in between: a result of a walk
+// that overlapped a change should be discarded. The caller must not hold the
+// lock itself.
+func (c *Classifier) Analyze(root fs.Item, lock TreeReadLock) *Result {
+	if lock == nil {
+		lock = unshared{}
+	}
 	w := &walker{
-		c: c,
+		c:    c,
+		tree: lock,
 		result: &Result{
 			c:       c,
 			matches: make(map[fs.Item]Match),
@@ -287,6 +322,8 @@ type walker struct {
 	c      *Classifier
 	result *Result
 	repos  []*repo
+	// tree is held while the walk reads what may change in the tree
+	tree TreeReadLock
 }
 
 // walk classifies it and everything below it. carried is the match of a
@@ -302,6 +339,8 @@ func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}, car
 	if ok {
 		if !it.IsDir() || !w.c.pinnedBelow(path) {
 			w.result.matches[it] = m
+			w.tree.RLock()
+			defer w.tree.RUnlock()
 			return w.result.totalsLocked(it)
 		}
 		// Deleting it as a unit would take an excluded path or one a more
@@ -319,10 +358,9 @@ func (w *walker) walk(it fs.Item, path string, siblings map[string]struct{}, car
 // walkChildren walks the children of the directory it and records their
 // totals as its own.
 func (w *walker) walkChildren(it fs.Item, path string, carried *Match) Totals {
-	var children []fs.Item
+	children := entries(it, w.tree)
 	names := make(map[string]struct{})
-	for child := range it.GetFilesLocked(fs.SortByName, fs.SortAsc) {
-		children = append(children, child)
+	for _, child := range children {
 		names[child.GetName()] = struct{}{}
 	}
 
@@ -420,9 +458,9 @@ func (c *Classifier) affectsSiblings(name string) bool {
 	return false
 }
 
-func childNames(dir fs.Item) map[string]struct{} {
+func (w *walker) childNames(dir fs.Item) map[string]struct{} {
 	names := make(map[string]struct{})
-	for child := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for _, child := range entries(dir, w.tree) {
 		names[child.GetName()] = struct{}{}
 	}
 	return names

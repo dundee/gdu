@@ -131,9 +131,5 @@ func (d *SimpleDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.I
 		}
 	}
 }
-func (d *SimpleDir) GetFilesLocked(fs.SortBy, fs.SortOrder) iter.Seq[fs.Item] {
-	panic("not implemented")
-}
 func (d *SimpleDir) RemoveFile(fs.Item)           { panic("not implemented") }
 func (d *SimpleDir) RemoveFileByName(name string) { panic("not implemented") }
-func (d *SimpleDir) RLock() func()                { panic("not implemented") }

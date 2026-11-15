@@ -39,7 +39,7 @@ func (a DeleteAction) mode() remove.Mode {
 }
 
 func (ui *UI) defaultDeleter(roots []string) itemDeleter {
-	opts := []remove.Option{remove.WithTrash(ui.trasher)}
+	opts := []remove.Option{remove.WithTrash(ui.trasher), remove.WithTreeLock(ui.session.TreeLock())}
 	if ui.deleteInParallel {
 		opts = append(opts, remove.WithParallel())
 	}

@@ -222,6 +222,7 @@ func (ui *UI) showInfo() {
 	if ui.currentDir == nil {
 		return
 	}
+	defer ui.readTree()()
 
 	var content, numberColor string
 	row, column := ui.table.GetSelection()
@@ -350,6 +351,12 @@ func (ui *UI) confirmExport() *tview.Form {
 	return form
 }
 
+// exportTree writes the tree of the session as JSON to w.
+func (ui *UI) exportTree(w io.Writer) error {
+	defer ui.readTree()()
+	return ui.session.Root().EncodeJSON(w, true, nil)
+}
+
 func (ui *UI) exportAnalysis() {
 	ui.pages.RemovePage("export")
 
@@ -394,7 +401,7 @@ func (ui *UI) exportAnalysis() {
 		}
 		defer file.Close()
 
-		if err = ui.session.Root().EncodeJSON(&buff, true, nil); err != nil {
+		if err = ui.exportTree(&buff); err != nil {
 			ui.showErrFromGo("Error encoding JSON", err)
 			return
 		}

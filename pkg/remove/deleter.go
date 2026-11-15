@@ -56,10 +56,58 @@ type Deleter struct {
 	roots    []string
 	parallel bool
 	trash    func(dir, item fs.Item) error
+	tree     TreeLock
 }
 
 // Option configures a Deleter.
 type Option func(*Deleter)
+
+// TreeLock guards a tree shared with other goroutines, as the session's does.
+type TreeLock interface {
+	Lock()
+	Unlock()
+	RLock()
+	RUnlock()
+}
+
+// WithTreeLock makes the deleter list the directories of the tree holding
+// lock for reading, and change the tree holding it for writing. It holds
+// neither while it changes the disk, which can take long.
+func WithTreeLock(lock TreeLock) Option {
+	return func(d *Deleter) {
+		if lock != nil {
+			d.tree = lock
+		}
+	}
+}
+
+// unshared is the lock of a tree no one else uses.
+type unshared struct{}
+
+func (unshared) Lock()    {}
+func (unshared) Unlock()  {}
+func (unshared) RLock()   {}
+func (unshared) RUnlock() {}
+
+// change changes the tree holding its write lock.
+func (d *Deleter) change(fn func()) {
+	d.tree.Lock()
+	defer d.tree.Unlock()
+	fn()
+}
+
+// lockedDir is a directory whose RemoveFile holds the tree's write lock, for
+// the trash functions, which update the tree themselves.
+type lockedDir struct {
+	fs.Item
+	tree TreeLock
+}
+
+func (l lockedDir) RemoveFile(item fs.Item) {
+	l.tree.Lock()
+	defer l.tree.Unlock()
+	l.Item.RemoveFile(item)
+}
 
 // WithParallel removes the subdirectories of a removed directory concurrently.
 func WithParallel() Option {
@@ -68,8 +116,9 @@ func WithParallel() Option {
 
 // WithTrash sets how ModeTrash moves an item to the trash. The function must
 // remove the item from dir once it is gone from disk, as MoveItemToTrash and
-// the functions returned by TrashCommand do. MoveItemToTrash is the default.
-// Delete checks the item before calling it.
+// the functions returned by TrashCommand do; the dir it is given holds the
+// tree's write lock for that. MoveItemToTrash is the default. Delete checks
+// the item before calling it.
 func WithTrash(trash func(dir, item fs.Item) error) Option {
 	return func(d *Deleter) {
 		if trash != nil {
@@ -81,7 +130,7 @@ func WithTrash(trash func(dir, item fs.Item) error) Option {
 // NewDeleter returns a Deleter which changes only items inside roots, the
 // absolute paths of the scanned roots.
 func NewDeleter(roots []string, opts ...Option) *Deleter {
-	d := &Deleter{trash: MoveItemToTrash}
+	d := &Deleter{trash: MoveItemToTrash, tree: unshared{}}
 	for _, root := range roots {
 		if root != "" {
 			d.roots = append(d.roots, filepath.Clean(root))
@@ -122,7 +171,7 @@ func (d *Deleter) Delete(dir, item fs.Item, mode Mode) error {
 		// The trash moves the item by its path, so unlike remove and empty it
 		// cannot be confined to the root; resolve has just checked that the
 		// path still leads inside it.
-		return d.trash(dir, item)
+		return d.trash(lockedDir{Item: dir, tree: d.tree}, item)
 	}
 	return fmt.Errorf("unknown removal mode %d", mode)
 }
@@ -260,29 +309,29 @@ func (d *Deleter) remove(dir, item fs.Item) error {
 	// The node standing for an archive is a file on disk, so its entries must
 	// not be removed one by one.
 	if d.parallel && item.IsDir() && !analyze.IsArchiveDir(item) {
-		if err := removeSubdirsParallel(root, t.rel, item); err != nil {
+		if err := removeSubdirsParallel(root, t.rel, d.entries(item)); err != nil {
 			return err
 		}
 	}
 	if err := root.RemoveAll(t.rel); err != nil {
 		return err
 	}
-	dir.RemoveFile(item)
+	d.change(func() { dir.RemoveFile(item) })
 	return nil
 }
 
 // concurrencyLimit bounds the subdirectories removed at once by WithParallel.
 var concurrencyLimit = make(chan struct{}, 3*runtime.GOMAXPROCS(0))
 
-// removeSubdirsParallel removes the subdirectories of dir, which lies at rel
-// inside root, concurrently.
-func removeSubdirsParallel(root *os.Root, rel string, dir fs.Item) error {
+// removeSubdirsParallel removes the subdirectories among entries, the entries
+// of the directory lying at rel inside root, concurrently.
+func removeSubdirsParallel(root *os.Root, rel string, entries fs.Files) error {
 	var (
 		wait     sync.WaitGroup
 		errOnce  sync.Once
 		firstErr error
 	)
-	for _, sub := range entries(dir) {
+	for _, sub := range entries {
 		if !sub.IsDir() {
 			continue
 		}
@@ -319,7 +368,7 @@ func (d *Deleter) emptyDir(dir, item fs.Item) error {
 	if err := d.checkEmptyDir(dir, item); err != nil {
 		return err
 	}
-	for _, entry := range entries(item) {
+	for _, entry := range d.entries(item) {
 		if err := d.remove(item, entry); err != nil {
 			return err
 		}
@@ -365,7 +414,7 @@ func (d *Deleter) emptyFile(dir, item fs.Item) error {
 		return err
 	}
 
-	replaceWithEmptyFile(dir, item)
+	d.change(func() { replaceWithEmptyFile(dir, item) })
 	return nil
 }
 
@@ -386,12 +435,10 @@ func sameFile(a, b os.FileInfo) bool {
 	return runtime.GOOS == "windows" || os.SameFile(a, b)
 }
 
-// entries returns the entries of dir. Taking the read lock and iterating
-// GetFiles works for every directory implementation, including the stored one,
-// whose GetFilesLocked does not load its entries.
-func entries(dir fs.Item) fs.Files {
-	unlock := dir.RLock()
-	defer unlock()
+// entries returns the entries of dir, listed holding the tree's read lock.
+func (d *Deleter) entries(dir fs.Item) fs.Files {
+	d.tree.RLock()
+	defer d.tree.RUnlock()
 	var files fs.Files
 	for entry := range dir.GetFiles(fs.SortBySize, fs.SortDesc) {
 		files = append(files, entry)

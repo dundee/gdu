@@ -136,7 +136,7 @@ func TestStoredAnalyzerWithZip(t *testing.T) {
 	var validZip fs.Item
 	var invalidZip fs.Item
 
-	for file := range dir.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+	for file := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
 		if file.GetName() == "valid.zip" {
 			validZip = file
 		}

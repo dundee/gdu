@@ -130,7 +130,7 @@ func dirHolding(top fs.Item, path string) statsHolder {
 	cur := top
 	for cur.GetPath() != dirPath {
 		var next fs.Item
-		for entry := range cur.GetFilesLocked(fs.SortByName, fs.SortAsc) {
+		for entry := range cur.GetFiles(fs.SortByName, fs.SortAsc) {
 			entryPath := entry.GetPath()
 			if entry.IsDir() && (entryPath == dirPath || strings.HasPrefix(dirPath, entryPath+string(filepath.Separator))) {
 				next = entry

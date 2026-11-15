@@ -5,65 +5,44 @@ import (
 	"runtime"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestStoredDirUpdateStatsLockedAccessors exercises the same reader/writer mix
-// on a StoredDir that the web UI and TUI produce: stats updates overlapping
-// readers that go through the synchronized accessors. Run with -race to catch
-// any field written outside Dir.m.
-func TestStoredDirUpdateStatsLockedAccessors(t *testing.T) {
+// Readers of a stored tree, such as the web UI's request handlers, read it at
+// once, holding only the tree's read lock, and load its directories as they
+// go. Run with -race.
+func TestStoredTreeConcurrentReaders(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer(t.TempDir())
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
-		IgnoreFile: func(_ string) bool { return false },
-	}).(*StoredDir)
+	scanned := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{})
+	scanned.UpdateStats(false)
+	want := flatten(scanned)
+	dir, err := analyzer.LoadAnalysis("test_dir")
+	require.NoError(t, err)
 
-	// Hold the database open for the whole test so every worker shares one
-	// badger instance instead of opening and closing it per call.
 	closeFn := analyzer.storage.Open()
 	defer closeFn()
 
-	// updateStats is idempotent over a static tree, so the concurrent run must
-	// converge on the values a single-threaded run produces.
-	dir.UpdateStats(false)
-	wantCount, wantSize, wantUsage := dir.GetItemCount(), dir.GetSize(), dir.GetUsage()
-
-	const workers = 4
-	const rounds = 25
-
 	var wg sync.WaitGroup
-	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for range rounds {
-				dir.UpdateStats(false)
-				runtime.Gosched()
-			}
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for range rounds {
-				readLockedStoredDir(dir)
-				runtime.Gosched()
-			}
-		}()
+	got := make([]map[string]storedStats, 4)
+	for i := range got {
+		wg.Go(func() {
+			readLockedStoredDir(dir.(*StoredDir))
+			got[i] = flatten(dir)
+		})
 	}
 	wg.Wait()
 
-	assert.Equal(t, wantCount, dir.GetItemCount())
-	assert.Equal(t, wantSize, dir.GetSize())
-	assert.Equal(t, wantUsage, dir.GetUsage())
+	for _, g := range got {
+		assert.Equal(t, want, g)
+	}
 }
 
 // TestStoredDirOpensStorageOnDemandConcurrently drives the same workload with
@@ -81,14 +60,21 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 
 	assert.False(t, analyzer.storage.IsOpen(), "the analyzer should have closed storage on the way out")
 
+	// as the session does: computing the totals changes the tree, reading
+	// it does not, and readers open the storage at once
+	var tree sync.RWMutex
 	var wg sync.WaitGroup
 	for range 4 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for range 5 {
+				tree.Lock()
 				dir.UpdateStats(false)
+				tree.Unlock()
+				tree.RLock()
 				readLockedStoredDir(dir)
+				tree.RUnlock()
 				runtime.Gosched()
 			}
 		}()
@@ -97,52 +83,6 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 
 	assert.False(t, analyzer.storage.IsOpen(), "every reference must be released again")
 	assert.Positive(t, dir.GetSize())
-}
-
-// TestStoredDirGetFilesUnderCallerHeldReadLock pins the caller-locked half of
-// the fs.Item contract: tui.(*UI).showDir holds RLock across the whole
-// GetFiles iteration, so loading children lazily must not re-enter Dir.m.
-// sync.RWMutex is not reentrant, so a write lock there self-deadlocks, and
-// even a read lock deadlocks once a writer has queued behind the caller.
-func TestStoredDirGetFilesUnderCallerHeldReadLock(t *testing.T) {
-	fin := testdir.CreateTestDir()
-	defer fin()
-
-	analyzer := CreateStoredAnalyzer(t.TempDir())
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
-		IgnoreFile: func(_ string) bool { return false },
-	}).(*StoredDir)
-
-	dir.UpdateStats(false)
-
-	done := make(chan int, 1)
-	go func() {
-		unlock := dir.RLock()
-		defer unlock()
-
-		// Queue a writer on the very mutex the caller holds for reading, so
-		// the read-lock variant of the bug is covered too.
-		queued := make(chan struct{})
-		go func() {
-			close(queued)
-			dir.SetFlag('!')
-		}()
-		<-queued
-		time.Sleep(50 * time.Millisecond)
-
-		var count int
-		for range dir.GetFiles(fs.SortByName, fs.SortAsc) {
-			count++
-		}
-		done <- count
-	}()
-
-	select {
-	case count := <-done:
-		assert.Positive(t, count)
-	case <-time.After(30 * time.Second):
-		t.Fatal("GetFiles deadlocked while the caller held the directory read lock")
-	}
 }
 
 // readLockedStoredDir mirrors a UI traversal: every scalar accessor plus the

@@ -146,10 +146,6 @@ func TestSimpleDirPanics(t *testing.T) {
 	assert.Panics(t, func() { d.EncodeJSON(nil, false, nil) })
 	assert.Panics(t, func() { d.GetItemStats(nil, false) })
 	assert.Panics(t, func() { d.AddFile(nil) })
-	assert.Panics(t, func() {
-		d.GetFilesLocked(fs.SortBySize, fs.SortAsc)
-	})
 	assert.Panics(t, func() { d.RemoveFile(nil) })
 	assert.Panics(t, func() { d.RemoveFileByName("x") })
-	assert.Panics(t, func() { d.RLock() })
 }

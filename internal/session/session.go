@@ -58,9 +58,16 @@ type storedAnalyzer interface {
 
 // Session is the analysis a frontend presents, and every way of producing or
 // refreshing it. All its methods are safe to call from any goroutine.
+//
+// The session owns its tree: whoever reads the tree holds TreeLock for
+// reading, and whoever changes it, holds it for writing. A tree being built
+// by a scan or a load is not the session's until it is complete.
 type Session struct {
 	settings *common.UI
 
+	tree sync.RWMutex
+
+	// mu guards the fields below
 	mu    sync.RWMutex
 	root  fs.Item
 	links *fs.HardLinks
@@ -93,9 +100,20 @@ func (s *Session) RootPath() string {
 	return ""
 }
 
-// RootPaths returns the paths of the scanned roots.
+// RootPaths returns the paths of the scanned roots. It reads the tree holding
+// TreeLock, which the caller must not hold.
 func (s *Session) RootPaths() []string {
+	s.tree.RLock()
+	defer s.tree.RUnlock()
 	return analyze.ScannedRootPaths(s.Root())
+}
+
+// TreeLock returns the lock guarding the tree of the session. Readers of the
+// tree hold it for reading; whoever changes the tree, such as a
+// remove.Deleter given it with remove.WithTreeLock, holds it for writing.
+// Methods of the session that take it say so.
+func (s *Session) TreeLock() *sync.RWMutex {
+	return &s.tree
 }
 
 // HardLinks returns the links to the file item, item included, as counted by
@@ -143,6 +161,9 @@ func (s *Session) Scan(ctx context.Context, paths []string, observe Observer) fs
 	if len(paths) > 1 {
 		root = analyze.CreateVirtualRootDir(roots...)
 	}
+	// the tree can be previewed already
+	s.tree.Lock()
+	defer s.tree.Unlock()
 	s.finalize(root, s.settings.IsFilteringFiles())
 	return root
 }
@@ -151,10 +172,15 @@ func (s *Session) Scan(ctx context.Context, paths []string, observe Observer) fs
 // place. It returns what the tree now holds at dir's place: the rescanned
 // directory, or the new top when the whole tree had to be scanned again.
 // Cancelling ctx stops the scan as it does for Scan.
+//
+// It changes the tree holding TreeLock, which the caller must not hold.
 func (s *Session) Rescan(ctx context.Context, dir fs.Item, observe Observer) fs.Item {
 	parent := dir.GetParent()
 	if parent == nil {
-		return s.Scan(ctx, analyze.ScannedRootPaths(dir), observe)
+		s.tree.RLock()
+		paths := analyze.ScannedRootPaths(dir)
+		s.tree.RUnlock()
+		return s.Scan(ctx, paths, observe)
 	}
 	if _, ok := s.settings.Analyzer.(storedAnalyzer); ok {
 		// a database holds the analysis of whole scanned roots, so it cannot
@@ -166,6 +192,9 @@ func (s *Session) Rescan(ctx context.Context, dir fs.Item, observe Observer) fs.
 	defer stop()
 
 	scanned, _ := s.walk(ctx, dir.GetPath(), 1)
+
+	s.tree.Lock()
+	defer s.tree.Unlock()
 	scanned.SetParent(parent)
 	// replace dir itself: under the virtual top level dir, scanned roots can
 	// share a name
@@ -191,6 +220,8 @@ func (s *Session) Load(input io.Reader) (fs.Item, error) {
 	runtime.GC()
 
 	// the filters apply to scanning, not to what an export holds
+	s.tree.Lock()
+	defer s.tree.Unlock()
 	s.finalize(dir, false)
 	return dir, nil
 }
@@ -214,8 +245,13 @@ func (s *Session) Open(path string) (fs.Item, error) {
 
 // Snapshot returns a copy of the tree the running scan has built so far, or
 // nil when there is none or the analyzer cannot provide it.
+//
+// It reads holding TreeLock, which the caller must not hold, as the tree may
+// be the session's already.
 func (s *Session) Snapshot() fs.Item {
 	if analyzer, ok := s.settings.Analyzer.(interface{ GetCurrentDir() fs.Item }); ok {
+		s.tree.RLock()
+		defer s.tree.RUnlock()
 		return analyzer.GetCurrentDir()
 	}
 	return nil
@@ -239,7 +275,8 @@ func (s *Session) walk(ctx context.Context, path string, number int) (fs.Item, b
 }
 
 // finalize computes the totals of the tree topped by root, with a fresh
-// hard-link index, and makes it the tree of the session.
+// hard-link index, and makes it the tree of the session. The caller holds
+// TreeLock for writing.
 func (s *Session) finalize(root fs.Item, filtering bool) {
 	s.mu.Lock()
 	s.phase = Finalizing

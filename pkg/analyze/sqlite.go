@@ -755,11 +755,6 @@ func (i *SqliteItem) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.
 	}
 }
 
-// GetFilesLocked returns children with locking
-func (i *SqliteItem) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
-	return i.GetFiles(sortBy, order)
-}
-
 // RemoveFile removes a child file, updating both in-memory stats and the database in one pass.
 func (i *SqliteItem) RemoveFile(item fs.Item) {
 	sqliteItem := item.(*SqliteItem)
@@ -799,12 +794,6 @@ func (i *SqliteItem) RemoveFileByName(name string) {
 	}
 
 	i.RemoveFile(child)
-}
-
-// RLock returns a no-op unlock function
-func (i *SqliteItem) RLock() func() {
-	i.m.RLock()
-	return i.m.RUnlock
 }
 
 // SqliteAnalyzer implements Analyzer using SQLite storage

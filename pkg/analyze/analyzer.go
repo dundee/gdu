@@ -3,6 +3,7 @@ package analyze
 import (
 	"context"
 	"os"
+	"sync"
 	"sync/atomic"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -15,13 +16,22 @@ type BaseAnalyzer struct {
 	progressItemCount       atomic.Int64
 	progressTotalUsage      atomic.Int64
 	progressCurrentItemName atomic.Value
-	currentDir              atomic.Value
+	preview                 atomic.Pointer[preview]
+}
+
+// preview is the tree an in-memory scan is building, readable while it is
+// built. mu guards what the walk changes in it concurrently: the root, and
+// the attaching of a complete directory to its parent. Any other directory is
+// changed only by the goroutine walking it, before it is attached, and no
+// more once it is.
+type preview struct {
+	mu   sync.Mutex
+	root *Dir
 }
 
 // Init initializes the BaseAnalyzer
 func (a *BaseAnalyzer) Init() {
 	a.progressCurrentItemName.Store("")
-	a.currentDir.Store((*Dir)(nil))
 }
 
 // scan is one run of an analyzer: its options, and what it keeps while it
@@ -43,7 +53,7 @@ func (a *BaseAnalyzer) begin(ctx context.Context, opts common.ScanOptions) *scan
 	a.progressItemCount.Store(0)
 	a.progressTotalUsage.Store(0)
 	a.progressCurrentItemName.Store("")
-	a.currentDir.Store((*Dir)(nil))
+	a.preview.Store(nil)
 
 	s := &scan{ctx: ctx, opts: opts}
 	if s.opts.IgnoreDir == nil {
@@ -91,21 +101,25 @@ func MeasureSharedUsage(path string, info os.FileInfo, usage int64) (exclusive, 
 	return (&extentMeter{}).measure(path, info, usage)
 }
 
-// setCurrentDir stores the root directory currently being analyzed so it can be
-// inspected (e.g. previewed) while the scan is still running.
-func (a *BaseAnalyzer) setCurrentDir(dir *Dir) {
-	a.currentDir.Store(dir)
+// setCurrentDir makes p the tree being built, so it can be previewed while
+// the scan is still running.
+func (a *BaseAnalyzer) setCurrentDir(p *preview) {
+	a.preview.Store(p)
 }
 
 // GetCurrentDir returns an independent snapshot of the directory tree built so
 // far, or nil if no analysis has started yet. Callers may aggregate or navigate
-// the snapshot without mutating the live scan state.
+// the snapshot without mutating the live scan state. Once the scan is over, the
+// tree is its caller's, who must keep it from changing meanwhile, as the
+// session does with its tree lock.
 func (a *BaseAnalyzer) GetCurrentDir() fs.Item {
-	dir, _ := a.currentDir.Load().(*Dir)
-	if dir == nil {
+	p := a.preview.Load()
+	if p == nil {
 		return nil
 	}
-	return snapshotDir(dir, nil)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return snapshotDir(p.root, nil)
 }
 
 // GetProgress returns the progress of the running scan, or of the last one.

@@ -58,7 +58,7 @@ func TestPreviewWhileScanning(t *testing.T) {
 			if cur := analyzer.GetCurrentDir(); cur != nil {
 				cur.UpdateStats(false)
 				var total int64
-				for item := range cur.GetFilesLocked(fs.SortBySize, fs.SortDesc) {
+				for item := range cur.GetFiles(fs.SortBySize, fs.SortDesc) {
 					total += item.GetSize()
 				}
 				_ = total
@@ -87,7 +87,7 @@ func TestCurrentDirSnapshotCannotOverwriteLiveStats(t *testing.T) {
 		ItemCount: 1,
 	}
 	analyzer := CreateAnalyzer()
-	analyzer.setCurrentDir(live)
+	analyzer.setCurrentDir(&preview{root: live})
 
 	snapshot := analyzer.GetCurrentDir()
 	live.AddFile(&File{Name: "complete", Size: 7, Usage: 5, Parent: live})
@@ -117,7 +117,7 @@ func TestCurrentDirSnapshotKeepsDirOwnUsage(t *testing.T) {
 	live.AddFile(sub)
 
 	analyzer := CreateAnalyzer()
-	analyzer.setCurrentDir(live)
+	analyzer.setCurrentDir(&preview{root: live})
 	snapshot := analyzer.GetCurrentDir()
 	snapshot.UpdateStats(false)
 
@@ -129,7 +129,7 @@ func TestCurrentDirSnapshotKeepsSharedUsage(t *testing.T) {
 	live.AddFile(&File{Name: "clone", Size: 8192, Usage: 4096, SharedUsage: 4096, Parent: live})
 
 	analyzer := CreateAnalyzer()
-	analyzer.setCurrentDir(live)
+	analyzer.setCurrentDir(&preview{root: live})
 	snapshot := analyzer.GetCurrentDir().(*Dir)
 
 	require.Len(t, snapshot.Files, 1)
@@ -169,7 +169,7 @@ func TestCurrentDirSnapshotPreservesArchiveItems(t *testing.T) {
 	live.Files = append(live.Files, zipDir, tarDir)
 
 	analyzer := CreateAnalyzer()
-	analyzer.setCurrentDir(live)
+	analyzer.setCurrentDir(&preview{root: live})
 	snapshot := analyzer.GetCurrentDir()
 
 	items := make(map[string]fs.Item)

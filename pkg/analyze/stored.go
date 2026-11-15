@@ -241,13 +241,11 @@ func (f *StoredDir) load() error {
 		})
 	}
 
-	f.m.Lock()
 	f.Flag = record.Flag
 	f.Size, f.Usage, f.OwnUsage, f.ItemCount = record.Size, record.Usage, record.OwnUsage, record.ItemCount
 	f.Dev = record.Dev
 	f.Mtime = record.Mtime
 	f.Files = files
-	f.m.Unlock()
 	f.kind = record.Type
 	f.loaded = true
 	return nil
@@ -265,9 +263,7 @@ func (f *StoredDir) isLoaded() bool {
 // directory leaves the tree as it is, so a walk of the whole tree does not
 // keep the whole tree in memory.
 func (f *StoredDir) detached() (*StoredDir, error) {
-	f.m.RLock()
 	copied := newStoredDir(f.storage, f.GetPath(), f.Parent)
-	f.m.RUnlock()
 	if err := copied.load(); err != nil {
 		return nil, err
 	}
@@ -287,8 +283,7 @@ func (f *StoredDir) loadEntries(files fs.Files) {
 	}
 }
 
-// record returns the record of the directory. The caller must hold f.m, or
-// be the only one using the directory.
+// record returns the record of the directory.
 func (f *StoredDir) record() *storedRecord {
 	record := &storedRecord{
 		Type:      f.kind,
@@ -330,7 +325,7 @@ func entryOf(file fs.Item) storedEntry {
 	return entry
 }
 
-// store stores the directory. The caller must hold f.m.
+// store stores the directory.
 func (f *StoredDir) store() {
 	if err := f.storage.storeRecord(f.GetPath(), f.record()); err != nil {
 		log.Print(err.Error())
@@ -342,16 +337,6 @@ func (f *StoredDir) store() {
 func (f *StoredDir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
 	f.loadEntries(f.Files)
 	return f.Dir.GetFiles(sortBy, order)
-}
-
-// GetFilesLocked returns files in directory as a sorted iterator, loading the
-// directories among them.
-func (f *StoredDir) GetFilesLocked(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
-	f.m.RLock()
-	files := copyFiles(f.Files)
-	f.m.RUnlock()
-	f.loadEntries(files)
-	return f.Dir.GetFilesLocked(sortBy, order)
 }
 
 // EncodeJSON writes JSON representation of the directory and everything in
@@ -381,8 +366,6 @@ func (f *StoredDir) AddFile(item fs.Item) {
 	closeFn := f.storage.Open()
 	defer closeFn()
 
-	f.m.Lock()
-	defer f.m.Unlock()
 	f.Files = append(f.Files, item)
 	f.store()
 }
@@ -393,9 +376,7 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 	closeFn := f.storage.Open()
 	defer closeFn()
 
-	f.m.Lock()
 	f.Files = f.Files.Remove(item)
-	f.m.Unlock()
 
 	removeFromTotals(f, item)
 }
@@ -405,28 +386,21 @@ func (f *StoredDir) RemoveFileByName(name string) {
 	closeFn := f.storage.Open()
 	defer closeFn()
 
-	f.m.Lock()
 	idx, ok := f.Files.FindByName(name)
 	if !ok {
-		f.m.Unlock()
 		return
 	}
 	item := f.Files[idx]
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
-	f.m.Unlock()
 
 	removeFromTotals(f, item)
 }
 
-// adjustStats adds the deltas to the totals of the directory and stores it,
-// under its write lock so readers never see the totals and the stored copy
-// disagree.
+// adjustStats adds the deltas to the totals of the directory and stores it.
 func (f *StoredDir) adjustStats(itemCount, size, usage int64) {
 	closeFn := f.storage.Open()
 	defer closeFn()
 
-	f.m.Lock()
-	defer f.m.Unlock()
 	f.ItemCount += itemCount
 	f.Size += size
 	f.Usage += usage
@@ -444,9 +418,7 @@ func (f *StoredDir) GetItemStats(links *fs.HardLinks, filteringFiles bool) (item
 func (f *StoredDir) UpdateStats(filteringFiles bool) *fs.HardLinks {
 	links := fs.NewHardLinks()
 	f.updateStats(links, filteringFiles)
-	f.m.Lock()
 	f.links = links
-	f.m.Unlock()
 	return links
 }
 
@@ -466,34 +438,21 @@ func (f *StoredDir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 		}
 		copied.updateStats(links, filteringFiles)
 
-		copied.m.RLock()
 		mtime, flag := copied.Mtime, copied.Flag
 		itemCount, size, usage, ownUsage := copied.ItemCount, copied.Size, copied.Usage, copied.OwnUsage
-		copied.m.RUnlock()
 
-		f.m.Lock()
 		f.Mtime, f.Flag = mtime, flag
 		f.ItemCount, f.Size, f.Usage, f.OwnUsage = itemCount, size, usage, ownUsage
-		f.m.Unlock()
 		return
 	}
 
-	// Snapshot the fields we accumulate into, so the stats are computed from
-	// locals while no lock is held. Recursing into entry.GetItemStats below
-	// must not happen under f.m.
-	f.m.RLock()
 	files := copyFiles(f.Files)
 	curMtime := f.Mtime
 	curFlag := f.Flag
 	dev := f.Dev
-	f.m.RUnlock()
 
 	totals, mtime, flag := aggregateDirEntries(files, curMtime, curFlag, dev, links, filteringFiles)
 
-	// Commit and store under one write lock so neither a concurrent reader
-	// nor the encoder can observe a half-updated directory.
-	f.m.Lock()
-	defer f.m.Unlock()
 	f.Mtime = mtime
 	f.Flag = flag
 	totals.ownUsage = f.OwnUsage
