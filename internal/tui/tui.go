@@ -16,7 +16,6 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/config"
-	"github.com/dundee/gdu/v5/internal/ignore"
 	"github.com/dundee/gdu/v5/internal/remove"
 	"github.com/dundee/gdu/v5/internal/session"
 	"github.com/dundee/gdu/v5/internal/timefilter"
@@ -683,12 +682,14 @@ func (ui *UI) deviceItemSelected(row, column int) {
 		return
 	}
 
-	paths := device.GetNestedMountpointsPaths(selectedDevice.MountPoint, ui.devices)
-	pattern, err := common.CreateIgnorePattern(paths)
-	ui.IgnoreDirPathPatterns = ignore.FromRegexp(pattern)
+	// every mount, not only the devices listed: tmpfs, overlay, network
+	// and FUSE filesystems below the device are not part of it either
+	mounts, err := ui.getter.GetMounts()
 	if err != nil {
-		slog.Warn("creating the patterns of other devices", "paths", paths, "err", err)
+		slog.Warn("listing mounts", "err", err)
+		mounts = ui.devices
 	}
+	ui.IgnoreOtherDevices(device.GetNestedMountpointsPaths(selectedDevice.MountPoint, mounts))
 
 	ui.resetSorting()
 

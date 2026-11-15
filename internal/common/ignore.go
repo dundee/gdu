@@ -15,20 +15,6 @@ import (
 	"github.com/dundee/gdu/v5/pkg/analyze"
 )
 
-// CreateIgnorePattern creates one pattern from all path patterns.
-// Every relative pattern also gets its absolute form added as an alternative
-// and vice versa, so that patterns work no matter whether the scanned paths
-// are relative or absolute. The added alternative is the pattern itself with
-// a generated path prefix, so it stays a regular expression; only the path
-// separators in it are escaped.
-func CreateIgnorePattern(paths []string) (compiled *regexp.Regexp, err error) {
-	fragments, err := regexPatternFragments(paths)
-	if err != nil {
-		return nil, err
-	}
-	return compileIgnoreFragments(fragments)
-}
-
 // regexPatternFragments validates the given regular path patterns and returns
 // them as regex fragments. Each pattern gets an absolute/relative twin so that
 // it matches regardless of how the scanned path was spelled.
@@ -160,9 +146,23 @@ func IgnorePattern(patterns []string, ignoreFile, gitignoreFile string, roots []
 	return ignore.New(tails, regex), nil
 }
 
+// IgnoreOtherDevices leaves the directories at paths, the mount points of
+// other devices below the device to scan, out of the scans that follow. They
+// replace those given before, and add to the directories and patterns the
+// user left out.
+func (ui *UI) IgnoreOtherDevices(paths []string) {
+	ui.otherDevices = make(map[string]struct{}, len(paths))
+	for _, path := range paths {
+		ui.otherDevices[path] = struct{}{}
+	}
+}
+
 // ShouldDirBeIgnored returns true if given path should be ignored
 func (ui *UI) ShouldDirBeIgnored(name, path string) bool {
 	_, shouldIgnore := ui.IgnoreDirPaths[path]
+	if !shouldIgnore {
+		_, shouldIgnore = ui.otherDevices[path]
+	}
 	if shouldIgnore {
 		slog.Info("directory ignored", "path", path)
 	}
@@ -252,33 +252,30 @@ func (ui *UI) CreateIgnoreFunc() analyze.ShouldDirBeIgnored {
 
 // createPathIgnoreFunc returns function for detecting if dir should be ignored
 // based on its name or path only
-// nolint: gocyclo // Why: This function is a switch statement that is not too complex
 func (ui *UI) createPathIgnoreFunc() analyze.ShouldDirBeIgnored {
-	switch {
-	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns == nil && !ui.IgnoreHidden:
-		return ui.ShouldDirBeIgnored
-	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns != nil && !ui.IgnoreHidden:
-		return func(name, path string) bool {
-			return ui.ShouldDirBeIgnored(name, path) || ui.ShouldDirBeIgnoredUsingPattern(name, path)
+	var checks []analyze.ShouldDirBeIgnored
+	if len(ui.IgnoreDirPaths) > 0 || len(ui.otherDevices) > 0 {
+		checks = append(checks, ui.ShouldDirBeIgnored)
+	}
+	if ui.IgnoreDirPathPatterns != nil {
+		checks = append(checks, ui.ShouldDirBeIgnoredUsingPattern)
+	}
+	if ui.IgnoreHidden {
+		checks = append(checks, ui.IsHiddenDir)
+	}
+	switch len(checks) {
+	case 0:
+		return func(string, string) bool { return false }
+	case 1:
+		return checks[0]
+	}
+	return func(name, path string) bool {
+		for _, check := range checks {
+			if check(name, path) {
+				return true
+			}
 		}
-	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns != nil && ui.IgnoreHidden:
-		return func(name, path string) bool {
-			return ui.ShouldDirBeIgnored(name, path) || ui.ShouldDirBeIgnoredUsingPattern(name, path) || ui.IsHiddenDir(name, path)
-		}
-	case len(ui.IgnoreDirPaths) == 0 && ui.IgnoreDirPathPatterns != nil && ui.IgnoreHidden:
-		return func(name, path string) bool {
-			return ui.ShouldDirBeIgnoredUsingPattern(name, path) || ui.IsHiddenDir(name, path)
-		}
-	case len(ui.IgnoreDirPaths) == 0 && ui.IgnoreDirPathPatterns != nil && !ui.IgnoreHidden:
-		return ui.ShouldDirBeIgnoredUsingPattern
-	case len(ui.IgnoreDirPaths) == 0 && ui.IgnoreDirPathPatterns == nil && ui.IgnoreHidden:
-		return ui.IsHiddenDir
-	case len(ui.IgnoreDirPaths) > 0 && ui.IgnoreDirPathPatterns == nil && ui.IgnoreHidden:
-		return func(name, path string) bool {
-			return ui.ShouldDirBeIgnored(name, path) || ui.IsHiddenDir(name, path)
-		}
-	default:
-		return func(name, path string) bool { return false }
+		return false
 	}
 }
 

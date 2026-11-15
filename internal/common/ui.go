@@ -30,6 +30,9 @@ type UI struct {
 	FilteringFiles         bool
 	blockSize              int64
 	blockSuffix            string
+	// otherDevices are the mount points of other devices below the device
+	// scanned, see IgnoreOtherDevices
+	otherDevices map[string]struct{}
 	// scan settings, see analyze.Options
 	followSymlinks  bool
 	exclusiveSize   bool
