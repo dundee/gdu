@@ -5,7 +5,6 @@ import (
 	"io"
 	"iter"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -161,15 +160,6 @@ func (a *StoredAnalyzer) storeArchive(dir fs.Item, path string) {
 	if err := a.storage.storeRecord(path, record); err != nil {
 		log.Print(err.Error())
 	}
-}
-
-// isPathElement reports whether name can only name an entry of its directory.
-func isPathElement(name string) bool {
-	switch name {
-	case "", ".", "..":
-		return false
-	}
-	return !strings.ContainsAny(name, "/\x00"+string(filepath.Separator)) && filepath.VolumeName(name) == ""
 }
 
 // StoredDir is a directory of an analysis kept in the database (--db x.badger).

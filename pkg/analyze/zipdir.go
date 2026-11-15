@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -103,8 +104,12 @@ func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error
 			continue // Skip directory entries, we'll create them automatically based on file paths
 		}
 
+		name, ok := archiveEntryPath(f.Name)
+		if !ok {
+			continue
+		}
 		// Parse file path and ensure all parent directories exist
-		dirPath := filepath.Dir(f.Name)
+		dirPath := path.Dir(name)
 		if dirPath == "." {
 			dirPath = "" // root directory
 		}
@@ -114,7 +119,7 @@ func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error
 		parentDir := dirMap[dirPath]
 		zipFile := &ZipFile{
 			File: &File{
-				Name:   filepath.Base(f.Name),
+				Name:   path.Base(name),
 				Flag:   ' ',
 				Size:   int64(f.UncompressedSize64),
 				Usage:  int64(f.CompressedSize64),
@@ -122,7 +127,7 @@ func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error
 				Parent: parentDir,
 			},
 			zipPath:   zipPath,
-			inZipPath: f.Name,
+			inZipPath: name,
 		}
 
 		parentDir.AddFile(zipFile)
@@ -131,26 +136,27 @@ func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error
 	return zipDir, nil
 }
 
-// ensureZipDirExists ensures all directories in the specified path exist
-func ensureZipDirExists(dirMap map[string]*ZipDir, path, zipPath string, rootDir *ZipDir) {
-	if path == "" || path == "." {
+// ensureZipDirExists ensures all directories of dirPath, a path made by
+// archiveEntryPath, exist
+func ensureZipDirExists(dirMap map[string]*ZipDir, dirPath, zipPath string, rootDir *ZipDir) {
+	if dirPath == "" || dirPath == "." {
 		return
 	}
 
 	// If directory already exists, return directly
-	if _, exists := dirMap[path]; exists {
+	if _, exists := dirMap[dirPath]; exists {
 		return
 	}
 
 	// Ensure parent directory exists
-	parentPath := filepath.Dir(path)
-	if parentPath != "." && parentPath != "" && parentPath != path {
+	parentPath := path.Dir(dirPath)
+	if parentPath != "." && parentPath != "" && parentPath != dirPath {
 		ensureZipDirExists(dirMap, parentPath, zipPath, rootDir)
 	}
 
 	// Create current directory
 	var parent *ZipDir
-	if parentPath == "" || parentPath == "." || parentPath == path {
+	if parentPath == "" || parentPath == "." || parentPath == dirPath {
 		parent = rootDir
 	} else {
 		parent = dirMap[parentPath]
@@ -159,7 +165,7 @@ func ensureZipDirExists(dirMap map[string]*ZipDir, path, zipPath string, rootDir
 	newDir := &ZipDir{
 		Dir: &Dir{
 			File: &File{
-				Name:   filepath.Base(path),
+				Name:   path.Base(dirPath),
 				Flag:   'Z',
 				Size:   4096, // virtual directory size
 				Usage:  4096,
@@ -172,7 +178,7 @@ func ensureZipDirExists(dirMap map[string]*ZipDir, path, zipPath string, rootDir
 		zipPath: zipPath,
 	}
 
-	dirMap[path] = newDir
+	dirMap[dirPath] = newDir
 	parent.AddFile(newDir)
 }
 

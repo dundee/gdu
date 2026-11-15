@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -166,18 +167,17 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 			return nil, err
 		}
 
-		// Normalize path: strip leading ./ and trailing /
-		name := strings.TrimPrefix(header.Name, "./")
-		name = strings.TrimSuffix(name, "/")
+		name, ok := archiveEntryPath(header.Name)
+		if !ok {
+			continue
+		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if name != "" {
-				ensureTarDirExists(dirMap, name, tarPath, tarDir)
-			}
+			ensureTarDirExists(dirMap, name, tarPath, tarDir)
 
 		case tar.TypeReg, tar.TypeLink, tar.TypeSymlink:
-			dirPath := filepath.Dir(name)
+			dirPath := path.Dir(name)
 			if dirPath == "." {
 				dirPath = ""
 			}
@@ -188,7 +188,7 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 
 			tarFile := &TarFile{
 				File: &File{
-					Name:   filepath.Base(name),
+					Name:   path.Base(name),
 					Flag:   ' ',
 					Size:   header.Size,
 					Usage:  header.Size,
@@ -210,24 +210,25 @@ func processTarFile(tarPath string, info os.FileInfo) (*TarDir, error) {
 	return tarDir, nil
 }
 
-// ensureTarDirExists ensures all directories in the specified path exist within dirMap
-func ensureTarDirExists(dirMap map[string]*TarDir, path, tarPath string, rootDir *TarDir) {
-	if path == "" || path == "." {
+// ensureTarDirExists ensures all directories of dirPath, a path made by
+// archiveEntryPath, exist within dirMap
+func ensureTarDirExists(dirMap map[string]*TarDir, dirPath, tarPath string, rootDir *TarDir) {
+	if dirPath == "" || dirPath == "." {
 		return
 	}
 
-	if _, exists := dirMap[path]; exists {
+	if _, exists := dirMap[dirPath]; exists {
 		return
 	}
 
 	// Ensure parent directory exists first
-	parentPath := filepath.Dir(path)
-	if parentPath != "." && parentPath != "" && parentPath != path {
+	parentPath := path.Dir(dirPath)
+	if parentPath != "." && parentPath != "" && parentPath != dirPath {
 		ensureTarDirExists(dirMap, parentPath, tarPath, rootDir)
 	}
 
 	var parent *TarDir
-	if parentPath == "" || parentPath == "." || parentPath == path {
+	if parentPath == "" || parentPath == "." || parentPath == dirPath {
 		parent = rootDir
 	} else {
 		parent = dirMap[parentPath]
@@ -236,7 +237,7 @@ func ensureTarDirExists(dirMap map[string]*TarDir, path, tarPath string, rootDir
 	newDir := &TarDir{
 		Dir: &Dir{
 			File: &File{
-				Name:   filepath.Base(path),
+				Name:   path.Base(dirPath),
 				Flag:   'T',
 				Size:   4096,
 				Usage:  4096,
@@ -249,6 +250,6 @@ func ensureTarDirExists(dirMap map[string]*TarDir, path, tarPath string, rootDir
 		tarPath: tarPath,
 	}
 
-	dirMap[path] = newDir
+	dirMap[dirPath] = newDir
 	parent.AddFile(newDir)
 }
