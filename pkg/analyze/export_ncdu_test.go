@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v6/internal/testdir"
 )
 
 // ncduTotals adds up an export the way ncdu reads it: every item, directories

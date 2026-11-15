@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/device"
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/device"
+	"github.com/dundee/gdu/v6/pkg/fs"
 	"github.com/rivo/tview"
 )
 

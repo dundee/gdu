@@ -8,8 +8,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/dundee/gdu/v5/internal/cleanup"
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/internal/cleanup"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // categoryNodePrefix marks the synthetic category nodes of the "By category"

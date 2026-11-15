@@ -39,7 +39,7 @@ type storedEntry struct {
 }
 
 // RecordStore keeps the records of a stored analysis: bytes under keys.
-// Package github.com/dundee/gdu/v5/pkg/analyze/badger provides one keeping
+// Package github.com/dundee/gdu/v6/pkg/analyze/badger provides one keeping
 // them in a badger database.
 //
 // Put and Get are called concurrently. The store opens on first use and

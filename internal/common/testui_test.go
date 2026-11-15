@@ -1,8 +1,8 @@
 package common_test
 
 import (
-	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/internal/config"
+	"github.com/dundee/gdu/v6/internal/common"
+	"github.com/dundee/gdu/v6/internal/config"
 )
 
 // testUI builds a common.UI step by step for the tests of leaving things out

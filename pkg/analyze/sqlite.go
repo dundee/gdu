@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // SqliteStorage represents SQLite database storage
@@ -839,7 +839,7 @@ func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, mtime
 // database db, and creates its tables there when missing. The analyzer owns
 // db: it closes it when creating the tables fails.
 //
-// Package github.com/dundee/gdu/v5/pkg/analyze/sqlite opens the database
+// Package github.com/dundee/gdu/v6/pkg/analyze/sqlite opens the database
 // with an SQLite driver and creates the analyzer.
 func NewSqliteAnalyzer(db *sql.DB) (*SqliteAnalyzer, error) {
 	storage, err := newSqliteStorage(db)

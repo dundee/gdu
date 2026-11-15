@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // macOSTrashBin is the trash CLI shipped with macOS. It moves items into the

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // Operating system identifiers as reported by runtime.GOOS.

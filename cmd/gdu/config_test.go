@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/dundee/gdu/v6/cmd/gdu/app"
 )
 
 // withConfig runs initConfig with the system config system and the user

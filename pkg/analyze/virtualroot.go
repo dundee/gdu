@@ -1,7 +1,7 @@
 package analyze
 
 import (
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 // VirtualRootName is the display name of the synthetic directory that groups

@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dundee/gdu/v5/internal/xzcheck"
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/internal/xzcheck"
+	"github.com/dundee/gdu/v6/pkg/fs"
 	"github.com/ulikunitz/xz"
 )
 

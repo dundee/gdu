@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
+	"github.com/dundee/gdu/v6/pkg/fs"
 )
 
 type trashInfoFile interface {

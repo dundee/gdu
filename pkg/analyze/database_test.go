@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/testdir"
+	"github.com/dundee/gdu/v6/internal/testdir"
 )
 
 // databaseBackend is a Database to run the contract tests on.

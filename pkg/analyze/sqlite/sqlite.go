@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/analyze"
 )
 
 // CreateAnalyzer returns an analyzer storing its results in the SQLite

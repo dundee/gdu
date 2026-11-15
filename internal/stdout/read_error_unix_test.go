@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/config"
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v6/internal/config"
+	"github.com/dundee/gdu/v6/pkg/analyze"
 )
 
 // As du does, gdu lists what it could read on stdout, and tells on stderr

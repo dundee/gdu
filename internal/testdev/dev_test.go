@@ -3,7 +3,7 @@ package testdev
 import (
 	"testing"
 
-	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v6/pkg/device"
 	"github.com/stretchr/testify/assert"
 )
 

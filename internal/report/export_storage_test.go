@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/config"
-	"github.com/dundee/gdu/v5/internal/testdir"
-	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/analyze/badger"
-	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
+	"github.com/dundee/gdu/v6/internal/config"
+	"github.com/dundee/gdu/v6/internal/testdir"
+	"github.com/dundee/gdu/v6/pkg/analyze"
+	"github.com/dundee/gdu/v6/pkg/analyze/badger"
+	"github.com/dundee/gdu/v6/pkg/analyze/sqlite"
 	"github.com/stretchr/testify/assert"
 )
 

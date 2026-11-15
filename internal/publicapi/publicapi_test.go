@@ -43,11 +43,11 @@ func TestPublicAPIUsesNoInternalTypes(t *testing.T) {
 }
 
 func TestEveryPackageOutsideInternalIsListed(t *testing.T) {
-	out, err := exec.Command("go", "list", "github.com/dundee/gdu/v5/...").Output()
+	out, err := exec.Command("go", "list", "github.com/dundee/gdu/v6/...").Output()
 	if err != nil {
 		t.Fatal(err)
 	}
-	listed := map[string]bool{"github.com/dundee/gdu/v5/cmd/gdu": true}
+	listed := map[string]bool{"github.com/dundee/gdu/v6/cmd/gdu": true}
 	for _, path := range Packages {
 		listed[path] = true
 	}
@@ -62,7 +62,7 @@ func TestEveryPackageOutsideInternalIsListed(t *testing.T) {
 // databases, which pkg/analyze/badger and pkg/analyze/sqlite bring in, nor
 // the terminal UI.
 func TestAnalyzeLinksNoDatabaseNorUI(t *testing.T) {
-	out, err := exec.Command("go", "list", "-deps", "github.com/dundee/gdu/v5/pkg/analyze").Output()
+	out, err := exec.Command("go", "list", "-deps", "github.com/dundee/gdu/v6/pkg/analyze").Output()
 	if err != nil {
 		t.Fatal(err)
 	}

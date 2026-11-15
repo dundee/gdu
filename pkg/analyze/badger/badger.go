@@ -7,8 +7,8 @@
 package badger
 
 import (
-	"github.com/dundee/gdu/v5/internal/badgerstore"
-	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v6/internal/badgerstore"
+	"github.com/dundee/gdu/v6/pkg/analyze"
 )
 
 // CreateAnalyzer returns an analyzer storing its results in the badger

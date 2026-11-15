@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sync/atomic"
 
-	"github.com/dundee/gdu/v5/pkg/device"
+	"github.com/dundee/gdu/v6/pkg/device"
 )
 
 // getFilesystemID is a variable so that tests can replace it

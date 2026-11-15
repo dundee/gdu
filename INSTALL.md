@@ -49,7 +49,7 @@ can update themselves with `gdu --self-update`.
 
 [Go](https://pkg.go.dev/github.com/dundee/gdu):
 
-    go install github.com/dundee/gdu/v5/cmd/gdu@latest
+    go install github.com/dundee/gdu/v6/cmd/gdu@latest
 
 [Winget](https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dundee/gdu) (for Windows users):
 
