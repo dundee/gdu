@@ -104,7 +104,7 @@ period.
 
 ## Pull requests
 
-- Branch off `master` and open your pull request against `master`.
+- Branch off `main` and open your pull request against `main`.
 - Pull requests are **squash-merged**, and the final commit subject becomes the
   release changelog entry — so make it a clean Conventional Commit. GitHub
   appends the PR number automatically (e.g. `feat: add web UI (#617)`).
