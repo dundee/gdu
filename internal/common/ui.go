@@ -29,6 +29,12 @@ type UI struct {
 	ignorePatternFragments []string
 	blockSize              int64
 	blockSuffix            string
+	// scan settings, see ScanOptions
+	followSymlinks  bool
+	exclusiveSize   bool
+	annexedSize     bool
+	archiveBrowsing bool
+	timeFilter      TimeFilter
 }
 
 // SetAnalyzer sets analyzer instance
@@ -38,28 +44,41 @@ func (ui *UI) SetAnalyzer(a Analyzer) {
 
 // SetFollowSymlinks sets whether symlinks to files should be followed
 func (ui *UI) SetFollowSymlinks(v bool) {
-	ui.Analyzer.SetFollowSymlinks(v)
+	ui.followSymlinks = v
 }
 
 // SetExclusiveSize sets whether file usage is the bytes not shared with other files
 func (ui *UI) SetExclusiveSize(v bool) {
-	ui.Analyzer.SetExclusiveSize(v)
+	ui.exclusiveSize = v
 }
 
 // SetShowAnnexedSize sets whether to use annexed size of git-annex files
 func (ui *UI) SetShowAnnexedSize(v bool) {
-	ui.Analyzer.SetShowAnnexedSize(v)
+	ui.annexedSize = v
 }
 
 // SetTimeFilter sets the time filter function for file inclusion
 func (ui *UI) SetTimeFilter(timeFilter TimeFilter) {
-	ui.Analyzer.SetTimeFilter(timeFilter)
+	ui.timeFilter = timeFilter
 	ui.FilteringFiles = true
 }
 
 // SetArchiveBrowsing sets whether browsing of zip/jar archives is enabled
 func (ui *UI) SetArchiveBrowsing(v bool) {
-	ui.Analyzer.SetArchiveBrowsing(v)
+	ui.archiveBrowsing = v
+}
+
+// ScanOptions returns the options of a scan with the current settings.
+func (ui *UI) ScanOptions() ScanOptions {
+	return ScanOptions{
+		IgnoreDir:       ui.CreateIgnoreFunc(),
+		IgnoreFile:      ui.CreateFileTypeFilter(),
+		TimeFilter:      ui.timeFilter,
+		FollowSymlinks:  ui.followSymlinks,
+		AnnexedSize:     ui.annexedSize,
+		ExclusiveSize:   ui.exclusiveSize,
+		ArchiveBrowsing: ui.archiveBrowsing,
+	}
 }
 
 // SetBlockSizeFromEnvironment applies the BLOCK_SIZE or BLOCKSIZE output format.

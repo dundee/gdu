@@ -1,10 +1,12 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,20 +63,16 @@ func TestTopDirAnalyzeHardLinks(t *testing.T) {
 				expectedUsage += dirOwnUsage(d)
 			}
 
+			// a second scan must not count the links met by the first
 			analyzer := CreateTopDirAnalyzer()
-			for scan := range 2 {
-				if scan > 0 {
-					analyzer.ResetProgress()
-				}
-				dir := analyzer.AnalyzeDir(
-					root, func(_, _ string) bool { return false },
-					func(name string) bool { return tc.ignored != "" && name == tc.ignored },
-				)
-				analyzer.GetDone().Wait()
+			for run := range 2 {
+				dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{
+					IgnoreFile: func(name string) bool { return tc.ignored != "" && name == tc.ignored },
+				})
 				dir.UpdateStats(make(fs.HardLinkedItems))
 
-				assert.Equal(t, int64(len(content))*tc.copies, dir.GetSize(), "scan %d apparent size", scan)
-				assert.Equal(t, expectedUsage, dir.GetUsage(), "scan %d disk usage", scan)
+				assert.Equal(t, int64(len(content))*tc.copies, dir.GetSize(), "scan %d apparent size", run)
+				assert.Equal(t, expectedUsage, dir.GetUsage(), "scan %d disk usage", run)
 
 				// Every root-level file still shows its own size, even when its
 				// storage has already been counted in the directory total.

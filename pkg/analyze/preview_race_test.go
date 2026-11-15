@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -65,11 +66,7 @@ func TestPreviewWhileScanning(t *testing.T) {
 		}
 	}()
 
-	dir := analyzer.AnalyzeDir(
-		root,
-		func(_, _ string) bool { return false },
-		func(_ string) bool { return false },
-	)
+	dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 	close(stop)
 	wg.Wait()
 

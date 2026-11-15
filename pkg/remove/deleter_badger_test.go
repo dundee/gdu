@@ -1,6 +1,7 @@
 package remove
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -18,8 +20,7 @@ func scanBadger(t *testing.T, root string, archives bool) (fs.Item, string) {
 	t.Helper()
 	db := filepath.Join(t.TempDir(), "gdu.badger")
 	analyzer := analyze.CreateStoredAnalyzer(db)
-	analyzer.SetArchiveBrowsing(archives)
-	tree := analyzer.AnalyzeDir(root, func(string, string) bool { return false }, nil)
+	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{ArchiveBrowsing: archives})
 	tree.UpdateStats(make(fs.HardLinkedItems))
 	return tree, db
 }

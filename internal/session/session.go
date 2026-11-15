@@ -69,10 +69,6 @@ type Session struct {
 	analyzer common.Analyzer
 	phase    Phase
 	current  int
-	// walking is the analyzer while it walks a root, and walkCancelled tells
-	// whether it was cancelled already
-	walking       common.Analyzer
-	walkCancelled bool
 }
 
 // New returns a session scanning with the analyzer and the ignore rules of
@@ -231,44 +227,11 @@ func (s *Session) walk(ctx context.Context, path string, number int) (fs.Item, b
 	}
 
 	analyzer := s.settings.Analyzer
-	// the analyzer owns one set of progress counters and one cancel flag,
-	// both of which a reset clears
-	analyzer.ResetProgress()
-
-	stop := context.AfterFunc(ctx, s.cancelWalk)
-	defer stop()
-
 	s.mu.Lock()
 	s.analyzer, s.phase, s.current = analyzer, Scanning, number
-	s.walking = analyzer
-	// a cancellation that came before the reset was cleared by it
-	cancelled := ctx.Err() != nil
-	s.walkCancelled = cancelled
 	s.mu.Unlock()
-	if cancelled {
-		analyzer.Cancel()
-	}
 
-	root := analyzer.AnalyzeDir(path, s.settings.CreateIgnoreFunc(), s.settings.CreateFileTypeFilter())
-
-	s.mu.Lock()
-	s.walking = nil
-	s.mu.Unlock()
-	return root, true
-}
-
-// cancelWalk cancels the analyzer walking a root, once.
-func (s *Session) cancelWalk() {
-	s.mu.Lock()
-	analyzer := s.walking
-	if s.walkCancelled {
-		analyzer = nil
-	}
-	s.walkCancelled = true
-	s.mu.Unlock()
-	if analyzer != nil {
-		analyzer.Cancel()
-	}
+	return analyzer.AnalyzeDir(ctx, path, s.settings.ScanOptions()), true
 }
 
 // finalize computes the totals of the tree topped by root, with a fresh

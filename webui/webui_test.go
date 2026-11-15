@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -933,12 +934,7 @@ func TestReadFromStorage(t *testing.T) {
 
 	// Populate the storage with a stored analysis.
 	a := analyze.CreateStoredAnalyzer(storagePath)
-	dir := a.AnalyzeDir(
-		"test_dir",
-		func(_, _ string) bool { return false },
-		func(_ string) bool { return false },
-	)
-	a.GetDone().Wait()
+	dir := a.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{})
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	ui := newTestUI()

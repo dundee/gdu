@@ -3,9 +3,11 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -23,10 +25,9 @@ func TestErr(t *testing.T) {
 	}()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*Dir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*Dir)
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, "test_dir", dir.GetName())
@@ -49,10 +50,9 @@ func TestSeqErr(t *testing.T) {
 	}()
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*Dir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*Dir)
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	assert.Equal(t, "test_dir", dir.GetName())

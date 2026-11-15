@@ -1,11 +1,13 @@
 package analyze
 
 import (
+	"context"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -20,10 +22,9 @@ func TestStoredDirUpdateStatsLockedAccessors(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer(t.TempDir())
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	// Hold the database open for the whole test so every worker shares one
 	// badger instance instead of opening and closing it per call.
@@ -74,10 +75,9 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer(t.TempDir())
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	assert.False(t, analyzer.storage.IsOpen(), "the analyzer should have closed storage on the way out")
 
@@ -109,10 +109,9 @@ func TestStoredDirGetFilesUnderCallerHeldReadLock(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer(t.TempDir())
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*StoredDir)
 
 	dir.UpdateStats(make(fs.HardLinkedItems))
 

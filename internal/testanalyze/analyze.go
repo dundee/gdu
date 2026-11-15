@@ -1,9 +1,9 @@
 package testanalyze
 
 import (
+	"context"
 	"errors"
 	"os"
-	"sync/atomic"
 	"time"
 
 	"github.com/dundee/gdu/v5/internal/common"
@@ -12,14 +12,10 @@ import (
 )
 
 // MockedAnalyzer returns dir with files with different size exponents
-type MockedAnalyzer struct {
-	cancelled atomic.Bool
-}
+type MockedAnalyzer struct{}
 
 // AnalyzeDir returns dir with files with different size exponents
-func (a *MockedAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
+func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, common.ScanOptions) fs.Item {
 	dir := &analyze.Dir{
 		File: &analyze.File{
 			Name:  "test_dir",
@@ -73,51 +69,6 @@ func (a *MockedAnalyzer) AnalyzeDir(
 func (a *MockedAnalyzer) GetProgress() common.CurrentProgress {
 	return common.CurrentProgress{}
 }
-
-// GetDone returns always Done
-func (a *MockedAnalyzer) GetDone() common.SignalGroup {
-	c := make(common.SignalGroup)
-	defer c.Broadcast()
-	return c
-}
-
-// ResetProgress clears cancellation state for a subsequent analysis.
-func (a *MockedAnalyzer) ResetProgress() {
-	a.cancelled.Store(false)
-}
-
-// Cancel records a cancellation request.
-func (a *MockedAnalyzer) Cancel() {
-	a.cancelled.Store(true)
-}
-
-// IsCancelled reports whether cancellation was requested.
-func (a *MockedAnalyzer) IsCancelled() bool {
-	return a.cancelled.Load()
-}
-
-// SetFollowSymlinks does nothing
-func (a *MockedAnalyzer) SetFollowSymlinks(v bool) {}
-
-// SetExclusiveSize does nothing
-func (a *MockedAnalyzer) SetExclusiveSize(v bool) {}
-
-// MeasureSharedUsage keeps the given usage, with nothing shared
-func (a *MockedAnalyzer) MeasureSharedUsage(_ string, _ os.FileInfo, usage int64) (exclusive, shared int64) {
-	return usage, 0
-}
-
-// SetShowAnnexedSize does nothing
-func (a *MockedAnalyzer) SetShowAnnexedSize(v bool) {}
-
-// SetTimeFilter does nothing
-func (a *MockedAnalyzer) SetTimeFilter(timeFilter common.TimeFilter) {}
-
-// SetArchiveBrowsing does nothing
-func (a *MockedAnalyzer) SetArchiveBrowsing(v bool) {}
-
-// SetFileTypeFilter does nothing
-func (a *MockedAnalyzer) SetFileTypeFilter(fileTypeFilter common.ShouldFileBeIgnored) {}
 
 // ItemFromDirWithErr returns error
 func ItemFromDirWithErr(dir, file fs.Item) error {

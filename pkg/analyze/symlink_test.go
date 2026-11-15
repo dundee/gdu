@@ -1,10 +1,12 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -64,14 +66,12 @@ func symlinkTreeAnalyzers() []analyzerFactory {
 	return []analyzerFactory{
 		{"parallel", func(path string) fs.Item {
 			a := CreateAnalyzer()
-			item := a.AnalyzeDir(path, ignoreDir, ignoreType)
-			a.GetDone().Wait()
+			item := a.AnalyzeDir(context.Background(), path, common.ScanOptions{IgnoreDir: ignoreDir, IgnoreFile: ignoreType})
 			return item
 		}},
 		{"sequential", func(path string) fs.Item {
 			a := CreateSeqAnalyzer()
-			item := a.AnalyzeDir(path, ignoreDir, ignoreType)
-			a.GetDone().Wait()
+			item := a.AnalyzeDir(context.Background(), path, common.ScanOptions{IgnoreDir: ignoreDir, IgnoreFile: ignoreType})
 			return item
 		}},
 	}
@@ -110,10 +110,9 @@ func TestTopDirAnalyzerPopulatesSymlinkTarget(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*SimpleDir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	}).(*SimpleDir)
 
 	link := findSymlink(dir)
 	assert.NotNil(t, link, "symlink item should be present in the tree")
@@ -132,10 +131,7 @@ func TestStoredAnalyzerPopulatesSymlinkTarget(t *testing.T) {
 	assert.Nil(t, err)
 
 	a := CreateStoredAnalyzer("/tmp/badger")
-	dir := a.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*StoredDir)
-	a.GetDone().Wait()
+	dir := a.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
 	idx, ok := dir.Files.FindByName("link")
 	assert.True(t, ok, "symlink item should be present in the tree")

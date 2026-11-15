@@ -1,12 +1,13 @@
 package analyze
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
-	"time"
 
+	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -17,11 +18,7 @@ func TestTopDirAnalyzeDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	assert.Equal(t, "test_dir", dir.GetName())
 
@@ -48,11 +45,7 @@ func TestTopDirAnalyzeDirWithFiles(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		tmpDir, func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	simpleDir := dir.(*SimpleDir)
 	simpleDir.UpdateStats(make(fs.HardLinkedItems))
@@ -69,13 +62,10 @@ func TestTopDirAnalyzeDirIgnoreDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"test_dir",
-		func(name, _ string) bool { return name == "nested" },
-		func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreDir:  func(name, _ string) bool { return name == "nested" },
+		IgnoreFile: func(_ string) bool { return false },
+	})
 
 	simpleDir := dir.(*SimpleDir)
 	// "nested" directory should be ignored, no entries
@@ -91,15 +81,9 @@ func TestTopDirAnalyzeDirIgnoreFileType(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		tmpDir,
-		func(_, _ string) bool { return false },
-		func(name string) bool {
-			return len(name) > 4 && name[len(name)-4:] == ".log"
-		},
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(name string) bool {
+		return len(name) > 4 && name[len(name)-4:] == ".log"
+	}})
 
 	simpleDir := dir.(*SimpleDir)
 	assert.Equal(t, 1, len(simpleDir.Files))
@@ -117,15 +101,9 @@ func TestTopDirAnalyzeDirIgnoreFileTypeInSubDir(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		tmpDir,
-		func(_, _ string) bool { return false },
-		func(name string) bool {
-			return len(name) > 4 && name[len(name)-4:] == ".log"
-		},
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(name string) bool {
+		return len(name) > 4 && name[len(name)-4:] == ".log"
+	}})
 
 	simpleDir := dir.(*SimpleDir)
 	// sub directory should exist but only count keep.txt
@@ -140,71 +118,38 @@ func TestTopDirAnalyzeDirProgress(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	_ = analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	_ = analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	// Just verify the progress channel is accessible and was used
 	assert.NotNil(t, analyzer.GetProgress())
 }
 
-func TestTopDirAnalyzeDirResetProgress(t *testing.T) {
+// An analyzer can scan again, each scan reporting its own progress.
+func TestTopDirAnalyzeDirTwice(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	_ = analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
+	_ = analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	progress := analyzer.GetProgress()
 	assert.GreaterOrEqual(t, progress.TotalUsage, int64(0))
 
-	analyzer.GetDone().Wait()
-	analyzer.ResetProgress()
-
-	// Analyze again after reset
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	// Analyze again
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	assert.Equal(t, "test_dir", dir.GetName())
 }
 
 func TestTopDirAnalyzeDirNonExistent(t *testing.T) {
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"/nonexistent_path_xyz", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "/nonexistent_path_xyz", common.ScanOptions{
+		IgnoreFile: func(_ string) bool { return false },
+	})
 
 	simpleDir := dir.(*SimpleDir)
 	assert.Equal(t, "nonexistent_path_xyz", simpleDir.Name)
 	assert.Equal(t, 0, len(simpleDir.Files))
-}
-
-func TestTopDirAnalyzerSetters(t *testing.T) {
-	analyzer := CreateTopDirAnalyzer()
-
-	analyzer.SetFollowSymlinks(true)
-	assert.True(t, analyzer.followSymlinks)
-
-	analyzer.SetShowAnnexedSize(true)
-	assert.True(t, analyzer.gitAnnexedSize)
-
-	analyzer.SetArchiveBrowsing(true)
-	assert.True(t, analyzer.archiveBrowsing)
-
-	called := false
-	filter := func(name string) bool { called = true; return false }
-	analyzer.SetFileTypeFilter(filter)
-	analyzer.ignoreFileType("test")
-	assert.True(t, called)
 }
 
 func TestTopDirAnalyzeDirIgnoreSubDir(t *testing.T) {
@@ -220,13 +165,10 @@ func TestTopDirAnalyzeDirIgnoreSubDir(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		tmpDir,
-		func(name, _ string) bool { return name == "ignored" },
-		func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+		IgnoreDir:  func(name, _ string) bool { return name == "ignored" },
+		IgnoreFile: func(_ string) bool { return false },
+	})
 
 	simpleDir := dir.(*SimpleDir)
 	assert.Equal(t, 1, len(simpleDir.Files))
@@ -237,10 +179,7 @@ func topDirFlags(t *testing.T, path string) map[string]rune {
 	t.Helper()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		path, func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), path, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	flags := make(map[string]rune)
 	for file := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
@@ -290,11 +229,7 @@ func TestTopDirGetFiles(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateTopDirAnalyzer()
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	)
-
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	simpleDir := dir.(*SimpleDir)
 	simpleDir.UpdateStats(make(fs.HardLinkedItems))
@@ -317,11 +252,10 @@ func TestTopDirFollowSymlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	analyzer.SetFollowSymlinks(true)
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*SimpleDir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile:     func(_ string) bool { return false },
+		FollowSymlinks: true,
+	}).(*SimpleDir)
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	var files []fs.Item
@@ -349,11 +283,10 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateTopDirAnalyzer()
-	analyzer.SetFollowSymlinks(true)
-	dir := analyzer.AnalyzeDir(
-		"test_dir", func(_, _ string) bool { return false }, func(_ string) bool { return false },
-	).(*SimpleDir)
-	analyzer.GetDone().Wait()
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+		IgnoreFile:     func(_ string) bool { return false },
+		FollowSymlinks: true,
+	}).(*SimpleDir)
 	dir.UpdateStats(make(fs.HardLinkedItems))
 
 	var files []fs.Item
@@ -363,25 +296,4 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 
 	assert.Equal(t, int64(12+512), dir.Size)
 	assert.Equal(t, int64(7), dir.ItemCount)
-}
-
-func TestTopDirFullAnalyzerKeepsSettings(t *testing.T) {
-	a := CreateTopDirAnalyzer()
-	a.SetFollowSymlinks(true)
-	a.SetShowAnnexedSize(true)
-	a.SetExclusiveSize(true)
-	a.SetArchiveBrowsing(true)
-	a.SetFileTypeFilter(func(string) bool { return true })
-	a.SetTimeFilter(func(time.Time) bool { return false })
-
-	full := a.FullAnalyzer()
-
-	assert.True(t, full.followSymlinks)
-	assert.True(t, full.gitAnnexedSize)
-	assert.Same(t, a.extents, full.extents)
-	assert.True(t, full.archiveBrowsing)
-	assert.True(t, full.ignoreFileType("x"))
-	assert.False(t, full.matchesTimeFilterFn(time.Time{}))
-
-	assert.False(t, CreateTopDirAnalyzer().FullAnalyzer().isFilteringFiles(), "no filter stays no filter")
 }

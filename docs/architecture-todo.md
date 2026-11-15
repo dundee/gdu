@@ -20,9 +20,10 @@ _analyzer_, _Item_, _Dir_, _storage strategy_, _hard-link tracker_.
 
 **Strength: Strong**
 
-**Status: Partly done.** Every analyzer resolves its files through
-`BaseAnalyzer.resolveFile` (`pkg/analyze/entry.go`), and the stable-order analyzer
-is gone. The directory traversal, preview and progress are still per analyzer.
+**Status: Done.** Every analyzer resolves its files through
+`BaseAnalyzer.resolveFile` (`pkg/analyze/entry.go`) and walks directories through
+`walkTree` (`pkg/analyze/walk.go`); each analyzer is a `dirSink` deciding only what
+to do with them. The stable-order analyzer is gone.
 
 - **Files:** `pkg/analyze/parallel.go:30`, `sequential.go:25`, `parallel_stable.go:25`,
   `stored.go:33`, `parallel_top_dir.go:40`, `sqlite.go:896` (six `AnalyzeDir` +

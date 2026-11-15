@@ -4,6 +4,7 @@ package analyze
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -292,8 +293,7 @@ func TestCompressedAndSparseFilesUsage(t *testing.T) {
 
 	t.Run("top dir", func(t *testing.T) {
 		analyzer := CreateTopDirAnalyzer()
-		dir := analyzer.AnalyzeDir(root, func(_, _ string) bool { return false }, func(_ string) bool { return false })
-		analyzer.GetDone().Wait()
+		dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 		dir.UpdateStats(make(fs.HardLinkedItems))
 		assert.GreaterOrEqual(t, dir.GetSize(), int64(2*testFileSize))
 		assert.Less(t, dir.GetUsage(), int64(testFileSize))

@@ -7,25 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTopDirAddUsage(t *testing.T) {
-	td := &TopDir{Name: "test"}
-	td.AddUsage(100, 200, 5)
-	assert.Equal(t, int64(100), td.Size.Load())
-	assert.Equal(t, int64(200), td.Usage.Load())
-	assert.Equal(t, int64(5), td.ItemCount.Load())
-
-	td.AddUsage(50, 80, 3)
-	assert.Equal(t, int64(150), td.Size.Load())
-	assert.Equal(t, int64(280), td.Usage.Load())
-	assert.Equal(t, int64(8), td.ItemCount.Load())
-}
-
-func TestTopDirSetFlag(t *testing.T) {
-	td := &TopDir{Name: "test", Flag: ' '}
-	td.SetFlag('!')
-	assert.Equal(t, '!', td.Flag)
-}
-
 func TestSimpleDirGetName(t *testing.T) {
 	d := &SimpleDir{SimpleFile: SimpleFile{Name: "mydir"}}
 	assert.Equal(t, "mydir", d.GetName())
@@ -68,7 +49,7 @@ func TestEmptySimpleDirUpdateStats(t *testing.T) {
 
 	assert.Equal(t, int64(512), d.Size)
 	assert.Equal(t, int64(0), d.Usage)
-	assert.Equal(t, int64(0), d.ItemCount)
+	assert.Equal(t, int64(1), d.ItemCount, "the directory itself, as Dir counts it")
 }
 
 func TestSimpleDirUpdateStatsErrorFlag(t *testing.T) {
@@ -158,10 +139,7 @@ func TestSimpleDirGetFilesDirVsFile(t *testing.T) {
 func TestSimpleDirPanics(t *testing.T) {
 	d := &SimpleDir{}
 
-	assert.Panics(t, func() { d.GetFlag() })
 	assert.Panics(t, func() { d.GetType() })
-	assert.Panics(t, func() { d.GetMtime() })
-	assert.Panics(t, func() { d.GetItemCount() })
 	assert.Panics(t, func() { d.GetParent() })
 	assert.Panics(t, func() { d.SetParent(nil) })
 	assert.Panics(t, func() { d.GetMultiLinkedInode() })

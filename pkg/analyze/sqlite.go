@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -133,7 +134,7 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 	}
 
 	s.updateStmt, err = tx.Prepare(
-		`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
+		`UPDATE items SET size = ?, usage = ?, item_count = ?, mtime = ?, flag = ? WHERE id = ?`,
 	)
 	if err != nil {
 		s.insertStmt.Close()
@@ -247,17 +248,17 @@ func (s *SqliteStorage) InsertItem(
 }
 
 // UpdateItem updates an existing item's stats
-func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64, flag rune) error {
+func (s *SqliteStorage) UpdateItem(id, size, usage, itemCount int64, mtime time.Time, flag rune) error {
 	var err error
 
 	// Use prepared statement if in bulk mode, otherwise use direct exec
 	if s.updateStmt != nil {
-		_, err = s.updateStmt.Exec(size, usage, itemCount, string(flag), id)
+		_, err = s.updateStmt.Exec(size, usage, itemCount, mtime.Unix(), string(flag), id)
 	} else {
 		s.m.Lock()
 		_, err = s.db.Exec(
-			`UPDATE items SET size = ?, usage = ?, item_count = ?, flag = ? WHERE id = ?`,
-			size, usage, itemCount, string(flag), id,
+			`UPDATE items SET size = ?, usage = ?, item_count = ?, mtime = ?, flag = ? WHERE id = ?`,
+			size, usage, itemCount, mtime.Unix(), string(flag), id,
 		)
 		s.m.Unlock()
 	}
@@ -811,7 +812,6 @@ type SqliteAnalyzer struct {
 	BaseAnalyzer
 	storage   *SqliteStorage
 	dbWriteMu sync.Mutex
-	links     linkTracker
 }
 
 // insertItemLocked is a serialized wrapper around storage.InsertItem.
@@ -827,10 +827,10 @@ func (a *SqliteAnalyzer) insertItemLocked(
 	return a.storage.InsertItem(parentID, name, isDir, size, usage, mtime, itemCount, mli, flag)
 }
 
-func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, flag rune) error {
+func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, mtime time.Time, flag rune) error {
 	a.dbWriteMu.Lock()
 	defer a.dbWriteMu.Unlock()
-	return a.storage.UpdateItem(id, size, usage, itemCount, flag)
+	return a.storage.UpdateItem(id, size, usage, itemCount, mtime, flag)
 }
 
 // CreateSqliteAnalyzer creates a new SQLite analyzer
@@ -870,12 +870,8 @@ func (a *SqliteAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 
 // AnalyzeDir analyzes the given path and stores results in SQLite, replacing
 // whatever the database held before. LoadAnalysis reads a stored analysis.
-func (a *SqliteAnalyzer) AnalyzeDir(
-	path string, ignore common.ShouldDirBeIgnored, fileTypeFilter common.ShouldFileBeIgnored,
-) fs.Item {
-	a.ignoreDir = ignore
-	a.ignoreFileType = fileTypeFilter
-	a.links.reset()
+func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts common.ScanOptions) fs.Item {
+	s := a.begin(ctx, opts)
 
 	// Clear existing data and store metadata
 	err := a.storage.ClearItems()
@@ -892,236 +888,132 @@ func (a *SqliteAnalyzer) AnalyzeDir(
 		log.Printf("Error starting bulk insert: %v", err)
 	}
 
-	go a.UpdateProgress()
-
-	// Process directory and get the root item
-	rootItem := a.processDir(path, nil)
-
-	a.wait.Wait()
+	root := walkTree[*sqliteDir](&a.BaseAnalyzer, s, sqliteSink{a: a, scan: s}, path, true)
 
 	// Commit bulk insert transaction
 	if err := a.storage.EndBulkInsert(); err != nil {
 		log.Printf("Error committing bulk insert: %v", err)
 	}
 
-	a.progressDoneChan <- struct{}{}
-	a.doneChan.Broadcast()
-
-	return rootItem
+	if root == nil {
+		return nil
+	}
+	return root.item
 }
 
-// nolint:funlen
-func (a *SqliteAnalyzer) processDir(path string, parentID *int64) *SqliteItem {
-	// This analyzer aggregates as it scans rather than via a later updateStats
-	// pass, but it must land on the same numbers: totals cover the children
-	// only, and resolveDirStats applies the empty-directory rule at the end.
-	var (
-		filesSize  int64 // only files in this directory, for progress reporting
-		subDirChan = make(chan *SqliteItem)
-		dirCount   int
-	)
+// sqliteDir is a directory of a scan into SQLite.
+type sqliteDir struct {
+	id       int64
+	parentID *int64
+	name     string
+	totals   *runningTotals
+	// item is the directory as stored, once it is closed
+	item *SqliteItem
+}
 
-	a.wait.Add(1)
-	defer a.wait.Done()
+// sqliteSink inserts every directory and file of a scan into SQLite, totaling
+// the directories as it goes: a directory's row is completed once everything
+// below it has been inserted.
+type sqliteSink struct {
+	a    *SqliteAnalyzer
+	scan *scan
+}
 
-	// Hold a concurrency slot only during the scan/insert phase. We must
-	// release it before draining subDirChan, otherwise child goroutines
-	// (which need to acquire a slot themselves) would deadlock once the
-	// global concurrencyLimit is saturated by ancestors waiting on their
-	// own children.
-	concurrencyLimit <- struct{}{}
-	slotReleased := false
-	releaseSlot := func() {
-		if !slotReleased {
-			<-concurrencyLimit
-			slotReleased = true
-		}
+func (s sqliteSink) openDir(parent *sqliteDir, path string, root bool) (*sqliteDir, bool) {
+	dir := &sqliteDir{name: filepath.Base(path)}
+	if !root {
+		dir.parentID = &parent.id
 	}
-	defer releaseSlot()
+	mtime, ownUsage := dirStats(path)
+	dir.totals = newRunningTotals(mtime, ownUsage)
 
-	if parentID != nil && a.IsCancelled() {
-		return nil
-	}
-
-	files, err := os.ReadDir(path)
+	// the totals are stored when the directory is closed
+	id, err := s.a.insertItemLocked(dir.parentID, dir.name, true, 0, 0, mtime, 1, 0, ' ')
 	if err != nil {
 		log.Print(err.Error())
+		return nil, false
 	}
+	dir.id = id
+	return dir, true
+}
 
-	// Get directory info for mtime and the directory's own usage
-	dirInfo, statErr := os.Stat(path)
-	var dirMtime time.Time
-	totals := dirTotals{itemCount: 1}
-	if statErr == nil {
-		dirMtime = dirInfo.ModTime()
-		totals.ownUsage = dirInfoOwnUsage(dirInfo)
-	}
+func (sqliteSink) readDir(dir *sqliteDir, _ string, err error, entries int) {
+	dir.totals.setFlag(getDirFlag(err, entries))
+}
 
-	dirFlag := getDirFlag(err, len(files))
+func (s sqliteSink) resolveOptions(*sqliteDir) resolveOptions {
+	return resolveOptions{browseArchives: true, links: &s.scan.links}
+}
 
-	// Insert directory into database (size/usage will be updated later)
-	dirID, err := a.insertItemLocked(
-		parentID,
-		filepath.Base(path),
-		true,
-		0, // size will be updated later
-		0, // usage will be updated later
-		dirMtime,
-		1, // item_count will be updated later
-		0,
-		dirFlag,
-	)
-	if err != nil {
-		log.Print(err.Error())
-		return nil
-	}
-
-	// Spawn subdirectory scans in parallel; each goroutine fully completes its
-	// subtree (including DB row finalization) before sending the result back.
-	for _, f := range files {
-		if a.IsCancelled() {
-			break
-		}
-		if f.IsDir() {
-			name := f.Name()
-			entryPath := filepath.Join(path, name)
-			if a.shouldSkipDir(name, entryPath) {
-				continue
-			}
-			dirCount++
-
-			go func(entryPath string) {
-				sub := a.processDir(entryPath, &dirID)
-				subDirChan <- sub
-			}(entryPath)
-			continue
-		}
-
-		entry, ok, err := a.resolveFile(path, f, resolveOptions{browseArchives: true, links: &a.links})
-		if err != nil {
-			log.Print(err.Error())
-			dirFlag = '!'
-			continue
-		}
-		if !ok {
-			continue
-		}
-
-		if entry.archive != nil {
-			archive := entry.archive
-			archiveID, err := a.insertItemLocked(
-				&dirID,
-				entry.name,
-				true,
-				archive.GetSize(),
-				archive.GetUsage(),
-				entry.info.ModTime(),
-				archive.GetItemCount(),
-				0,
-				archive.GetFlag(),
-			)
-			if err != nil {
-				log.Print(err.Error())
-				continue
-			}
-			a.persistArchive(archive, archiveID)
-
-			totals.size += archive.GetSize()
-			totals.usage += archive.GetUsage()
-			totals.itemCount += archive.GetItemCount()
-			totals.entries++
-			filesSize += archive.GetUsage()
-			continue
-		}
-
-		// a file met through another hard link before is counted there
-		size, usage := entry.info.Size(), entry.usage
-		if entry.duplicate {
-			size, usage = 0, 0
-		}
-		_, err = a.insertItemLocked(
-			&dirID,
-			entry.name,
-			false,
-			size,
-			usage,
-			entry.info.ModTime(),
-			1,
-			entry.link.ino,
-			entry.flag,
+func (s sqliteSink) addFile(dir *sqliteDir, entry *fileEntry) int64 {
+	mtime := entry.info.ModTime()
+	if archive := entry.archive; archive != nil {
+		archiveID, err := s.a.insertItemLocked(
+			&dir.id, entry.name, true,
+			archive.GetSize(), archive.GetUsage(), mtime, archive.GetItemCount(), 0, archive.GetFlag(),
 		)
 		if err != nil {
 			log.Print(err.Error())
-			continue
+			return 0
 		}
-
-		totals.size += size
-		totals.usage += usage
-		totals.itemCount++
-		totals.entries++
-		totals.hasFiles = true
-		filesSize += usage
+		s.a.persistArchive(s.scan, archive, archiveID)
+		dir.totals.addEntry(archive.GetItemCount(), archive.GetSize(), archive.GetUsage(), mtime, archive.GetFlag(), true)
+		return archive.GetUsage()
 	}
 
-	// Release the concurrency slot before draining subDirChan so children
-	// blocked on concurrencyLimit can make progress.
-	releaseSlot()
-
-	// Aggregate subdirectory results. Each sub is fully finalized when received.
-	for i := 0; i < dirCount; i++ {
-		sub := <-subDirChan
-		if sub != nil {
-			totals.size += sub.size
-			totals.usage += sub.usage
-			totals.itemCount += sub.itemCount
-			totals.entries++
-			switch sub.flag {
-			case '!', '.':
-				if dirFlag != '!' {
-					dirFlag = '.'
-				}
-			}
-		}
+	// a file met through another hard link before is counted there
+	size, usage := entry.info.Size(), entry.usage
+	if entry.duplicate {
+		size, usage = 0, 0
 	}
+	_, err := s.a.insertItemLocked(&dir.id, entry.name, false, size, usage, mtime, 1, entry.link.ino, entry.flag)
+	if err != nil {
+		log.Print(err.Error())
+		return 0
+	}
+	dir.totals.addEntry(1, size, usage, mtime, entry.flag, false)
+	return usage
+}
 
-	// Files excluded by a type or time filter were never counted above, so the
-	// empty-directory rule sees exactly the entries that survived filtering.
-	itemCount, totalSize, totalUsage := resolveDirStats(totals, a.isFilteringFiles())
+func (sqliteSink) fileError(dir *sqliteDir) {
+	dir.totals.setFlag('!')
+}
 
-	// Update directory with computed stats
-	if err := a.updateDirLocked(dirID, totalSize, totalUsage, itemCount, dirFlag); err != nil {
+func (sqliteSink) entriesDone(*sqliteDir) {}
+
+func (s sqliteSink) closeDir(dir *sqliteDir) {
+	itemCount, size, usage, mtime, flag := dir.totals.result(s.scan.filteringFiles())
+	if err := s.a.updateDirLocked(dir.id, size, usage, itemCount, mtime, flag); err != nil {
 		log.Printf("Error updating item: %v", err)
 	}
-
-	// Report progress (only files in this dir, subdirs already reported themselves)
-	a.progressCurrentItemName.Store(path)
-	a.progressItemCount.Add(int64(len(files)))
-	a.progressTotalUsage.Add(filesSize)
-
-	// Return SqliteItem for the directory
-	return &SqliteItem{
-		storage:   a.storage,
-		id:        dirID,
-		parentID:  parentID,
-		name:      filepath.Base(path),
+	dir.item = &SqliteItem{
+		storage:   s.a.storage,
+		id:        dir.id,
+		parentID:  dir.parentID,
+		name:      dir.name,
 		isDir:     true,
-		size:      totalSize,
-		usage:     totalUsage,
-		mtime:     dirMtime,
+		size:      size,
+		usage:     usage,
+		mtime:     mtime,
 		itemCount: itemCount,
-		flag:      dirFlag,
+		flag:      flag,
 	}
+}
+
+func (sqliteSink) addDir(parent, child *sqliteDir) {
+	item := child.item
+	parent.totals.addEntry(item.itemCount, item.size, item.usage, item.mtime, item.flag, true)
 }
 
 // persistArchive stores the entries of a browsed archive, or of a directory
 // in one, under parentID.
-func (a *SqliteAnalyzer) persistArchive(archive fs.Item, parentID int64) {
+func (a *SqliteAnalyzer) persistArchive(s *scan, archive fs.Item, parentID int64) {
 	archiveDir := archiveDirOf(archive)
 	if archiveDir == nil {
 		return
 	}
 	for _, f := range archiveDir.Files {
-		if a.IsCancelled() {
+		if s.isCancelled() {
 			return
 		}
 		if f.IsDir() {
@@ -1140,7 +1032,7 @@ func (a *SqliteAnalyzer) persistArchive(archive fs.Item, parentID int64) {
 				log.Print(err.Error())
 				continue
 			}
-			a.persistArchive(f, id)
+			a.persistArchive(s, f, id)
 		} else {
 			_, err := a.insertItemLocked(
 				&parentID,

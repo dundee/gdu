@@ -10,14 +10,6 @@ func fileStats(info os.FileInfo, _ string) (usage int64, link inodeKey) {
 	return info.Size(), link
 }
 
-func setDirPlatformSpecificAttrs(dir *Dir, path string) {
-	stat, err := os.Stat(path)
-	if err != nil {
-		return
-	}
-	dir.Mtime = stat.ModTime()
-}
-
 // dirOwnUsage returns 0: Plan9 exposes no block allocation for a
 // directory, so gdu charges it nothing rather than guessing a block.
 func dirOwnUsage(string) int64 {
