@@ -96,8 +96,6 @@ func TestRemoveStoredFile(t *testing.T) {
 	subdirFiles := slices.Collect(subdir.GetFiles(fs.SortByName, fs.SortAsc))
 	subdir.RemoveFile(subdirFiles[0])
 
-	closeFn := a.storage.Open()
-	defer closeFn()
 	stored, err := a.storage.dirForPath("test_dir")
 	assert.NoError(t, err)
 

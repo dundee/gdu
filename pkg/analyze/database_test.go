@@ -31,8 +31,6 @@ var databaseBackends = []databaseBackend{
 		},
 		storeUnrecorded: func(t *testing.T, db Database, path string) {
 			storage := db.(*StoredAnalyzer).storage
-			closeFn := storage.Open()
-			defer closeFn()
 			require.NoError(t, storage.storeRecord(path, &storedRecord{ItemCount: 1}))
 		},
 	},
@@ -56,8 +54,6 @@ var databaseBackends = []databaseBackend{
 func withInfo(db Database, f func(infoStore)) {
 	switch db := db.(type) {
 	case *StoredAnalyzer:
-		closeFn := db.storage.Open()
-		defer closeFn()
 		f(db.storage)
 	case *SqliteAnalyzer:
 		f(db.storage)

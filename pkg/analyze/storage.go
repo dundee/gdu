@@ -42,12 +42,11 @@ type storedEntry struct {
 // Package github.com/dundee/gdu/v5/pkg/analyze/badger provides one keeping
 // them in a badger database.
 //
-// Put and Get are only called while the store is open. Open may be called
-// again, also concurrently, before the function it returned is called: only
-// the last of those functions closes the store.
+// Put and Get are called concurrently. The store opens on first use and
+// stays open until Close, after which it fails.
 type RecordStore interface {
-	// Open opens the store and returns a function closing it again.
-	Open() (closeFn func())
+	// Close closes the store.
+	Close() error
 	// Put stores value under key.
 	Put(key, value []byte) error
 	// Get returns the value stored under key; found is false when there is

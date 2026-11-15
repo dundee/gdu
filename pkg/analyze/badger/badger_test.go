@@ -17,10 +17,14 @@ func TestScanAndLoad(t *testing.T) {
 	defer fin()
 	path := filepath.Join(t.TempDir(), "test.badger")
 
-	scanned := badger.CreateAnalyzer(path).AnalyzeDir(context.Background(), "test_dir", analyze.Options{})
+	scanner := badger.CreateAnalyzer(path)
+	scanned := scanner.AnalyzeDir(context.Background(), "test_dir", analyze.Options{})
 	scanned.UpdateStats(false)
+	require.NoError(t, scanner.Close())
 
-	loaded, err := badger.CreateAnalyzer(path).LoadAnalysis("test_dir")
+	loader := badger.CreateAnalyzer(path)
+	defer loader.Close()
+	loaded, err := loader.LoadAnalysis("test_dir")
 	require.NoError(t, err)
 	loaded.UpdateStats(false)
 	assert.Equal(t, scanned.GetUsage(), loaded.GetUsage())

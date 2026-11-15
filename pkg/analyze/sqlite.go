@@ -854,6 +854,11 @@ func NewSqliteAnalyzer(db *sql.DB) (*SqliteAnalyzer, error) {
 	return a, nil
 }
 
+// Close closes the database, as Database says.
+func (a *SqliteAnalyzer) Close() error {
+	return a.storage.Close()
+}
+
 // LoadAnalysis returns the analysis of path stored in the database by an
 // earlier scan, as Database says.
 func (a *SqliteAnalyzer) LoadAnalysis(path string) (Node, error) {

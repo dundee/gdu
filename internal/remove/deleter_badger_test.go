@@ -20,14 +20,28 @@ func scanBadger(t *testing.T, root string, archives bool) (fs.Item, string) {
 	t.Helper()
 	db := filepath.Join(t.TempDir(), "gdu.badger")
 	analyzer := badger.CreateAnalyzer(db)
+	openBadgers[db] = analyzer
+	t.Cleanup(func() { _ = analyzer.Close() })
 	tree := analyzer.AnalyzeDir(context.Background(), root, analyze.Options{ArchiveBrowsing: archives})
 	tree.UpdateStats(false)
 	return tree, db
 }
 
+// openBadgers are the analyzers scanBadger made, which keep their database
+// open, by its path.
+var openBadgers = map[string]*analyze.StoredAnalyzer{}
+
+// loadBadger loads the analysis of root from db as a later run of gdu would,
+// once the scanning one has closed it.
 func loadBadger(t *testing.T, db, root string) fs.Item {
 	t.Helper()
-	tree, err := badger.CreateAnalyzer(db).LoadAnalysis(root)
+	if scanner, ok := openBadgers[db]; ok {
+		require.NoError(t, scanner.Close())
+		delete(openBadgers, db)
+	}
+	analyzer := badger.CreateAnalyzer(db)
+	t.Cleanup(func() { _ = analyzer.Close() })
+	tree, err := analyzer.LoadAnalysis(root)
 	require.NoError(t, err)
 	return tree
 }

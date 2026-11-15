@@ -91,8 +91,6 @@ func TestStoredRecordMalformed(t *testing.T) {
 
 func TestStoredRecordOfOtherFormatIsRefused(t *testing.T) {
 	storage := newRecords(badgerstore.New(t.TempDir()))
-	closeFn := storage.Open()
-	defer closeFn()
 	value := (&storedRecord{Format: storedFormat - 1}).marshal()
 	require.NoError(t, storage.Put([]byte("/dir"), value))
 

@@ -461,7 +461,9 @@ as is a database written by another version of gdu: scan again.
 Without `-r`, `--db` always scans and replaces what the database held. gdu only
 replaces a database it created: it refuses a `--db` path holding any other file
 or directory, and leaves the database alone when a run does not scan into it
-(`-f`, `--sequential`).
+(`-f`, `--sequential`). A BadgerDB database is open for the whole run, so a
+second gdu cannot open it at the same time; it reports that another process is
+using it.
 
 ## Running tests
 

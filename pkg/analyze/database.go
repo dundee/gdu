@@ -23,9 +23,14 @@ import (
 // fails with ErrNoAnalysis when the database holds no analysis of path, with
 // ErrIncompleteAnalysis when it is incomplete, and with ErrStoredFormat when
 // another version of gdu wrote it.
+//
+// The database stays open until Close, which a program calls once it is done
+// with the analyzer and the trees it returned. A database opened by one
+// analyzer cannot be opened by another until then.
 type Database interface {
 	Analyzer
 	LoadAnalysis(path string) (Node, error)
+	Close() error
 }
 
 var (
