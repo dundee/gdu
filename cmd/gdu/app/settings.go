@@ -3,12 +3,10 @@ package app
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"runtime"
-	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/config"
@@ -189,7 +187,7 @@ func (a *App) scanSettings(paths []string) (config.Scan, error) {
 		}
 		for _, path := range paths {
 			nested := device.GetNestedMountpointsPaths(path, mounts)
-			log.Printf("Ignoring mount points: %s", strings.Join(nested, ", "))
+			slog.Info("ignoring mount points", "paths", nested)
 			scan.IgnoreDirs = append(scan.IgnoreDirs, nested...)
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"iter"
+	"log/slog"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -14,7 +15,6 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
-	log "github.com/sirupsen/logrus"
 )
 
 // SqliteStorage represents SQLite database storage
@@ -111,7 +111,7 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 	if err != nil {
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
-			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+			slog.Error("rolling back transaction", "err", rollbackErr)
 		}
 		return err
 	}
@@ -123,7 +123,7 @@ func (s *SqliteStorage) BeginBulkInsert() error {
 		s.insertStmt.Close()
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
-			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+			slog.Error("rolling back transaction", "err", rollbackErr)
 		}
 		return err
 	}
@@ -287,7 +287,7 @@ func (s *SqliteStorage) RemoveItemAndUpdateStats(id, size, usage, itemCount int6
 	if err != nil {
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
-			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+			slog.Error("rolling back transaction", "err", rollbackErr)
 		}
 		return err
 	}
@@ -296,7 +296,7 @@ func (s *SqliteStorage) RemoveItemAndUpdateStats(id, size, usage, itemCount int6
 	if err = s.deleteItemTree(tx, id); err != nil {
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
-			log.Errorf("failed to rollback transaction: %v", rollbackErr)
+			slog.Error("rolling back transaction", "err", rollbackErr)
 		}
 		return err
 	}
@@ -589,7 +589,7 @@ func (i *SqliteItem) GetParent() fs.Item {
 
 	parent, err := i.storage.GetItemByID(*i.parentID)
 	if err != nil {
-		log.Print(err.Error())
+		slog.Warn("loading parent", "id", *i.parentID, "err", err)
 		return nil
 	}
 
@@ -748,7 +748,7 @@ func (i *SqliteItem) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.
 	return func(yield func(fs.Item) bool) {
 		children, err := i.storage.GetChildren(i.id)
 		if err != nil {
-			log.Print(err.Error())
+			slog.Warn("loading entries", "id", i.id, "err", err)
 			return
 		}
 
@@ -794,7 +794,7 @@ func (i *SqliteItem) RemoveFile(item fs.Item) {
 	}
 
 	if err := i.storage.RemoveItemAndUpdateStats(sqliteItem.id, size, usage, itemCount); err != nil {
-		log.Errorf("Error removing item and updating stats: %v", err)
+		slog.Error("removing item", "err", err)
 		return
 	}
 }
@@ -876,21 +876,21 @@ func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Optio
 	// recorded first, so that the database is never taken for holding a
 	// complete analysis while it is being replaced
 	if err := beginAnalysis(a.storage, sqliteFormat, path); err != nil {
-		log.Printf("Recording the analysis of %s: %v", path, err)
+		slog.Warn("recording the analysis", "path", path, "err", err)
 		a.failed.Store(true)
 	}
 	if err := a.storage.ClearItems(); err != nil {
-		log.Printf("Error clearing items: %v", err)
+		slog.Warn("clearing items", "err", err)
 		a.failed.Store(true)
 	}
 	if err := a.storage.SetMetadata("top_dir_path", path); err != nil {
-		log.Printf("Error setting metadata: %v", err)
+		slog.Warn("storing metadata", "err", err)
 		a.failed.Store(true)
 	}
 
 	// Start bulk insert transaction
 	if err := a.storage.BeginBulkInsert(); err != nil {
-		log.Printf("Error starting bulk insert: %v", err)
+		slog.Warn("starting bulk insert", "err", err)
 		a.failed.Store(true)
 	}
 
@@ -898,7 +898,7 @@ func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Optio
 
 	// Commit bulk insert transaction
 	if err := a.storage.EndBulkInsert(); err != nil {
-		log.Printf("Error committing bulk insert: %v", err)
+		slog.Warn("committing bulk insert", "err", err)
 		a.failed.Store(true)
 	}
 
@@ -906,7 +906,7 @@ func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Optio
 		return nil
 	}
 	if err := endAnalysis(a.storage, sqliteFormat, path, s.isCancelled(), a.failed.Load()); err != nil {
-		log.Printf("Recording the analysis of %s: %v", path, err)
+		slog.Warn("recording the analysis", "path", path, "err", err)
 	}
 	return root.item
 }
@@ -940,7 +940,7 @@ func (s sqliteSink) openDir(parent *sqliteDir, path string, root bool) (*sqliteD
 	// the totals are stored when the directory is closed
 	id, err := s.a.insertItemLocked(dir.parentID, dir.name, true, 0, 0, mtime, 1, 0, ' ')
 	if err != nil {
-		log.Print(err.Error())
+		slog.Warn("storing directory", "path", path, "err", err)
 		return nil, false
 	}
 	dir.id = id
@@ -963,7 +963,7 @@ func (s sqliteSink) addFile(dir *sqliteDir, entry *fileEntry) int64 {
 			archive.GetSize(), archive.GetUsage(), mtime, archive.GetItemCount(), 0, archive.GetFlag(),
 		)
 		if err != nil {
-			log.Print(err.Error())
+			slog.Warn("storing archive", "name", entry.name, "err", err)
 			return 0
 		}
 		s.a.persistArchive(s.scan, archive, archiveID)
@@ -978,7 +978,7 @@ func (s sqliteSink) addFile(dir *sqliteDir, entry *fileEntry) int64 {
 	}
 	_, err := s.a.insertItemLocked(&dir.id, entry.name, false, size, usage, mtime, 1, entry.link.ino, entry.flag)
 	if err != nil {
-		log.Print(err.Error())
+		slog.Warn("storing file", "name", entry.name, "err", err)
 		return 0
 	}
 	dir.totals.addEntry(1, size, usage, mtime, entry.flag, false)
@@ -994,7 +994,7 @@ func (sqliteSink) entriesDone(*sqliteDir) {}
 func (s sqliteSink) closeDir(dir *sqliteDir) {
 	itemCount, size, usage, mtime, flag := dir.totals.result(s.scan.filteringFiles())
 	if err := s.a.updateDirLocked(dir.id, size, usage, itemCount, mtime, flag); err != nil {
-		log.Printf("Error updating item: %v", err)
+		slog.Warn("updating directory", "name", dir.name, "err", err)
 	}
 	dir.item = &SqliteItem{
 		storage:   s.a.storage,
@@ -1039,7 +1039,7 @@ func (a *SqliteAnalyzer) persistArchive(s *scan, archive fs.Item, parentID int64
 				f.GetFlag(),
 			)
 			if err != nil {
-				log.Print(err.Error())
+				slog.Warn("storing archive entry", "name", f.GetName(), "err", err)
 				continue
 			}
 			a.persistArchive(s, f, id)
@@ -1056,7 +1056,7 @@ func (a *SqliteAnalyzer) persistArchive(s *scan, archive fs.Item, parentID int64
 				f.GetFlag(),
 			)
 			if err != nil {
-				log.Print(err.Error())
+				slog.Warn("storing archive entry", "name", f.GetName(), "err", err)
 				continue
 			}
 		}

@@ -2,11 +2,10 @@ package analyze
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // BaseAnalyzer provides what all analyzers have in common: the progress of
@@ -66,7 +65,7 @@ func (a *BaseAnalyzer) begin(ctx context.Context, opts Options) *scan {
 
 // readError logs e and tells it to the scan's OnReadError.
 func (s *scan) readError(e ReadError) {
-	log.Print(e.Err.Error())
+	slog.Warn("reading", "path", e.Path, "err", e.Err)
 	if s.opts.OnReadError != nil {
 		s.opts.OnReadError(e)
 	}

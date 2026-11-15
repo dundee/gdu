@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/build"
 	"github.com/dundee/gdu/v5/internal/config"
@@ -239,7 +239,7 @@ func (a *App) Run() error {
 		return nil
 	}
 
-	log.Printf("Runtime flags: %+v", *a.Flags)
+	slog.Info("runtime flags", "flags", *a.Flags)
 
 	paths, err := a.resolvePaths()
 	if err != nil {
@@ -252,7 +252,7 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Settings: %+v", settings)
+	slog.Info("settings", "settings", settings)
 
 	front := a.frontend()
 	analyzer, err := a.analyzer(front, &settings)
@@ -369,7 +369,7 @@ func (a *App) runAction(ui UI, paths []string) error {
 		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 		go func() {
-			log.Println(http.ListenAndServe("localhost:6060", mux))
+			slog.Error("profiling server", "err", http.ListenAndServe("localhost:6060", mux))
 		}()
 	}
 
@@ -398,7 +398,7 @@ func (a *App) runAction(ui UI, paths []string) error {
 		// the path is not checked, the analysis is readable even when the
 		// directory is gone
 		path := build.RootPathPrefix + paths[0]
-		log.Printf("Reading stored analysis of: %s", path)
+		slog.Info("reading stored analysis", "path", path)
 		if err := ui.ReadFromStorage(path); err != nil {
 			return fmt.Errorf("reading stored analysis: %w", err)
 		}
@@ -407,7 +407,7 @@ func (a *App) runAction(ui UI, paths []string) error {
 		// an iCloud Drive / Google Drive / OneDrive tree is orders of
 		// magnitude slower. This is a no-op on other platforms.
 		if err := gfs.PreventDatalessMaterialization(); err != nil {
-			log.Printf("Could not prevent dataless materialization: %s", err)
+			slog.Warn("preventing dataless materialization", "err", err)
 		}
 
 		scanPaths := make([]string, 0, len(paths))
@@ -423,14 +423,14 @@ func (a *App) runAction(ui UI, paths []string) error {
 		}
 
 		if len(scanPaths) == 1 {
-			log.Printf("Analyzing path: %s", scanPaths[0])
+			slog.Info("analyzing", "path", scanPaths[0])
 			if err := ui.AnalyzePath(scanPaths[0], nil); err != nil {
 				return fmt.Errorf("scanning dir: %w", err)
 			}
 			break
 		}
 
-		log.Printf("Analyzing paths: %s", strings.Join(scanPaths, ", "))
+		slog.Info("analyzing", "paths", scanPaths)
 		if err := ui.AnalyzePaths(scanPaths); err != nil {
 			return fmt.Errorf("scanning dirs: %w", err)
 		}

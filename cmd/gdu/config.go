@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,7 +13,6 @@ import (
 	"runtime"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
@@ -166,13 +166,13 @@ func setDefaultConfigFilePath() {
 // /dev/null.
 func reportConfigError(w io.Writer) {
 	if configErr != nil {
-		log.Printf("Error reading config file: %s", configErr)
+		slog.Error("reading config file", "err", configErr)
 		for _, err := range unjoin(configErr) {
 			fmt.Fprintf(w, "gdu: ignoring the config file: %s\n", err)
 		}
 	}
 	for _, warning := range configWarnings {
-		log.Print(warning)
+		slog.Warn(warning)
 		fmt.Fprintf(w, "gdu: %s\n", warning)
 	}
 }

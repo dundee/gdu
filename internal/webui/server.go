@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -12,8 +13,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // StartUILoop binds the listener, prints the URL, optionally opens the browser,
@@ -31,7 +30,7 @@ func (ui *UI) StartUILoop() error {
 
 	if ui.openBrowser {
 		if err := openBrowser(url, ui.browserCmd); err != nil {
-			log.Printf("webui: could not open browser: %s", err)
+			slog.Warn("webui: opening browser", "err", err)
 			fmt.Fprintf(ui.output, "Open %s in your browser.\n", url)
 		}
 	}
@@ -49,7 +48,7 @@ func (ui *UI) StartUILoop() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(ctx); err != nil {
-			log.Printf("webui: shutdown: %s", err)
+			slog.Warn("webui: shutting down", "err", err)
 		}
 		close(shutdownDone)
 	}()

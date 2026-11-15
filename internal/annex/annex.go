@@ -3,7 +3,7 @@ package annex
 import (
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 )
@@ -38,7 +38,7 @@ func SizeFromKey(name string) (size int64, err error) {
 func AnnexedFileInfo(fi fs.FileInfo, name string) *FileInfo {
 	size, err := SizeFromKey(name)
 	if err != nil {
-		log.Print(err.Error())
+		slog.Warn("reading git-annex key", "name", name, "err", err)
 		return &FileInfo{FileInfo: fi}
 	}
 

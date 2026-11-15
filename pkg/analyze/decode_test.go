@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"slices"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +15,7 @@ import (
 )
 
 func init() {
-	log.SetLevel(log.WarnLevel)
+	slog.SetLogLoggerLevel(slog.LevelWarn)
 }
 
 func TestReadAnalysis(t *testing.T) {

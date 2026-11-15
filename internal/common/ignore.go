@@ -5,12 +5,11 @@ package common
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/ignore"
 	"github.com/dundee/gdu/v5/pkg/analyze"
@@ -165,7 +164,7 @@ func IgnorePattern(patterns []string, ignoreFile, gitignoreFile string, roots []
 func (ui *UI) ShouldDirBeIgnored(name, path string) bool {
 	_, shouldIgnore := ui.IgnoreDirPaths[path]
 	if shouldIgnore {
-		log.Printf("Directory %s ignored", path)
+		slog.Info("directory ignored", "path", path)
 	}
 	return shouldIgnore
 }
@@ -174,7 +173,7 @@ func (ui *UI) ShouldDirBeIgnored(name, path string) bool {
 func (ui *UI) ShouldDirBeIgnoredUsingPattern(name, path string) bool {
 	shouldIgnore := ui.IgnoreDirPathPatterns.MatchString(path)
 	if shouldIgnore {
-		log.Printf("Directory %s ignored", path)
+		slog.Info("directory ignored", "path", path)
 	}
 	return shouldIgnore
 }
@@ -183,7 +182,7 @@ func (ui *UI) ShouldDirBeIgnoredUsingPattern(name, path string) bool {
 func (ui *UI) IsHiddenDir(name, path string) bool {
 	shouldIgnore := name[0] == '.'
 	if shouldIgnore {
-		log.Printf("Directory %s ignored", path)
+		slog.Info("directory ignored", "path", path)
 	}
 	return shouldIgnore
 }
@@ -206,7 +205,7 @@ func (ui *UI) ShouldFileBeIgnoredByType(name string) bool {
 		// Remove leading dot from ignoreType
 		cleanIgnoreType := strings.TrimPrefix(strings.ToLower(ignoreType), ".")
 		if cleanIgnoreType == ext {
-			log.Printf("File %s ignored by type", name)
+			slog.Info("file ignored by type", "name", name)
 			return true
 		}
 	}
@@ -235,7 +234,7 @@ func (ui *UI) ShouldFileBeIncludedByType(name string) bool {
 		}
 	}
 
-	log.Printf("File %s excluded by type filter", name)
+	slog.Info("file excluded by type filter", "name", name)
 	return false
 }
 

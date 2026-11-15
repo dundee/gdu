@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"runtime"
@@ -12,8 +13,6 @@ import (
 	"syscall"
 	"time"
 	"unicode"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/config"
@@ -442,7 +441,7 @@ func (ui *UI) handleSignals(signals <-chan os.Signal, stop <-chan struct{}) {
 			if !ok {
 				return
 			}
-			log.Printf("Got signal: %s", current)
+			slog.Info("got signal", "signal", current)
 			ui.postSignalEvent(signalEvent(current), stop)
 		}
 	}
@@ -688,7 +687,7 @@ func (ui *UI) deviceItemSelected(row, column int) {
 	pattern, err := common.CreateIgnorePattern(paths)
 	ui.IgnoreDirPathPatterns = ignore.FromRegexp(pattern)
 	if err != nil {
-		log.Printf("Creating path patterns for other devices failed: %s", paths)
+		slog.Warn("creating the patterns of other devices", "paths", paths, "err", err)
 	}
 
 	ui.resetSorting()

@@ -2,12 +2,11 @@ package webui
 
 import (
 	"cmp"
+	"log/slog"
 	"net/http"
 	"os"
 	"slices"
 	"sync"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/internal/cleanup"
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -34,7 +33,7 @@ type cleanupCache struct {
 func userHomeDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Printf("webui: cleanup rules relative to home are disabled: %s", err)
+		slog.Warn("webui: cleanup rules relative to home are disabled", "err", err)
 		return ""
 	}
 	return home

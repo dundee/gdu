@@ -1,10 +1,9 @@
 package analyze
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -128,7 +127,7 @@ func openArchive(path, name string, info os.FileInfo) fs.Item {
 	case isZipFile(name):
 		zipDir, err := processZipFile(path, info)
 		if err != nil {
-			log.Printf("Failed to process zip file %s: %v", path, err)
+			slog.Warn("reading zip file", "path", path, "err", err)
 			return nil
 		}
 		finishArchive(zipDir.Dir, path, info)
@@ -136,7 +135,7 @@ func openArchive(path, name string, info os.FileInfo) fs.Item {
 	case isTarFile(name):
 		tarDir, err := processTarFile(path, info)
 		if err != nil {
-			log.Printf("Failed to process tar file %s: %v", path, err)
+			slog.Warn("reading tar file", "path", path, "err", err)
 			return nil
 		}
 		finishArchive(tarDir.Dir, path, info)

@@ -3,19 +3,19 @@ package analyze
 import (
 	"bytes"
 	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func init() {
-	log.SetLevel(log.WarnLevel)
+	slog.SetLogLoggerLevel(slog.LevelWarn)
 }
 
 func TestEncode(t *testing.T) {
