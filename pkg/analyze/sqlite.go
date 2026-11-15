@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"iter"
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
@@ -449,6 +450,45 @@ func (s *SqliteStorage) GetMetadata(key string) (string, error) {
 	return value, err
 }
 
+// sqliteFormat is the version of the layout of the database. A database of
+// another version has to be scanned again.
+const sqliteFormat = 1
+
+// sqliteInfoKey is the metadata key of the record of the analysis the database
+// holds.
+const sqliteInfoKey = "analysis"
+
+func (s *SqliteStorage) writeInfo(info analysisInfo) error {
+	value, err := info.marshal()
+	if err != nil {
+		return err
+	}
+	return s.SetMetadata(sqliteInfoKey, string(value))
+}
+
+func (s *SqliteStorage) holdsUnrecorded(path string) (bool, error) {
+	root, err := s.GetMetadata("top_dir_path")
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return filepath.Clean(root) == filepath.Clean(path) && s.HasData(), nil
+}
+
+func (s *SqliteStorage) readInfo() (info analysisInfo, ok bool, err error) {
+	value, err := s.GetMetadata(sqliteInfoKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return info, false, nil
+	}
+	if err != nil {
+		return info, false, err
+	}
+	info, err = unmarshalInfo([]byte(value))
+	return info, err == nil, err
+}
+
 // SqliteItem represents a file or directory stored in SQLite
 type SqliteItem struct {
 	storage   *SqliteStorage
@@ -772,6 +812,8 @@ type SqliteAnalyzer struct {
 	BaseAnalyzer
 	storage   *SqliteStorage
 	dbWriteMu sync.Mutex
+	// failed is set when a write of the scan fails
+	failed atomic.Bool
 }
 
 // insertItemLocked is a serialized wrapper around storage.InsertItem.
@@ -784,13 +826,21 @@ func (a *SqliteAnalyzer) insertItemLocked(
 ) (int64, error) {
 	a.dbWriteMu.Lock()
 	defer a.dbWriteMu.Unlock()
-	return a.storage.InsertItem(parentID, name, isDir, size, usage, mtime, itemCount, mli, flag)
+	id, err := a.storage.InsertItem(parentID, name, isDir, size, usage, mtime, itemCount, mli, flag)
+	if err != nil {
+		a.failed.Store(true)
+	}
+	return id, err
 }
 
 func (a *SqliteAnalyzer) updateDirLocked(id, size, usage, itemCount int64, mtime time.Time, flag rune) error {
 	a.dbWriteMu.Lock()
 	defer a.dbWriteMu.Unlock()
-	return a.storage.UpdateItem(id, size, usage, itemCount, mtime, flag)
+	err := a.storage.UpdateItem(id, size, usage, itemCount, mtime, flag)
+	if err != nil {
+		a.failed.Store(true)
+	}
+	return err
 }
 
 // NewSqliteAnalyzer returns an analyzer storing its results in the SQLite
@@ -813,40 +863,43 @@ func NewSqliteAnalyzer(db *sql.DB) (*SqliteAnalyzer, error) {
 }
 
 // LoadAnalysis returns the analysis of path stored in the database by an
-// earlier scan. It fails when the database holds no analysis, or the analysis
-// of another path.
+// earlier scan, as Database says.
 func (a *SqliteAnalyzer) LoadAnalysis(path string) (Node, error) {
-	if !a.storage.HasData() {
-		return nil, fmt.Errorf("the database holds no analysis of %s", path)
+	if err := checkAnalysis(a.storage, sqliteFormat, path); err != nil {
+		return nil, err
 	}
-	stored, err := a.storage.GetMetadata("top_dir_path")
+	root, err := a.storage.GetRootItem()
 	if err != nil {
-		return nil, fmt.Errorf("reading the path of the stored analysis: %w", err)
+		return nil, err
 	}
-	if filepath.Clean(stored) != filepath.Clean(path) {
-		return nil, fmt.Errorf("the database holds the analysis of %s, not of %s", stored, path)
-	}
-	return a.storage.GetRootItem()
+	return root, nil
 }
 
-// AnalyzeDir analyzes the given path and stores results in SQLite, replacing
-// whatever the database held before. LoadAnalysis reads a stored analysis.
+// AnalyzeDir scans path into the database, replacing whatever it held, as
+// Database says. The totals are stored as the scan goes.
 func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) Node {
 	s := a.begin(ctx, opts)
+	a.failed.Store(false)
 
-	// Clear existing data and store metadata
-	err := a.storage.ClearItems()
-	if err != nil {
-		log.Printf("Error clearing items: %v", err)
+	// recorded first, so that the database is never taken for holding a
+	// complete analysis while it is being replaced
+	if err := beginAnalysis(a.storage, sqliteFormat, path); err != nil {
+		log.Printf("Recording the analysis of %s: %v", path, err)
+		a.failed.Store(true)
 	}
-	err = a.storage.SetMetadata("top_dir_path", path)
-	if err != nil {
+	if err := a.storage.ClearItems(); err != nil {
+		log.Printf("Error clearing items: %v", err)
+		a.failed.Store(true)
+	}
+	if err := a.storage.SetMetadata("top_dir_path", path); err != nil {
 		log.Printf("Error setting metadata: %v", err)
+		a.failed.Store(true)
 	}
 
 	// Start bulk insert transaction
 	if err := a.storage.BeginBulkInsert(); err != nil {
 		log.Printf("Error starting bulk insert: %v", err)
+		a.failed.Store(true)
 	}
 
 	root := walkTree[*sqliteDir](&a.BaseAnalyzer, s, sqliteSink{a: a, scan: s}, path, true)
@@ -854,10 +907,14 @@ func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Optio
 	// Commit bulk insert transaction
 	if err := a.storage.EndBulkInsert(); err != nil {
 		log.Printf("Error committing bulk insert: %v", err)
+		a.failed.Store(true)
 	}
 
 	if root == nil {
 		return nil
+	}
+	if err := endAnalysis(a.storage, sqliteFormat, path, s.isCancelled(), a.failed.Load()); err != nil {
+		log.Printf("Recording the analysis of %s: %v", path, err)
 	}
 	return root.item
 }

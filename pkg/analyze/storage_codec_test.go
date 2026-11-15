@@ -90,7 +90,7 @@ func TestStoredRecordMalformed(t *testing.T) {
 }
 
 func TestStoredRecordOfOtherFormatIsRefused(t *testing.T) {
-	storage := records{badgerstore.New(t.TempDir())}
+	storage := newRecords(badgerstore.New(t.TempDir()))
 	closeFn := storage.Open()
 	defer closeFn()
 	value := (&storedRecord{Format: storedFormat - 1}).marshal()
@@ -98,5 +98,5 @@ func TestStoredRecordOfOtherFormatIsRefused(t *testing.T) {
 
 	_, err := storage.loadRecord("/dir")
 
-	assert.ErrorIs(t, err, errStoredFormat)
+	assert.ErrorIs(t, err, ErrStoredFormat)
 }

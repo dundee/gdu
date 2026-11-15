@@ -1,16 +1,14 @@
 package analyze
 
 import (
-	"errors"
+	"fmt"
+	"sync/atomic"
 	"time"
 )
 
 // storedFormat is the version of the records in the database. A database
 // holding records of another version has to be scanned again.
 const storedFormat = 2
-
-// errStoredFormat is returned for a record of another format.
-var errStoredFormat = errors.New("the database was written by another version of gdu, scan again to replace it")
 
 // storedRecord is what the database holds for a directory, under its path.
 // It holds no references to other items, so a stored tree never has to be
@@ -52,30 +50,44 @@ type RecordStore interface {
 	Open() (closeFn func())
 	// Put stores value under key.
 	Put(key, value []byte) error
-	// Get returns the value stored under key, and an error when there is none.
-	Get(key []byte) ([]byte, error)
+	// Get returns the value stored under key; found is false when there is
+	// none.
+	Get(key []byte) (value []byte, found bool, err error)
 }
 
 // records reads and writes the records of directories in a RecordStore.
 type records struct {
 	RecordStore
+	// failed is set when storing a record fails
+	failed *atomic.Bool
+}
+
+func newRecords(store RecordStore) records {
+	return records{RecordStore: store, failed: &atomic.Bool{}}
 }
 
 // storeRecord stores the record of the directory at path.
 func (s records) storeRecord(path string, record *storedRecord) error {
 	record.Format = storedFormat
-	return s.Put([]byte(path), record.marshal())
+	err := s.Put([]byte(path), record.marshal())
+	if err != nil {
+		s.failed.Store(true)
+	}
+	return err
 }
 
 // loadRecord returns the record of the directory at path.
 func (s records) loadRecord(path string) (*storedRecord, error) {
-	value, err := s.Get([]byte(path))
+	value, found, err := s.Get([]byte(path))
 	if err != nil {
 		return nil, err
 	}
+	if !found {
+		return nil, fmt.Errorf("%w of %s", ErrNoAnalysis, path)
+	}
 	record := &storedRecord{}
 	if record.unmarshal(value) != nil || record.Format != storedFormat {
-		return nil, errStoredFormat
+		return nil, ErrStoredFormat
 	}
 	return record, nil
 }
@@ -87,4 +99,30 @@ func (s records) dirForPath(path string) (*StoredDir, error) {
 		return nil, err
 	}
 	return dir, nil
+}
+
+// infoKey is the key of the record of the analysis the store holds. No path
+// starts with a NUL.
+var infoKey = []byte("\x00analysis")
+
+func (s records) writeInfo(info analysisInfo) error {
+	value, err := info.marshal()
+	if err != nil {
+		return err
+	}
+	return s.Put(infoKey, value)
+}
+
+func (s records) holdsUnrecorded(path string) (bool, error) {
+	_, found, err := s.Get([]byte(path))
+	return found, err
+}
+
+func (s records) readInfo() (info analysisInfo, ok bool, err error) {
+	value, found, err := s.Get(infoKey)
+	if err != nil || !found {
+		return info, false, err
+	}
+	info, err = unmarshalInfo(value)
+	return info, err == nil, err
 }

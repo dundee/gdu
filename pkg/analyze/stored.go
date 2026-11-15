@@ -2,8 +2,6 @@ package analyze
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"iter"
 	"path/filepath"
@@ -25,35 +23,52 @@ type StoredAnalyzer struct {
 // Package github.com/dundee/gdu/v5/pkg/analyze/badger creates one storing
 // them in a badger database.
 func NewStoredAnalyzer(store RecordStore) *StoredAnalyzer {
-	a := &StoredAnalyzer{storage: records{store}}
+	a := &StoredAnalyzer{storage: newRecords(store)}
 	a.Init()
 	return a
 }
 
 // LoadAnalysis returns the analysis of path stored in the database by an
-// earlier scan. It fails when the database holds no analysis of path.
+// earlier scan, as Database says.
 func (a *StoredAnalyzer) LoadAnalysis(path string) (Node, error) {
 	closeFn := a.storage.Open()
 	defer closeFn()
 
-	dir, err := a.storage.dirForPath(path)
-	if errors.Is(err, errStoredFormat) {
+	if err := checkAnalysis(a.storage, storedFormat, path); err != nil {
 		return nil, err
 	}
+	dir, err := a.storage.dirForPath(path)
 	if err != nil {
-		return nil, fmt.Errorf("the database holds no analysis of %s: %w", path, err)
+		return nil, err
 	}
 	return dir, nil
 }
 
-// AnalyzeDir analyzes given path
+// AnalyzeDir scans path into the database, replacing its analysis, as
+// Database says. The analysis is stored once UpdateStats has computed and
+// stored the totals of the returned tree.
 func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) Node {
 	s := a.begin(ctx, opts)
 
 	closeFn := a.storage.Open()
 	defer closeFn()
 
-	return walkTree[*StoredDir](&a.BaseAnalyzer, s, &storedSink{a: a}, path, true)
+	a.storage.failed.Store(false)
+	if err := beginAnalysis(a.storage, storedFormat, path); err != nil {
+		log.Printf("Recording the analysis of %s: %v", path, err)
+		a.storage.failed.Store(true)
+	}
+	root := walkTree[*StoredDir](&a.BaseAnalyzer, s, &storedSink{a: a}, path, true)
+	if root == nil {
+		return nil
+	}
+	stopped := s.isCancelled()
+	root.stored = func() {
+		if err := endAnalysis(a.storage, storedFormat, path, stopped, a.storage.failed.Load()); err != nil {
+			log.Printf("Recording the analysis of %s: %v", path, err)
+		}
+	}
+	return root
 }
 
 // storedSink stores each directory of a scan as soon as its entries are
@@ -173,6 +188,9 @@ type StoredDir struct {
 	loaded  bool
 	// kind is the GetType of a directory inside a browsed archive
 	kind string
+	// stored, set on the root of a scan, records that the analysis is
+	// stored once its totals are
+	stored func()
 }
 
 func newStoredDir(storage records, path string, parent fs.Item) *StoredDir {
@@ -441,4 +459,9 @@ func (f *StoredDir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 	totals.ownUsage = f.OwnUsage
 	f.ItemCount, f.Size, f.Usage = resolveDirStats(totals, filteringFiles)
 	f.store()
+
+	if f.stored != nil {
+		f.stored()
+		f.stored = nil
+	}
 }

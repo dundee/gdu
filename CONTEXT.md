@@ -26,6 +26,13 @@ A scan the user told to schedule no new work, whose results found so far are
 kept and browsed as if the scan had finished. Distinct from an abandoned scan,
 where the user quits gdu and the results are discarded.
 
+## Stored analysis
+
+The analysis of a scanned root kept in a database, which a later run loads
+instead of scanning again. It is **complete**, **stopped** (that of a stopped
+scan, kept like one), or **incomplete**: its scan never ended, as when gdu was
+killed, or failed to store part of it. An incomplete analysis is not loaded.
+
 ## Apparent size
 
 The size an item claims to be, i.e. the length of its contents.
