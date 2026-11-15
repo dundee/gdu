@@ -935,7 +935,7 @@ func TestReadFromStorage(t *testing.T) {
 	// Populate the storage with a stored analysis.
 	a := analyze.CreateStoredAnalyzer(storagePath)
 	dir := a.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{})
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	ui := newTestUI()
 	ui.SetAnalyzer(analyze.CreateStoredAnalyzer(storagePath))

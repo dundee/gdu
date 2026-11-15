@@ -122,9 +122,11 @@ to do with them. The stable-order analyzer is gone.
 
 **Strength: Worth exploring**
 
-**Status: Partly done.** Analyzers that total during the scan (top-dir, SQLite) share
-`linkTracker` (`pkg/analyze/hardlinks.go`), keyed by device and inode. The in-memory
-tree still counts through `alreadyCounted` and `fileFlagMu`, keyed by inode alone.
+**Status: Done.** Hard-linked files are identified by device and inode everywhere.
+Analyzers that total during the scan (top-dir, SQLite) share `linkTracker`
+(`pkg/analyze/hardlinks.go`); a tree counts them into an `fs.HardLinks` index of its
+own each time its totals are computed, which its top keeps for removals. `fileFlagMu`
+is gone.
 
 - **Files:** `analyze/file.go:108` (`alreadyCounted`, package-global `fileFlagMu`),
   `analyze/parallel_top_dir.go:237` (`sync.Map`), `analyze/sqlite.go:1028`

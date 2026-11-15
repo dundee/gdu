@@ -183,7 +183,7 @@ func TestExportMarksAnUnreadableDirectory(t *testing.T) {
 
 	a := CreateAnalyzer()
 	root := a.AnalyzeDir(context.Background(), dir, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
-	root.UpdateStats(make(fs.HardLinkedItems))
+	root.UpdateStats(false)
 
 	var buff bytes.Buffer
 	require.NoError(t, root.EncodeJSON(&buff, true, nil))

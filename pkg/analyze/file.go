@@ -11,11 +11,6 @@ import (
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
-// fileFlagMu protects the mutable Flag field on published File values. File
-// keeps its fields public for compatibility, so hard-link accounting can
-// update Flag after a file has been exposed to preview readers.
-var fileFlagMu sync.RWMutex
-
 var _ fs.SymlinkItem = (*File)(nil)
 
 // File struct
@@ -60,8 +55,6 @@ func (f *File) GetPath() string {
 
 // GetFlag returns flag of the file
 func (f *File) GetFlag() rune {
-	fileFlagMu.RLock()
-	defer fileFlagMu.RUnlock()
 	return f.Flag
 }
 
@@ -82,8 +75,6 @@ func (f *File) GetMtime() time.Time {
 
 // GetType returns name type of item
 func (f *File) GetType() string {
-	fileFlagMu.RLock()
-	defer fileFlagMu.RUnlock()
 	if f.Flag == '@' {
 		if f.Symlink != "" {
 			return "Symlink"
@@ -108,21 +99,6 @@ func (f *File) GetMultiLinkedInode() uint64 {
 	return f.Mli
 }
 
-func (f *File) alreadyCounted(linkedItems fs.HardLinkedItems) bool {
-	mli := f.Mli
-	counted := false
-	if mli > 0 {
-		fileFlagMu.Lock()
-		f.Flag = 'H'
-		fileFlagMu.Unlock()
-		if _, ok := linkedItems[mli]; ok {
-			counted = true
-		}
-		linkedItems[mli] = append(linkedItems[mli], f)
-	}
-	return counted
-}
-
 // CreateFileItem creates a File from an os.FileInfo with correct platform-specific attributes
 func CreateFileItem(path string, info os.FileInfo) *File {
 	usage, link := fileStats(info, path)
@@ -136,17 +112,15 @@ func CreateFileItem(path string, info os.FileInfo) *File {
 	}
 }
 
-// GetItemStats returns 1 as count of items, apparent usage and real usage of this file
-func (f *File) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
-	if f.alreadyCounted(linkedItems) {
-		return 1, 0, 0
-	}
+// GetItemStats returns 1 as count of items, apparent usage and real usage of
+// this file. A file with several hard links is counted by its directory,
+// which knows its device.
+func (f *File) GetItemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
 	return 1, f.GetSize(), f.GetUsage()
 }
 
 // UpdateStats does nothing on file
-func (f *File) UpdateStats(linkedItems fs.HardLinkedItems)                  {}
-func (f *File) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {}
+func (f *File) UpdateStats(bool) *fs.HardLinks { return nil }
 
 // GetFiles returns all files in directory
 func (f *File) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
@@ -228,17 +202,25 @@ func resolveDirStats(totals dirTotals, filteringFiles bool) (itemCount, size, us
 // aggregateDirEntries folds the stats of entries into the totals their parent
 // directory should report, and returns the parent's mtime and flag updated from
 // its children. mtime and flag are seeded with the parent's current values.
+//
+// A file with several hard links is counted by the first of its links added
+// to links; its entries lie on the device dev.
 func aggregateDirEntries(
 	entries fs.Files,
 	mtime time.Time,
 	flag rune,
-	linkedItems fs.HardLinkedItems,
+	dev uint64,
+	links *fs.HardLinks,
 	filteringFiles bool,
 ) (totals dirTotals, newMtime time.Time, newFlag rune) {
 	totals = dirTotals{itemCount: 1, entries: len(entries)}
 
 	for _, entry := range entries {
-		count, size, usage := entry.GetItemStats(linkedItems, filteringFiles)
+		count, size, usage := entry.GetItemStats(links, filteringFiles)
+		if ino := entry.GetMultiLinkedInode(); ino != 0 && !entry.IsDir() &&
+			!links.Add(fs.InodeKey{Dev: dev, Ino: ino}, entry) {
+			size, usage = 0, 0
+		}
 		totals.size += size
 		totals.usage += usage
 		totals.itemCount += count
@@ -270,9 +252,15 @@ type Dir struct {
 	ItemCount int64
 	// OwnUsage is the disk usage of the blocks allocated to the directory
 	// itself, excluding its entries.
-	OwnUsage      int64
+	OwnUsage int64
+	// Dev is the device the directory and its files lie on, which tells
+	// hard-linked files on different filesystems apart.
+	Dev           uint64
 	statsFromJSON bool
-	m             sync.RWMutex
+	// links is the index of the hard-linked files of the tree, kept by the
+	// directory topping the tree when its totals are computed
+	links *fs.HardLinks
+	m     sync.RWMutex
 }
 
 func snapshotDir(source *Dir, parent fs.Item) *Dir {
@@ -291,6 +279,7 @@ func snapshotDir(source *Dir, parent fs.Item) *Dir {
 		Files:     make(fs.Files, 0, len(source.Files)),
 		ItemCount: source.ItemCount,
 		OwnUsage:  source.OwnUsage,
+		Dev:       source.Dev,
 	}
 	children := append(fs.Files(nil), source.Files...)
 	source.m.RUnlock()
@@ -490,21 +479,24 @@ func (f *Dir) GetPath() string {
 }
 
 // GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *Dir) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
-	f.updateStats(linkedItems, filteringFiles)
+func (f *Dir) GetItemStats(links *fs.HardLinks, filteringFiles bool) (itemCount, size, usage int64) {
+	f.updateStats(links, filteringFiles)
 	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }
 
-func (f *Dir) UpdateStats(linkedItems fs.HardLinkedItems) {
-	f.updateStats(linkedItems, false)
+// UpdateStats computes the totals of the tree topped by the directory, which
+// keeps the index of its hard-linked files, and returns the index.
+func (f *Dir) UpdateStats(filteringFiles bool) *fs.HardLinks {
+	links := fs.NewHardLinks()
+	f.updateStats(links, filteringFiles)
+	f.m.Lock()
+	f.links = links
+	f.m.Unlock()
+	return links
 }
 
-func (f *Dir) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {
-	f.updateStats(linkedItems, true)
-}
-
-// UpdateStats recursively updates size and item count
-func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
+// updateStats recursively updates size and item count
+func (f *Dir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 	if f.statsFromJSON {
 		return
 	}
@@ -519,7 +511,7 @@ func (f *Dir) updateStats(linkedItems fs.HardLinkedItems, filteringFiles bool) {
 	flag := f.Flag
 	f.m.RUnlock()
 
-	totals, mtime, flag := aggregateDirEntries(files, mtime, flag, linkedItems, filteringFiles)
+	totals, mtime, flag := aggregateDirEntries(files, mtime, flag, f.Dev, links, filteringFiles)
 
 	f.m.Lock()
 	defer f.m.Unlock()
@@ -535,30 +527,33 @@ func (f *Dir) RemoveFile(item fs.Item) {
 	f.Files = f.Files.Remove(item)
 	f.m.Unlock()
 
-	f.subtractStats(item)
+	removeFromTotals(f, item)
 }
 
-// subtractStats removes item's totals from this dir and every ancestor. Each
-// directory is updated under its own lock, because holding only this dir's
-// mutex would leave the ancestors' writes unsynchronized against readers
-// calling GetSize, GetUsage or GetItemCount on them.
-func (f *Dir) subtractStats(item fs.Item) {
-	itemCount, size, usage := item.GetItemCount(), item.GetSize(), item.GetUsage()
+// adjustStats adds the deltas to the totals of the directory alone. It is
+// updated under its own lock, so readers calling GetSize, GetUsage or
+// GetItemCount see consistent totals.
+func (f *Dir) adjustStats(itemCount, size, usage int64) {
+	f.m.Lock()
+	defer f.m.Unlock()
+	f.ItemCount += itemCount
+	f.Size += size
+	f.Usage += usage
+}
 
-	cur := f
-	for {
-		cur.m.Lock()
-		cur.ItemCount -= itemCount
-		cur.Size -= size
-		cur.Usage -= usage
-		parent := cur.Parent
-		cur.m.Unlock()
+// hardLinks returns the index of the hard-linked files kept by the directory,
+// if it topped a tree whose totals were computed.
+func (f *Dir) hardLinks() *fs.HardLinks {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.links
+}
 
-		if parent == nil {
-			break
-		}
-		cur = parent.(*Dir)
-	}
+// device returns the device the directory lies on.
+func (f *Dir) device() uint64 {
+	f.m.RLock()
+	defer f.m.RUnlock()
+	return f.Dev
 }
 
 // sortFiles sorts files in place according to sortBy and order
@@ -602,5 +597,5 @@ func (f *Dir) RemoveFileByName(name string) {
 	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
 	f.m.Unlock()
 
-	f.subtractStats(item)
+	removeFromTotals(f, item)
 }

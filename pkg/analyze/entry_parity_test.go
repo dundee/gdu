@@ -89,9 +89,9 @@ func scanFiltered(
 	}
 	// as the session does, by whether the scan filtered files
 	if opts.FilteringFiles() {
-		dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
+		dir.UpdateStats(true)
 	} else {
-		dir.UpdateStats(make(fs.HardLinkedItems))
+		dir.UpdateStats(false)
 	}
 	return dir
 }

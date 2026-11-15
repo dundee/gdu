@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dundee/gdu/v5/pkg/fs"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
@@ -55,7 +54,7 @@ func TestReadAnalysisPreservesTruncatedDirectoryStats(t *testing.T) {
 
 	dir, err := ReadAnalysis(input)
 	assert.NoError(t, err)
-	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+	dir.UpdateStats(false)
 
 	assert.Equal(t, int64(4096), dir.GetSize())
 	assert.Equal(t, int64(4096), dir.GetUsage())
@@ -64,7 +63,7 @@ func TestReadAnalysisPreservesTruncatedDirectoryStats(t *testing.T) {
 	assert.Equal(t, int64(4096), summary.GetSize())
 	assert.Equal(t, int64(4096), summary.GetUsage())
 	assert.Equal(t, int64(2), summary.GetItemCount())
-	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
+	dir.UpdateStats(true)
 	assert.Equal(t, int64(4096), dir.GetSize())
 	assert.Equal(t, int64(4096), dir.GetUsage())
 	assert.Equal(t, int64(3), dir.GetItemCount())
@@ -78,7 +77,7 @@ func TestReadAnalysisRecomputesEmptyDirStats(t *testing.T) {
 
 	dir, err := ReadAnalysis(input)
 	assert.NoError(t, err)
-	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+	dir.UpdateStats(false)
 
 	assert.Equal(t, int64(512), dir.GetSize())
 	assert.Equal(t, int64(0), dir.GetUsage())
@@ -99,7 +98,7 @@ func TestReadAnalysisKeepsDirOwnUsage(t *testing.T) {
 
 	dir, err := ReadAnalysis(input)
 	assert.NoError(t, err)
-	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+	dir.UpdateStats(false)
 
 	assert.Equal(t, int64(20480), dir.GetUsage())
 	assert.Equal(t, int64(5), dir.GetItemCount())
@@ -124,7 +123,7 @@ func TestReadAnalysisPreservesTruncatedDirWithPlaceholderSize(t *testing.T) {
 
 	dir, err := ReadAnalysis(input)
 	assert.NoError(t, err)
-	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+	dir.UpdateStats(false)
 
 	truncated := dir.Files[0].(*Dir)
 	assert.Equal(t, int64(512), truncated.GetSize())

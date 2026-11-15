@@ -266,8 +266,7 @@ func (ui *UI) showInfo() {
 	content += numberColor + ui.formatSize(selectedFile.GetSize(), false, true)
 	content += fmt.Sprintf(" (%s%d[-::] B)", numberColor, selectedFile.GetSize()) + "\n"
 
-	if selectedFile.GetMultiLinkedInode() > 0 {
-		linkedItems := ui.session.HardLinks(selectedFile.GetMultiLinkedInode())
+	if linkedItems := ui.session.HardLinks(selectedFile); len(linkedItems) > 0 {
 		linesCount += 2 + len(linkedItems)
 		content += "\nHard-linked files:\n"
 		for _, linkedItem := range linkedItems {

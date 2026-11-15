@@ -716,13 +716,13 @@ func addSqliteString(buff *[]byte, val string) error {
 }
 
 // GetItemStats returns item statistics - hard links already handled during scan
-func (i *SqliteItem) GetItemStats(linkedItems fs.HardLinkedItems, filteringFiles bool) (itemCount, size, usage int64) {
+func (i *SqliteItem) GetItemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
 	return i.itemCount, i.size, i.usage
 }
 
-// UpdateStats is a no-op for SqliteItem - hard links are handled during scan
-func (i *SqliteItem) UpdateStats(linkedItems fs.HardLinkedItems)                  {}
-func (i *SqliteItem) UpdateStatsWithFileFiltering(linkedItems fs.HardLinkedItems) {}
+// UpdateStats does nothing for SqliteItem: the totals are computed, and hard
+// links counted once, during the scan.
+func (i *SqliteItem) UpdateStats(bool) *fs.HardLinks { return nil }
 
 // AddFile adds a child file (no-op for SQLite items - children are in DB)
 func (i *SqliteItem) AddFile(item fs.Item) {
@@ -924,7 +924,7 @@ func (s sqliteSink) openDir(parent *sqliteDir, path string, root bool) (*sqliteD
 	if !root {
 		dir.parentID = &parent.id
 	}
-	mtime, ownUsage := dirStats(path)
+	mtime, ownUsage, _ := dirStats(path)
 	dir.totals = newRunningTotals(mtime, ownUsage)
 
 	// the totals are stored when the directory is closed

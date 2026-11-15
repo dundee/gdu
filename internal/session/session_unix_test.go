@@ -26,12 +26,12 @@ func TestHardLinksAreCountedOnceAcrossRescans(t *testing.T) {
 	file := child(t, root, "file")
 	require.NotZero(t, file.GetMultiLinkedInode())
 
-	assert.Len(t, s.HardLinks(file.GetMultiLinkedInode()), 2)
+	assert.Len(t, s.HardLinks(file), 2)
 
 	s.Rescan(ctx, child(t, root, "dir"), nil)
 
 	assert.Equal(t, usage, root.GetUsage())
-	assert.Len(t, s.HardLinks(file.GetMultiLinkedInode()), 2)
+	assert.Len(t, s.HardLinks(file), 2)
 
 	s.Rescan(ctx, root, nil)
 	assert.Equal(t, usage, s.Root().GetUsage())

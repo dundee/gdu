@@ -28,8 +28,10 @@ type storedRecord struct {
 	Type                             string
 	Flag                             rune
 	Size, Usage, OwnUsage, ItemCount int64
-	Mtime                            time.Time
-	Entries                          []storedEntry
+	// Dev is the device of the directory
+	Dev     uint64
+	Mtime   time.Time
+	Entries []storedEntry
 }
 
 // storedEntry is an entry of a stored directory. An entry for a directory

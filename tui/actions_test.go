@@ -508,7 +508,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 	file.Mli = 1
 	file2.Mli = 1
 
-	ui.currentDir.UpdateStats(make(fs.HardLinkedItems))
+	ui.currentDir.UpdateStats(false)
 
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 

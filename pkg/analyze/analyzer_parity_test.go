@@ -80,7 +80,7 @@ func scanWith(t *testing.T, analyzer common.Analyzer, root string) map[string]it
 	t.Helper()
 
 	dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{})
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	return collectStats(dir)
 }
@@ -96,7 +96,7 @@ func scanFilteringAllFiles(
 	dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{
 		IgnoreFile: func(string) bool { return true },
 	})
-	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
+	dir.UpdateStats(true)
 
 	return collectStats(dir)
 }
@@ -185,7 +185,7 @@ func TestTopDirAnalyzerUsageParity(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			analyzer := CreateTopDirAnalyzer()
 			dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreFile: tc.fileFilter})
-			dir.UpdateStats(make(fs.HardLinkedItems))
+			dir.UpdateStats(false)
 
 			assert.Equal(t, tc.want["."].usage, dir.GetUsage(), "top-dir analyzer at root")
 			for child := range dir.GetFiles(fs.SortByName, fs.SortAsc) {

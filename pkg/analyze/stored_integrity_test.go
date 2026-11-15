@@ -66,7 +66,7 @@ func scanStored(t *testing.T, root string, archives bool) (fs.Item, string) {
 	db := filepath.Join(t.TempDir(), "gdu.badger")
 	analyzer := CreateStoredAnalyzer(db)
 	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: noIgnoredDirs, ArchiveBrowsing: archives})
-	tree.UpdateStats(make(fs.HardLinkedItems))
+	tree.UpdateStats(false)
 	return tree, db
 }
 
@@ -74,7 +74,7 @@ func scanInMemory(t *testing.T, root string, archives bool) fs.Item {
 	t.Helper()
 	analyzer := CreateAnalyzer()
 	tree := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: noIgnoredDirs, ArchiveBrowsing: archives})
-	tree.UpdateStats(make(fs.HardLinkedItems))
+	tree.UpdateStats(false)
 	return tree
 }
 

@@ -273,7 +273,7 @@ func TestEveryAnalyzerReportsExclusiveSizeOfClones(t *testing.T) {
 			scan := func(exclusive bool) fs.Item {
 				a := tc.analyzer(t)
 				root := a.AnalyzeDir(context.Background(), dir, common.ScanOptions{ExclusiveSize: exclusive})
-				root.UpdateStats(make(fs.HardLinkedItems))
+				root.UpdateStats(false)
 				return root
 			}
 			normal := scan(false).GetUsage() - dirOwnUsage(dir)

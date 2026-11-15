@@ -20,3 +20,8 @@ func dirOwnUsage(string) int64 {
 func dirInfoOwnUsage(os.FileInfo) int64 {
 	return 0
 }
+
+// dirInfoDevice returns 0: hard links are not identified on Plan9.
+func dirInfoDevice(os.FileInfo) uint64 {
+	return 0
+}

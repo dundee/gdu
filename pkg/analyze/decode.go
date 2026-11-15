@@ -35,10 +35,12 @@ func ReadAnalysis(input io.Reader) (dir *Dir, err error) {
 		return nil, errors.New("array of maps not found in the top level array on 4th position")
 	}
 
-	return decodeDir(items)
+	return decodeDir(items, 0)
 }
 
-func decodeDir(items []any) (dir *Dir, err error) {
+// decodeDir decodes a directory lying on the device parentDev, unless the
+// export tells another.
+func decodeDir(items []any, parentDev uint64) (dir *Dir, err error) {
 	if len(items) == 0 {
 		return nil, errors.New("directory array is empty")
 	}
@@ -47,6 +49,11 @@ func decodeDir(items []any) (dir *Dir, err error) {
 	dir, hasSize, hasUsage, hasItemCount, err = parseDirectoryMetadata(items[0])
 	if err != nil {
 		return nil, err
+	}
+	if dev, ok := items[0].(map[string]any)["dev"].(float64); ok {
+		dir.Dev = uint64(dev)
+	} else {
+		dir.Dev = parentDev
 	}
 
 	for _, v := range items[1:] {
@@ -87,7 +94,7 @@ func decodeDir(items []any) (dir *Dir, err error) {
 
 			dir.AddFile(file)
 		case []any:
-			subdir, err := decodeDir(item)
+			subdir, err := decodeDir(item, dir.Dev)
 			if err != nil {
 				return nil, err
 			}

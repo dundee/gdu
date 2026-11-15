@@ -23,7 +23,7 @@ func TestTopDirAnalyzeDir(t *testing.T) {
 	assert.Equal(t, "test_dir", dir.GetName())
 
 	simpleDir := dir.(*SimpleDir)
-	simpleDir.UpdateStats(make(fs.HardLinkedItems))
+	simpleDir.UpdateStats(false)
 
 	// Should have one top-level entry: "nested" directory
 	assert.Equal(t, 1, len(simpleDir.Files))
@@ -48,7 +48,7 @@ func TestTopDirAnalyzeDirWithFiles(t *testing.T) {
 	dir := analyzer.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	simpleDir := dir.(*SimpleDir)
-	simpleDir.UpdateStats(make(fs.HardLinkedItems))
+	simpleDir.UpdateStats(false)
 
 	// Should have 2 entries: file_a and subdir
 	assert.Equal(t, 2, len(simpleDir.Files))
@@ -232,7 +232,7 @@ func TestTopDirGetFiles(t *testing.T) {
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
 
 	simpleDir := dir.(*SimpleDir)
-	simpleDir.UpdateStats(make(fs.HardLinkedItems))
+	simpleDir.UpdateStats(false)
 
 	count := 0
 	for range simpleDir.GetFiles(fs.SortBySize, fs.SortAsc) {
@@ -256,7 +256,7 @@ func TestTopDirFollowSymlink(t *testing.T) {
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*SimpleDir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	var files []fs.Item
 	for file := range dir.GetFiles(fs.SortBySize, fs.SortDesc) {
@@ -287,7 +287,7 @@ func TestTopDirFollowNestedSymlink(t *testing.T) {
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*SimpleDir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	var files []fs.Item
 	for file := range dir.GetFiles(fs.SortBySize, fs.SortDesc) {

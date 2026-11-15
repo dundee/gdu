@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/common"
-	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +21,7 @@ func TestScannedDirIncludesOwnBlocks(t *testing.T) {
 
 	analyzer := CreateSeqAnalyzer()
 	scanned := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{}).(*Dir)
-	scanned.UpdateStats(make(fs.HardLinkedItems))
+	scanned.UpdateStats(false)
 
 	assert.Equal(t, want, scanned.Files[0].GetUsage())
 }
@@ -39,7 +38,7 @@ func TestZeroBlockDirIsNotChargedABlock(t *testing.T) {
 		"top-dir":  CreateTopDirAnalyzer(),
 	} {
 		scanned := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{})
-		scanned.UpdateStats(make(fs.HardLinkedItems))
+		scanned.UpdateStats(false)
 
 		assert.Equal(t, int64(0), scanned.GetUsage(), name)
 	}

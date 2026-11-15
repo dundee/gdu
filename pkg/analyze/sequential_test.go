@@ -10,7 +10,6 @@ import (
 
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
-	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +29,7 @@ func TestAnalyzeDirSeq(t *testing.T) {
 	progress := analyzer.GetProgress()
 	assert.GreaterOrEqual(t, progress.TotalUsage, int64(0))
 
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	// test dir info
 	assert.Equal(t, "test_dir", dir.Name)
@@ -94,7 +93,7 @@ func TestFlagsSeq(t *testing.T) {
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	sort.Sort(sort.Reverse(dir.Files))
 
@@ -121,7 +120,7 @@ func TestHardlinkSeq(t *testing.T) {
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	assert.Equal(t, int64(7), dir.Size)      // file2 and file3 are counted just once for size
 	assert.Equal(t, int64(6), dir.ItemCount) // but twice for item count
@@ -147,7 +146,7 @@ func TestFollowSymlinkSeq(t *testing.T) {
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	sort.Sort(sort.Reverse(dir.Files))
 
@@ -178,7 +177,7 @@ func TestBrokenSymlinkSkippedSeq(t *testing.T) {
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 
 	sort.Sort(sort.Reverse(dir.Files))
 
@@ -196,5 +195,5 @@ func BenchmarkAnalyzeDirSeq(b *testing.B) {
 
 	analyzer := CreateSeqAnalyzer()
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
-	dir.UpdateStats(make(fs.HardLinkedItems))
+	dir.UpdateStats(false)
 }

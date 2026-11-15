@@ -64,7 +64,7 @@ func (s *topDirSink) openDir(_ *topDirNode, path string, root bool) (*topDirNode
 }
 
 func (s *topDirSink) readDir(node *topDirNode, path string, err error, entries int) {
-	mtime, ownUsage := dirStats(path)
+	mtime, ownUsage, _ := dirStats(path)
 	if node.dir == nil {
 		node.totals = newRunningTotals(mtime, ownUsage)
 		node.totals.setFlag(getDirFlag(err, entries))

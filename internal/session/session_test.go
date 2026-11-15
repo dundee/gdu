@@ -98,14 +98,14 @@ type gatedTotals struct {
 	gate chan struct{}
 }
 
-func (g *gatedTotals) UpdateStats(links fs.HardLinkedItems) {
+func (g *gatedTotals) UpdateStats(filtering bool) *fs.HardLinks {
 	<-g.gate
-	g.Item.UpdateStats(links)
+	return g.Item.UpdateStats(filtering)
 }
 
 // GetItemStats is how a parent, such as the virtual top level dir, computes
 // the totals of its entries.
-func (g *gatedTotals) GetItemStats(links fs.HardLinkedItems, filtering bool) (count, size, usage int64) {
+func (g *gatedTotals) GetItemStats(links *fs.HardLinks, filtering bool) (count, size, usage int64) {
 	<-g.gate
 	return g.Item.GetItemStats(links, filtering)
 }

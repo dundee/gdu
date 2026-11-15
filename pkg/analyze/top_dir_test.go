@@ -32,7 +32,7 @@ func TestSimpleDirUpdateStats(t *testing.T) {
 		},
 	}
 
-	d.UpdateStats(make(fs.HardLinkedItems))
+	d.UpdateStats(false)
 
 	assert.Equal(t, int64(100+50+300), d.Size)
 	assert.Equal(t, int64(200+80+400), d.Usage)
@@ -45,7 +45,7 @@ func TestEmptySimpleDirUpdateStats(t *testing.T) {
 		Files:      []SimpleFile{},
 	}
 
-	d.UpdateStats(make(fs.HardLinkedItems))
+	d.UpdateStats(false)
 
 	assert.Equal(t, int64(512), d.Size)
 	assert.Equal(t, int64(0), d.Usage)
@@ -60,7 +60,7 @@ func TestSimpleDirUpdateStatsErrorFlag(t *testing.T) {
 		},
 	}
 
-	d.UpdateStats(make(fs.HardLinkedItems))
+	d.UpdateStats(false)
 	assert.Equal(t, '.', d.Flag)
 }
 
@@ -72,7 +72,7 @@ func TestSimpleDirUpdateStatsErrorFlagPreserved(t *testing.T) {
 		},
 	}
 
-	d.UpdateStats(make(fs.HardLinkedItems))
+	d.UpdateStats(false)
 	// '!' flag on dir should be preserved (not downgraded to '.')
 	assert.Equal(t, '!', d.Flag)
 }
@@ -85,7 +85,7 @@ func TestSimpleDirUpdateStatsDotFlag(t *testing.T) {
 		},
 	}
 
-	d.UpdateStats(make(fs.HardLinkedItems))
+	d.UpdateStats(false)
 	assert.Equal(t, '.', d.Flag)
 }
 

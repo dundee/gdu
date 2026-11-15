@@ -77,7 +77,7 @@ Flags:
   -u, --no-unicode                     Do not use Unicode symbols (for size bar)
       --no-view-file                   Do not allow viewing file contents
   -n, --non-interactive                Do not run in interactive mode
-      --output-attrs string            Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino)
+      --output-attrs string            Export only selected JSON attributes (name,asize,dsize,shsize,items,mtime,notreg,ino,dev)
   -o, --output-file string             Export all info into file as JSON
   -r, --read-from-storage              Show the analysis stored by an earlier scan in the database (--db) instead of scanning
       --reverse-sort                   Reverse the sorting order in non-interactive mode (smallest to largest by default)

@@ -225,7 +225,7 @@ func TestUpdateStats(t *testing.T) {
 	}
 	dir.Files = fs.Files{file, file2}
 
-	dir.UpdateStats(nil)
+	dir.UpdateStats(false)
 
 	assert.Equal(t, int64(5), dir.Size)
 	assert.Equal(t, 42, dir.GetMtime().Minute())
@@ -276,7 +276,7 @@ func TestUpdateStatsWithFileFiltering(t *testing.T) {
 	subdir.Files = fs.Files{subsubdir}
 	dir.Files = fs.Files{file, file2, subdir}
 
-	dir.UpdateStatsWithFileFiltering(nil)
+	dir.UpdateStats(true)
 
 	assert.Equal(t, int64(1024+5), dir.Size)
 	assert.Equal(t, int64(4), dir.ItemCount)
@@ -295,14 +295,14 @@ func TestDirOwnUsageIsCounted(t *testing.T) {
 	}
 
 	root := newTree()
-	root.UpdateStats(make(fs.HardLinkedItems))
+	root.UpdateStats(false)
 	assert.Equal(t, int64(2*4096), root.GetUsage())
 	assert.Equal(t, int64(3), root.GetItemCount())
 
 	// Filtering collapses a tree of empty dirs to one item, but the blocks the
 	// directories occupy are still counted.
 	root = newTree()
-	root.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems))
+	root.UpdateStats(true)
 	assert.Equal(t, int64(2*4096), root.GetUsage())
 	assert.Equal(t, int64(1), root.GetItemCount())
 }
@@ -416,13 +416,13 @@ func TestStatsFromJSONArePreserved(t *testing.T) {
 	}
 	dir.SetStatsFromJSON()
 
-	dir.UpdateStats(make(fs.HardLinkedItems, 10))
+	dir.UpdateStats(false)
 	assert.Equal(t, int64(4096), dir.GetSize())
 	assert.Equal(t, int64(2048), dir.GetUsage())
 	assert.Equal(t, int64(2), dir.GetItemCount())
 
-	dir.UpdateStatsWithFileFiltering(make(fs.HardLinkedItems, 10))
-	count, size, usage := dir.GetItemStats(make(fs.HardLinkedItems, 10), true)
+	dir.UpdateStats(true)
+	count, size, usage := dir.GetItemStats(fs.NewHardLinks(), true)
 	assert.Equal(t, int64(2), count)
 	assert.Equal(t, int64(4096), size)
 	assert.Equal(t, int64(2048), usage)

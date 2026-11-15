@@ -69,7 +69,7 @@ func TestTopDirAnalyzeHardLinks(t *testing.T) {
 				dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{
 					IgnoreFile: func(name string) bool { return tc.ignored != "" && name == tc.ignored },
 				})
-				dir.UpdateStats(make(fs.HardLinkedItems))
+				dir.UpdateStats(false)
 
 				assert.Equal(t, int64(len(content))*tc.copies, dir.GetSize(), "scan %d apparent size", run)
 				assert.Equal(t, expectedUsage, dir.GetUsage(), "scan %d disk usage", run)

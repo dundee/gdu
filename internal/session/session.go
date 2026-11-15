@@ -63,7 +63,7 @@ type Session struct {
 
 	mu    sync.RWMutex
 	root  fs.Item
-	links fs.HardLinkedItems
+	links *fs.HardLinks
 	// the analyzer, phase and root number of the running scan, as reported
 	// to observers
 	analyzer common.Analyzer
@@ -74,7 +74,7 @@ type Session struct {
 // New returns a session scanning with the analyzer and the ignore rules of
 // settings, taken as they are when each scan starts.
 func New(settings *common.UI) *Session {
-	return &Session{settings: settings, links: make(fs.HardLinkedItems)}
+	return &Session{settings: settings}
 }
 
 // Root returns the top of the tree: a scanned root, or the virtual top level
@@ -98,12 +98,16 @@ func (s *Session) RootPaths() []string {
 	return analyze.ScannedRootPaths(s.Root())
 }
 
-// HardLinks returns the items sharing the inode, as counted by the totals of
-// the tree.
-func (s *Session) HardLinks(inode uint64) fs.Files {
+// HardLinks returns the links to the file item, item included, as counted by
+// the totals of the tree, or none when item has a single link.
+func (s *Session) HardLinks(item fs.Item) fs.Files {
+	key, ok := analyze.HardLinkKey(item)
+	if !ok {
+		return nil
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.links[inode]
+	return s.links.Links(key)
 }
 
 // SetRoot makes root, an analysis made by other means, the tree of the
@@ -112,7 +116,7 @@ func (s *Session) SetRoot(root fs.Item) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.root = root
-	s.links = make(fs.HardLinkedItems)
+	s.links = nil
 }
 
 // Scan scans paths, computes the totals and makes the result the tree of the
@@ -241,12 +245,7 @@ func (s *Session) finalize(root fs.Item, filtering bool) {
 	s.phase = Finalizing
 	s.mu.Unlock()
 
-	links := make(fs.HardLinkedItems, 10)
-	if filtering {
-		root.UpdateStatsWithFileFiltering(links)
-	} else {
-		root.UpdateStats(links)
-	}
+	links := root.UpdateStats(filtering)
 
 	s.mu.Lock()
 	s.root, s.links = root, links

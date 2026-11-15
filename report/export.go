@@ -142,6 +142,7 @@ func exportedDir(dir fs.Item) *analyze.Dir {
 		},
 		BasePath:  filepath.Dir(dir.GetPath()),
 		ItemCount: dir.GetItemCount(),
+		Dev:       analyze.Device(dir),
 	}
 }
 
@@ -172,7 +173,7 @@ func (ui *UI) topDir(dir fs.Item) fs.Item {
 	for _, f := range files {
 		topDir.AddFile(exportedFile(f, topDir))
 	}
-	topDir.UpdateStats(make(fs.HardLinkedItems, 10))
+	topDir.UpdateStats(false)
 	return topDir
 }
 

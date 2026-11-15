@@ -180,14 +180,14 @@ func (w *walker[D]) done(node *walkNode[D]) {
 	}
 }
 
-// dirStats returns the mtime of the directory at path and the disk usage of
-// the blocks allocated to the directory itself.
-func dirStats(path string) (mtime time.Time, ownUsage int64) {
+// dirStats returns the mtime of the directory at path, the disk usage of the
+// blocks allocated to the directory itself, and its device.
+func dirStats(path string) (mtime time.Time, ownUsage int64, dev uint64) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return mtime, 0
+		return mtime, 0, 0
 	}
-	return info.ModTime(), dirInfoOwnUsage(info)
+	return info.ModTime(), dirInfoOwnUsage(info), dirInfoDevice(info)
 }
 
 // runningTotals are the totals of a directory added up as a scan meets its

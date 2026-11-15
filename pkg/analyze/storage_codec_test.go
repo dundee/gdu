@@ -19,6 +19,7 @@ func TestStoredRecordRoundTrip(t *testing.T) {
 		Usage:     4096,
 		OwnUsage:  4096,
 		ItemCount: 4,
+		Dev:       1<<40 + 5,
 		Mtime:     time.Unix(1_700_000_000, 123_456_789),
 		Entries: []storedEntry{
 			{Name: "sub", Dir: true},
