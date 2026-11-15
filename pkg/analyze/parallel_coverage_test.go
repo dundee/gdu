@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,7 +57,7 @@ func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreDir:  func(name, _ string) bool { return name == "nested" },
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
@@ -72,10 +71,10 @@ func TestParallelAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 func TestAnalyzersMarkFilesystemErrors(t *testing.T) {
 	factories := []struct {
 		name string
-		new  func() common.Analyzer
+		new  func() Analyzer
 	}{
-		{name: "parallel", new: func() common.Analyzer { return CreateAnalyzer() }},
-		{name: "sequential", new: func() common.Analyzer { return CreateSeqAnalyzer() }},
+		{name: "parallel", new: func() Analyzer { return CreateAnalyzer() }},
+		{name: "sequential", new: func() Analyzer { return CreateSeqAnalyzer() }},
 	}
 
 	for _, factory := range factories {
@@ -86,7 +85,7 @@ func TestAnalyzersMarkFilesystemErrors(t *testing.T) {
 				require.NoError(t, os.WriteFile(filePath, []byte("data"), 0o600))
 
 				var removeErr error
-				dir := factory.new().AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreFile: func(string) bool {
+				dir := factory.new().AnalyzeDir(context.Background(), root, Options{IgnoreFile: func(string) bool {
 					removeErr = os.Remove(filePath)
 					return false
 				}})
@@ -103,7 +102,7 @@ func TestAnalyzersMarkFilesystemErrors(t *testing.T) {
 				}
 
 				analyzer := factory.new()
-				dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{
+				dir := analyzer.AnalyzeDir(context.Background(), root, Options{
 					IgnoreFile:     func(string) bool { return false },
 					FollowSymlinks: true,
 				})

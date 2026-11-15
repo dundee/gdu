@@ -6,7 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -39,7 +38,7 @@ func (a *BaseAnalyzer) Init() {
 type scan struct {
 	// ctx stops the scan when cancelled
 	ctx  context.Context
-	opts common.ScanOptions
+	opts Options
 	// extents is nil unless exclusive size is on
 	extents *extentMeter
 	// links counts hard-linked files once, for the analyzers that total as
@@ -49,7 +48,7 @@ type scan struct {
 
 // begin starts a scan with opts, which cancelling ctx stops, and resets the
 // progress.
-func (a *BaseAnalyzer) begin(ctx context.Context, opts common.ScanOptions) *scan {
+func (a *BaseAnalyzer) begin(ctx context.Context, opts Options) *scan {
 	a.progressItemCount.Store(0)
 	a.progressTotalUsage.Store(0)
 	a.progressCurrentItemName.Store("")
@@ -123,8 +122,8 @@ func (a *BaseAnalyzer) GetCurrentDir() fs.Item {
 }
 
 // GetProgress returns the progress of the running scan, or of the last one.
-func (a *BaseAnalyzer) GetProgress() common.CurrentProgress {
-	return common.CurrentProgress{
+func (a *BaseAnalyzer) GetProgress() Progress {
+	return Progress{
 		CurrentItemName: a.progressCurrentItemName.Load().(string),
 		ItemCount:       a.progressItemCount.Load(),
 		TotalUsage:      a.progressTotalUsage.Load(),

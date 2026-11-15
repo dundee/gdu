@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
-	"github.com/dundee/gdu/v5/internal/common"
 )
 
 // storedFormat is the version of the records in the database. A database
@@ -45,6 +44,9 @@ type storedEntry struct {
 	Mli                      uint64
 	Symlink                  string
 }
+
+// is64Bit is true on 64-bit systems.
+const is64Bit = (^uint(0) >> 63) == 1
 
 // Storage represents a badger storage
 //
@@ -130,7 +132,7 @@ func (s *Storage) openLocked() {
 	options.NumMemtables = badgerNumMemtables
 	options.BlockCacheSize = badgerBlockCacheSize
 
-	if !common.Is64Bit {
+	if !is64Bit {
 		// For 32-bit systems, we need to set ValueLogFileSize to a smaller value to
 		// avoid "cannot allocate memory while mmapping" error
 		options.ValueLogFileSize = (1<<30 - 1) / 2

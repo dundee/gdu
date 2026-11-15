@@ -8,7 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,7 @@ func TestAnalyzeDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 
@@ -71,7 +70,7 @@ func TestIgnoreDir(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	dir := CreateAnalyzer().AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := CreateAnalyzer().AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreDir:  func(_, _ string) bool { return true },
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
@@ -91,7 +90,7 @@ func TestFlags(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 	dir.UpdateStats(false)
@@ -118,7 +117,7 @@ func TestHardlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)
 	dir.UpdateStats(false)
@@ -143,7 +142,7 @@ func TestFollowSymlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
@@ -178,7 +177,7 @@ func TestGitAnnexSymlink(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 		AnnexedSize:    true,
@@ -210,7 +209,7 @@ func TestBrokenSymlinkSkipped(t *testing.T) {
 	assert.Nil(t, err)
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*Dir)
@@ -231,7 +230,7 @@ func BenchmarkAnalyzeDir(b *testing.B) {
 	b.ResetTimer()
 
 	analyzer := CreateAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 	dir.UpdateStats(false)
 }
 
@@ -241,13 +240,13 @@ func TestParallelVsSequentialConsistency(t *testing.T) {
 
 	// Run sequential analyzer
 	seqAnalyzer := CreateSeqAnalyzer()
-	seqDir := seqAnalyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	seqDir := seqAnalyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 	seqDir.UpdateStats(false)
 	seqNames := getFileNames(seqDir)
 
 	// Run parallel analyzer
 	parAnalyzer := CreateAnalyzer()
-	parDir := parAnalyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+	parDir := parAnalyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 	parDir.UpdateStats(false)
 	parNames := getFileNames(parDir)
 

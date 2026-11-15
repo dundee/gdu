@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,7 +13,7 @@ func TestSequentialAnalyzerAnalyzeDirWithIgnoreDir(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateSeqAnalyzer()
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreDir:  func(name, _ string) bool { return name == "nested" },
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*Dir)

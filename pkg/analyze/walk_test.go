@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
@@ -73,7 +72,7 @@ func TestPreviewDuringScan(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		analyzer interface {
-			common.Analyzer
+			Analyzer
 			GetCurrentDir() fs.Item
 		}
 	}{
@@ -92,7 +91,7 @@ func TestPreviewDuringScan(t *testing.T) {
 			}
 			done := make(chan fs.Item, 1)
 			go func() {
-				done <- tc.analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: ignore})
+				done <- tc.analyzer.AnalyzeDir(context.Background(), root, Options{IgnoreDir: ignore})
 			}()
 
 			<-reached
@@ -132,7 +131,7 @@ func TestScanConcurrencyFollowsGOMAXPROCS(t *testing.T) {
 			}
 
 			analyzer := tc.analyzer(t)
-			analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreDir: ignore})
+			analyzer.AnalyzeDir(context.Background(), root, Options{IgnoreDir: ignore})
 
 			// the goroutine walking the root, and two per CPU
 			assert.LessOrEqual(t, most.Load(), int32(3))
@@ -157,6 +156,6 @@ func TestProgressCountsTheItemsOfTheTree(t *testing.T) {
 func treeAnalyzersWithTopDir() []parityAnalyzer {
 	return append(entryParityAnalyzers(), parityAnalyzer{
 		name:     "top-dir",
-		analyzer: func(*testing.T) common.Analyzer { return CreateTopDirAnalyzer() },
+		analyzer: func(*testing.T) Analyzer { return CreateTopDirAnalyzer() },
 	})
 }

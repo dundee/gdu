@@ -17,8 +17,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/dundee/gdu/v5/cmd/gdu/app"
+	"github.com/dundee/gdu/v5/internal/selfupdate"
 	"github.com/dundee/gdu/v5/pkg/device"
-	"github.com/dundee/gdu/v5/pkg/selfupdate"
 )
 
 const (
@@ -326,15 +326,15 @@ func selfUpdate() (done bool, err error) {
 	defer cancel()
 
 	updater := selfupdate.New()
-	args := app.StripSelfUpdateFlag(os.Args[1:])
+	args := selfupdate.StripFlag(os.Args[1:])
 
-	outcome, err := app.RunSelfUpdate(ctx, os.Stderr, updater, args)
+	outcome, err := selfupdate.Run(ctx, os.Stderr, updater, args)
 	switch outcome {
-	case app.SelfUpdateExit:
+	case selfupdate.OutcomeExit:
 		return true, err
-	case app.SelfUpdateRestart:
+	case selfupdate.OutcomeRestart:
 		return true, selfupdate.Restart(updater.ExecPath, args)
-	case app.SelfUpdateContinue:
+	case selfupdate.OutcomeContinue:
 	}
 	return false, nil
 }

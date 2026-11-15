@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +23,7 @@ func TestSequentialAnalyzerWithZipFile(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 
 	// Analyze directory (containing zip file)
-	result := analyzer.AnalyzeDir(context.Background(), tempDir, common.ScanOptions{
+	result := analyzer.AnalyzeDir(context.Background(), tempDir, Options{
 		IgnoreFile:      func(string) bool { return false },
 		ArchiveBrowsing: true,
 	})
@@ -71,7 +70,7 @@ func TestParallelAnalyzerWithZipFile(t *testing.T) {
 	analyzer := CreateAnalyzer()
 
 	// Analyze directory
-	result := analyzer.AnalyzeDir(context.Background(), tempDir, common.ScanOptions{
+	result := analyzer.AnalyzeDir(context.Background(), tempDir, Options{
 		IgnoreFile:      func(string) bool { return false },
 		ArchiveBrowsing: true,
 	})
@@ -112,7 +111,7 @@ func TestZipFileWithNestedStructure(t *testing.T) {
 	analyzer := CreateSeqAnalyzer()
 
 	// Analyze directory
-	result := analyzer.AnalyzeDir(context.Background(), tempDir, common.ScanOptions{
+	result := analyzer.AnalyzeDir(context.Background(), tempDir, Options{
 		IgnoreFile:      func(string) bool { return false },
 		ArchiveBrowsing: true,
 	})

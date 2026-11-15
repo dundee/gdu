@@ -32,7 +32,7 @@ const (
 
 // Progress is what an Observer is told about a running scan.
 type Progress struct {
-	common.CurrentProgress
+	analyze.Progress
 	Phase Phase
 	// Root is the number of the scanned root being walked, counted from 1,
 	// and Roots is how many scanned roots there are.
@@ -73,7 +73,7 @@ type Session struct {
 	links *fs.HardLinks
 	// the analyzer, phase and root number of the running scan, as reported
 	// to observers
-	analyzer common.Analyzer
+	analyzer analyze.Analyzer
 	phase    Phase
 	current  int
 }
@@ -323,7 +323,7 @@ func (s *Session) progress(roots int) Progress {
 
 	p := Progress{Phase: phase, Root: current, Roots: roots}
 	if analyzer != nil {
-		p.CurrentProgress = analyzer.GetProgress()
+		p.Progress = analyzer.GetProgress()
 	}
 	return p
 }

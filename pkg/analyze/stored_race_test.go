@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +20,7 @@ func TestStoredTreeConcurrentReaders(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer(t.TempDir())
-	scanned := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{})
+	scanned := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{})
 	scanned.UpdateStats(false)
 	want := flatten(scanned)
 	dir, err := analyzer.LoadAnalysis("test_dir")
@@ -54,7 +53,7 @@ func TestStoredDirOpensStorageOnDemandConcurrently(t *testing.T) {
 	defer fin()
 
 	analyzer := CreateStoredAnalyzer(t.TempDir())
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
 

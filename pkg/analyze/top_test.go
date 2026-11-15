@@ -5,7 +5,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,7 @@ func TestCollectTopFiles2(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	dir := CreateAnalyzer().AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := CreateAnalyzer().AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	})
 
@@ -31,7 +30,7 @@ func TestCollectTopFiles1(t *testing.T) {
 	fin := testdir.CreateTestDir()
 	defer fin()
 
-	dir := CreateAnalyzer().AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := CreateAnalyzer().AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	})
 

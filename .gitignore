@@ -5,5 +5,5 @@
 /coverage.html
 /dist
 /test_dir
-/tui/test_dir
+/internal/tui/test_dir
 /vendor

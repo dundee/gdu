@@ -4,14 +4,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/assert"
 )
-
-// Compile-time check that MockedApp implements common.TermApplication
-var _ common.TermApplication = (*MockedApp)(nil)
 
 func TestCreateSimScreen(t *testing.T) {
 	screen := CreateSimScreen()
@@ -112,7 +108,7 @@ func TestMockedAppSetMouseCapture(t *testing.T) {
 }
 
 func TestMockedAppQueueUpdateDraw(t *testing.T) {
-	app := CreateMockedApp(false).(*MockedApp)
+	app := CreateMockedApp(false)
 
 	counter := 0
 	f1 := func() { counter++ }
@@ -132,7 +128,7 @@ func TestMockedAppQueueUpdateDraw(t *testing.T) {
 }
 
 func TestMockedAppSetBeforeDrawFunc(t *testing.T) {
-	app := CreateMockedApp(false).(*MockedApp)
+	app := CreateMockedApp(false)
 
 	assert.Empty(t, app.BeforeDraws)
 
@@ -144,7 +140,7 @@ func TestMockedAppSetBeforeDrawFunc(t *testing.T) {
 }
 
 func TestMockedAppConcurrentQueueUpdateDraw(t *testing.T) {
-	app := CreateMockedApp(false).(*MockedApp)
+	app := CreateMockedApp(false)
 
 	var wg sync.WaitGroup
 	n := 100

@@ -13,7 +13,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -441,7 +440,7 @@ func TestSequentialAnalyzerWithTarFile(t *testing.T) {
 
 	a := CreateSeqAnalyzer()
 
-	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+	result := a.AnalyzeDir(context.Background(), tmpDir, Options{
 		IgnoreFile:      func(string) bool { return false },
 		ArchiveBrowsing: true,
 	})
@@ -472,7 +471,7 @@ func TestSequentialAnalyzerWithTarGzFile(t *testing.T) {
 
 	a := CreateSeqAnalyzer()
 
-	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+	result := a.AnalyzeDir(context.Background(), tmpDir, Options{
 		IgnoreFile:      func(string) bool { return false },
 		ArchiveBrowsing: true,
 	})
@@ -500,7 +499,7 @@ func TestParallelAnalyzerWithTarFile(t *testing.T) {
 
 	a := CreateAnalyzer()
 
-	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+	result := a.AnalyzeDir(context.Background(), tmpDir, Options{
 		IgnoreFile:      func(string) bool { return false },
 		ArchiveBrowsing: true,
 	})
@@ -525,7 +524,7 @@ func TestParallelAnalyzerWithTarXzFile(t *testing.T) {
 
 	a := CreateAnalyzer()
 
-	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{
+	result := a.AnalyzeDir(context.Background(), tmpDir, Options{
 		IgnoreFile:      func(string) bool { return false },
 		ArchiveBrowsing: true,
 	})
@@ -601,7 +600,7 @@ func TestAnalyzerTarBrowsingDisabled(t *testing.T) {
 	a := CreateSeqAnalyzer()
 	// archiveBrowsing is false by default
 
-	result := a.AnalyzeDir(context.Background(), tmpDir, common.ScanOptions{IgnoreFile: func(string) bool { return false }})
+	result := a.AnalyzeDir(context.Background(), tmpDir, Options{IgnoreFile: func(string) bool { return false }})
 
 	require.NotNil(t, result)
 

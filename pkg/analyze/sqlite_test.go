@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
@@ -671,7 +670,7 @@ func TestSqliteAnalyzerArchiveBrowsing(t *testing.T) {
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:      func(_ string) bool { return false },
 		ArchiveBrowsing: true,
 	}).(*SqliteItem)
@@ -708,7 +707,7 @@ func TestSqliteAnalyzerAnalyzeDir(t *testing.T) {
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*SqliteItem)
 
@@ -767,7 +766,7 @@ func TestSqliteAnalyzerPropagatesChildPermissionError(t *testing.T) {
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	dir := analyzer.AnalyzeDir(context.Background(), rootPath, common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), rootPath, Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*SqliteItem)
 
@@ -792,7 +791,7 @@ func TestSqliteAnalyzerIgnoreDir(t *testing.T) {
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreDir:  func(_, _ string) bool { return true },
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*SqliteItem)
@@ -811,7 +810,7 @@ func TestSqliteAnalyzerIgnoreFileType(t *testing.T) {
 	defer analyzer.storage.Close()
 
 	// Ignore all files
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return true },
 	}).(*SqliteItem)
 
@@ -845,7 +844,7 @@ func TestSqliteAnalyzerHardlinks(t *testing.T) {
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*SqliteItem)
 
@@ -881,7 +880,7 @@ func TestSqliteAnalyzerSymlink(t *testing.T) {
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*SqliteItem)
 
@@ -913,7 +912,7 @@ func TestSqliteAnalyzerFollowSymlink(t *testing.T) {
 	assert.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile:     func(_ string) bool { return false },
 		FollowSymlinks: true,
 	}).(*SqliteItem)
@@ -945,7 +944,7 @@ func TestSqliteAnalyzerTimeFilter(t *testing.T) {
 
 	// Filter out all files (mtime filter that always returns false)
 
-	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 		TimeFilter: func(mtime time.Time) bool { return false },
 	}).(*SqliteItem)
@@ -965,7 +964,7 @@ func TestSqliteAnalyzerLoadFromExisting(t *testing.T) {
 	analyzer1, err := CreateSqliteAnalyzer(dbPath)
 	assert.NoError(t, err)
 
-	dir1 := analyzer1.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{
+	dir1 := analyzer1.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*SqliteItem)
 
@@ -1011,14 +1010,14 @@ func TestSqliteAnalyzerScansEvenWithStoredAnalysis(t *testing.T) {
 	require.NoError(t, err)
 	defer analyzer.storage.Close()
 
-	analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreDir: noIgnore})
+	analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreDir: noIgnore})
 	require.NoError(t, os.WriteFile("test_dir/nested/added", []byte("new"), 0o600))
 
-	rescanned := analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreDir: noIgnore})
+	rescanned := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreDir: noIgnore})
 	rescanned.UpdateStats(false)
 	assert.Equal(t, int64(6), rescanned.GetItemCount())
 
-	nested := analyzer.AnalyzeDir(context.Background(), "test_dir/nested", common.ScanOptions{IgnoreDir: noIgnore})
+	nested := analyzer.AnalyzeDir(context.Background(), "test_dir/nested", Options{IgnoreDir: noIgnore})
 	assert.Equal(t, "nested", nested.GetName())
 	assert.Equal(t, "test_dir/nested", nested.GetPath())
 }
@@ -1036,7 +1035,7 @@ func TestSqliteAnalyzerProgress(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+		analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 	}()
 
 	// Wait for analysis to make some progress
@@ -1055,7 +1054,7 @@ func BenchmarkSqliteAnalyzeDir(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		dbPath := filepath.Join(b.TempDir(), "test.db")
 		analyzer, _ := CreateSqliteAnalyzer(dbPath)
-		analyzer.AnalyzeDir(context.Background(), "test_dir", common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+		analyzer.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }})
 		analyzer.storage.Close()
 	}
 }

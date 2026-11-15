@@ -5,18 +5,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
 
-// Compile-time check that MockedAnalyzer implements common.Analyzer
-var _ common.Analyzer = (*MockedAnalyzer)(nil)
+// Compile-time check that MockedAnalyzer implements analyze.Analyzer
+var _ analyze.Analyzer = (*MockedAnalyzer)(nil)
 
 func TestAnalyzeDir(t *testing.T) {
 	a := &MockedAnalyzer{}
-	result := a.AnalyzeDir(context.Background(), ".", common.ScanOptions{})
+	result := a.AnalyzeDir(context.Background(), ".", analyze.Options{})
 
 	assert.NotNil(t, result)
 	assert.True(t, result.IsDir())

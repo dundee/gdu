@@ -12,7 +12,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
@@ -280,7 +279,7 @@ func TestCompressedAndSparseFilesUsage(t *testing.T) {
 
 	analyzers := append([]parityAnalyzer{{
 		name:     "parallel",
-		analyzer: func(*testing.T) common.Analyzer { return CreateAnalyzer() },
+		analyzer: func(*testing.T) Analyzer { return CreateAnalyzer() },
 	}}, parityAnalyzers()...)
 	for _, tc := range analyzers {
 		t.Run(tc.name, func(t *testing.T) {
@@ -292,7 +291,7 @@ func TestCompressedAndSparseFilesUsage(t *testing.T) {
 
 	t.Run("top dir", func(t *testing.T) {
 		analyzer := CreateTopDirAnalyzer()
-		dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{IgnoreFile: func(_ string) bool { return false }})
+		dir := analyzer.AnalyzeDir(context.Background(), root, Options{IgnoreFile: func(_ string) bool { return false }})
 		dir.UpdateStats(false)
 		assert.GreaterOrEqual(t, dir.GetSize(), int64(2*testFileSize))
 		assert.Less(t, dir.GetUsage(), int64(testFileSize))

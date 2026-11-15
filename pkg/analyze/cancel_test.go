@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,7 +15,7 @@ func TestAnalyzersCancelKeepsPartialResults(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		analyzer common.Analyzer
+		analyzer Analyzer
 	}{
 		{name: "parallel", analyzer: CreateAnalyzer()},
 		{name: "sequential", analyzer: CreateSeqAnalyzer()},
@@ -53,7 +52,7 @@ func TestAnalyzeDirHonorsPreemptiveCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	dir := analyzer.AnalyzeDir(ctx, createCancellationTree(t), common.ScanOptions{})
+	dir := analyzer.AnalyzeDir(ctx, createCancellationTree(t), Options{})
 
 	assert.NotContains(t, itemNames(dir), "a-file")
 	assert.NotContains(t, itemNames(dir), "b-dir")
@@ -65,9 +64,9 @@ func TestScanAfterCancelledScanIsComplete(t *testing.T) {
 	root := createCancellationTree(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	analyzer.AnalyzeDir(ctx, root, common.ScanOptions{})
+	analyzer.AnalyzeDir(ctx, root, Options{})
 
-	dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{})
+	dir := analyzer.AnalyzeDir(context.Background(), root, Options{})
 
 	assert.Contains(t, itemNames(dir), "a-file")
 	assert.Contains(t, itemNames(dir), "b-dir")
@@ -83,11 +82,11 @@ func createCancellationTree(t *testing.T) string {
 }
 
 // scanUntilCancelled scans root, cancelling the scan when it meets b-dir.
-func scanUntilCancelled(t *testing.T, analyzer common.Analyzer, root string) fs.Item {
+func scanUntilCancelled(t *testing.T, analyzer Analyzer, root string) fs.Item {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	return analyzer.AnalyzeDir(ctx, root, common.ScanOptions{IgnoreDir: func(name, _ string) bool {
+	return analyzer.AnalyzeDir(ctx, root, Options{IgnoreDir: func(name, _ string) bool {
 		if name == "b-dir" {
 			cancel()
 		}

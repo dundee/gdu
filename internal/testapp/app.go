@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -33,7 +32,7 @@ type MockedApp struct {
 }
 
 // CreateMockedApp returns app with simulation screen for tests
-func CreateMockedApp(failRun bool) common.TermApplication {
+func CreateMockedApp(failRun bool) *MockedApp {
 	app := &MockedApp{
 		FailRun:     failRun,
 		updateDraws: make([]func(), 0, 1),

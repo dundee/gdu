@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -15,7 +14,7 @@ import (
 type MockedAnalyzer struct{}
 
 // AnalyzeDir returns dir with files with different size exponents
-func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, common.ScanOptions) fs.Item {
+func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, analyze.Options) fs.Item {
 	dir := &analyze.Dir{
 		File: &analyze.File{
 			Name:  "test_dir",
@@ -66,8 +65,8 @@ func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, common.ScanOptions)
 }
 
 // GetProgress returns empty progress
-func (a *MockedAnalyzer) GetProgress() common.CurrentProgress {
-	return common.CurrentProgress{}
+func (a *MockedAnalyzer) GetProgress() analyze.Progress {
+	return analyze.Progress{}
 }
 
 // ItemFromDirWithErr returns error

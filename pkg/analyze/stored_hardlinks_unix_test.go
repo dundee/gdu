@@ -10,8 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dundee/gdu/v5/internal/common"
 )
 
 // Removing the links of a file from a stored tree keeps the file counted
@@ -23,7 +21,7 @@ func TestStoredHardLinkRemoval(t *testing.T) {
 	require.NoError(t, os.Link(filepath.Join(path, "a", "f"), filepath.Join(path, "b", "g")))
 	fileUsage := usageOf(t, filepath.Join(path, "a", "f"))
 	db := filepath.Join(t.TempDir(), "gdu.badger")
-	root := CreateStoredAnalyzer(db).AnalyzeDir(context.Background(), path, common.ScanOptions{})
+	root := CreateStoredAnalyzer(db).AnalyzeDir(context.Background(), path, Options{})
 	root.UpdateStats(false)
 	usage, count := root.GetUsage(), root.GetItemCount()
 

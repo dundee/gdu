@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
@@ -58,13 +59,13 @@ func TestSetAnalyzer(t *testing.T) {
 type MockedAnalyzer struct{}
 
 // AnalyzeDir returns nothing
-func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, ScanOptions) fs.Item {
+func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, analyze.Options) fs.Item {
 	return nil
 }
 
 // GetProgress returns empty progress
-func (a *MockedAnalyzer) GetProgress() CurrentProgress {
-	return CurrentProgress{}
+func (a *MockedAnalyzer) GetProgress() analyze.Progress {
+	return analyze.Progress{}
 }
 
 func TestSetBlockSizeFromEnvironment(t *testing.T) {

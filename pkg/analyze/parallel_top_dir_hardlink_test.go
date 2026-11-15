@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +65,7 @@ func TestTopDirAnalyzeHardLinks(t *testing.T) {
 			// a second scan must not count the links met by the first
 			analyzer := CreateTopDirAnalyzer()
 			for run := range 2 {
-				dir := analyzer.AnalyzeDir(context.Background(), root, common.ScanOptions{
+				dir := analyzer.AnalyzeDir(context.Background(), root, Options{
 					IgnoreFile: func(name string) bool { return tc.ignored != "" && name == tc.ignored },
 				})
 				dir.UpdateStats(false)
