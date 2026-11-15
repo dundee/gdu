@@ -122,7 +122,7 @@ func (e *fileEntry) item(parent fs.Item) fs.Item {
 
 // openArchive returns the browsed content of the archive at path, a *ZipDir
 // or *TarDir, or nil when name is not an archive's or the archive cannot be
-// read.
+// read. Its totals are computed already, see finishArchive.
 func openArchive(path, name string, info os.FileInfo) fs.Item {
 	switch {
 	case isZipFile(name):
@@ -131,10 +131,7 @@ func openArchive(path, name string, info os.FileInfo) fs.Item {
 			log.Printf("Failed to process zip file %s: %v", path, err)
 			return nil
 		}
-		if uncompressed, compressed, err := getZipFileSize(path); err == nil {
-			zipDir.Size = uncompressed
-			zipDir.Usage = compressed
-		}
+		finishArchive(zipDir.Dir, path, info)
 		return zipDir
 	case isTarFile(name):
 		tarDir, err := processTarFile(path, info)
@@ -142,9 +139,33 @@ func openArchive(path, name string, info os.FileInfo) fs.Item {
 			log.Printf("Failed to process tar file %s: %v", path, err)
 			return nil
 		}
+		finishArchive(tarDir.Dir, path, info)
 		return tarDir
 	}
 	return nil
+}
+
+// finishArchive computes the totals of the browsed archive dir, at path, once:
+// what it holds does not change. Its entries show their sizes inside the
+// archive, uncompressed, but the archive itself counts as the file it is,
+// with its size, disk usage and mtime, so that browsing it changes nothing
+// in the totals of the directories holding it.
+func finishArchive(dir *Dir, path string, info os.FileInfo) {
+	archiveTotals(dir)
+	usage, _ := fileStats(info, path)
+	dir.Size, dir.Usage, dir.Mtime = info.Size(), usage, info.ModTime()
+}
+
+// archiveTotals computes the totals of dir, a directory of a browsed archive,
+// and of the directories in it. Their itemStats return the totals computed,
+// so the deepest ones come first.
+func archiveTotals(dir *Dir) {
+	for _, entry := range dir.Files {
+		if sub := archiveDirOf(entry); sub != nil {
+			archiveTotals(sub)
+		}
+	}
+	dir.updateStats(fs.NewHardLinks(), false)
 }
 
 // archiveDirOf returns the directory of a browsed archive, or of a directory

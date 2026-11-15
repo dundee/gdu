@@ -437,6 +437,12 @@ func (f *StoredDir) updateStats(links *fs.HardLinks, filteringFiles bool) {
 		return
 	}
 
+	if f.inArchive() {
+		// what a browsed archive holds does not change: its totals are
+		// those stored by the scan (see finishArchive)
+		return
+	}
+
 	files := copyFiles(f.Files)
 	curMtime := f.Mtime
 	curFlag := f.Flag

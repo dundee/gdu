@@ -533,7 +533,7 @@ func TestSqliteItemEncodeJSON(t *testing.T) {
 	err = root.EncodeJSON(&buf, false, nil)
 	assert.NoError(t, err)
 
-	expected := `[{"name":"root","asize":100,"dsize":200,"items":2,"mtime":1600000000},
+	expected := `[{"name":"root","dsize":180,"gdu_asize":100,"gdu_dsize":200,"items":2,"mtime":1600000000},
 {"name":"file.txt","asize":10,"dsize":20,"mtime":1600000000}]`
 	assert.Equal(t, expected, buf.String())
 }
@@ -550,7 +550,7 @@ func TestSqliteItemEncodeEmptyDirJSON(t *testing.T) {
 	var buf bytes.Buffer
 	err = root.EncodeJSON(&buf, false, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, "[{\"name\":\"empty\",\"asize\":0,\"dsize\":0,\"items\":0}\n]", buf.String())
+	assert.Equal(t, "[{\"name\":\"empty\",\"gdu_asize\":0,\"gdu_dsize\":0,\"items\":0}\n]", buf.String())
 }
 
 func TestSqliteItemEncodeJSONWithSelectedAttributes(t *testing.T) {
@@ -568,7 +568,7 @@ func TestSqliteItemEncodeJSONWithSelectedAttributes(t *testing.T) {
 	err = root.EncodeJSON(&buf, false, fs.JSONAttributes{"asize": {}, "dsize": {}})
 
 	assert.NoError(t, err)
-	assert.Equal(t, `[{"name":"root","asize":100,"dsize":200},
+	assert.Equal(t, `[{"name":"root","dsize":180,"gdu_asize":100,"gdu_dsize":200},
 {"name":"file.txt","asize":10,"dsize":20}]`, buf.String())
 }
 

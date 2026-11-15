@@ -93,7 +93,7 @@ func TestDevicesSurviveExport(t *testing.T) {
 	top.UpdateStats(false)
 	var out bytes.Buffer
 	require.NoError(t, top.EncodeJSON(&out, true, nil))
-	assert.Contains(t, out.String(), `"name":"m","asize":100,"dsize":4096,"items":2,"dev":2`)
+	assert.Contains(t, out.String(), `"name":"m","gdu_asize":100,"gdu_dsize":4096,"items":2,"dev":2`)
 	assert.NotContains(t, out.String(), `"dev":1`, "the device is written only where it changes")
 
 	imported, err := ReadAnalysis(bytes.NewBufferString(`[1,2,{"progname":"gdu"},` + out.String() + `]`))

@@ -640,32 +640,24 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool, attributes f
 		return err
 	}
 
-	// Directory summary stats (asize, dsize, items) are written by default so
-	// they can be preserved on import. When --output-attrs is supplied, each is
-	// emitted only if explicitly selected.
-	if attributes.Includes("asize") {
-		buff = append(buff, []byte(`,"asize":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(i.GetSize(), 10))...)
+	children, err := i.storage.GetChildren(i.id)
+	if err != nil {
+		return err
 	}
-	if attributes.Includes("dsize") {
-		buff = append(buff, []byte(`,"dsize":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(i.GetUsage(), 10))...)
+	// the database keeps the totals only: the directory's own usage is
+	// what its entries leave of its total, a hard-linked file being stored
+	// with no usage where it is not counted
+	ownUsage := i.GetUsage()
+	for _, child := range children {
+		ownUsage -= child.GetUsage()
 	}
-	if attributes.Includes("items") {
-		buff = append(buff, []byte(`,"items":`)...)
-		buff = append(buff, []byte(strconv.FormatInt(i.GetItemCount(), 10))...)
-	}
+	buff = appendDirSizes(buff, attributes, max(ownUsage, 0), i.GetSize(), i.GetUsage(), i.GetItemCount())
 	if attributes.Includes("mtime") && !i.GetMtime().IsZero() {
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
 	}
 
 	buff = append(buff, '}')
-
-	children, err := i.storage.GetChildren(i.id)
-	if err != nil {
-		return err
-	}
 
 	if len(children) > 0 {
 		buff = append(buff, ',')

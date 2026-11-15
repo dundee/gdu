@@ -17,6 +17,11 @@ import (
 // entry is no single name, such as "..", "" or "a/b": its path would lie
 // elsewhere than in its directory. Only the top directory is named by its
 // path.
+//
+// A directory's asize and dsize are what the directory itself takes, as ncdu
+// writes them, with its totals under gdu_asize and gdu_dsize (see
+// appendDirSizes). gdu wrote the totals as asize and dsize before; such an
+// export is read as it was written.
 func ReadAnalysis(input io.Reader) (dir *Dir, err error) {
 	var data any
 
@@ -41,18 +46,30 @@ func ReadAnalysis(input io.Reader) (dir *Dir, err error) {
 		return nil, errors.New("array of maps not found in the top level array on 4th position")
 	}
 
-	return decodeDir(items, nil)
+	return decodeDir(items, nil, writtenByGdu(dataArray[2]))
+}
+
+// writtenByGdu reports whether the header meta of an export says gdu wrote
+// it, as it does unless it names another program.
+func writtenByGdu(meta any) bool {
+	header, ok := meta.(map[string]any)
+	if !ok {
+		return true
+	}
+	program, ok := header["progname"].(string)
+	return !ok || program == "gdu"
 }
 
 // decodeDir decodes a directory of parent, or the top directory when parent
 // is nil. It lies on the device of parent, unless the export tells another.
-func decodeDir(items []any, parent *Dir) (dir *Dir, err error) {
+// byGdu tells that gdu wrote the export.
+func decodeDir(items []any, parent *Dir, byGdu bool) (dir *Dir, err error) {
 	if len(items) == 0 {
 		return nil, errors.New("directory array is empty")
 	}
 
-	var hasSize, hasUsage, hasItemCount bool
-	dir, hasSize, hasUsage, hasItemCount, err = parseDirectoryMetadata(items[0], parent == nil)
+	var stats exportedStats
+	dir, stats, err = parseDirectoryMetadata(items[0], parent == nil, byGdu)
 	if err != nil {
 		if parent != nil {
 			return nil, fmt.Errorf("%s: %w", parent.GetPath(), err)
@@ -109,23 +126,23 @@ func decodeDir(items []any, parent *Dir) (dir *Dir, err error) {
 
 			dir.AddFile(file)
 		case []any:
-			subdir, err := decodeDir(item, dir)
+			subdir, err := decodeDir(item, dir, byGdu)
 			if err != nil {
 				return nil, err
 			}
 			dir.AddFile(subdir)
 		}
 	}
-	if hasUsage {
+	if stats.ownUsageInTotal {
 		dir.OwnUsage = exportedOwnUsage(dir)
 	}
-	preserveTruncatedStats(dir, hasSize, hasUsage, hasItemCount)
+	preserveTruncatedStats(dir, stats.hasSize, stats.hasUsage, stats.hasItemCount)
 
 	return dir, nil
 }
 
-// exportedOwnUsage recovers the disk usage of the directory itself, which the
-// export folds into the directory's total. A hard-linked file counted elsewhere
+// exportedOwnUsage recovers the disk usage of the directory itself, which an
+// export by an older gdu folds into the directory's total. A hard-linked file counted elsewhere
 // in the tree can make the entries add up to more than the total, so the
 // result is clamped at zero rather than going negative.
 func exportedOwnUsage(dir *Dir) int64 {
@@ -136,22 +153,25 @@ func exportedOwnUsage(dir *Dir) int64 {
 	return max(own, 0)
 }
 
+// exportedStats tells which totals the export of a directory holds.
+type exportedStats struct {
+	hasSize, hasUsage, hasItemCount bool
+	// ownUsageInTotal tells that the own usage of the directory is folded
+	// into its total usage, as older gdu versions wrote it
+	ownUsageInTotal bool
+}
+
 // parseDirectoryMetadata decodes the directory item; the top directory is
-// named by its path, any other by its name.
-func parseDirectoryMetadata(item any, top bool) (
-	dir *Dir,
-	hasSize bool,
-	hasUsage bool,
-	hasItemCount bool,
-	err error,
-) {
+// named by its path, any other by its name. byGdu tells that gdu wrote the
+// export.
+func parseDirectoryMetadata(item any, top, byGdu bool) (dir *Dir, stats exportedStats, err error) {
 	dirMap, ok := item.(map[string]any)
 	if !ok {
-		return nil, false, false, false, errors.New("directory item is not a map")
+		return nil, stats, errors.New("directory item is not a map")
 	}
 	name, ok := dirMap["name"].(string)
 	if !ok {
-		return nil, false, false, false, errors.New("directory name is not a string")
+		return nil, stats, errors.New("directory name is not a string")
 	}
 
 	dir = &Dir{File: &File{Flag: ' '}}
@@ -161,25 +181,37 @@ func parseDirectoryMetadata(item any, top bool) (
 	if readError, ok := dirMap["read_error"].(bool); ok && readError {
 		dir.Flag = '!'
 	}
-	if asize, ok := dirMap["asize"].(float64); ok {
-		dir.Size = int64(asize)
-		hasSize = true
+	asize, hasAsize := dirMap["asize"].(float64)
+	dsize, hasDsize := dirMap["dsize"].(float64)
+	totalSize, hasTotalSize := dirMap[totalSizeKey].(float64)
+	totalUsage, hasTotalUsage := dirMap[totalUsageKey].(float64)
+	if byGdu && !hasTotalSize && !hasTotalUsage {
+		// an older gdu wrote the totals as asize and dsize
+		totalSize, hasTotalSize = asize, hasAsize
+		totalUsage, hasTotalUsage = dsize, hasDsize
+		stats.ownUsageInTotal = hasDsize
+	} else {
+		dir.OwnUsage = int64(dsize)
 	}
-	if dsize, ok := dirMap["dsize"].(float64); ok {
-		dir.Usage = int64(dsize)
-		hasUsage = true
+	if hasTotalSize {
+		dir.Size = int64(totalSize)
+		stats.hasSize = true
+	}
+	if hasTotalUsage {
+		dir.Usage = int64(totalUsage)
+		stats.hasUsage = true
 	}
 	if itemCount, ok := dirMap["items"].(float64); ok {
 		dir.ItemCount = int64(itemCount)
-		hasItemCount = true
+		stats.hasItemCount = true
 	}
 
 	if !top {
 		if !isPathElement(name) {
-			return nil, false, false, false, fmt.Errorf("invalid directory name %q", name)
+			return nil, stats, fmt.Errorf("invalid directory name %q", name)
 		}
 		dir.Name = name
-		return dir, hasSize, hasUsage, hasItemCount, nil
+		return dir, stats, nil
 	}
 
 	slashPos := strings.LastIndex(name, "/")
@@ -190,7 +222,7 @@ func parseDirectoryMetadata(item any, top bool) (
 		dir.Name = name
 	}
 
-	return dir, hasSize, hasUsage, hasItemCount, nil
+	return dir, stats, nil
 }
 
 func preserveTruncatedStats(dir *Dir, hasSize, hasUsage, hasItemCount bool) {

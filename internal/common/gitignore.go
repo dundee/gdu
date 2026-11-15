@@ -7,22 +7,29 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 )
 
-// readGitignoreFile returns the patterns of the .gitignore-style file
-// ignoreFile as regex fragments. Patterns with a leading / are matched
-// relative to scanRoots. Blank lines and # comments are skipped. Negated (!)
-// and match-everything patterns are rejected with an error rather than
-// skipped, because both would silently make gdu report less than is really
-// on disk.
-func readGitignoreFile(ignoreFile string, scanRoots []string) ([]string, error) {
-	var fragments []string
+// gitignorePatterns are the patterns of a .gitignore-style file. Those naming
+// a directory wherever it lies are tails matched against the last elements
+// of a path (see ignore.Pattern); the others are regex fragments matched
+// against the whole path.
+type gitignorePatterns struct {
+	tails     [][]string
+	fragments []string
+}
 
+// readGitignoreFile returns the patterns of the .gitignore-style file
+// ignoreFile. Patterns with a leading / are matched relative to scanRoots.
+// Blank lines and # comments are skipped. Negated (!) and match-everything
+// patterns are rejected with an error rather than skipped, because both
+// would silently make gdu report less than is really on disk.
+func readGitignoreFile(ignoreFile string, scanRoots []string) (patterns gitignorePatterns, err error) {
 	file, err := os.Open(ignoreFile)
 	if err != nil {
-		return nil, err
+		return patterns, err
 	}
 	defer file.Close()
 
@@ -33,7 +40,7 @@ func readGitignoreFile(ignoreFile string, scanRoots []string) ([]string, error) 
 			continue
 		}
 		if strings.HasPrefix(pattern, "!") {
-			return nil, fmt.Errorf(
+			return patterns, fmt.Errorf(
 				"negated pattern %q on line %d of %s is not supported: gdu prunes whole "+
 					"directories, so an already ignored directory cannot be un-ignored; "+
 					"remove the line or drop the pattern it negates",
@@ -41,16 +48,46 @@ func readGitignoreFile(ignoreFile string, scanRoots []string) ([]string, error) 
 		}
 		fragment, err := TranslateGitignorePattern(pattern, scanRoots)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pattern %q on line %d of %s: %w",
+			return patterns, fmt.Errorf("invalid pattern %q on line %d of %s: %w",
 				pattern, lineNo, ignoreFile, err)
 		}
-		fragments = append(fragments, fragment)
+		if tail, ok := gitignoreTail(pattern); ok {
+			patterns.tails = append(patterns.tails, tail)
+			continue
+		}
+		patterns.fragments = append(patterns.fragments, fragment)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	return patterns, scanner.Err()
+}
+
+// gitignoreClass is a character class gitignoreTail takes: no escapes, no
+// nested brackets, no ] first.
+var gitignoreClass = regexp.MustCompile(`\[[!^]?[^\[\]\\]+\]`)
+
+// gitignoreTail returns the path.Match patterns of the last elements of a
+// path the gitignore pattern matches, when it matches a directory wherever
+// it lies: a pattern which is not anchored, such as node_modules, *.log or
+// build/Release. ok is false for any other pattern, such as an anchored one
+// or one holding **, which is matched by the regular expression
+// TranslateGitignorePattern makes of it; that does the same for these,
+// except that a class never matches a separator, as in git.
+func gitignoreTail(pattern string) (tail []string, ok bool) {
+	body, rooted := stripGitignoreDecorations(pattern)
+	if rooted || body == "" || strings.Contains(body, `\`) || strings.Contains(body, "**") {
+		return nil, false
 	}
-	return fragments, nil
+	for _, element := range strings.Split(body, "/") {
+		if strings.ContainsAny(gitignoreClass.ReplaceAllString(element, ""), "[]") {
+			return nil, false
+		}
+		element = strings.ReplaceAll(element, "[!", "[^")
+		if _, err := path.Match(element, ""); err != nil {
+			return nil, false
+		}
+		tail = append(tail, element)
+	}
+	return tail, true
 }
 
 // TranslateGitignorePattern converts one .gitignore-style pattern into a

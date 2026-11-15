@@ -7,7 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 )
@@ -39,6 +38,12 @@ func (zf *ZipFile) GetType() string {
 func (zf *ZipFile) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttributes) error {
 	// Use the embedded File's EncodeJSON method
 	return zf.File.EncodeJSON(writer, topLevel, attributes)
+}
+
+// itemStats returns the totals of the directory, computed when the archive
+// was opened (see finishArchive)
+func (zd *ZipDir) itemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
+	return zd.ItemCount, zd.Size, zd.Usage
 }
 
 // GetType returns type of zip directory
@@ -167,9 +172,7 @@ func ensureZipDirExists(dirMap map[string]*ZipDir, dirPath, zipPath string, root
 			File: &File{
 				Name:   path.Base(dirPath),
 				Flag:   'Z',
-				Size:   4096, // virtual directory size
-				Usage:  4096,
-				Mtime:  time.Now(),
+				Mtime:  rootDir.Mtime,
 				Parent: parent,
 			},
 			ItemCount: 1,
@@ -180,23 +183,4 @@ func ensureZipDirExists(dirMap map[string]*ZipDir, dirPath, zipPath string, root
 
 	dirMap[dirPath] = newDir
 	parent.AddFile(newDir)
-}
-
-// getZipFileSize gets the total uncompressed size of a zip file
-func getZipFileSize(zipPath string) (uncompressed, compressed int64, err error) {
-	reader, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer reader.Close()
-
-	var uncompressedSize, compressedSize int64
-	for _, f := range reader.File {
-		if !f.FileInfo().IsDir() {
-			uncompressedSize += int64(f.UncompressedSize64)
-			compressedSize += int64(f.CompressedSize64)
-		}
-	}
-
-	return uncompressedSize, compressedSize, nil
 }
