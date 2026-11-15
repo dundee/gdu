@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -254,13 +255,18 @@ func (ui *UI) quit(printCurrentDirPath bool) {
 
 // shouldConfirmQuit returns true when quitting would discard the work of a scan
 // that took a noticeable amount of time, whether it is still running or already
-// finished.
+// finished, and not kept in a database.
 func (ui *UI) shouldConfirmQuit() bool {
 	if !ui.confirmQuit {
 		return false
 	}
 	if ui.scanning {
 		return time.Since(ui.scanStart) >= confirmQuitMinScanDuration
+	}
+	// a database keeps the results of a scan once it has ended, so
+	// quitting loses nothing
+	if _, stored := ui.Analyzer.(analyze.Database); stored {
+		return false
 	}
 	return ui.currentDir != nil && ui.scanDuration >= confirmQuitMinScanDuration
 }

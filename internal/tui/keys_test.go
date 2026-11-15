@@ -16,6 +16,8 @@ import (
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/internal/testdir"
 	"github.com/dundee/gdu/v5/pkg/analyze"
+	"github.com/dundee/gdu/v5/pkg/analyze/badger"
+	"github.com/dundee/gdu/v5/pkg/analyze/sqlite"
 	"github.com/dundee/gdu/v5/pkg/device"
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
@@ -2003,4 +2005,42 @@ func TestQuitAfterDeletingQuitsAtOnceWithoutDeletions(t *testing.T) {
 	ui.quitAfterDeleting(func() { quit = true })
 
 	assert.True(t, quit)
+}
+
+// A database keeps the results of a scan once it has ended, so quitting
+// after a long one does not ask; a scan still running would be lost, so
+// quitting it still does.
+func TestQuitDoesNotConfirmWithADatabase(t *testing.T) {
+	fin := testdir.CreateTestDir()
+	defer fin()
+	for name, create := range map[string]func(t *testing.T) analyze.Analyzer{
+		"badger": func(t *testing.T) analyze.Analyzer {
+			return badger.CreateAnalyzer(filepath.Join(t.TempDir(), "gdu.badger"))
+		},
+		"sqlite": func(t *testing.T) analyze.Analyzer {
+			a, err := sqlite.CreateAnalyzer(filepath.Join(t.TempDir(), "gdu.sqlite"))
+			require.NoError(t, err)
+			return a
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			simScreen := testapp.CreateSimScreen()
+			defer simScreen.Fini()
+			ui := CreateUI(testapp.CreateMockedApp(false), simScreen, &bytes.Buffer{}, create(t), &config.Settings{})
+			ui.done = make(chan struct{})
+			require.NoError(t, ui.AnalyzePath("test_dir", nil))
+			<-ui.done
+			for _, f := range ui.app.(*testapp.MockedApp).GetUpdateDraws() {
+				f()
+			}
+			ui.scanDuration = 10 * time.Second
+
+			assert.Nil(t, ui.keyPressed(tcell.NewEventKey(tcell.KeyRune, 'q', 0)))
+			assert.False(t, ui.pages.HasPage("confirm"), "the results are saved")
+
+			ui.scanning = true
+			ui.scanStart = time.Now().Add(-10 * time.Second)
+			assert.True(t, ui.shouldConfirmQuit(), "a running scan is not saved yet")
+		})
+	}
 }
