@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +58,7 @@ func TestSetAnalyzer(t *testing.T) {
 type MockedAnalyzer struct{}
 
 // AnalyzeDir returns nothing
-func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, analyze.Options) fs.Item {
+func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, analyze.Options) analyze.Node {
 	return nil
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/dundee/gdu/v5/internal/common"
 	"github.com/dundee/gdu/v5/pkg/analyze"
 	"github.com/dundee/gdu/v5/pkg/fs"
+	log "github.com/sirupsen/logrus"
 )
 
 // Phase is the stage a running scan is in.
@@ -53,7 +54,7 @@ var ErrNoDatabase = errors.New("reading a stored analysis needs a database (--db
 // storedAnalyzer is an analyzer storing its results in a database (--db),
 // from which the analysis of an earlier scan can be loaded.
 type storedAnalyzer interface {
-	LoadAnalysis(path string) (fs.Item, error)
+	LoadAnalysis(path string) (analyze.Node, error)
 }
 
 // Session is the analysis a frontend presents, and every way of producing or
@@ -69,7 +70,7 @@ type Session struct {
 
 	// mu guards the fields below
 	mu    sync.RWMutex
-	root  fs.Item
+	root  analyze.Node
 	links *fs.HardLinks
 	// the analyzer, phase and root number of the running scan, as reported
 	// to observers
@@ -86,7 +87,7 @@ func New(settings *common.UI) *Session {
 
 // Root returns the top of the tree: a scanned root, or the virtual top level
 // dir holding several of them. It is nil until the first scan or load.
-func (s *Session) Root() fs.Item {
+func (s *Session) Root() analyze.Node {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.root
@@ -130,7 +131,7 @@ func (s *Session) HardLinks(item fs.Item) fs.Files {
 
 // SetRoot makes root, an analysis made by other means, the tree of the
 // session as it is.
-func (s *Session) SetRoot(root fs.Item) {
+func (s *Session) SetRoot(root analyze.Node) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.root = root
@@ -141,14 +142,14 @@ func (s *Session) SetRoot(root fs.Item) {
 // session, which it returns. Several paths are grouped under the virtual top
 // level dir. Cancelling ctx stops the scan, which then keeps what was found so
 // far and skips the roots it had not started yet.
-func (s *Session) Scan(ctx context.Context, paths []string, observe Observer) fs.Item {
+func (s *Session) Scan(ctx context.Context, paths []string, observe Observer) analyze.Node {
 	if len(paths) == 0 {
 		return nil
 	}
 	stop := s.watch(observe, len(paths))
 	defer stop()
 
-	roots := make([]fs.Item, 0, len(paths))
+	roots := make([]analyze.Node, 0, len(paths))
 	for i, path := range paths {
 		root, ok := s.walk(ctx, path, i+1)
 		if !ok {
@@ -159,7 +160,11 @@ func (s *Session) Scan(ctx context.Context, paths []string, observe Observer) fs
 
 	root := roots[0]
 	if len(paths) > 1 {
-		root = analyze.CreateVirtualRootDir(roots...)
+		items := make([]fs.Item, len(roots))
+		for i, r := range roots {
+			items[i] = r
+		}
+		root = analyze.CreateVirtualRootDir(items...)
 	}
 	// the tree can be previewed already
 	s.tree.Lock()
@@ -195,23 +200,20 @@ func (s *Session) Rescan(ctx context.Context, dir fs.Item, observe Observer) fs.
 
 	s.tree.Lock()
 	defer s.tree.Unlock()
-	scanned.SetParent(parent)
 	// replace dir itself: under the virtual top level dir, scanned roots can
 	// share a name
-	parent.RemoveFile(dir)
-	parent.AddFile(scanned)
-
-	top := parent
-	for top.GetParent() != nil {
-		top = top.GetParent()
+	if err := analyze.ReplaceEntry(parent, dir, scanned); err != nil {
+		log.Printf("Rescanning %s: %v", dir.GetPath(), err)
+		return dir
 	}
-	s.finalize(top, s.settings.IsFilteringFiles())
+
+	s.finalize(s.Root(), s.settings.IsFilteringFiles())
 	return scanned
 }
 
 // Load reads an analysis exported as JSON and makes it the tree of the
 // session.
-func (s *Session) Load(input io.Reader) (fs.Item, error) {
+func (s *Session) Load(input io.Reader) (analyze.Node, error) {
 	dir, err := analyze.ReadAnalysis(input)
 	if err != nil {
 		return nil, err
@@ -229,7 +231,7 @@ func (s *Session) Load(input io.Reader) (fs.Item, error) {
 // Open makes the analysis of path stored in the database by an earlier scan
 // the tree of the session. It fails with ErrNoDatabase when the analyzer has
 // no database.
-func (s *Session) Open(path string) (fs.Item, error) {
+func (s *Session) Open(path string) (analyze.Node, error) {
 	stored, ok := s.settings.Analyzer.(storedAnalyzer)
 	if !ok {
 		return nil, ErrNoDatabase
@@ -248,8 +250,8 @@ func (s *Session) Open(path string) (fs.Item, error) {
 //
 // It reads holding TreeLock, which the caller must not hold, as the tree may
 // be the session's already.
-func (s *Session) Snapshot() fs.Item {
-	if analyzer, ok := s.settings.Analyzer.(interface{ GetCurrentDir() fs.Item }); ok {
+func (s *Session) Snapshot() analyze.Node {
+	if analyzer, ok := s.settings.Analyzer.(interface{ GetCurrentDir() analyze.Node }); ok {
 		s.tree.RLock()
 		defer s.tree.RUnlock()
 		return analyzer.GetCurrentDir()
@@ -261,7 +263,7 @@ func (s *Session) Snapshot() fs.Item {
 // without scanning, when ctx was cancelled before it got to path. The first
 // root is always walked, even if only to stop at once, so that a scan always
 // ends with a tree.
-func (s *Session) walk(ctx context.Context, path string, number int) (fs.Item, bool) {
+func (s *Session) walk(ctx context.Context, path string, number int) (analyze.Node, bool) {
 	if number > 1 && ctx.Err() != nil {
 		return nil, false
 	}
@@ -277,7 +279,7 @@ func (s *Session) walk(ctx context.Context, path string, number int) (fs.Item, b
 // finalize computes the totals of the tree topped by root, with a fresh
 // hard-link index, and makes it the tree of the session. The caller holds
 // TreeLock for writing.
-func (s *Session) finalize(root fs.Item, filtering bool) {
+func (s *Session) finalize(root analyze.Node, filtering bool) {
 	s.mu.Lock()
 	s.phase = Finalizing
 	s.mu.Unlock()

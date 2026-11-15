@@ -1,10 +1,12 @@
 package analyze
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleDirGetName(t *testing.T) {
@@ -136,16 +138,34 @@ func TestSimpleDirGetFilesDirVsFile(t *testing.T) {
 	}
 }
 
-func TestSimpleDirPanics(t *testing.T) {
-	d := &SimpleDir{}
+// The top-dir analyzer's directory is an item like any other: it reads, takes
+// a parent and exports, rather than panicking.
+func TestSimpleDirIsAnItem(t *testing.T) {
+	d := &SimpleDir{
+		SimpleFile: SimpleFile{Name: "top", Flag: ' '},
+		BasePath:   "/base",
+		Files: []SimpleFile{
+			{Name: "sub", IsDir: true, Size: 10, Usage: 4096, ItemCount: 3, Flag: ' '},
+			{Name: "file", Size: 5, Usage: 4096, ItemCount: 1, Flag: ' '},
+		},
+	}
+	d.UpdateStats(false)
 
-	assert.Panics(t, func() { d.GetType() })
-	assert.Panics(t, func() { d.GetParent() })
-	assert.Panics(t, func() { d.SetParent(nil) })
-	assert.Panics(t, func() { d.GetMultiLinkedInode() })
-	assert.Panics(t, func() { d.EncodeJSON(nil, false, nil) })
-	assert.Panics(t, func() { d.GetItemStats(nil, false) })
-	assert.Panics(t, func() { d.AddFile(nil) })
-	assert.Panics(t, func() { d.RemoveFile(nil) })
-	assert.Panics(t, func() { d.RemoveFileByName("x") })
+	assert.Equal(t, "Directory", d.GetType())
+	assert.Nil(t, d.GetParent())
+	assert.Equal(t, uint64(0), d.GetMultiLinkedInode())
+	parent := &Dir{File: &File{Name: "parent"}}
+	d.SetParent(parent)
+	assert.Same(t, parent, d.GetParent())
+
+	count, size, usage := d.itemStats(nil, false)
+	assert.Equal(t, int64(5), count)
+	assert.Equal(t, int64(15), size)
+	assert.Equal(t, int64(8192), usage)
+
+	var buff bytes.Buffer
+	require.NoError(t, d.EncodeJSON(&buff, true, nil))
+	assert.Contains(t, buff.String(), `"name":"/base/top"`)
+	assert.Contains(t, buff.String(), `"name":"sub"`)
+	assert.Contains(t, buff.String(), `"name":"file","asize":5`)
 }

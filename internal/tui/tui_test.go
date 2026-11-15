@@ -468,10 +468,9 @@ func TestMoveToTrashSelectedInBackground(t *testing.T) {
 	ui.done = make(chan struct{})
 	ui.SetDeleteInBackground()
 	var trashed string
-	ui.trasher = func(dir, item fs.Item) error {
+	ui.trasher = func(item fs.Item) (bool, error) {
 		trashed = item.GetName()
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}
 
 	assert.Equal(t, 1, ui.table.GetRowCount())
@@ -1062,10 +1061,9 @@ func TestConfirmMoveToTrashSelectedYes(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.done = make(chan struct{})
 	var trashed string
-	ui.trasher = func(dir, item fs.Item) error {
+	ui.trasher = func(item fs.Item) (bool, error) {
 		trashed = item.GetName()
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}
 	ui.table.Select(0, 0)
 	selected := ui.table.GetCell(0, 0).GetReference().(fs.Item).GetName()
@@ -1084,10 +1082,9 @@ func TestConfirmMoveToTrashMarkedYes(t *testing.T) {
 	ui := getAnalyzedPathMockedApp(t, true, true, false)
 	ui.done = make(chan struct{})
 	var trashed string
-	ui.trasher = func(dir, item fs.Item) error {
+	ui.trasher = func(item fs.Item) (bool, error) {
 		trashed = item.GetName()
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}
 	markRow(t, ui, 0)
 

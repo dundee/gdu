@@ -5,8 +5,6 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
-
-	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 // BaseAnalyzer provides what all analyzers have in common: the progress of
@@ -111,7 +109,7 @@ func (a *BaseAnalyzer) setCurrentDir(p *preview) {
 // the snapshot without mutating the live scan state. Once the scan is over, the
 // tree is its caller's, who must keep it from changing meanwhile, as the
 // session does with its tree lock.
-func (a *BaseAnalyzer) GetCurrentDir() fs.Item {
+func (a *BaseAnalyzer) GetCurrentDir() Node {
 	p := a.preview.Load()
 	if p == nil {
 		return nil

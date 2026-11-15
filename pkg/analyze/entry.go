@@ -104,7 +104,7 @@ func (s *scan) resolveFile(dirPath string, d os.DirEntry, opts resolveOptions) (
 // item returns the entry as an item of the in-memory tree, in parent.
 func (e *fileEntry) item(parent fs.Item) fs.Item {
 	if e.archive != nil {
-		e.archive.SetParent(parent)
+		setParent(e.archive, parent)
 		return e.archive
 	}
 	return &File{

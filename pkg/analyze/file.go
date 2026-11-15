@@ -111,10 +111,10 @@ func CreateFileItem(path string, info os.FileInfo) *File {
 	}
 }
 
-// GetItemStats returns 1 as count of items, apparent usage and real usage of
+// itemStats returns 1 as count of items, apparent usage and real usage of
 // this file. A file with several hard links is counted by its directory,
 // which knows its device.
-func (f *File) GetItemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
+func (f *File) itemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
 	return 1, f.GetSize(), f.GetUsage()
 }
 
@@ -126,20 +126,8 @@ func (f *File) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] 
 	return func(yield func(fs.Item) bool) {}
 }
 
-// AddFile panics on file
-func (f *File) AddFile(item fs.Item) {
-	panic("AddFile should not be called on file")
-}
-
-// RemoveFile panics on file
-func (f *File) RemoveFile(item fs.Item) {
-	panic("RemoveFile should not be called on file")
-}
-
-// RemoveFileByName panics on file
-func (f *File) RemoveFileByName(name string) {
-	panic("RemoveFileByName should not be called on file")
-}
+// dirType is what GetType returns for a directory.
+const dirType = "Directory"
 
 // EmptyDirSize is the apparent size gdu assigns to a directory that has no
 // counted children. It is a fixed sentinel (not the real filesystem block
@@ -205,7 +193,7 @@ func aggregateDirEntries(
 	totals = dirTotals{itemCount: 1, entries: len(entries)}
 
 	for _, entry := range entries {
-		count, size, usage := entry.GetItemStats(links, filteringFiles)
+		count, size, usage := totalsOf(entry, links, filteringFiles)
 		if ino := entry.GetMultiLinkedInode(); ino != 0 && !entry.IsDir() &&
 			!links.Add(fs.InodeKey{Dev: dev, Ino: ino}, entry) {
 			size, usage = 0, 0
@@ -320,7 +308,7 @@ func snapshotItem(source, parent fs.Item) fs.Item {
 
 func reparentSnapshotChildren(dir *Dir, parent fs.Item) {
 	for _, child := range dir.Files {
-		child.SetParent(parent)
+		setParent(child, parent)
 	}
 }
 
@@ -386,7 +374,7 @@ func (f *Dir) GetFiles(sortBy fs.SortBy, order fs.SortOrder) iter.Seq[fs.Item] {
 
 // GetType returns name type of item
 func (f *Dir) GetType() string {
-	return "Directory"
+	return dirType
 }
 
 // GetItemCount returns number of files in dir
@@ -410,8 +398,8 @@ func (f *Dir) GetPath() string {
 	return f.Name
 }
 
-// GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *Dir) GetItemStats(links *fs.HardLinks, filteringFiles bool) (itemCount, size, usage int64) {
+// itemStats returns item count, apparent usage and real usage of this dir
+func (f *Dir) itemStats(links *fs.HardLinks, filteringFiles bool) (itemCount, size, usage int64) {
 	f.updateStats(links, filteringFiles)
 	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }
@@ -487,16 +475,4 @@ func sortFiles(files fs.Files, sortBy fs.SortBy, order fs.SortOrder) {
 	} else {
 		sort.Sort(sorter)
 	}
-}
-
-// RemoveFileByName removes item by name from dir
-func (f *Dir) RemoveFileByName(name string) {
-	idx, ok := f.Files.FindByName(name)
-	if !ok {
-		return
-	}
-	item := f.Files[idx]
-	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
-
-	removeFromTotals(f, item)
 }

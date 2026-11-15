@@ -60,15 +60,15 @@ var trashCommandOS = trashCommandOSOps{
 // via $1, $@ or $*, which commands taking their destination last need. The
 // GDU_TRASH_PATH environment variable is set to the same absolute path.
 //
-// The item is removed from the in-memory tree only once the command succeeded
-// and the path is really gone; a command which leaves the item in place (an
-// interactive command answered with "no", for example) is not an error and
-// leaves the tree untouched.
-func TrashCommand(command string) func(dir, item fs.Item) error {
-	return func(dir, item fs.Item) error {
+// The item counts as moved only once the command succeeded and the path is
+// really gone; a command which leaves the item in place (an interactive
+// command answered with "no", for example) is not an error and leaves the
+// tree untouched.
+func TrashCommand(command string) Trash {
+	return func(item fs.Item) (bool, error) {
 		absPath, err := trashCommandOS.abs(item.GetPath())
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		var stderr bytes.Buffer
@@ -76,17 +76,13 @@ func TrashCommand(command string) func(dir, item fs.Item) error {
 		envv := append(trashCommandOS.environ(), trashPathEnvVar+"="+absPath)
 
 		if err := trashCommandOS.run(shellBin, argv, envv, &stderr); err != nil {
-			return commandError(command, err, stderr.String())
+			return false, commandError(command, err, stderr.String())
 		}
 
-		if _, err := trashCommandOS.lstat(absPath); err == nil {
-			// The command reported success but the item is still there. Keep the
-			// tree in sync with the filesystem and leave the item listed.
-			return nil
-		}
-
-		dir.RemoveFile(item)
-		return nil
+		// the command may report success and leave the item there, which then
+		// stays listed
+		_, err = trashCommandOS.lstat(absPath)
+		return err != nil, nil
 	}
 }
 

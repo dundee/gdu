@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
 
@@ -73,8 +74,11 @@ func (f *Dir) EncodeJSON(writer io.Writer, topLevel bool, attributes fs.JSONAttr
 				return err
 			}
 		}
-		err := item.EncodeJSON(writer, false, attributes)
-		if err != nil {
+		node, ok := item.(Node)
+		if !ok {
+			return fmt.Errorf("encoding %s: not an item of an analyzed tree", item.GetPath())
+		}
+		if err := node.EncodeJSON(writer, false, attributes); err != nil {
 			return err
 		}
 	}

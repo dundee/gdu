@@ -3,8 +3,6 @@ package analyze
 import (
 	"context"
 	"time"
-
-	"github.com/dundee/gdu/v5/pkg/fs"
 )
 
 // Analyzer scans directories.
@@ -12,7 +10,7 @@ type Analyzer interface {
 	// AnalyzeDir scans the directory at path. Cancelling ctx stops the scan,
 	// which then returns what it found so far. An analyzer runs one scan at
 	// a time.
-	AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item
+	AnalyzeDir(ctx context.Context, path string, opts Options) Node
 	// GetProgress returns the progress of the running scan, or of the last
 	// one. It is safe to call during a scan.
 	GetProgress() Progress

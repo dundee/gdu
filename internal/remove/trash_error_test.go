@@ -105,7 +105,7 @@ func TestMoveItemToTrashSetupErrors(t *testing.T) {
 			}
 			item := &analyze.File{Name: "item", Parent: parent}
 
-			err := MoveItemToTrash(nil, item)
+			_, err := MoveItemToTrash(item)
 
 			require.ErrorIs(t, err, sentinel)
 		})
@@ -128,7 +128,7 @@ func TestMoveItemToTrashExhaustsDestinationRetries(t *testing.T) {
 	}
 	item := &analyze.File{Name: "item", Parent: parent}
 
-	err := MoveItemToTrash(nil, item)
+	_, err := MoveItemToTrash(item)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not find unique trash name")

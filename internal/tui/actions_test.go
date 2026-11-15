@@ -178,7 +178,7 @@ type blockingAnalyzer struct {
 	started chan struct{}
 }
 
-func (a *blockingAnalyzer) AnalyzeDir(ctx context.Context, path string, opts analyze.Options) fs.Item {
+func (a *blockingAnalyzer) AnalyzeDir(ctx context.Context, path string, opts analyze.Options) analyze.Node {
 	close(a.started)
 	<-ctx.Done()
 	return a.MockedAnalyzer.AnalyzeDir(ctx, path, opts)
@@ -507,7 +507,7 @@ func TestShowInfoWithHardlinks(t *testing.T) {
 	file.Mli = 1
 	file2.Mli = 1
 
-	ui.currentDir.UpdateStats(false)
+	ui.currentDir.(analyze.Node).UpdateStats(false)
 
 	assert.Equal(t, "test_dir", ui.currentDir.GetName())
 

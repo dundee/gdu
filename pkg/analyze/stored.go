@@ -32,7 +32,7 @@ func NewStoredAnalyzer(store RecordStore) *StoredAnalyzer {
 
 // LoadAnalysis returns the analysis of path stored in the database by an
 // earlier scan. It fails when the database holds no analysis of path.
-func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
+func (a *StoredAnalyzer) LoadAnalysis(path string) (Node, error) {
 	closeFn := a.storage.Open()
 	defer closeFn()
 
@@ -47,7 +47,7 @@ func (a *StoredAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 }
 
 // AnalyzeDir analyzes given path
-func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
+func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) Node {
 	s := a.begin(ctx, opts)
 
 	closeFn := a.storage.Open()
@@ -379,21 +379,6 @@ func (f *StoredDir) RemoveFile(item fs.Item) {
 	removeFromTotals(f, item)
 }
 
-// RemoveFileByName removes file by name from stored directory
-func (f *StoredDir) RemoveFileByName(name string) {
-	closeFn := f.storage.Open()
-	defer closeFn()
-
-	idx, ok := f.Files.FindByName(name)
-	if !ok {
-		return
-	}
-	item := f.Files[idx]
-	f.Files = append(f.Files[:idx], f.Files[idx+1:]...)
-
-	removeFromTotals(f, item)
-}
-
 // adjustStats adds the deltas to the totals of the directory and stores it.
 func (f *StoredDir) adjustStats(itemCount, size, usage int64) {
 	closeFn := f.storage.Open()
@@ -405,8 +390,8 @@ func (f *StoredDir) adjustStats(itemCount, size, usage int64) {
 	f.store()
 }
 
-// GetItemStats returns item count, apparent usage and real usage of this dir
-func (f *StoredDir) GetItemStats(links *fs.HardLinks, filteringFiles bool) (itemCount, size, usage int64) {
+// itemStats returns item count, apparent usage and real usage of this dir
+func (f *StoredDir) itemStats(links *fs.HardLinks, filteringFiles bool) (itemCount, size, usage int64) {
 	f.updateStats(links, filteringFiles)
 	return f.GetItemCount(), f.GetSize(), f.GetUsage()
 }

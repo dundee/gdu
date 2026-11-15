@@ -257,10 +257,9 @@ func TestDeleteNodeEndpointTrashModeUsesTrasher(t *testing.T) {
 	scan(t, ui, root)
 
 	var trashedPath string
-	ui.trasher = func(dir, item fs.Item) error {
+	ui.trasher = func(item fs.Item) (bool, error) {
 		trashedPath = item.GetPath()
-		dir.RemoveFile(item)
-		return nil
+		return true, nil
 	}
 
 	srv := httptest.NewServer(ui.routes())
@@ -293,8 +292,8 @@ func TestDeleteNodeEndpointReturnsErrorWhenRemoveFuncFails(t *testing.T) {
 	root := makeTree(t)
 	scan(t, ui, root)
 
-	ui.trasher = func(dir fs.Item, item fs.Item) error {
-		return errors.New("trash command failed")
+	ui.trasher = func(fs.Item) (bool, error) {
+		return false, errors.New("trash command failed")
 	}
 
 	srv := httptest.NewServer(ui.routes())
@@ -321,7 +320,7 @@ func TestDeleteNodeEndpointReportsItemLeftInPlaceByTrash(t *testing.T) {
 	scan(t, ui, root)
 
 	// like a trash command that exits 0 without moving the item
-	ui.trasher = func(fs.Item, fs.Item) error { return nil }
+	ui.trasher = func(fs.Item) (bool, error) { return false, nil }
 
 	srv := httptest.NewServer(ui.routes())
 	defer srv.Close()

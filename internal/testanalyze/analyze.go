@@ -14,7 +14,7 @@ import (
 type MockedAnalyzer struct{}
 
 // AnalyzeDir returns dir with files with different size exponents
-func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, analyze.Options) fs.Item {
+func (a *MockedAnalyzer) AnalyzeDir(context.Context, string, analyze.Options) analyze.Node {
 	dir := &analyze.Dir{
 		File: &analyze.File{
 			Name:  "test_dir",
@@ -80,8 +80,7 @@ func ItemFromDirWithSleep(dir, file fs.Item) error {
 	if err := os.RemoveAll(file.GetPath()); err != nil {
 		return err
 	}
-	dir.RemoveFile(file)
-	return nil
+	return analyze.RemoveEntry(dir, file)
 }
 
 // ItemFromDirWithSleepAndErr returns error

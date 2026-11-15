@@ -11,7 +11,6 @@ import (
 	"github.com/dundee/gdu/v5/internal/testanalyze"
 	"github.com/dundee/gdu/v5/internal/testapp"
 	"github.com/dundee/gdu/v5/pkg/analyze"
-	"github.com/dundee/gdu/v5/pkg/fs"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/require"
@@ -105,7 +104,7 @@ func newCancelRaceAnalyzer() *cancelRaceAnalyzer {
 	}
 }
 
-func (a *cancelRaceAnalyzer) AnalyzeDir(ctx context.Context, path string, opts analyze.Options) fs.Item {
+func (a *cancelRaceAnalyzer) AnalyzeDir(ctx context.Context, path string, opts analyze.Options) analyze.Node {
 	stop := context.AfterFunc(ctx, a.cancel)
 	defer stop()
 	close(a.started)

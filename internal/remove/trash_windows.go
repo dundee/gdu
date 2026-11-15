@@ -9,6 +9,6 @@ import (
 )
 
 // MoveItemToTrash is not supported on Windows; use Unix XDG trash builds instead.
-func MoveItemToTrash(dir, item fs.Item) error {
-	return fmt.Errorf("move to trash is not supported on Windows")
+func MoveItemToTrash(fs.Item) (moved bool, err error) {
+	return false, fmt.Errorf("move to trash is not supported on Windows")
 }

@@ -1,7 +1,8 @@
 // Package analyze scans directories into trees of fs.Item, the way gdu does.
 //
-// A scan builds the tree; UpdateStats then computes the totals of every
-// directory, counting each hard-linked file once:
+// A scan builds the tree and returns its top, a Node; UpdateStats then
+// computes the totals of every directory, counting each hard-linked file
+// once:
 //
 //	analyzer := analyze.CreateAnalyzer()
 //	opts := analyze.Options{FollowSymlinks: true}
@@ -21,6 +22,11 @@
 // results in a database, from which a later run can load them again with
 // LoadAnalysis. They are packages of their own, so that a program not using
 // them does not link the databases.
+//
+// The entries of a tree are fs.Item, which only read it. A Node can also
+// compute the totals of its tree and export it (EncodeJSON). RemoveEntry and
+// ReplaceEntry change a tree, keeping the totals and the hard-link index in
+// step.
 //
 // A tree is not safe for concurrent use: whoever reads it while another
 // goroutine changes it must synchronise the two.

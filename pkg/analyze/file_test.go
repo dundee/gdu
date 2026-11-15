@@ -109,36 +109,6 @@ func TestRemove(t *testing.T) {
 	assert.Equal(t, file2, dir.Files[0])
 }
 
-func TestRemoveByName(t *testing.T) {
-	dir := Dir{
-		File: &File{
-			Name:  "xxx",
-			Size:  5,
-			Usage: 8,
-		},
-		ItemCount: 2,
-	}
-
-	file := &File{
-		Name:   "yyy",
-		Size:   2,
-		Usage:  4,
-		Parent: &dir,
-	}
-	file2 := &File{
-		Name:   "zzz",
-		Size:   3,
-		Usage:  4,
-		Parent: &dir,
-	}
-	dir.Files = fs.Files{file, file2}
-
-	dir.Files = dir.Files.RemoveByName("yyy")
-
-	assert.Equal(t, 1, len(dir.Files))
-	assert.Equal(t, file2, dir.Files[0])
-}
-
 func TestRemoveNotInDir(t *testing.T) {
 	dir := Dir{
 		File: &File{
@@ -166,37 +136,6 @@ func TestRemoveNotInDir(t *testing.T) {
 	assert.Equal(t, false, ok)
 
 	dir.Files = dir.Files.Remove(file2)
-
-	assert.Equal(t, 1, len(dir.Files))
-}
-
-func TestRemoveByNameNotInDir(t *testing.T) {
-	dir := Dir{
-		File: &File{
-			Name:  "xxx",
-			Size:  5,
-			Usage: 8,
-		},
-		ItemCount: 2,
-	}
-
-	file := &File{
-		Name:   "yyy",
-		Size:   2,
-		Usage:  4,
-		Parent: &dir,
-	}
-	file2 := &File{
-		Name:  "zzz",
-		Size:  3,
-		Usage: 4,
-	}
-	dir.Files = fs.Files{file}
-
-	_, ok := dir.Files.IndexOf(file2)
-	assert.Equal(t, false, ok)
-
-	dir.Files = dir.Files.RemoveByName("zzz")
 
 	assert.Equal(t, 1, len(dir.Files))
 }
@@ -371,16 +310,6 @@ func TestGetFiles(t *testing.T) {
 	assert.Equal(t, 0, len(fileFiles))
 }
 
-func TestAddFilePanicsOnFile(t *testing.T) {
-	file := &File{
-		Name: "xxx",
-		Mli:  5,
-	}
-	assert.Panics(t, func() {
-		file.AddFile(file)
-	})
-}
-
 func TestStatsFromJSONArePreserved(t *testing.T) {
 	dir := &Dir{
 		File: &File{
@@ -398,7 +327,7 @@ func TestStatsFromJSONArePreserved(t *testing.T) {
 	assert.Equal(t, int64(2), dir.GetItemCount())
 
 	dir.UpdateStats(true)
-	count, size, usage := dir.GetItemStats(fs.NewHardLinks(), true)
+	count, size, usage := dir.itemStats(fs.NewHardLinks(), true)
 	assert.Equal(t, int64(2), count)
 	assert.Equal(t, int64(4096), size)
 	assert.Equal(t, int64(2048), usage)

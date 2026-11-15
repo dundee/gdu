@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/testdir"
@@ -132,7 +133,8 @@ func TestStoredAnalyzerPopulatesSymlinkTarget(t *testing.T) {
 	a := createStoredAnalyzer("/tmp/badger")
 	dir := a.AnalyzeDir(context.Background(), "test_dir", Options{IgnoreFile: func(_ string) bool { return false }}).(*StoredDir)
 
-	idx, ok := dir.Files.FindByName("link")
+	idx := slices.IndexFunc(dir.Files, func(item fs.Item) bool { return item.GetName() == "link" })
+	ok := idx >= 0
 	assert.True(t, ok, "symlink item should be present in the tree")
 	si, ok := dir.Files[idx].(fs.SymlinkItem)
 	assert.True(t, ok, "File must implement fs.SymlinkItem")

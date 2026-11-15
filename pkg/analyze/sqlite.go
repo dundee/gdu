@@ -505,7 +505,7 @@ func (i *SqliteItem) GetSize() int64 {
 // GetType returns the type of the item
 func (i *SqliteItem) GetType() string {
 	if i.isDir {
-		return "Directory"
+		return dirType
 	}
 	if i.flag == '@' {
 		return "Other"
@@ -697,8 +697,8 @@ func addSqliteString(buff *[]byte, val string) error {
 	return nil
 }
 
-// GetItemStats returns item statistics - hard links already handled during scan
-func (i *SqliteItem) GetItemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
+// itemStats returns item statistics - hard links already handled during scan
+func (i *SqliteItem) itemStats(*fs.HardLinks, bool) (itemCount, size, usage int64) {
 	return i.itemCount, i.size, i.usage
 }
 
@@ -767,17 +767,6 @@ func (i *SqliteItem) RemoveFile(item fs.Item) {
 	}
 }
 
-// RemoveFileByName removes a child by name
-func (i *SqliteItem) RemoveFileByName(name string) {
-	child, err := i.storage.GetChildByName(i.id, name)
-	if err != nil {
-		log.Errorf("Error getting child from database: %v", err)
-		return
-	}
-
-	i.RemoveFile(child)
-}
-
 // SqliteAnalyzer implements Analyzer using SQLite storage
 type SqliteAnalyzer struct {
 	BaseAnalyzer
@@ -826,7 +815,7 @@ func NewSqliteAnalyzer(db *sql.DB) (*SqliteAnalyzer, error) {
 // LoadAnalysis returns the analysis of path stored in the database by an
 // earlier scan. It fails when the database holds no analysis, or the analysis
 // of another path.
-func (a *SqliteAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
+func (a *SqliteAnalyzer) LoadAnalysis(path string) (Node, error) {
 	if !a.storage.HasData() {
 		return nil, fmt.Errorf("the database holds no analysis of %s", path)
 	}
@@ -842,7 +831,7 @@ func (a *SqliteAnalyzer) LoadAnalysis(path string) (fs.Item, error) {
 
 // AnalyzeDir analyzes the given path and stores results in SQLite, replacing
 // whatever the database held before. LoadAnalysis reads a stored analysis.
-func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) fs.Item {
+func (a *SqliteAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Options) Node {
 	s := a.begin(ctx, opts)
 
 	// Clear existing data and store metadata

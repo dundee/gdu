@@ -49,7 +49,7 @@ type UI struct {
 	filteringInput          *tview.InputField
 	typeFilteringInput      *tview.InputField
 	done                    chan struct{}
-	trasher                 func(fs.Item, fs.Item) error
+	trasher                 remove.Trash
 	newDeleter              func(roots []string) itemDeleter
 	exec                    func(argv0 string, argv []string, envv []string) error
 	changeCwdFn             func(string) error

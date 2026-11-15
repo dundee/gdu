@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"io"
 	"iter"
 	"time"
 
@@ -27,7 +26,9 @@ const (
 	SortDesc
 )
 
-// Item is a FS item (file or dir)
+// Item is an item of a scanned tree: a file or a directory. It only reads
+// the tree; analyze.Node adds computing the totals and the export, and
+// package analyze changes trees.
 //
 // A tree of items is not safe for concurrent use. Its owner serialises the
 // changes to it, and the readers hold the owner's read lock, as the session
@@ -42,21 +43,15 @@ type Item interface {
 	GetUsage() int64
 	GetMtime() time.Time
 	GetItemCount() int64
+	// GetParent returns the directory holding the item, or nil for the top
+	// of the tree
 	GetParent() Item
-	SetParent(Item)
+	// GetMultiLinkedInode returns the inode of a file with several hard
+	// links, and 0 for any other item
 	GetMultiLinkedInode() uint64
-	EncodeJSON(writer io.Writer, topLevel bool, attributes JSONAttributes) error
-	// GetItemStats computes the totals of the item, counting the hard-linked
-	// files of its tree in links, and returns them.
-	GetItemStats(links *HardLinks, filteringFiles bool) (itemCount int64, size, usage int64)
-	// UpdateStats computes the totals of the tree topped by the item and
-	// returns the index of its hard-linked files. filteringFiles tells the
-	// totals that the scan left out files by their name or mtime.
-	UpdateStats(filteringFiles bool) *HardLinks
-	AddFile(Item)
+	// GetFiles returns the entries of a directory in the given order, and
+	// nothing for a file
 	GetFiles(SortBy, SortOrder) iter.Seq[Item]
-	RemoveFile(Item)
-	RemoveFileByName(name string)
 }
 
 // SymlinkItem is an optional interface implemented by items that carry a
@@ -79,28 +74,9 @@ func (f Files) IndexOf(file Item) (int, bool) {
 	return 0, false
 }
 
-// FindByName searches name in Files and returns its index
-func (f Files) FindByName(name string) (int, bool) {
-	for i, item := range f {
-		if item.GetName() == name {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
 // Remove removes File from Files
 func (f Files) Remove(file Item) Files {
 	index, ok := f.IndexOf(file)
-	if !ok {
-		return f
-	}
-	return append(f[:index], f[index+1:]...)
-}
-
-// RemoveByName removes File from Files
-func (f Files) RemoveByName(name string) Files {
-	index, ok := f.FindByName(name)
 	if !ok {
 		return f
 	}

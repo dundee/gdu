@@ -100,6 +100,10 @@ to do with them. The stable-order analyzer is gone.
 
 **Strength: Worth exploring**
 
+**Status: Done** (ADR 7). `fs.Item` only reads the tree (12 methods); `analyze.Node`
+adds computing the totals and the export, and is what analyzers return;
+`analyze.RemoveEntry` and `ReplaceEntry` change trees. No item type panics any more.
+
 - **Files:** `pkg/fs/file.go:31-54` (24 methods). Implementations that panic on most of it:
   `analyze/top_dir.go:76-86,122,157-162` (`SimpleDir`), `analyze/stored.go:444`
   (`ParentDir`), `analyze/file.go:157-174` (`File` mutation methods),

@@ -35,7 +35,7 @@ func CreateVirtualRootDir(roots ...fs.Item) *Dir {
 	}
 
 	for _, root := range roots {
-		root.SetParent(dir)
+		setParent(root, dir)
 		dir.AddFile(root)
 	}
 

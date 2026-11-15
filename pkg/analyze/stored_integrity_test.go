@@ -194,7 +194,7 @@ func TestStoredRemoveDirectoryIsStored(t *testing.T) {
 	sub := entry(t, tree, "sub")
 	size, usage, count := tree.GetSize(), tree.GetUsage(), tree.GetItemCount()
 
-	tree.RemoveFile(sub)
+	require.NoError(t, RemoveEntry(tree, sub))
 
 	assert.False(t, hasEntry(tree, "sub"))
 	assert.Equal(t, size-sub.GetSize(), tree.GetSize())
@@ -216,9 +216,8 @@ func TestStoredReplaceFileThenRemoveAnother(t *testing.T) {
 	sub := entry(t, tree, "sub")
 	x := entry(t, sub, "x")
 
-	sub.RemoveFile(x)
-	sub.AddFile(&File{Name: "x", Flag: x.GetFlag(), Parent: sub})
-	sub.RemoveFile(entry(t, sub, "deeper"))
+	require.NoError(t, ReplaceEntry(sub, x, &File{Name: "x", Flag: x.GetFlag()}))
+	require.NoError(t, RemoveEntry(sub, entry(t, sub, "deeper")))
 
 	loaded, err := createStoredAnalyzer(db).LoadAnalysis(root)
 	require.NoError(t, err)
