@@ -7,8 +7,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // dirSink is what an analyzer does with the directories a scan walks: build
@@ -96,7 +94,7 @@ func (w *walker[D]) walkDir(node *walkNode[D], path string) {
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		log.Print(err.Error())
+		w.scan.readError(ReadError{Path: path, Dir: true, Err: err})
 	}
 	w.sink.readDir(node.dir, path, err, len(entries))
 	opts := w.sink.resolveOptions(node.dir)
@@ -116,7 +114,7 @@ func (w *walker[D]) walkDir(node *walkNode[D], path string) {
 
 		file, ok, err := w.scan.resolveFile(path, entry, opts)
 		if err != nil {
-			log.Print(err.Error())
+			w.scan.readError(ReadError{Path: filepath.Join(path, entry.Name()), Err: err})
 			w.sink.fileError(node.dir)
 			continue
 		}

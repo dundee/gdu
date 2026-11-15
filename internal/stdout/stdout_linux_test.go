@@ -4,6 +4,7 @@ package stdout
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
 	"github.com/dundee/gdu/v5/internal/config"
@@ -21,7 +22,7 @@ func TestShowDevicesWithErr(t *testing.T) {
 	output := bytes.NewBuffer(make([]byte, 10))
 
 	getter := device.LinuxDevicesInfoGetter{MountsPath: "/xyzxyz"}
-	ui := CreateStdoutUI(output, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
+	ui := CreateStdoutUI(output, io.Discard, analyze.CreateTopDirAnalyzer(), &config.Settings{Display: config.Display{Progress: true}})
 	err := ui.ListDevices(getter)
 
 	assert.Contains(t, err.Error(), "no such file")
