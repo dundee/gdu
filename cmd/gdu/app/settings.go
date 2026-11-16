@@ -121,9 +121,8 @@ func (a *App) settings(paths []string) (config.Settings, error) {
 			Colors:    colors,
 			Progress:  progress,
 			NoUnicode: f.NoUnicode,
-			// disk usage is only partially available on Windows (compressed,
-			// sparse and OneDrive files) and not at all on Plan9
-			ApparentSize:  f.ShowApparentSize || runtime.GOOS == "windows" || runtime.GOOS == "plan9",
+			// disk usage is not available on Plan9
+			ApparentSize:  f.ShowApparentSize || runtime.GOOS == "plan9",
 			RelativeSize:  f.ShowRelativeSize,
 			SIPrefix:      f.UseSIPrefix,
 			NoPrefix:      f.NoPrefix,
