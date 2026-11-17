@@ -3,13 +3,16 @@
 package analyze
 
 import (
+	"bytes"
 	"context"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
+	"github.com/dundee/gdu/v6/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,6 +60,27 @@ func TestScanTellsWhatItCouldNotRead(t *testing.T) {
 			assert.Equal(t, locked, errs[0].Path)
 			assert.True(t, errs[0].Dir)
 			assert.ErrorIs(t, errs[0].Err, iofs.ErrPermission)
+		})
+	}
+}
+
+// Every analyzer exports what it could not read.
+func TestExportMarksWhatItCouldNotRead(t *testing.T) {
+	root, _ := makeLockedTree(t)
+
+	analyzers := append([]parityAnalyzer{
+		{name: "parallel", analyzer: func(*testing.T) Analyzer { return CreateAnalyzer() }},
+		{name: "top-dir", analyzer: func(*testing.T) Analyzer { return CreateTopDirAnalyzer() }},
+	}, parityAnalyzers()...)
+	for _, tc := range analyzers {
+		t.Run(tc.name, func(t *testing.T) {
+			tree := tc.analyzer(t).AnalyzeDir(context.Background(), root, Options{})
+			tree.UpdateStats(false)
+
+			var buff bytes.Buffer
+			require.NoError(t, tree.EncodeJSON(&buff, true, fs.JSONAttributes{"name": {}}))
+			assert.Contains(t, buff.String(), `[{"name":"locked","read_error":true}`)
+			assert.Equal(t, 1, strings.Count(buff.String(), `"read_error":true`))
 		})
 	}
 }
