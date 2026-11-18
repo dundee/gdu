@@ -72,7 +72,7 @@ You might need to restart your terminal.
 ## [COPR builds](https://copr.fedorainfracloud.org/coprs/faramirza/gdu/)
 COPR Builds exist for the the following Linux Distros.
 
-[How to enable a CORP Repo](https://docs.pagure.org/copr.copr/how_to_enable_repo.html)
+[How to enable a CORP Repo](https://docs.copr.fedorainfracloud.org/how_to_enable_repo.html)
 
 Amazon Linux 2023:
 ```
