@@ -656,6 +656,9 @@ func (i *SqliteItem) encodeDirJSON(writer io.Writer, topLevel bool, attributes f
 		buff = append(buff, []byte(`,"mtime":`)...)
 		buff = append(buff, []byte(strconv.FormatInt(i.GetMtime().Unix(), 10))...)
 	}
+	if i.flag == '!' {
+		buff = append(buff, []byte(`,"read_error":true`)...)
+	}
 
 	buff = append(buff, '}')
 
