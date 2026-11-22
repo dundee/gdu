@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"testing"
@@ -277,4 +278,65 @@ func TestReadAnalysisSharedUsage(t *testing.T) {
 	clone := dir.Files[0].(*File)
 	assert.Equal(t, int64(4096), clone.Usage)
 	assert.Equal(t, int64(4096), clone.SharedUsage)
+}
+
+func TestReadAnalysisBooleanFileFlags(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		fields string
+		flag   rune
+		kind   string
+	}{
+		{"absent", "", ' ', "File"},
+		{"notreg-false", `,"notreg":false`, ' ', "File"},
+		{"notreg-true", `,"notreg":true`, '@', "Other"},
+		{"hlnkc-false", `,"hlnkc":false`, ' ', "File"},
+		{"hlnkc-true", `,"hlnkc":true`, 'H', "File"},
+		{"both-false", `,"notreg":false,"hlnkc":false`, ' ', "File"},
+		{"notreg-true-hlnkc-false", `,"notreg":true,"hlnkc":false`, '@', "Other"},
+		{"notreg-false-hlnkc-true", `,"notreg":false,"hlnkc":true`, 'H', "File"},
+		{"both-true", `,"notreg":true,"hlnkc":true`, 'H', "File"},
+		{"null", `,"notreg":null,"hlnkc":null`, ' ', "File"},
+		{"strings", `,"notreg":"true","hlnkc":"true"`, ' ', "File"},
+		{"numbers", `,"notreg":1,"hlnkc":1`, ' ', "File"},
+		{"objects", `,"notreg":{},"hlnkc":{}`, ' ', "File"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			document := `[1,2,{"progname":"ncdu"},[{"name":"/root"},{"name":"entry","ino":1234,"asize":7,"dsize":4096` + tc.fields + `}]]`
+			dir, err := ReadAnalysis(bytes.NewBufferString(document))
+			require.NoError(t, err)
+			require.Len(t, dir.Files, 1)
+			file := dir.Files[0]
+			assert.Equal(t, tc.flag, file.GetFlag())
+			assert.Equal(t, tc.kind, file.GetType())
+			assert.Equal(t, int64(7), file.GetSize())
+			assert.Equal(t, int64(4096), file.GetUsage())
+
+			var output bytes.Buffer
+			require.NoError(t, dir.EncodeJSON(&output, true, nil))
+			var exported []any
+			require.NoError(t, json.Unmarshal(output.Bytes(), &exported))
+			require.Len(t, exported, 2)
+			attributes, ok := exported[1].(map[string]any)
+			require.True(t, ok)
+			if tc.flag == '@' {
+				assert.Equal(t, true, attributes["notreg"])
+			} else {
+				assert.NotContains(t, attributes, "notreg")
+			}
+			if tc.flag == 'H' {
+				assert.Equal(t, true, attributes["hlnkc"])
+				assert.Equal(t, float64(1234), attributes["ino"])
+			} else {
+				assert.NotContains(t, attributes, "hlnkc")
+				assert.NotContains(t, attributes, "ino")
+			}
+
+			reimported, err := ReadAnalysis(bytes.NewBufferString(fmt.Sprintf(`[1,2,{"progname":"gdu"},%s]`, output.String())))
+			require.NoError(t, err)
+			require.Len(t, reimported.Files, 1)
+			assert.Equal(t, tc.flag, reimported.Files[0].GetFlag())
+			assert.Equal(t, tc.kind, reimported.Files[0].GetType())
+		})
+	}
 }

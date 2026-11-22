@@ -110,7 +110,7 @@ func decodeDir(items []any, parent *Dir, byGdu bool) (dir *Dir, err error) {
 			if mtime, ok := item["mtime"].(float64); ok {
 				file.Mtime = time.Unix(int64(mtime), 0)
 			}
-			if _, ok := item["notreg"].(bool); ok {
+			if notreg, ok := item["notreg"].(bool); ok && notreg {
 				file.Flag = '@'
 			} else {
 				file.Flag = ' '
@@ -118,7 +118,7 @@ func decodeDir(items []any, parent *Dir, byGdu bool) (dir *Dir, err error) {
 			if mli, ok := item["ino"].(float64); ok {
 				file.Mli = uint64(mli)
 			}
-			if _, ok := item["hlnkc"].(bool); ok {
+			if hlnkc, ok := item["hlnkc"].(bool); ok && hlnkc {
 				file.Flag = 'H'
 			}
 
