@@ -15,7 +15,9 @@ func (t OtherDevicesInfoGetter) GetDevicesInfo() (devices Devices, err error) {
 	return nil, errors.New("Only Linux platform is supported for listing devices")
 }
 
-// GetMounts returns all mounted filesystems
+// GetMounts returns no mount points, as listing them is not supported here.
+// It does not fail, so that --no-cross still works: the scan does not descend
+// into NTFS junctions and reparse points on Windows anyway.
 func (t OtherDevicesInfoGetter) GetMounts() (devices Devices, err error) {
-	return nil, errors.New("Only Linux platform is supported for listing mount points")
+	return Devices{}, nil
 }
