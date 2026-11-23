@@ -109,6 +109,9 @@ On Linux, same-filesystem bind mounts (including read-only mounts) remain
 included. Mounts on other filesystems remain excluded. Explicit ignore rules
 still apply.
 
+On Windows, the scan never enters junctions or mounted folders, with or
+without this option.
+
 #### `no-hidden`
 
 Ignore hidden directories (beginning with dot)
