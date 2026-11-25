@@ -12,6 +12,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestHelpShowsShellCompletion(t *testing.T) {
+	var output bytes.Buffer
+	rootCmd.SetOut(&output)
+	t.Cleanup(func() { rootCmd.SetOut(nil) })
+
+	require.NoError(t, rootCmd.Help())
+	assert.Contains(t, output.String(), "completion")
+	for _, shell := range []string{"bash", "fish", "zsh"} {
+		command, _, err := rootCmd.Find([]string{"completion", shell})
+		require.NoError(t, err)
+		assert.Equal(t, shell, command.Name())
+	}
+}
+
 func TestNoViewFileFlagRegistered(t *testing.T) {
 	flag := rootCmd.Flags().Lookup("no-view-file")
 	if flag == nil {

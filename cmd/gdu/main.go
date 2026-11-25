@@ -140,6 +140,8 @@ func init() {
 
 	initConfig()
 	setDefaults()
+	// Cobra otherwise hides its completion command from help on a root-only CLI.
+	rootCmd.InitDefaultCompletionCmd("completion")
 }
 
 func runE(command *cobra.Command, args []string) error {

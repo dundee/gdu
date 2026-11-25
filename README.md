@@ -119,6 +119,25 @@ Basic list of actions in interactive mode (show help modal for more):
   ?                                   Show help modal
 ```
 
+## Shell completion
+
+Generate and load completions for the current shell session:
+
+```bash
+source <(gdu completion bash) # requires bash-completion
+```
+
+```fish
+gdu completion fish | source
+```
+
+```zsh
+source <(gdu completion zsh)
+```
+
+Run `gdu completion <shell> --help` for persistent installation instructions. To scan a directory
+named `completion`, use `gdu ./completion`.
+
 ## Examples
 
     gdu                                   # analyze current dir
