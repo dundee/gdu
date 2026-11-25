@@ -73,8 +73,9 @@ func (a *StoredAnalyzer) AnalyzeDir(ctx context.Context, path string, opts Optio
 // known. The scanned root is returned with its entries; the directories
 // below it are left to be loaded from the database when needed.
 type storedSink struct {
-	a    *StoredAnalyzer
-	root *StoredDir
+	a       *StoredAnalyzer
+	root    *StoredDir
+	pruneMu sync.Mutex
 }
 
 func (s *storedSink) openDir(parent *StoredDir, path string, root bool) (*StoredDir, bool) {
@@ -129,6 +130,39 @@ func (s *storedSink) entriesDone(dir *StoredDir) {
 func (*storedSink) closeDir(*StoredDir) {}
 
 func (*storedSink) addDir(_, _ *StoredDir) {}
+
+func (s *storedSink) discardDir(parent, child *StoredDir) {
+	s.pruneMu.Lock()
+	defer s.pruneMu.Unlock()
+
+	// The scanned root stays loaded and has an in-memory placeholder for each
+	// child. Nested directories have already released their entries, so update
+	// their persisted parent record as well.
+	for _, entry := range parent.Files {
+		if entry.IsDir() && entry.GetName() == child.GetName() {
+			parent.Files = parent.Files.Remove(entry)
+			break
+		}
+	}
+
+	record, err := s.a.storage.loadRecord(parent.GetPath())
+	if err != nil {
+		slog.Warn("loading directory to remove filtered child", "path", parent.GetPath(), "err", err)
+		s.a.storage.failed.Store(true)
+		return
+	}
+	entries := record.Entries[:0]
+	for _, entry := range record.Entries {
+		if entry.Dir && entry.Name == child.GetName() {
+			continue
+		}
+		entries = append(entries, entry)
+	}
+	record.Entries = entries
+	if err := s.a.storage.storeRecord(parent.GetPath(), record); err != nil {
+		slog.Warn("storing directory without filtered child", "path", parent.GetPath(), "err", err)
+	}
+}
 
 // storeArchive stores the directories of a browsed archive lying at path, so
 // that they load like any other stored directory.

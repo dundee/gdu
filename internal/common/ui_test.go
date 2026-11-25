@@ -30,6 +30,7 @@ func TestScanSettingsAreScanOptions(t *testing.T) {
 		AnnexedSize:     true,
 		ExclusiveSize:   true,
 		ArchiveBrowsing: true,
+		MinSize:         1024,
 		TimeFilter:      filter,
 		TimeLocation:    time.UTC,
 	}})
@@ -42,6 +43,7 @@ func TestScanSettingsAreScanOptions(t *testing.T) {
 	assert.True(t, opts.ExclusiveSize)
 	assert.True(t, opts.ArchiveBrowsing)
 	assert.NotNil(t, opts.TimeFilter)
+	assert.Equal(t, int64(1024), opts.MinSize)
 	assert.NotNil(t, opts.IgnoreDir)
 	assert.Nil(t, opts.IgnoreFile, "no file is filtered by its name")
 	assert.True(t, opts.FilteringFiles())
@@ -53,6 +55,13 @@ func TestScanOptionsByDefault(t *testing.T) {
 
 	assert.False(t, opts.FollowSymlinks || opts.AnnexedSize || opts.ExclusiveSize || opts.ArchiveBrowsing)
 	assert.False(t, opts.FilteringFiles())
+}
+
+func TestMinSizeMarksScanAsFilteringFiles(t *testing.T) {
+	ui := NewUI(nil, &config.Settings{Scan: config.Scan{MinSize: 1}})
+
+	assert.True(t, ui.ScanOptions().FilteringFiles())
+	assert.True(t, ui.IsFilteringFiles())
 }
 
 func TestNewUI(t *testing.T) {

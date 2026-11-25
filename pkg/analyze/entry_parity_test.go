@@ -160,6 +160,30 @@ func TestFollowedSymlinkTimeFilterParity(t *testing.T) {
 	assert.NotContains(t, want, "sub/new")
 }
 
+func TestMinSizeFilterParity(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "root")
+	writeSized(t, filepath.Join(root, "small"), 2, time.Time{})
+	writeSized(t, filepath.Join(root, "boundary"), 3, time.Time{})
+	writeSized(t, filepath.Join(root, "large"), 4, time.Time{})
+	writeSized(t, filepath.Join(root, "empty", "nested", "small"), 1, time.Time{})
+	writeSized(t, filepath.Join(root, "mixed", "nested", "small"), 1, time.Time{})
+	writeSized(t, filepath.Join(root, "mixed", "nested", "qualifying"), 5, time.Time{})
+
+	want := assertEntryParity(t, root, func(o *Options) { o.MinSize = 3 })
+
+	assert.NotContains(t, want, "small")
+	assert.NotContains(t, want, "empty")
+	assert.NotContains(t, want, "empty/nested")
+	assert.Contains(t, want, "mixed")
+	assert.Contains(t, want, "mixed/nested")
+	assert.Contains(t, want, "mixed/nested/qualifying")
+	assert.Contains(t, want, "boundary", "files equal to the threshold are included")
+	assert.Contains(t, want, "large")
+	assert.Equal(t, int64(5), want["mixed"].size, "directory totals include qualifying nested files only")
+	assert.Equal(t, int64(5), want["mixed/nested"].size)
+	assert.Equal(t, int64(12), want["."].size, "root totals exclude filtered files and empty directories")
+}
+
 // An entry that cannot be read marks its directory as read with errors.
 func TestUnreadableEntryFlagParity(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "root")

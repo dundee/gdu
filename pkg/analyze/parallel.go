@@ -112,6 +112,8 @@ func (s *treeSink) addDir(parent, child *Dir) {
 	parent.AddFile(child)
 }
 
+func (*treeSink) discardDir(*Dir, *Dir) {}
+
 // noLock is the lock of what no one shares.
 type noLock struct{}
 

@@ -262,6 +262,29 @@ func (s *SqliteStorage) deleteItemTree(tx *sql.Tx, id int64) error {
 	return err
 }
 
+// DeleteItemTree removes an item and its descendants without updating parent
+// totals. The SQLite analyzer uses it for directories filtered from a scan;
+// their parent totals have not been updated yet.
+func (s *SqliteStorage) DeleteItemTree(id int64) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+	if s.tx != nil {
+		return s.deleteItemTree(s.tx, id)
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	if err := s.deleteItemTree(tx, id); err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			slog.Error("rolling back filtered directory deletion", "err", rollbackErr)
+		}
+		return err
+	}
+	return tx.Commit()
+}
+
 // RemoveItemAndUpdateStats removes an item and updates all its ancestors' stats in the database
 func (s *SqliteStorage) RemoveItemAndUpdateStats(id, size, usage, itemCount int64) error {
 	s.m.Lock()
@@ -1021,6 +1044,15 @@ func (s sqliteSink) closeDir(dir *sqliteDir) {
 func (sqliteSink) addDir(parent, child *sqliteDir) {
 	item := child.item
 	parent.totals.addEntry(item.itemCount, item.size, item.usage, item.mtime, item.flag, true)
+}
+
+func (s sqliteSink) discardDir(_, child *sqliteDir) {
+	s.a.dbWriteMu.Lock()
+	defer s.a.dbWriteMu.Unlock()
+	if err := s.a.storage.DeleteItemTree(child.id); err != nil {
+		s.a.failed.Store(true)
+		slog.Warn("removing filtered directory", "name", child.name, "err", err)
+	}
 }
 
 // persistArchive stores the entries of a browsed archive, or of a directory
