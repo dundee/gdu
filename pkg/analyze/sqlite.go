@@ -277,7 +277,9 @@ func (s *SqliteStorage) DeleteItemTree(id int64) error {
 		return err
 	}
 	if err := s.deleteItemTree(tx, id); err != nil {
-		_ = tx.Rollback()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			slog.Error("rolling back filtered directory deletion", "err", rollbackErr)
+		}
 		return err
 	}
 	return tx.Commit()
