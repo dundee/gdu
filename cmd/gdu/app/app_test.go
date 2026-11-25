@@ -1021,6 +1021,55 @@ func TestSettingsResolveTimeFilter(t *testing.T) {
 	}
 }
 
+func TestSettingsResolveMinSize(t *testing.T) {
+	a := &App{Flags: &Flags{MinSize: 1024}}
+
+	s, err := a.settings(nil)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(1024), s.Scan.MinSize)
+}
+
+func TestSettingsRejectNegativeMinSize(t *testing.T) {
+	a := &App{Flags: &Flags{MinSize: -1}}
+
+	err := a.validate(nil)
+
+	assert.ErrorContains(t, err, "--min-size must be non-negative")
+}
+
+func TestMinSizeInNonInteractiveAndExportModes(t *testing.T) {
+	dir := t.TempDir()
+	root := filepath.Join(dir, "scan")
+	for path, size := range map[string]int{
+		"below":          2,
+		"boundary":       3,
+		"sub/included":   4,
+		"sub/also-below": 1,
+	} {
+		fullPath := filepath.Join(root, path)
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, make([]byte, size), 0o600))
+	}
+
+	stdout, err := runApp(&Flags{LogFile: "/dev/null", MinSize: 3, ShowItemCount: true, Depth: 3},
+		[]string{root}, false, testdev.DevicesInfoGetterMock{})
+	require.NoError(t, err)
+	assert.Contains(t, stdout, "boundary")
+	assert.Contains(t, stdout, "included")
+	assert.NotContains(t, stdout, "below")
+
+	report := filepath.Join(dir, "report.json")
+	_, err = runApp(&Flags{LogFile: "/dev/null", MinSize: 3, OutputFile: report},
+		[]string{root}, false, testdev.DevicesInfoGetterMock{})
+	require.NoError(t, err)
+	content, err := os.ReadFile(report)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), `"name":"boundary"`)
+	assert.Contains(t, string(content), `"name":"included"`)
+	assert.NotContains(t, string(content), `"name":"below"`)
+}
+
 // nolint: unparam // Why: it's used in linux tests
 func runApp(flags *Flags, args []string, istty bool, getter device.DevicesInfoGetter) (output string, err error) {
 	buff := bytes.NewBufferString("")

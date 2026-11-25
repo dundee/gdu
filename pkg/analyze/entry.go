@@ -73,6 +73,9 @@ func (s *scan) resolveFile(dirPath string, d os.DirEntry, opts resolveOptions) (
 	if s.opts.TimeFilter != nil && !s.opts.TimeFilter(info.ModTime()) {
 		return fileEntry{}, false, nil
 	}
+	if s.opts.MinSize > 0 && info.Size() < s.opts.MinSize {
+		return fileEntry{}, false, nil
+	}
 
 	entry := fileEntry{
 		name:    name,

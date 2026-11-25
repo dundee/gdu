@@ -44,6 +44,16 @@ func TestShowSymlinkTargetFlagRegistered(t *testing.T) {
 	}
 }
 
+func TestMinSizeFlagRegistered(t *testing.T) {
+	flag := rootCmd.Flags().Lookup("min-size")
+	require.NotNil(t, flag)
+	assert.Equal(t, "0", flag.DefValue)
+
+	t.Cleanup(func() { _ = rootCmd.Flags().Set("min-size", "0") })
+	require.NoError(t, rootCmd.Flags().Set("min-size", "1024"))
+	assert.Equal(t, int64(1024), af.MinSize)
+}
+
 func TestShowSymlinkTargetFlagCanBeSet(t *testing.T) {
 	t.Cleanup(func() {
 		_ = rootCmd.Flags().Set("show-symlink-target", "false")

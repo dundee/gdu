@@ -41,7 +41,9 @@ type Scan struct {
 	// TimeFilter counts files by their mtime; nil counts all
 	TimeFilter *timefilter.TimeFilter
 	// TimeLocation is where the dates of TimeFilter are read
-	TimeLocation    *time.Location
+	TimeLocation *time.Location
+	// MinSize leaves out files smaller than this number of apparent-size bytes
+	MinSize         int64
 	FollowSymlinks  bool
 	AnnexedSize     bool
 	ExclusiveSize   bool

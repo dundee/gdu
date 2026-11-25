@@ -102,6 +102,7 @@ type Flags struct {
 	Until              string    `yaml:"until"`
 	MaxAge             string    `yaml:"max-age"`
 	MinAge             string    `yaml:"min-age"`
+	MinSize            int64     `yaml:"min-size"`
 	ArchiveBrowsing    bool      `yaml:"archive-browsing"`
 	CollapsePath       bool      `yaml:"collapse-path"`
 	ShowSymlinkTarget  bool      `yaml:"show-symlink-target"`

@@ -25,6 +25,9 @@ type Options struct {
 	IgnoreFile ShouldFileBeIgnored
 	// TimeFilter tells which files to count by their mtime; nil counts all
 	TimeFilter TimeFilter
+	// MinSize leaves out files whose apparent size is less than this number
+	// of bytes; zero leaves out none
+	MinSize int64
 	// FollowSymlinks counts the files symlinks point to instead of the links
 	FollowSymlinks bool
 	// AnnexedSize counts git-annex files by the size of their content
@@ -50,11 +53,11 @@ type ReadError struct {
 	Err error
 }
 
-// FilteringFiles reports whether the scan leaves out files by their name or
-// mtime, which changes how the totals of directories left empty are counted:
-// pass it to UpdateStats.
+// FilteringFiles reports whether the scan leaves out files by name, mtime or
+// apparent size, which changes how the totals of directories left empty are
+// counted: pass it to UpdateStats.
 func (o Options) FilteringFiles() bool {
-	return o.IgnoreFile != nil || o.TimeFilter != nil
+	return o.IgnoreFile != nil || o.TimeFilter != nil || o.MinSize > 0
 }
 
 // ShouldDirBeIgnored reports whether the directory named name, at path, is

@@ -70,6 +70,9 @@ var conflicts = []conflict{
 // validate rejects flags which contradict each other or lack another one,
 // before anything is set up. paths are the scanned roots.
 func (a *App) validate(paths []string) error {
+	if a.Flags.MinSize < 0 {
+		return errors.New("--min-size must be non-negative")
+	}
 	for _, c := range conflicts {
 		if c.set(a.Flags) {
 			return fmt.Errorf("%s and %s cannot be used at once", c.first, c.second)
@@ -177,6 +180,7 @@ func (a *App) scanSettings(paths []string) (config.Scan, error) {
 		AnnexedSize:            f.ShowAnnexedSize,
 		ExclusiveSize:          f.ExclusiveSize,
 		ArchiveBrowsing:        f.ArchiveBrowsing,
+		MinSize:                f.MinSize,
 	}
 
 	if f.NoCross {

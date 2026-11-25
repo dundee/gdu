@@ -160,6 +160,24 @@ func TestFollowedSymlinkTimeFilterParity(t *testing.T) {
 	assert.NotContains(t, want, "sub/new")
 }
 
+func TestMinSizeFilterParity(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "root")
+	writeSized(t, filepath.Join(root, "small"), 2, time.Time{})
+	writeSized(t, filepath.Join(root, "boundary"), 3, time.Time{})
+	writeSized(t, filepath.Join(root, "large"), 4, time.Time{})
+	writeSized(t, filepath.Join(root, "sub", "small"), 1, time.Time{})
+
+	want := assertEntryParity(t, root, func(o *Options) { o.MinSize = 3 })
+
+	assert.NotContains(t, want, "small")
+	assert.NotContains(t, want, "sub/small")
+	assert.Contains(t, want, "sub", "directories remain visible even when their files are filtered")
+	assert.Contains(t, want, "boundary", "files equal to the threshold are included")
+	assert.Contains(t, want, "large")
+	assert.Equal(t, EmptyDirSize, want["sub"].size, "a directory with only filtered files is counted as empty")
+	assert.Equal(t, EmptyDirSize+3+4, want["."].size, "directory size totals exclude filtered files")
+}
+
 // An entry that cannot be read marks its directory as read with errors.
 func TestUnreadableEntryFlagParity(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "root")

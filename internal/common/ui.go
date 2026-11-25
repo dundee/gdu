@@ -39,6 +39,7 @@ type UI struct {
 	annexedSize     bool
 	archiveBrowsing bool
 	timeFilter      analyze.TimeFilter
+	minSize         int64
 }
 
 // NewUI returns the state the frontends share for the settings s, scanning
@@ -61,11 +62,15 @@ func NewUI(analyzer analyze.Analyzer, s *config.Settings) *UI {
 		exclusiveSize:          s.Scan.ExclusiveSize,
 		annexedSize:            s.Scan.AnnexedSize,
 		archiveBrowsing:        s.Scan.ArchiveBrowsing,
+		minSize:                s.Scan.MinSize,
 	}
 	if filter, loc := s.Scan.TimeFilter, s.Scan.TimeLocation; filter != nil {
 		ui.timeFilter = func(mtime time.Time) bool {
 			return filter.IncludeByTimeFilter(mtime, loc)
 		}
+		ui.FilteringFiles = true
+	}
+	if s.Scan.MinSize > 0 {
 		ui.FilteringFiles = true
 	}
 	return ui
@@ -77,6 +82,7 @@ func (ui *UI) ScanOptions() analyze.Options {
 		IgnoreDir:       ui.CreateIgnoreFunc(),
 		IgnoreFile:      ui.CreateFileTypeFilter(),
 		TimeFilter:      ui.timeFilter,
+		MinSize:         ui.minSize,
 		FollowSymlinks:  ui.followSymlinks,
 		AnnexedSize:     ui.annexedSize,
 		ExclusiveSize:   ui.exclusiveSize,
