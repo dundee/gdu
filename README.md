@@ -65,7 +65,7 @@ Flags:
       --max-age string                 Include files with mtime no older than DURATION (e.g., 7d, 2h30m, 1y2mo)
   -m, --max-cores int                  Set max cores that Gdu will use, at most 8; 0 leaves it to Go, which follows container limits
       --min-age string                 Include files with mtime at least DURATION old (e.g., 30d, 1w)
-      --min-size int                   Ignore files smaller than this size in bytes
+      --min-size int                   Ignore files smaller than this size in bytes and directories without matches
       --mouse                          Use mouse
   -c, --no-color                       Do not use colorized output
       --no-confirm-quit                Do not ask for confirmation before quitting after a long scan

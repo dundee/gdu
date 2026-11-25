@@ -1046,6 +1046,7 @@ func TestMinSizeInNonInteractiveAndExportModes(t *testing.T) {
 		"boundary":       3,
 		"sub/included":   4,
 		"sub/also-below": 1,
+		"zsh/only-below": 1,
 	} {
 		fullPath := filepath.Join(root, path)
 		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
@@ -1058,6 +1059,7 @@ func TestMinSizeInNonInteractiveAndExportModes(t *testing.T) {
 	assert.Contains(t, stdout, "boundary")
 	assert.Contains(t, stdout, "included")
 	assert.NotContains(t, stdout, "below")
+	assert.NotContains(t, stdout, "zsh")
 
 	report := filepath.Join(dir, "report.json")
 	_, err = runApp(&Flags{LogFile: "/dev/null", MinSize: 3, OutputFile: report},
@@ -1068,6 +1070,7 @@ func TestMinSizeInNonInteractiveAndExportModes(t *testing.T) {
 	assert.Contains(t, string(content), `"name":"boundary"`)
 	assert.Contains(t, string(content), `"name":"included"`)
 	assert.NotContains(t, string(content), `"name":"below"`)
+	assert.NotContains(t, string(content), `"name":"zsh"`)
 }
 
 // nolint: unparam // Why: it's used in linux tests

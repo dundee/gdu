@@ -42,6 +42,8 @@ type dirSink[D any] interface {
 	closeDir(dir D)
 	// addDir adds child, closed, to its parent.
 	addDir(parent, child D)
+	// discardDir removes a closed child that has no included files below it.
+	discardDir(parent, child D)
 }
 
 // walker walks the directory tree of one scan and hands what it finds to a
@@ -66,7 +68,8 @@ type walkNode[D any] struct {
 	parent *walkNode[D]
 	// pending counts the directory's own entries, as one, and its
 	// subdirectories not closed yet
-	pending atomic.Int64
+	pending         atomic.Int64
+	hasIncludedFile atomic.Bool
 }
 
 // walkTree walks the tree at path for the scan s with sink, in parallel or in
@@ -121,6 +124,7 @@ func (w *walker[D]) walkDir(node *walkNode[D], path string) {
 		if !ok {
 			continue
 		}
+		node.hasIncludedFile.Store(true)
 		usage += w.sink.addFile(node.dir, &file)
 		if file.archive != nil {
 			items += file.archive.GetItemCount()
@@ -172,7 +176,14 @@ func (w *walker[D]) done(node *walkNode[D]) {
 	for node != nil && node.pending.Add(-1) == 0 {
 		w.sink.closeDir(node.dir)
 		if node.parent != nil {
-			w.sink.addDir(node.parent.dir, node.dir)
+			if w.scan.opts.MinSize > 0 && !node.hasIncludedFile.Load() {
+				w.sink.discardDir(node.parent.dir, node.dir)
+			} else {
+				w.sink.addDir(node.parent.dir, node.dir)
+				if node.hasIncludedFile.Load() {
+					node.parent.hasIncludedFile.Store(true)
+				}
+			}
 		}
 		node = node.parent
 	}

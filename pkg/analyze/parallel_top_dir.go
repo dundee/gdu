@@ -144,3 +144,5 @@ func (s *topDirSink) addDir(parent, child *topDirNode) {
 		IsDir:     true,
 	})
 }
+
+func (*topDirSink) discardDir(*topDirNode, *topDirNode) {}
