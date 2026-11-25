@@ -12,6 +12,8 @@ gdu - Pretty fast disk usage analyzer written in Go
 
 **gdu \[flags\] \[directory_to_scan...\]**
 
+**gdu completion bash|fish|zsh**
+
 # DESCRIPTION
 
 Pretty fast disk usage analyzer written in Go.
@@ -26,6 +28,10 @@ and presented together under a virtual top level directory named
 rejected, as scanning both would count the nested part twice. Exporting
 (\--output-file) and database storage (\--db) accept a single directory
 only.
+
+Generate shell completion scripts with **gdu completion**. Run
+**gdu completion** *shell* **\--help** for installation instructions.
+To scan a directory named completion, specify **./completion**.
 
 # OPTIONS
 
