@@ -55,7 +55,11 @@ func exportingAnalyzers(t *testing.T) map[string]Analyzer {
 	t.Cleanup(func() { sqlite.storage.Close() })
 	return map[string]Analyzer{
 		"memory": CreateAnalyzer(),
-		"badger": createStoredAnalyzer(filepath.Join(t.TempDir(), "gdu.badger")),
+		"badger": func() Analyzer {
+			a := createStoredAnalyzer(filepath.Join(t.TempDir(), "gdu.badger"))
+			t.Cleanup(func() { _ = a.Close() })
+			return a
+		}(),
 		"sqlite": sqlite,
 	}
 }

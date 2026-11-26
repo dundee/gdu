@@ -211,7 +211,9 @@ func parityAnalyzers() []parityAnalyzer {
 		{
 			name: "stored (badger)",
 			analyzer: func(t *testing.T) Analyzer {
-				return createStoredAnalyzer(filepath.Join(t.TempDir(), "badger"))
+				a := createStoredAnalyzer(filepath.Join(t.TempDir(), "badger"))
+				t.Cleanup(func() { _ = a.Close() })
+				return a
 			},
 		},
 		{
