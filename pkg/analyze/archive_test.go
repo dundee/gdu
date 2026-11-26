@@ -42,6 +42,8 @@ func writeHostileZip(t *testing.T, archivePath string) {
 	out, err := os.Create(archivePath)
 	require.NoError(t, err)
 	w := zip.NewWriter(out)
+	_, err = w.Create("../up/")
+	require.NoError(t, err)
 	for name := range hostileEntryNames {
 		entry, err := w.Create(name)
 		require.NoError(t, err)
