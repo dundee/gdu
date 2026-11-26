@@ -35,6 +35,7 @@ func TestStorageBackedAnalyzersCancelKeepsPartialResults(t *testing.T) {
 	root := createCancellationTree(t)
 
 	stored := createStoredAnalyzer(filepath.Join(t.TempDir(), "results.badger"))
+	t.Cleanup(func() { _ = stored.Close() })
 	dir := scanUntilCancelled(t, stored, root)
 	assert.Contains(t, itemNames(dir), "a-file")
 	assert.NotContains(t, itemNames(dir), "b-dir")

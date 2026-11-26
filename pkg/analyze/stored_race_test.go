@@ -21,6 +21,7 @@ func TestStoredTreeConcurrentReaders(t *testing.T) {
 	defer fin()
 
 	analyzer := createStoredAnalyzer(t.TempDir())
+	t.Cleanup(func() { _ = analyzer.Close() })
 	scanned := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{})
 	scanned.UpdateStats(false)
 	want := flatten(scanned)
@@ -51,6 +52,7 @@ func TestStoredDirUsesOneDatabaseConcurrently(t *testing.T) {
 	defer fin()
 
 	analyzer := createStoredAnalyzer(t.TempDir())
+	t.Cleanup(func() { _ = analyzer.Close() })
 	dir := analyzer.AnalyzeDir(context.Background(), "test_dir", Options{
 		IgnoreFile: func(_ string) bool { return false },
 	}).(*StoredDir)
