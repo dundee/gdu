@@ -115,12 +115,12 @@ func processZipFile(zipPath string, info os.FileInfo) (zipDir *ZipDir, err error
 	dirMap[""] = zipDir // root directory
 
 	for _, f := range reader.File {
-		if f.FileInfo().IsDir() {
-			continue // Skip directory entries, we'll create them automatically based on file paths
-		}
-
 		name, ok := archiveEntryPath(f.Name)
 		if !ok {
+			continue
+		}
+		if f.FileInfo().IsDir() {
+			ensureZipDirExists(dirMap, name, zipPath, zipDir)
 			continue
 		}
 		// Parse file path and ensure all parent directories exist

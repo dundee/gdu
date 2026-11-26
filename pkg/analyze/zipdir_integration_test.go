@@ -5,11 +5,50 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/dundee/gdu/v6/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestZipFileKeepsEmptyDirectories(t *testing.T) {
+	tempDir := t.TempDir()
+	zipPath := filepath.Join(tempDir, "test.zip")
+	file, err := os.Create(zipPath)
+	assert.NoError(t, err)
+	writer := zip.NewWriter(file)
+	for _, name := range []string{"empty/", "nested/empty/", "full/file", "full/"} {
+		_, err = writer.Create(name)
+		assert.NoError(t, err)
+	}
+	assert.NoError(t, writer.Close())
+	assert.NoError(t, file.Close())
+
+	result := CreateAnalyzer().AnalyzeDir(context.Background(), tempDir, Options{ArchiveBrowsing: true})
+	result.UpdateStats(false)
+	archives := slices.Collect(result.GetFiles(fs.SortByName, fs.SortAsc))
+	if !assert.Len(t, archives, 1) {
+		return
+	}
+
+	var names []string
+	var walk func(fs.Item, string)
+	walk = func(dir fs.Item, prefix string) {
+		for item := range dir.GetFiles(fs.SortByName, fs.SortAsc) {
+			name := prefix + item.GetName()
+			if item.IsDir() {
+				name += "/"
+				walk(item, name)
+			}
+			names = append(names, name)
+		}
+	}
+	walk(archives[0], "")
+	slices.Sort(names)
+	assert.Equal(t, []string{"empty/", "full/", "full/file", "nested/", "nested/empty/"}, names)
+	assert.Equal(t, int64(6), archives[0].GetItemCount())
+}
 
 func TestSequentialAnalyzerWithZipFile(t *testing.T) {
 	// Create temporary directory and zip file
